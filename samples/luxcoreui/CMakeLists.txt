@@ -22,8 +22,9 @@
 #
 #############################################################################
 
-add_subdirectory(deps/glfw-3.1.1)
-include_directories(deps/glfw-3.1.1/include)
+# add_subdirectory(deps/glfw-3.1.1)
+#include_directories(deps/glfw-3.1.1/include)
+find_package(glfw3 REQUIRED)
 include_directories(deps/nfd/include)
 
 #############################################################################
@@ -85,7 +86,8 @@ add_executable(luxcoreui ${LUXCOREUI_SRCS})
 
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
-	${GLFW_LIBRARIES}
+	${PYTHON_LIBRARIES}
+        ${GLFW_LIBRARIES}
 	${LUXCORE_LIBRARY}
 	${OPENGL_LIBRARIES}
 	${GTK3_LIBRARIES}
