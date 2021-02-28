@@ -1,4 +1,5 @@
 /***************************************************************************
+ *
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
@@ -24,12 +25,12 @@
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 
-#include "luxrays/utils/properties.h"
-#include "slg/core/sdl.h"
-
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
+
+#include "luxrays/utils/properties.h"
+#include "slg/core/sdl.h"
 
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
