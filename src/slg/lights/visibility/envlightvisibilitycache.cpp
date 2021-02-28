@@ -25,12 +25,12 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
-
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
 #include "luxrays/utils/safesave.h"
+
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
 
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
