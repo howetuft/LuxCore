@@ -28,6 +28,10 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 cmake_minimum_required(VERSION 3.5.1)
 cmake_policy(VERSION 3.0)
 
+if(POLICY CMP0072)
+	cmake_policy(SET CMP0072 OLD)
+endif()
+
 # Remove the following when the version check is at least 2.8.4
 SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
