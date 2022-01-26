@@ -7,8 +7,7 @@
 #include <openvdb/Types.h>
 #include <openvdb/io/Compression.h> // for io::readCompressedValues(), etc
 #include <openvdb/util/NodeMasks.h>
-#include <tbb/atomic.h>
-#include <tbb/spin_mutex.h>
+#include <oneapi/tbb.h>
 #include <algorithm> // for std::swap
 #include <cstddef> // for offsetof()
 #include <iostream>
