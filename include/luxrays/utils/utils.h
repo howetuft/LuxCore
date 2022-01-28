@@ -48,6 +48,11 @@ template <class T>
 int isinf(T a) { return std::isinf(a); }
 #endif
 
+#ifdef __clang__
+using std::isnan;
+using std::isinf;
+#endif
+
 #if defined(__APPLE__)
 #include <string>
 #endif
