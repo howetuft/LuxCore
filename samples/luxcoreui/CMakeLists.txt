@@ -104,7 +104,5 @@ TARGET_LINK_LIBRARIES(luxcoreui
 	${OPENGL_LIBRARIES}
 	${GTK3_LIBRARIES}
        ${Boost_LIBRARIES}
-        ${PYTHON_LIBRARIES}
-        ${OpenVDB_LIBRARIES}
-        spdlog::spdlog)
+        ${PYTHON_LIBRARIES})
 endif()

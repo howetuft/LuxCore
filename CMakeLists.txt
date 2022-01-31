@@ -45,9 +45,6 @@ unset(CMAKE_CONFIGURATION_TYPES CACHE)
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
 if (CMAKE_CONFIGURATION_TYPES)
 
@@ -107,23 +104,11 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-find_package(spdlog)
-add_compile_definitions(SPDLOG_FMT_EXTERNAL)
-find_package(fmt)
+include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 # Find dependencies
 include(Dependencies)
-
-SET(Boost_Save ${Boost_LIBRARIES})
-find_package(OpenVDB)
-LIST(APPEND Boost_LIBRARIES ${Boost_Save})
-
-
-if (NOT OpenVDB_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required OpenVDB files - Please check ${OpenVDB_SEARCH_PATH}")
-endif()
-
 
 if (NOT Boost_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
@@ -188,7 +173,7 @@ if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-  set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv ${OPENVDB_LIBRARY} opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 ################################################################################
