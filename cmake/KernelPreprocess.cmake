@@ -23,7 +23,7 @@
 ################################################################################
 
 FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
-	MESSAGE(STATUS "Preprocessing OpenCL kernel: " ${SRC} " => " ${DST} )
+	#MESSAGE(STATUS "Preprocessing OpenCL kernel: " ${SRC} " => " ${DST} )
 
 	add_custom_command(
 		OUTPUT ${DST}
