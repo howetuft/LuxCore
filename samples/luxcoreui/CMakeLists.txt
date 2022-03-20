@@ -22,7 +22,10 @@
 #
 #############################################################################
 
-add_subdirectory(deps/glfw-3.1.1)
+find_package(glfw3 REQUIRED)
+IF(NOT ${GLFW3_FOUND})
+	add_subdirectory(deps/glfw-3.1.1)
+ENDIF()
 include_directories(deps/glfw-3.1.1/include)
 include_directories(deps/nfd/include)
 
