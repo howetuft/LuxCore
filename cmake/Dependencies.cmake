@@ -46,7 +46,7 @@ if(NOT APPLE)
     if("${PYTHON_V}" EQUAL "27")
         find_package(PythonLibs 2.7)
     else()
-        find_package(PythonLibs 3.4)
+        find_package(Python3)
     endif()
 endif()
 
