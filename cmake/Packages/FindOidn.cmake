@@ -23,13 +23,13 @@ IF (NOT OIDN_INCLUDE_PATH)
 		/opt/local/include)
 ENDIF()
 
-FIND_LIBRARY(OIDN_LIBRARY NAMES OpenImageDenoise libOpenImageDenoise.so.0 PATHS
+FIND_LIBRARY(OIDN_LIBRARY NAMES OpenImageDenoise libOpenImageDenoise.so.1 PATHS
 	${OIDN_ROOT}/lib/x64
 	${OIDN_ROOT}/lib
 	${OIDN_ROOT}/build
 	NO_DEFAULT_PATH)
 IF (NOT OIDN_LIBRARY)
-	FIND_LIBRARY(OIDN_LIBRARY NAMES OpenImageDenoise libOpenImageDenoise.so.0 PATHS
+	FIND_LIBRARY(OIDN_LIBRARY NAMES OpenImageDenoise libOpenImageDenoise.so.1 PATHS
 		/usr/lib 
 		/usr/lib64
 		/usr/local/lib 
