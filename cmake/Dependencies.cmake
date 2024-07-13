@@ -42,19 +42,15 @@ if(NOT APPLE)
     include_directories(BEFORE SYSTEM ${JPEG_INCLUDE_DIR})
     find_package(PNG REQUIRED)
     include_directories(BEFORE SYSTEM ${PNG_PNG_INCLUDE_DIR})
-	# Find Python Libraries
-    if("${PYTHON_V}" EQUAL "27")
-        find_package(PythonLibs 2.7)
-    else()
-        find_package(Python3)
-    endif()
+    # Find Python Libraries
+    find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 endif()
 
 find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic pyside6-uic
-		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
+		HINTS "${Python3_INCLUDE_DIRS}/../Scripts"
 		PATHS "c:/Program Files/Python${PYTHON_V}/Scripts")
 
-include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${Python3_INCLUDE_DIRS})
 
 # Find Boost
 set(Boost_USE_STATIC_LIBS       ON)
