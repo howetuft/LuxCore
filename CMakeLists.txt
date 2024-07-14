@@ -198,16 +198,6 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
-	add_subdirectory(samples/luxcoredemo)
-	add_subdirectory(samples/luxcorescenedemo)
-
-	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
-		# Internal tests can not be compiled on WIN32 with DLL enabled
-		add_subdirectory(tests/luxcoreimplserializationdemo)
-	endif()
-endif()
-
 if (NOT WIN32 OR WIN_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoreconsole)
 endif()
@@ -216,14 +206,6 @@ if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)
 endif(OPENGL_FOUND)
 
-
-################################################################################
-#
-# Tests
-#
-################################################################################
-
-add_subdirectory(pyunittests)
 
 ################################################################################
 #
