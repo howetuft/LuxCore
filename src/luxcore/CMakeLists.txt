@@ -191,6 +191,8 @@ if(MSVC)
 	set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
 
+install(TARGETS pyluxcore LIBRARY DESTINATION lib)
+
 ################################################################################
 #
 # Predefines
