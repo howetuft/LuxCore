@@ -214,3 +214,5 @@ endif(OPENGL_FOUND)
 ################################################################################
 
 INCLUDE(AssembleBinDirs)
+
+INCLUDE(PostBuildWheel)
