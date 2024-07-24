@@ -70,6 +70,8 @@ endif()
 # The following implicitly boots up the generator, so don't move it up:
 
 project(LuxRays)
+enable_language(C)
+enable_language(CXX)
 
 if (NOT DEFINED LuxRays_SOURCE_DIR)
 	SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
