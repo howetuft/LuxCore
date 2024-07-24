@@ -91,7 +91,7 @@ IF(MSVC)
 	# Whole Program Opt. gui display fixed in cmake 2.8.5
 	# See http://public.kitware.com/Bug/view.php?id=6794
 	# /GL will be used to build the code but the selection is not displayed in the menu
-	set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Gd /TP /GL /GF /Ot")
+	set(MSVC_RELEASE_COMPILER_FLAGS "/WX- /MP /Ox /Ob2 /Oi /Oy /GT /GL /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /GR /Gd /GL /GF /Ot")
 
 	#set(MSVC_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /OPT:ICF")
 	#set(MSVC_RELEASE_WITH_DEBUG_LINKER_FLAGS "/DEBUG")
