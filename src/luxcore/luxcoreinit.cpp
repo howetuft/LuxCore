@@ -20,9 +20,9 @@
 #include <boost/format.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/rotating_file_sink.h"
-#include "spdlog/sinks/null_sink.h"
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/null_sink.h>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/strutils.h"
