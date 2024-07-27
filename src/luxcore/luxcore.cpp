@@ -19,7 +19,7 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 
-#include <spdlog/spdlog.h>
+#include "spdlog/spdlog.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"

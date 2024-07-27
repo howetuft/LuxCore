@@ -22,7 +22,7 @@
 #include <memory>
 #include <sstream>
 
-#include <spdlog/spdlog.h>
+#include "spdlog/spdlog.h"
 
 #include "luxrays/utils/strutils.h"
 #include "luxrays/utils/properties.h"
