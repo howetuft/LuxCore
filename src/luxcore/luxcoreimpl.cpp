@@ -1811,11 +1811,11 @@ struct fmt::formatter<luxcore::Camera::CameraType> {
     // for debugging only
     formatter() { std::cout << "formatter<luxcore::Camera::CameraType>()\n"; }
 
-    constexpr auto parse(std::format_parse_context& ctx) {
+    constexpr auto parse(fmt::format_parse_context& ctx) {
         return ctx.begin();
     }
 
-    auto format(const luxcore::Camera::CameraType& cam, std::format_context& ctx) const {
-        return std::format_to(ctx.out(), "{}", int(cam));
+    auto format(const luxcore::Camera::CameraType& cam, fmt::format_context& ctx) const {
+        return fmt::format_to(ctx.out(), "{}", int(cam));
     }
 };
