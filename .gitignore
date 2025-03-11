@@ -92,3 +92,8 @@ CMakeUserPresets.json
 .ccache/d/
 .ccache/e/
 .ccache/f/
+
+###########################
+# Visual Studio (Code)
+.vs/
+.vscode/
