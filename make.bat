@@ -17,7 +17,7 @@ set INSTALL_DIR=%OUTPUT_DIR%\install
 set SOURCE_DIR=%cd%
 
 if "%LUX_PYTHON%" == "" (
-    set LUX_PYTHON=python.exe
+    set LUX_PYTHON=python
 )
 
 if "%COMMAND%" == "" (
@@ -117,7 +117,7 @@ rmdir /S /Q %BUILD_DIR%
 goto :EOF
 
 :Deps
-%LUX_PYTHON% -u cmake\make_deps.py
+call python -u cmake\make_deps.py
 goto :EOF
 
 :ListPresets
