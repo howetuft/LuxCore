@@ -860,7 +860,7 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
 
     points = (luxrays::Point *)luxcore::detail::SceneImpl::AllocVerticesBuffer(size);
     for (py::ssize_t i = 0; i < size; ++i) {
-      if (py::isinstance<py::list>(l[i])) {
+      if (py::isinstance<py::tuple>(l[i])) {
         const py::tuple &t = py::cast<py::tuple>(l[i]);
         points[i] = luxrays::Point(py::cast<float>(t[0]), py::cast<float>(t[1]), py::cast<float>(t[2]));
       } else {
