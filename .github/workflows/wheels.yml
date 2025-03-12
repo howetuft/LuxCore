@@ -75,8 +75,10 @@ jobs:
       - name: Get current commit
         id: current-commit
         run: |
-          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "branch=$(git symbolic-ref HEAD)" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=$(git symbolic-ref HEAD)" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse HEAD)"
+          echo "branch=$(git symbolic-ref HEAD)"
 
       - name: Find workspace
         shell: bash
