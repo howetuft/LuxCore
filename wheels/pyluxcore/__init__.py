@@ -108,9 +108,12 @@ def ensure_nvrtc():
 
     # Linux: add nvrtc path to LD_LIBRARY_PATH
     if platform.system() == "Linux":
-        os.environ["LD_LIBRARY_PATH"] = (
-            str(libpath) + os.pathsep + os.environ["LD_LIBRARY_PATH"]
-        )
+        if "LD_LIBRARY_PATH" in os.environ:
+            os.environ["LD_LIBRARY_PATH"] = (
+                str(libpath) + os.pathsep + os.environ["LD_LIBRARY_PATH"]
+            )
+        else:
+            os.environ["LD_LIBRARY_PATH"] = str(libpath)
 
     # Windows: add nvrtc path to the process dll search path
     if platform.system() == "Windows":
