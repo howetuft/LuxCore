@@ -22,10 +22,12 @@ if "%LUX_PYTHON%" == "" (
 
 if "%COMMAND%" == "" (
     call :Luxcore
-    call :PyLuxcore
+    call :InvokeCMakeInstall luxcore
     call :LuxcoreUI
+    call :InvokeCMakeInstall luxcoreui
     call :LuxcoreConsole
-    call :InvokeCMakeInstall
+    call :InvokeCMakeInstall luxcoreconsole
+    call :PyLuxcore
 ) else if "%COMMAND%" == "luxcore" (
     call :Luxcore
     call :InvokeCMakeInstall luxcore
