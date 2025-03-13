@@ -315,6 +315,7 @@ jobs:
 
   attest-wheels:
     needs: [build-wheels]
+    runs-on: ubuntu-latest
     permissions:
       attestations: write
     outputs:
