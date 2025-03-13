@@ -29,6 +29,9 @@ on:
       branch:
         description: "The branch that has been checked out"
         value: ${{ jobs.build-wheels.outputs.branch }}
+      attestation-url:
+        description: "The url to the attestations"
+        value: ${{ jobs.attest-wheels.outputs.attestation-url }}
   push:
 
 jobs:
@@ -305,6 +308,29 @@ jobs:
 
       # Upload artifacts
       - uses: actions/upload-artifact@v4
+        id: upload
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ matrix.python-minor }}
           path: ./wheelhouse/*.whl
+
+  attest-wheels:
+    needs: [build-wheels]
+    permissions:
+      attestations: write
+    outputs:
+      attestation-url: ${{ steps.artifact-attestations.attestation-url }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        id: attest
+        with:
+          pattern: cibw-wheels-*
+          path: ${{ github.workspace }}/dist
+          merge-multiple: false
+
+      - name: Generate artifact attestations
+        id: artifact-attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ github.workspace }}/dist/*
+
