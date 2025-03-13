@@ -33,12 +33,14 @@ endif()
 
 install(
     TARGETS luxcoreconsole
-    RUNTIME_DEPENDENCIES
-    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+    RUNTIME_DEPENDENCY_SET LUXCONSOLE_DEPS
     COMPONENT luxcoreconsole
     FRAMEWORK
         DESTINATION luxcore
     OPTIONAL
+)
+install(RUNTIME_DEPENDENCY_SET LUXCONSOLE_DEPS
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}"
 )

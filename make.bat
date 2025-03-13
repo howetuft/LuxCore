@@ -34,12 +34,12 @@ if "%COMMAND%" == "" (
     call :InvokeCMakeInstall pyluxcore
 ) else if "%COMMAND%" == "luxcoreui" (
     call :LuxcoreUI
-    call :InvokeCMakeInstall luxcoreui
     call :InvokeCMakeInstall luxcore
+    call :InvokeCMakeInstall luxcoreui
 ) else if "%COMMAND%" == "luxcoreconsole" (
     call :LuxcoreConsole
-    call :InvokeCMakeInstall luxcoreconsole
     call :InvokeCMakeInstall luxcore
+    call :InvokeCMakeInstall luxcoreconsole
 ) else if "%COMMAND%" == "config" (
     call :Config
 ) else if "%COMMAND%" == "install" (
@@ -85,7 +85,7 @@ IF "%~1" == "" (
 goto :EOF
 
 :Clean
-call :InvokeCMake clean
+call :InvokeCMakeBuild clean
 goto :EOF
 
 :Config

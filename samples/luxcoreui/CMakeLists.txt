@@ -62,15 +62,16 @@ target_link_libraries(luxcoreui PRIVATE
   imguifiledialog::imguifiledialog
   glfw
 )
-
 install(
     TARGETS luxcoreui
-    RUNTIME_DEPENDENCIES
-    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+    RUNTIME_DEPENDENCY_SET LUXUI_DEPS
     COMPONENT luxcoreui
     FRAMEWORK
         DESTINATION luxcore
     OPTIONAL
+)
+install(RUNTIME_DEPENDENCY_SET LUXUI_DEPS
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}"
 )
