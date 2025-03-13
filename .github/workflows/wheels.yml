@@ -318,19 +318,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       attestations: write
+      id-token: write
     outputs:
-      attestation-url: ${{ steps.artifact-attestations.attestation-url }}
+      attestation-url: ${{ steps.attestation-step.attestation-url }}
 
     steps:
       - uses: actions/download-artifact@v4
-        id: attest
         with:
           pattern: cibw-wheels-*
           path: ${{ github.workspace }}/dist
           merge-multiple: false
 
       - name: Generate artifact attestations
-        id: artifact-attestations
+        id: attestation-step
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ github.workspace }}/dist/*
