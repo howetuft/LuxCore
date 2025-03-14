@@ -320,7 +320,7 @@ jobs:
       attestations: write
       id-token: write
     outputs:
-      attestation-url: ${{ steps.attestation-step.attestation-url }}
+      attestation-url: ${{ steps.attestation-step.outputs.attestation-url }}
 
     steps:
       - uses: actions/download-artifact@v4
@@ -334,4 +334,3 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ github.workspace }}/dist/*
-
