@@ -69,11 +69,16 @@ jobs:
         if: runner.os == 'Windows'
         run: git config --system core.longpaths true
 
-      - name: Checkout main repository (LuxCore)
+      - name: Checkout main repository (standard context)
+        if: ${{ !env.ACT }}
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
           ref: ${{ inputs.ref }}
+
+      - name: Checkout main repository (act context)
+        if: env.ACT
+        uses: actions/checkout@v4
 
       - name: Get current commit
         id: current-commit
@@ -324,6 +329,7 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v4
+        if: ${{ !env.ACT }}
         with:
           pattern: cibw-wheels-*
           path: ${{ github.workspace }}/dist
@@ -331,6 +337,7 @@ jobs:
 
       - name: Generate artifact attestations
         id: attestation-step
+        if: ${{ !env.ACT }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ github.workspace }}/dist/*
