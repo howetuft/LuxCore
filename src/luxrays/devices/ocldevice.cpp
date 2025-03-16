@@ -124,7 +124,7 @@ OpenCLDevice::OpenCLDevice(
 	oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
 	CHECK_OCL_ERROR(error);
 
-	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
+	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION);
 }
 
 OpenCLDevice::~OpenCLDevice() {

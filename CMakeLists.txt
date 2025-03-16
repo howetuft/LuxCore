@@ -28,7 +28,36 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.25)
 
+
+MESSAGE(STATUS "Building LuxCore ${LUXCORE_VERSION}")
+
 project(LuxRays)
+
+# Version computation
+#
+# Version number can be set by external caller (for instance, Github action)
+# by setting LUXCORE_VERSION.
+# Otherwise (like in a plain make build), we'll fallback to luxcore.json
+# default version
+#
+# Versioning should comply to semver standard: https://semver.org
+#
+FILE(READ "${CMAKE_CURRENT_LIST_DIR}/luxcore.json" luxcore_json)
+STRING(JSON _DEFAULT_VERSION_MAJOR GET "${luxcore_json}" DefaultVersion major)
+STRING(JSON _DEFAULT_VERSION_MINOR GET "${luxcore_json}" DefaultVersion minor)
+STRING(JSON _DEFAULT_VERSION_PATCH GET "${luxcore_json}" DefaultVersion patch)
+SET(
+  _DEFAULT_VERSION_BASE
+  "${_DEFAULT_VERSION_MAJOR}.${_DEFAULT_VERSION_MINOR}.${_DEFAULT_VERSION_PATCH}"
+)
+STRING(JSON _DEFAULT_VERSION_PRERELEASE GET "${luxcore_json}" DefaultVersion prerelease)
+if (NOT "${_DEFAULT_VERSION_PRERELEASE}" STREQUAL "")
+  SET(_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}-${_DEFAULT_VERSION_PRERELEASE}")
+else()
+  SET(_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}")
+endif()
+
+SET(LUXCORE_VERSION "${_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
 
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
@@ -36,17 +65,6 @@ OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
 OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
-
-# Version
-FILE(READ "${CMAKE_CURRENT_LIST_DIR}/luxcore.json" luxcore_json)
-STRING(JSON LUXCORE_VERSION_MAJOR GET "${luxcore_json}" Version major)
-STRING(JSON LUXCORE_VERSION_MINOR GET "${luxcore_json}" Version minor)
-STRING(JSON LUXCORE_VERSION_BUGFIX GET "${luxcore_json}" Version bugfix)
-MESSAGE(STATUS "Building LuxCore ${LUXCORE_VERSION_MAJOR}.${LUXCORE_VERSION_MINOR}.${LUXCORE_VERSION_BUGFIX}")
-# We set LuxRays version same as LuxCore (don't know if it is judicious...)
-SET(LUXRAYS_VERSION_MAJOR ${LUXCORE_VERSION_MAJOR})
-SET(LUXRAYS_VERSION_MINOR ${LUXCORE_VERSION_MINOR})
-SET(LUXRAYS_VERSION_BUGFIX ${LUXCORE_VERSION_BUGFIX})
 
 # Fundamental settings
 # This boots up the generator:

@@ -8,23 +8,13 @@ name: LuxCore Python Wheels Releaser
 on:
   workflow_dispatch:
     inputs:
-      release-tag:
-        description: "Tag for the release"
-        required: True
-        default: v0.0.1
-        type: string
-      release-name:
-        description: "Release name"
+      release-version:
+        description: "Release version (major.minor.patch[-pre])"
         required: False
-        default: LuxCore Wheels
+        default: ''
         type: string
       allow-updates:
         description: "Update existing release (if any)"
-        required: True
-        type: boolean
-        default: True
-      prerelease:
-        description: "Prerelease"
         required: True
         type: boolean
         default: True
@@ -35,14 +25,31 @@ on:
         default: False
 
 jobs:
-  # Reminder: don't forget to update call-build-wheels commit version if you
-  # upgrade LuxCoreRender/LuxCore/.github/workflows/wheels.yml, otherwise
-  # your modifications won't be taken into account
+  check-version:
+    name: 'Check version compliance'
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ inputs.release-version != '' }}
+        shell: python
+        run: |
+          import sys
+          import re
+          version = "${{ inputs.release-version }}"
+          semver_regex = r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+          res = re.fullmatch(semver_regex, version)
+          if res:
+            print("Version number OK ('{version}')")
+          else:
+            print(f"::error::Invalid version number '{version}' - (see https://semver.org)")
+            sys.exit(1)
+
   call-build-wheels:
     name: 'Build wheels'
-    uses: LuxCoreRender/LuxCore/.github/workflows/wheels.yml@cbbdcbcd4119a981b36599a362c8792bdb7f0711
+    needs: [check-version]
+    uses: ./.github/workflows/wheels.yml
     with:
       repository: LuxCoreRender/LuxCore
+      version: ${{ inputs.release-version }}
 
   create-release:
     name: 'Create release'
@@ -55,7 +62,9 @@ jobs:
       contents: write
     steps:
       - run: |
-          echo "Creating release '${{ inputs.release-version }}'"
+          _version=${{ needs.call-build-wheels.outputs.version }}
+          echo "Creating release '${_version}'"
+          echo "RELEASE_TAG=v${_version}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
@@ -80,8 +89,8 @@ jobs:
         # Use full length commit SHA, otherwise CodeQL complains...
         uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87
         with:
-          name: "${{ inputs.release-name }} ${{ inputs.release-tag }}"
-          tag: ${{ inputs.release-tag }}
+          name: "LuxCore Wheels ${{ env.RELEASE_TAG }}"
+          tag: ${{ env.RELEASE_TAG }}
           artifacts: artifacts/*
           removeArtifacts: true
           allowUpdates: ${{ inputs.allow-updates }}
@@ -92,7 +101,7 @@ jobs:
           body: |
             ## LuxCore Python Wheels
 
-            This release is built from the following point in LuxCoreRender/LuxCore:
+            This release was built from the following point in LuxCoreRender/LuxCore:
             - Branch: ${{ needs.call-build-wheels.outputs.branch }}
             - Commit: ${{ needs.call-build-wheels.outputs.commit }}
 

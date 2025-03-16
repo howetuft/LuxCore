@@ -20,9 +20,8 @@
 #define _LUXRAYS_CFG_H
 
 // The configured options and settings for LuxRays
-
-#define LUXRAYS_VERSION_MAJOR "@LUXRAYS_VERSION_MAJOR@"
-#define LUXRAYS_VERSION_MINOR "@LUXRAYS_VERSION_MINOR@"
-#define LUXRAYS_VERSION_BUGFIX "@LUXRAYS_VERSION_BUGFIX@"
+// LUXRAYS_VERSION is now the same as LUXCORE_VERSION
+// but we conserve it for legacy compatibility
+#define LUXRAYS_VERSION "@LUXCORE_VERSION@"
 
 #endif	/* _LUXRAYS_CFG_H */

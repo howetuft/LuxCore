@@ -238,7 +238,7 @@ string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderC
 void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig) {
 	const string kernelHash = GetCachedKernelsHash(renderConfig);
 
-	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
 	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
 	const string fileName = filePath.generic_string();
 
@@ -260,7 +260,7 @@ void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig)
 bool PathOCLBaseRenderEngine::HasCachedKernels(const RenderConfig &renderConfig) {
 	const string kernelHash = GetCachedKernelsHash(renderConfig);
 
-	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
 	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
 
 	return boost::filesystem::exists(filePath);

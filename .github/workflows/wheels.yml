@@ -22,6 +22,9 @@ on:
         required: false
         default: ''
         type: string
+      version:
+        description: 'The version to build - must comply to semver, or blank for default'
+        type: string
     outputs:
       commit:
         description: "The commit that has been checked out"
@@ -32,6 +35,9 @@ on:
       attestation-url:
         description: "The url to the attestations"
         value: ${{ jobs.attest-wheels.outputs.attestation-url }}
+      version:
+        description: "The version actually built"
+        value: ${{ jobs.build-wheels.outputs.version }}
   push:
 
 jobs:
@@ -61,6 +67,7 @@ jobs:
     outputs:
       commit: ${{ steps.current-commit.outputs.commit }}
       branch: ${{ steps.current-commit.outputs.branch }}
+      version: ${{ steps.output-version.outputs.version }}
 
     steps:
 
@@ -197,6 +204,32 @@ jobs:
             base = '${{ env.WORKSPACE }}/out/dependencies/full_deploy/host/m4/1.4.19/Release/'
             core.exportVariable('M4', base + arch + '/bin/m4')
 
+      - name: Export version for scikit-build-core
+        shell: python
+        run: |
+          import json
+          if (input_version := "${{ inputs.release-version }}"):
+            result = input_version
+          else:
+            with open("luxcore.json") as in_file:
+              default_version = json.load(in_file)["DefaultVersion"]
+            result = ".".join(default_version[i] for i in ("major", "minor", "patch"))
+            if (prerelease := default_version["prerelease"]):
+              result = f"{result}-{prerelease}"
+
+          print(f"Version: {result}")
+
+          with open("SKVERSION", "w+") as out_file:
+            out_file.write(result)
+
+      - name: Output version
+        id: output-version
+        shell: bash
+        run: |
+          _version=$(cat SKVERSION)
+          echo "version=${_version}" >> "$GITHUB_OUTPUT"
+
+
       # Build wheel
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
@@ -208,7 +241,7 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_${{ env.GLIBC_VERSION }}_x86_64
           CIBW_ENVIRONMENT: >
-            SKBUILD_CMAKE_ARGS='--preset ${{ env.CONAN_PRESET }};-G Ninja;--log-level=VERBOSE'
+            SKBUILD_CMAKE_ARGS='--preset ${{ env.CONAN_PRESET }};-G Ninja;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }}'
             SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             LUX_GENERATOR='Ninja'
           CIBW_ENVIRONMENT_PASS_LINUX: |

@@ -1,8 +1,9 @@
 {
-  "Version": {
+  "DefaultVersion": {
     "major": "2",
     "minor": "10",
-    "bugfix": "0"
+    "patch": "0",
+    "prerelease": "dev0"
   },
   "Dependencies": {
     "user": "LuxCoreRender",
