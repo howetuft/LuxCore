@@ -46,7 +46,7 @@ jobs:
   call-build-wheels:
     name: 'Build wheels'
     needs: [check-version]
-    uses: ./.github/workflows/wheels.yml
+    uses: ./.github/workflows/wheel-builder.yml
     with:
       repository: LuxCoreRender/LuxCore
       version: ${{ inputs.release-version }}
