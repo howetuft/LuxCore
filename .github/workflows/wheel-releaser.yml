@@ -41,7 +41,12 @@ on:
 
 jobs:
   call-build-wheels:
-    uses: ./.github/workflows/wheels.yml
+    name: 'Build wheels'
+    needs: [check-version]
+    uses: ./.github/workflows/wheel-builder.yml
+    with:
+      repository: LuxCoreRender/LuxCore
+      version: ${{ inputs.release-version }}
 
   create-release:
     name: 'Create release'
