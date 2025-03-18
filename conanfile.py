@@ -5,11 +5,15 @@
 from pathlib import Path
 import io
 import os
+import json
 
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.env import VirtualBuildEnv
 
+with open("luxcore.json") as config:
+    config_json = json.load(config)
+    LUXDEPS_VERSION = config_json["Dependencies"]["release"]
 
 class LuxCore(ConanFile):
     name = "luxcore"
@@ -17,7 +21,7 @@ class LuxCore(ConanFile):
     user = "luxcore"
     channel = "luxcore"
 
-    requires = "luxcoredeps/2.10.0@luxcore/luxcore"
+    requires = f"luxcoredeps/{LUXDEPS_VERSION}@luxcore/luxcore"
     tool_requires = "ninja/[*]"
     settings = "os", "compiler", "build_type", "arch"
 

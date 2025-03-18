@@ -68,7 +68,7 @@ def build_url(user, release):
         "LuxCoreDeps",
         "releases",
         "download",
-        release,
+        f"v{release}",
         f"luxcore-deps-{suffix}.zip"
     )
 
@@ -196,10 +196,9 @@ def main():
         )
 
         # Initialize
-        url = build_url(
-            settings["Dependencies"]["user"],
-            settings["Dependencies"]["release"],
-        )
+        user = settings["Dependencies"]["user"]
+        release = settings["Dependencies"]["release"]
+        url = build_url(user, release)
 
         # Download and unzip
         if not args.local:
@@ -237,7 +236,7 @@ def main():
         # Installing profiles
         logger.info("Installing profiles")
         run_conan(
-            ["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"]
+            ["config", "install-pkg", f"luxcoreconf/{release}@luxcore/luxcore"]
         )  # TODO version as a param
 
         # Generate & deploy
