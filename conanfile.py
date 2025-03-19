@@ -126,6 +126,7 @@ class LuxCore(ConanFile):
             tc.presets_build_environment = buildenv.environment()
 
         tc.cache_variables["SPDLOG_FMT_EXTERNAL_HO"] = True
+        tc.cache_variables["LUXCOREDEPS_VERSION"] = str(self.dependencies["luxcoredeps"].ref.version)
 
         tc.generate()
 
