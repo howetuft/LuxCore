@@ -59,6 +59,21 @@ endif()
 
 SET(LUXCORE_VERSION "${_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
 
+# Dependencies check
+STRING(JSON REQUIRED_LUXCOREDEPS_VERSION GET "${luxcore_json}" Dependencies release)
+MESSAGE(STATUS "LuxCore Dependencies - Provided version: ${LUXCOREDEPS_VERSION}")
+MESSAGE(STATUS "LuxCore Dependencies - Required version: ${REQUIRED_LUXCOREDEPS_VERSION}")
+IF(NOT ${REQUIRED_LUXCOREDEPS_VERSION} VERSION_EQUAL ${LUXCOREDEPS_VERSION})
+  MESSAGE(WARNING "\
+LuxCore Dependencies - Provided version does not match required version!\n\
+This may result in build errors or undefined behavior.\n\
+You should try to update dependencies ('make deps').\
+  ")
+ENDIF()
+
+
+
+
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
@@ -206,7 +221,6 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(imgui)
 find_package(glfw3)
 find_package(imguifiledialog)
-
 
 # Include embedded dependencies
 
