@@ -143,36 +143,6 @@ else()
   message(STATUS "Intel OIDN support: enabled")
 endif()
 
-# Build type
-# Detect whether we're using a single config or multi config generator and
-# configure it:
-
-set(supported_build_variants "Debug" "Release")
-unset(CMAKE_CONFIGURATION_TYPES CACHE)
-
-if (CMAKE_CONFIGURATION_TYPES)
-
-  message(STATUS "Multi-config generator detected")
-
-  # Hard-wire supported configurations:
-
-  set(CMAKE_CONFIGURATION_TYPES
-    ${supported_build_variants} CACHE INTERNAL "-" FORCE)
-else()
-  message(STATUS "Single-config generator detected")
-
-  # For generators like make, cmake needs to know which variant to use
-  # so let's have a drop-down selector for it in the GUI:
-
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration")
-  set_property(
-    CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${supported_build_variants}
-  )
-
-  message(STATUS "Using build variant: " ${CMAKE_BUILD_TYPE})
-
-endif()
-
 include(GNUInstallDirs)
 
 # Set path to modules (keep it after project declaration)

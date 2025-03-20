@@ -135,4 +135,4 @@ class LuxCore(ConanFile):
         cd.generate()
 
     def layout(self):
-        cmake_layout(self, generator="Ninja")
+        cmake_layout(self, generator="Ninja Multi-Config")

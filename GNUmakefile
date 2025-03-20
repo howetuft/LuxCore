@@ -29,10 +29,10 @@ all: luxcore pyluxcore luxcoreui luxcoreconsole
 
 $(build-targets): %: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target $*
-	cmake --install $(BUILD_DIR)/Release --prefix $(INSTALL_DIR) --component $*
+	cmake --install $(BUILD_DIR) --prefix $(INSTALL_DIR) --component $*
 
 config:
-	cmake $(CONFIG_CMAKE_ARGS) --preset conan-release \
+	cmake $(CONFIG_CMAKE_ARGS) --preset conan-default \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
 		-S $(SOURCE_DIR)
 
@@ -40,7 +40,7 @@ clean:
 	cmake --build --preset conan-release --target clean
 
 install:
-	cmake --install $(BUILD_DIR)/Release --prefix $(BUILD_DIR)
+	cmake --install $(BUILD_DIR) --prefix $(BUILD_DIR) --preset conan-release
 
 # Preset-independant targets
 clear:
@@ -51,3 +51,4 @@ deps:
 
 list-presets:
 	cmake --list-presets
+	cmake --list-presets=build

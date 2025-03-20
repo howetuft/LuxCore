@@ -240,6 +240,7 @@ def main():
         )  # TODO version as a param
 
         # Generate & deploy
+        # About release/debug mixing, see https://github.com/conan-io/conan/issues/12656
         logger.info("Generating")
         main_block = [
             "install",
@@ -248,11 +249,21 @@ def main():
             "--deployer=full_deploy",
             f"--deployer-folder={OUTPUT_DIR}/dependencies",
             f"--output-folder={OUTPUT_DIR}",
-            "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
+            "--settings=build_type=Release",
+            "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja Multi-Config",
             "--conf:all=tools.system.package_manager:sudo=True",
         ]
-        statement = main_block + ["."]
+        statement = main_block + ["--settings=&:build_type=Debug", "."]
         run_conan(statement)
+        statement = main_block + ["--settings=&:build_type=Release", "."]
+        run_conan(statement)
+        statement = main_block + ["--settings=&:build_type=RelWithDebInfo", "."]
+        run_conan(statement)
+        statement = main_block + ["--settings=&:build_type=MinSizeRel", "."]
+        run_conan(statement)
+
+        subprocess.run(["cmake", "--list-presets=build"])
+        print()
 
     logger.info("END")
 
