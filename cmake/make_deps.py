@@ -170,9 +170,30 @@ def main():
     # Get optional command-line parameters
     # Nota: --local option is used by LuxCoreDeps CI
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--local", type=Path)
-    parser.add_argument("-o", "--output", type=Path)
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument(
+        "-l",
+        "--local",
+        type=Path,
+        help="Use local dependency set (debug)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="Output directory",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print additional information",
+    )
+    parser.add_argument(
+        "-e",
+        "--extended",
+        action="store_true",
+        help="Extended presets (including RelWithDebInfo & MinSizeRel)",
+    )
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
@@ -252,7 +273,10 @@ def main():
             "--settings=build_type=Release",
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja Multi-Config",
         ]
-        for build_type in ("Debug", "Release", "RelWithDebInfo", "MinSizeRel"):
+        build_types = ["Debug", "Release"]
+        if args.extended:
+            build_types += ["RelWithDebInfo", "MinSizeRel"]
+        for build_type in build_types:
             logger.info(f"Generating '{build_type}'")
             end_block = [f"--settings=&:build_type={build_type}", "."]
             run_conan(main_block + end_block)
