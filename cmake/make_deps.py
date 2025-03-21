@@ -241,7 +241,7 @@ def main():
 
         # Generate & deploy
         # About release/debug mixing, see https://github.com/conan-io/conan/issues/12656
-        logger.info("Generating")
+        logger.info("Generating...")
         main_block = [
             "install",
             "--build=missing",
@@ -252,18 +252,14 @@ def main():
             "--settings=build_type=Release",
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja Multi-Config",
         ]
-        statement = main_block + ["--settings=&:build_type=Debug", "."]
-        run_conan(statement)
-        statement = main_block + ["--settings=&:build_type=Release", "."]
-        run_conan(statement)
-        statement = main_block + ["--settings=&:build_type=RelWithDebInfo", "."]
-        run_conan(statement)
-        statement = main_block + ["--settings=&:build_type=MinSizeRel", "."]
-        run_conan(statement)
+        for build_type in ("Debug", "Release", "RelWithDebInfo", "MinSizeRel"):
+            logger.info(f"Generating '{build_type}'")
+            end_block = [f"--settings=&:build_type={build_type}", "."]
+            run_conan(main_block + end_block)
 
         # Show presets
         subprocess.run(["cmake", "--list-presets=build"])
-        print()
+        print("", flush=True)
 
     logger.info("END")
 
