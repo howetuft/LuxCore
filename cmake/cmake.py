@@ -134,7 +134,7 @@ def build_and_install(args):
 
 def get_presets(preset_type: PresetType):
     """CMake get presets for a given type."""
-    preset_type = str(preset_type)
+    preset_type = str(preset_type.value)
     cmd = [f"--list-presets={preset_type}"]
     res = run_cmake(cmd, capture_output=True, text=True)
     presets = [
