@@ -14,7 +14,7 @@ python_version_minor=$(python -c 'import sys; print(sys.version_info[1])')
 
 act workflow_dispatch \
   --action-offline-mode \
-  --workflows ".github/workflows/wheels.yml" \
+  --workflows ".github/workflows/wheel-builder.yml" \
   -s GITHUB_TOKEN="$(gh auth token)" \
   --matrix os:ubuntu-latest \
   --matrix python-minor:${python_version_minor} \

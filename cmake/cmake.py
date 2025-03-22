@@ -16,7 +16,7 @@ import argparse
 from pathlib import Path
 from functools import cache
 import re
-from enum import StrEnum
+from enum import Enum
 
 import make_deps
 
@@ -34,7 +34,7 @@ logger = logging.getLogger("LuxCore Build")
 
 
 # Preset stuff
-class PresetType(StrEnum):
+class PresetType(Enum):
     """CMake preset types."""
 
     CONFIG = "configure"
