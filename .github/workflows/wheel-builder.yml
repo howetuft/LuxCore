@@ -2,9 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# This action is the 1st part of a larger toolchain. You will find the other
-# components in LuxCoreRender/LuxCoreWheels repository
-
 
 name: LuxCore Python Wheels Builder
 
@@ -243,7 +240,6 @@ jobs:
           CIBW_ENVIRONMENT: >
             SKBUILD_CMAKE_ARGS='--preset conan-default;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }};-G Ninja Multi-Config'
             SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-            #LUX_GENERATOR='Ninja'
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -336,9 +332,6 @@ jobs:
         with:
           path: conan-cache
           key: deps-${{ matrix.os }}-${{ matrix.python-minor}}-${{ hashFiles('**/conan-cache') }}
-
-      #- name: Setup tmate session
-        #uses: mxschmitt/action-tmate@v3
 
       #- name: Setup tmate session (debug)
         #if: ${{ failure() }}
