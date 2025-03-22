@@ -5,47 +5,38 @@ REM Convenience wrapper for CMake commands
 REM Script command (1st parameter)
 set COMMAND=%1
 
-echo Build cmake args: %BUILD_CMAKE_ARGS%
-
-if "%OUTPUT_DIR%" == "" (
-    set OUTPUT_DIR=out
-)
-
-set BUILD_DIR=%OUTPUT_DIR%\build
-set INSTALL_DIR=%OUTPUT_DIR%\install
-
-set SOURCE_DIR=%cd%
 
 if "%LUX_PYTHON%" == "" (
     set LUX_PYTHON=python
 )
 
+set LUX_CMAKE="%LUX_PYTHON%" -u cmake\cmake.py
+
 if "%COMMAND%" == "" (
-    call :Luxcore
-    call :InvokeCMakeInstall luxcore
-    call :LuxcoreUI
-    call :InvokeCMakeInstall luxcoreui
-    call :LuxcoreConsole
-    call :InvokeCMakeInstall luxcoreconsole
-    call :PyLuxcore
+    call :Config
+    call :BuildAndInstall luxcore
+    call :BuildAndInstall luxcoreui
+    call :BuildAndInstall luxcoreconsole
+    call :BuildAndInstall pyluxcore
 ) else if "%COMMAND%" == "luxcore" (
-    call :Luxcore
-    call :InvokeCMakeInstall luxcore
+    call :Config
+    call :BuildAndInstall luxcore
 ) else if "%COMMAND%" == "pyluxcore" (
-    call :PyLuxcore
-    call :InvokeCMakeInstall pyluxcore
+    call :Config
+    call :BuildAndInstall luxcore
+    call :BuildAndInstall pyluxcore
 ) else if "%COMMAND%" == "luxcoreui" (
-    call :LuxcoreUI
-    call :InvokeCMakeInstall luxcore
-    call :InvokeCMakeInstall luxcoreui
+    call :Config
+    call :BuildAndInstall luxcore
+    call :Build luxcoreui
 ) else if "%COMMAND%" == "luxcoreconsole" (
-    call :LuxcoreConsole
-    call :InvokeCMakeInstall luxcore
-    call :InvokeCMakeInstall luxcoreconsole
+    call :Config
+    call :BuildAndInstall luxcore
+    call :BuildAndInstall luxcoreconsole
 ) else if "%COMMAND%" == "config" (
     call :Config
 ) else if "%COMMAND%" == "install" (
-    call :InvokeCMakeInstall
+    call :Install
 ) else if "%COMMAND%" == "clean" (
     call :Clean
 ) else if "%COMMAND%" == "clear" (
@@ -59,71 +50,36 @@ if "%COMMAND%" == "" (
 )
 exit /B
 
-:InvokeCMakeConfig
-setlocal
-for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
-set PRESET=conan-release
-echo CMake preset: %PRESET%
-cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR% -G Ninja
-endlocal
+:Deps
+call %LUX_CMAKE% deps
 goto :EOF
 
-:InvokeCMakeBuild
-setlocal
-for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
-set PRESET=conan-release
-echo CMake preset: %PRESET%
-set TARGET=%1
-cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
-endlocal
+:ListPresets
+call %LUX_CMAKE% list-presets
 goto :EOF
 
-:InvokeCMakeInstall
+:Config
+call %LUX_CMAKE% config
+goto :EOF
+
+:BuildAndInstall
+call %LUX_CMAKE% build-and-install %1
+goto :EOF
+
+:Install
 IF "%~1" == "" (
-    cmake --install %BUILD_DIR%/Release --prefix %BUILD_DIR%
+    %LUX_CMAKE% all
 ) else (
-    cmake --install %BUILD_DIR%/Release --prefix %BUILD_DIR% --component %1
+    %LUX_CMAKE% %1
 )
 goto :EOF
 
 :Clean
-call :InvokeCMakeBuild clean
-goto :EOF
-
-:Config
-call :InvokeCMakeConfig %CONAN_PRESET%
-goto :EOF
-
-:Luxcore
-call :Config
-call :InvokeCMakeBuild luxcore
-goto :EOF
-
-:PyLuxcore
-call :Config
-call :InvokeCMakeBuild pyluxcore
-goto :EOF
-
-:LuxcoreUI
-call :Config
-call :InvokeCMakeBuild luxcoreui
-goto :EOF
-
-:LuxcoreConsole
-call :Config
-call :InvokeCMakeBuild luxcoreconsole
+call %LUX_CMAKE% clean
 goto :EOF
 
 :Clear
-rmdir /S /Q %BUILD_DIR%
-goto :EOF
-
-:Deps
-call python -u cmake\make_deps.py
-goto :EOF
-
-:ListPresets
-cmake --list-presets
+call %LUX_CMAKE% clear
 goto :EOF
 
 :EOF
