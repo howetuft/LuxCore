@@ -7,6 +7,7 @@
 import os
 import tempfile
 from urllib.request import urlretrieve
+from urllib.parse import urlparse, urlsplit
 from pathlib import Path
 from zipfile import ZipFile
 import subprocess
@@ -33,7 +34,6 @@ URL_SUFFIXES = {
     "macOS-ARM64": "macos-14",
     "macOS-X64": "macos-13",
 }
-
 
 def find_platform():
     """Find current platform."""
@@ -113,8 +113,35 @@ def run_conan(args, **kwargs):
 
 def download(url, destdir):
     """Download file from url into destdir."""
-    filename = destdir / "deps.zip"
-    local_filename, _ = urlretrieve(url, filename=filename)
+    # Download artifact
+    destdir = Path(destdir)
+    filename = urlparse(url).path.split('/')[-1]
+    filepath = destdir / filename
+    local_filename, _ = urlretrieve(url, filename=filepath)
+
+    # Check attestation
+    logger.info("Checking '%s'", local_filename)
+    gh_cmd = [
+        shutil.which("gh"),
+        "attestation",
+        "verify",
+        "-oLuxCoreRender",
+        filepath,
+    ]
+    with subprocess.Popen(
+            gh_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+    ) as proc:
+        if (msg := proc.stdout.read()):
+            logger.info(msg)
+
+    if proc.returncode:
+        logger.error("SIGNATURE ERROR")
+
+
+    # Unzip
     with ZipFile(local_filename) as downloaded:
         downloaded.extractall(destdir)
 
