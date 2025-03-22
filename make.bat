@@ -79,6 +79,7 @@ call %LUX_CMAKE% clean
 goto :EOF
 
 :Clear
+REM rmdir /S /Q
 call %LUX_CMAKE% clear
 goto :EOF
 
