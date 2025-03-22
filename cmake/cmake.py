@@ -179,7 +179,7 @@ def clear(_):
         directory = BINARY_DIR / subdir
         logger.info("Removing '%s'", directory)
         try:
-            shutil.rmtree(directory)
+            shutil.rmtree(directory, ignore_errors=True)
         except FileNotFoundError:
             logger.debug("'%s' not found", directory)
 
