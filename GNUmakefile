@@ -1,54 +1,40 @@
 # Credits to Blender Cycles
 
-# TODO Make debug targets
-#
-ifndef BUILD_CMAKE_ARGS
-	BUILD_CMAKE_ARGS:=
-endif
-
-ifndef OUTPUT_DIR
-	OUTPUT_DIR:=out
-endif
-
-BUILD_DIR = ${OUTPUT_DIR}/build
-INSTALL_DIR = ${OUTPUT_DIR}/install
-
-SOURCE_DIR:=$(shell pwd)
+# Environment variables that control the build:
+#   LUX_SOURCE_DIR - The path to the top level of the source tree (default: .)
+#   LUX_BINARY_DIR - The path to the top level of the build tree (default: ./out)
+#   LUX_BUILD_TYPE - Specifies the build type (default: Release)
 
 
 ifndef PYTHON
 	PYTHON:=python3
 endif
 
+LUX-CMAKE = $(PYTHON) cmake/cmake.py
 
 build-targets = pyluxcore luxcoreui luxcoreconsole luxcore
 
-.PHONY: clean deps config luxcore pyluxcore luxcoreui luxcoreconsole
+.PHONY: deps list-presets config luxcore pyluxcore luxcoreui luxcoreconsole install clean clear
 
 all: luxcore pyluxcore luxcoreui luxcoreconsole
 
-$(build-targets): %: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target $*
-	cmake --install $(BUILD_DIR) --prefix $(INSTALL_DIR) --component $*
-
-config:
-	cmake $(CONFIG_CMAKE_ARGS) --preset conan-default \
-		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
-		-S $(SOURCE_DIR)
-
-clean:
-	cmake --build --preset conan-release --target clean
-
-install:
-	cmake --install $(BUILD_DIR) --prefix $(BUILD_DIR) --preset conan-release
-
-# Preset-independant targets
-clear:
-	rm -rf $(OUTPUT_DIR)
-
 deps:
-	$(PYTHON) cmake/make_deps.py -o ${OUTPUT_DIR}
+	$(LUX-CMAKE) deps
 
 list-presets:
-	cmake --list-presets
-	cmake --list-presets=build
+	$(LUX-CMAKE) list-presets
+
+config:
+	$(LUX-CMAKE) config
+
+$(build-targets): %: config
+	$(LUX-CMAKE) build-and-install $*
+
+install:
+	$(LUX-CMAKE) install all
+
+clean:
+	$(LUX-CMAKE) clean
+
+clear:
+	$(LUX-CMAKE) clear

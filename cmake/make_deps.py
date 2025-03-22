@@ -152,7 +152,7 @@ def copy_conf(dest):
 
 
 
-def main():
+def main(call_args=None):
     """Entry point."""
     global OUTPUT_DIR
 
@@ -194,7 +194,10 @@ def main():
         action="store_true",
         help="Extended presets (including RelWithDebInfo & MinSizeRel)",
     )
-    args = parser.parse_args()
+    if call_args is None:
+        args = parser.parse_args()  # Parse command line
+    else:
+        args = parser.parse_args(call_args)
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     if args.output:
