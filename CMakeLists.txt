@@ -293,7 +293,9 @@ endif()
 #
 ################################################################################
 
+if(LINUX)
 include(InstallRequiredSystemLibraries)
+endif()
 
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING.txt")
 set(CPACK_PACKAGE_NAME "LuxCore")
@@ -305,6 +307,10 @@ set(CPACK_THREADS 0)
 
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)  # Install: per-component
 set(CPACK_COMPONENTS_GROUPING "ALL_COMPONENTS_IN_ONE") # Archive: all-in-one
-set(CPACK_COMPONENTS_ALL "luxcore;luxcoreui;luxcoreconsole;Unspecified")
+if(LINUX)
+    set(CPACK_COMPONENTS_ALL "luxcore;luxcoreui;luxcoreconsole;Unspecified")
+else()
+    set(CPACK_COMPONENTS_ALL "luxcore;luxcoreui;luxcoreconsole")
+endif()
 
 include(CPack)
