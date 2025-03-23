@@ -35,6 +35,19 @@ URL_SUFFIXES = {
     "macOS-X64": "macos-13",
 }
 
+
+class Colors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+
 def find_platform():
     """Find current platform."""
     system = platform.system()
@@ -69,7 +82,7 @@ def build_url(user, release):
         "releases",
         "download",
         f"v{release}",
-        f"luxcore-deps-{suffix}.zip"
+        f"luxcore-deps-{suffix}.zip",
     )
 
     return "/".join(url)
@@ -115,31 +128,39 @@ def download(url, destdir):
     """Download file from url into destdir."""
     # Download artifact
     destdir = Path(destdir)
-    filename = urlparse(url).path.split('/')[-1]
+    filename = urlparse(url).path.split("/")[-1]
     filepath = destdir / filename
     local_filename, _ = urlretrieve(url, filename=filepath)
 
     # Check attestation
     logger.info("Checking '%s'", local_filename)
-    gh_cmd = [
-        shutil.which("gh"),
-        "attestation",
-        "verify",
-        "-oLuxCoreRender",
-        filepath,
-    ]
-    with subprocess.Popen(
-            gh_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-    ) as proc:
-        if (msg := proc.stdout.read()):
-            logger.info(msg)
 
-    if proc.returncode:
-        logger.error("SIGNATURE ERROR")
-
+    gh_app = shutil.which("gh")
+    if not gh_app:
+        logger.error(Colors.FAIL + "SIGNATURE CHECKING ERROR" + Colors.ENDC)
+        msg = "Cannot find 'gh'application - Dependencies origin cannot be checked."
+        logger.error(Colors.FAIL + msg + Colors.ENDC)
+    else:
+        gh_cmd = [
+            gh_app,
+            "attestation",
+            "verify",
+            "-oLuxCoreRender",
+            "--format",
+            "json",
+            filepath,
+        ]
+        try:
+            gh_output = subprocess.check_output(gh_cmd, text=True)
+        except subprocess.CalledProcessError as err:
+            logger.error(Colors.FAIL + "SIGNATURE CHECKING ERROR" + Colors.ENDC)
+            logger.error("gh return code: %s", err.returncode)
+            logger.error(err.output)
+        else:
+            logger.info(Colors.OKGREEN + "'%s': found certificate - OK" + Colors.ENDC, filename)
+            signature, *_ = json.loads(gh_output)
+            certificate = signature["verificationResult"]["signature"]["certificate"]
+            logger.debug(json.dumps(certificate, indent=2))
 
     # Unzip
     with ZipFile(local_filename) as downloaded:
@@ -178,7 +199,6 @@ def copy_conf(dest):
     shutil.copy(source, dest)
 
 
-
 def main(call_args=None):
     """Entry point."""
     global OUTPUT_DIR
@@ -186,7 +206,7 @@ def main(call_args=None):
     # Set-up logger
     logger.setLevel(logging.INFO)
     logging.basicConfig(level=logging.INFO)
-    logger.info("BEGIN")
+    logger.info(Colors.OKBLUE + "BEGIN" + Colors.ENDC)
 
     # Get settings
     logger.info("Reading settings")
@@ -258,7 +278,6 @@ def main(call_args=None):
         else:
             logger.info("Using local dependency set ('%s')", args.local)
 
-
         # Clean
         logger.info("Cleaning local cache")
         res = run_conan(["remove", "-c", "*"], capture_output=True)
@@ -286,9 +305,7 @@ def main(call_args=None):
 
         # Installing profiles
         logger.info("Installing profiles")
-        run_conan(
-            ["config", "install-pkg", f"luxcoreconf/{release}@luxcore/luxcore"]
-        )
+        run_conan(["config", "install-pkg", f"luxcoreconf/{release}@luxcore/luxcore"])
 
         # Generate & deploy
         # About release/debug mixing, see https://github.com/conan-io/conan/issues/12656
@@ -315,7 +332,7 @@ def main(call_args=None):
         subprocess.run(["cmake", "--list-presets=build"])
         print("", flush=True)
 
-    logger.info("END")
+    logger.info(Colors.OKBLUE + "END" + Colors.ENDC)
 
 
 if __name__ == "__main__":
