@@ -33,6 +33,9 @@ $(build-targets): %: config
 install:
 	$(LUX-CMAKE) install all
 
+package:
+	$(LUX-CMAKE) build-and-install package
+
 clean:
 	$(LUX-CMAKE) clean
 

@@ -28,13 +28,15 @@ if "%COMMAND%" == "" (
 ) else if "%COMMAND%" == "luxcoreui" (
     call :Config
     call :BuildAndInstall luxcore
-    call :Build luxcoreui
+    call :BuildAndInstall luxcoreui
 ) else if "%COMMAND%" == "luxcoreconsole" (
     call :Config
     call :BuildAndInstall luxcore
     call :BuildAndInstall luxcoreconsole
 ) else if "%COMMAND%" == "config" (
     call :Config
+) else if "%COMMAND%" == "package" (
+    call :BuildAndInstall package
 ) else if "%COMMAND%" == "install" (
     call :Install
 ) else if "%COMMAND%" == "clean" (

@@ -31,7 +31,7 @@ cmake_policy(VERSION 3.25)
 
 MESSAGE(STATUS "Building LuxCore ${LUXCORE_VERSION}")
 
-project(LuxRays)
+project(LuxCore)
 
 # Version computation
 #
@@ -286,3 +286,25 @@ add_subdirectory(samples/luxcoreui)
 if(LUXCORE_TESTS)
   add_subdirectory(pyunittests)
 endif()
+
+################################################################################
+#
+# Pack
+#
+################################################################################
+
+include(InstallRequiredSystemLibraries)
+
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING.txt")
+set(CPACK_PACKAGE_NAME "LuxCore")
+set(CPACK_PACKAGE_VENDOR "LuxCoreRender")
+set(CPACK_PACKAGE_VERSION "${LUXCORE_VERSION}")
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_STRIP_FILES TRUE)
+set(CPACK_THREADS 0)
+
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)  # Install: per-component
+set(CPACK_COMPONENTS_GROUPING "ALL_COMPONENTS_IN_ONE") # Archive: all-in-one
+set(CPACK_COMPONENTS_ALL "luxcore;luxcoreui;luxcoreconsole;Unspecified")
+
+include(CPack)
