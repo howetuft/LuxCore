@@ -51,7 +51,8 @@ Nota: second `make` statement can also name a specific target. Examples:
 - `make clean`: clean build tree (delete intermediate files)
 - `make clear`: remove build tree
 - `make config`: configure/reconfigure project
-- `make deps`: update dependencies: `make deps`
+- `make deps`: update dependencies
+- `make package`: create a package (nota bene: `make` must have been run before)
 
 
 ### LuxCore library
