@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       release-tag:
-        description: "Tag of the release to publish"
+        description: "Version of the release to publish"
         required: True
-        default: v0.0.1
+        default: 0.0.1
         type: string
       test:
         description: "Publish on Pypi test"
