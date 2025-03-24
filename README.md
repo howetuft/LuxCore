@@ -46,6 +46,11 @@ configure CMake and start the build.
 Nota: second `make` statement can also name a specific target. Examples:
 `make luxcore` `make pyluxcore` `make luxcoreconsole` `make luxcoreui`
 
+#### Build type
+
+Build type can be controlled by environment variable `LUX_BUILD_TYPE`.
+Available build types are `Release` and `Debug` (case sensitive). Default is `Release`.
+
 #### Other commands
 
 - `make clean`: clean build tree (delete intermediate files)
@@ -70,9 +75,9 @@ the [`samples/luxcoreui`](samples/luxcoreui) directory.
 To see how it works, just run `luxcoreui` from the root directory:
 
 ```
-./out/install/bin/luxcoreui scenes/cornell/cornell.cfg
+./out/install/Release/bin/luxcoreui scenes/cornell/cornell.cfg
 ```
-
+(assuming you selected Release as a build type)
 ### LuxCoreConsole
 
 This is a simple example of a command line renderer written using LuxCore API and it is
@@ -80,7 +85,7 @@ available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
 Just run `luxcoreconsole` from the root directory with:
 
 ```
-./out/install/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
+./out/install/Release/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
 ```
 
 ### Authors
