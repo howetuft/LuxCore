@@ -13,6 +13,7 @@
 python_version_minor=$(python -c 'import sys; print(sys.version_info[1])')
 
 act workflow_dispatch \
+  --pull \
   --action-offline-mode \
   --workflows ".github/workflows/wheel-builder.yml" \
   -s GITHUB_TOKEN="$(gh auth token)" \

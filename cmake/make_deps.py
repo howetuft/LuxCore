@@ -7,7 +7,7 @@
 import os
 import tempfile
 from urllib.request import urlretrieve
-from urllib.parse import urlparse, urlsplit
+from urllib.parse import urlparse
 from pathlib import Path
 from zipfile import ZipFile
 import subprocess
@@ -18,11 +18,11 @@ import json
 import platform
 import sys
 from functools import cache
+from dataclasses import dataclass
 
 
 CONAN_ALL_PACKAGES = '"*"'
 
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "out")
 
 logger = logging.getLogger("LuxCore Dependencies")
 
@@ -36,7 +36,9 @@ URL_SUFFIXES = {
 }
 
 
+@dataclass
 class Colors:
+    """Colors for terminal output."""
     HEADER = "\033[95m"
     OKBLUE = "\033[94m"
     OKCYAN = "\033[96m"
@@ -135,11 +137,22 @@ def download(url, destdir):
     # Check attestation
     logger.info("Checking '%s'", local_filename)
 
-    gh_app = shutil.which("gh")
-    if not gh_app:
-        logger.error(Colors.FAIL + "SIGNATURE CHECKING ERROR" + Colors.ENDC)
-        msg = "Cannot find 'gh'application - Dependencies origin cannot be checked."
-        logger.error(Colors.FAIL + msg + Colors.ENDC)
+    if not (gh_app := shutil.which("gh")):
+        msg = (
+            Colors.WARNING,
+            "SIGNATURE CHECKING ERROR",
+            Colors.ENDC,
+        )
+        msg = "".join(msg)
+        logger.warning(msg)
+        msg = (
+            Colors.WARNING,
+            "Cannot find 'gh'application - ",
+            "Dependencies origin cannot be checked.",
+            Colors.ENDC,
+        )
+        msg = ''.join(msg)
+        logger.warning(msg)
     else:
         gh_cmd = [
             gh_app,
@@ -153,11 +166,13 @@ def download(url, destdir):
         try:
             gh_output = subprocess.check_output(gh_cmd, text=True)
         except subprocess.CalledProcessError as err:
-            logger.error(Colors.FAIL + "SIGNATURE CHECKING ERROR" + Colors.ENDC)
-            logger.error("gh return code: %s", err.returncode)
-            logger.error(err.output)
+            msg = f"{Colors.WARNING}SIGNATURE CHECKING ERROR{Colors.ENDC}"
+            logger.warning(msg)
+            logger.warning("gh return code: %s", err.returncode)
+            logger.warning(err.output)
         else:
-            logger.info(Colors.OKGREEN + "'%s': found certificate - OK" + Colors.ENDC, filename)
+            msg = f"{Colors.OKGREEN}'%s': found certificate - OK{Colors.ENDC}"
+            logger.info(msg, filename)
             signature, *_ = json.loads(gh_output)
             certificate = signature["verificationResult"]["signature"]["certificate"]
             logger.debug(json.dumps(certificate, indent=2))
@@ -201,18 +216,19 @@ def copy_conf(dest):
 
 def main(call_args=None):
     """Entry point."""
-    global OUTPUT_DIR
+    output_dir = os.getenv("output_dir", "out")
 
     # Set-up logger
     logger.setLevel(logging.INFO)
     logging.basicConfig(level=logging.INFO)
-    logger.info(Colors.OKBLUE + "BEGIN" + Colors.ENDC)
+    msg = f"{Colors.OKBLUE}BEGIN{Colors.ENDC}"
+    logger.info(msg)
 
     # Get settings
     logger.info("Reading settings")
     with open("luxcore.json", encoding="utf-8") as f:
         settings = json.load(f)
-    logger.info("Output directory: %s", OUTPUT_DIR)
+    logger.info("Output directory: %s", output_dir)
 
     # Get optional command-line parameters
     # Nota: --local option is used by LuxCoreDeps CI
@@ -248,7 +264,7 @@ def main(call_args=None):
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     if args.output:
-        OUTPUT_DIR = args.output
+        output_dir = args.output
 
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -315,8 +331,8 @@ def main(call_args=None):
             "--build=missing",
             f"--profile:all={get_profile_name()}",
             "--deployer=full_deploy",
-            f"--deployer-folder={OUTPUT_DIR}/dependencies",
-            f"--output-folder={OUTPUT_DIR}",
+            f"--deployer-folder={output_dir}/dependencies",
+            f"--output-folder={output_dir}",
             "--settings=build_type=Release",
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja Multi-Config",
         ]
@@ -324,15 +340,16 @@ def main(call_args=None):
         if args.extended:
             build_types += ["RelWithDebInfo", "MinSizeRel"]
         for build_type in build_types:
-            logger.info(f"Generating '{build_type}'")
+            logger.info("Generating '%s'", build_type)
             end_block = [f"--settings=&:build_type={build_type}", "."]
             run_conan(main_block + end_block)
 
         # Show presets
-        subprocess.run(["cmake", "--list-presets=build"])
+        subprocess.run(["cmake", "--list-presets=build"], check=False)
         print("", flush=True)
 
-    logger.info(Colors.OKBLUE + "END" + Colors.ENDC)
+    msg = Colors.OKBLUE + "END" + Colors.ENDC
+    logger.info(msg)
 
 
 if __name__ == "__main__":
