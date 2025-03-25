@@ -998,7 +998,7 @@ static void Scene_DefineMesh2(luxcore::detail::SceneImpl *scene, const string &m
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
     const py::object &cols, const py::object &alphas) {
-  Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, py::object());
+  Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, py::none());
 }
 
 static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string &meshName,
