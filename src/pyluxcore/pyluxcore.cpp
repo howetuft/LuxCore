@@ -1199,7 +1199,7 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
     const py::object &cols, const py::object &alphas) {
-  Scene_DefineMeshExt1(scene, meshName, p, vi, n, uv, cols, alphas, py::object());
+  Scene_DefineMeshExt1(scene, meshName, p, vi, n, uv, cols, alphas, py::none());
 }
 
 static void Scene_SetMeshVertexAOV(luxcore::detail::SceneImpl *scene, const string &meshName,
