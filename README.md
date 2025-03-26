@@ -1,5 +1,3 @@
-[![Build Status](https://dev.azure.com/LuxCoreRender/LuxCoreRender/_apis/build/status/LuxCoreRender.LuxCore)](https://dev.azure.com/LuxCoreRender/LuxCoreRender/_build/latest?definitionId=1)
-
 ### LuxCoreRender
 
 ![LuxCoreRender alt text](https://luxcorerender.org/wp-content/uploads/2017/12/wallpaper_lux_05_rend1b.jpg)
@@ -24,6 +22,7 @@ First, ensure you have a suitable toolchain:
 Ensure the following software is also installed and available in the PATH:
 
 - Git
+- Github CLI (for dependency signature checking: optional, but recommended)
 - Python 3
 - Conan (`pip install conan`)
 - CMake
@@ -87,7 +86,7 @@ Just run `luxcoreconsole` from the root directory with:
 ```
 ./out/install/Release/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
 ```
-
+(assuming you selected Release as a build type)
 ### Authors
 
 See AUTHORS.txt file.
