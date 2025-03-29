@@ -6,8 +6,8 @@
     "prerelease": "dev0"
   },
   "Dependencies": {
-    "user": "LuxCoreRender",
-    "release": "1.0.0-rc2"
+    "user": "howetuft",
+    "release": "1.0.0-win-no-avx"
   },
   "Build": {
     "gcc": "14",
