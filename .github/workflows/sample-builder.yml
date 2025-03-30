@@ -203,11 +203,7 @@ jobs:
         env:
           CONAN_HOME: ${{ github.workspace }}\.conan2
         run: |
-          pip install conan
-          make deps
-          make luxcoreui
-          make luxcoreconsole
-          make package
+          pip install conan && make deps && make && make package
 
       - name: Build (MacOS)
         if: runner.os == 'macOS'
