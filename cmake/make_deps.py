@@ -163,13 +163,16 @@ def download(url, destdir):
             "json",
             filepath,
         ]
+        errormsg = f"{Colors.WARNING}SIGNATURE CHECKING ERROR{Colors.ENDC}"
         try:
             gh_output = subprocess.check_output(gh_cmd, text=True)
         except subprocess.CalledProcessError as err:
-            msg = f"{Colors.WARNING}SIGNATURE CHECKING ERROR{Colors.ENDC}"
-            logger.warning(msg)
+            logger.warning(errormsg)
             logger.warning("gh return code: %s", err.returncode)
             logger.warning(err.output)
+        except OSError as err:
+            logger.warning(errormsg)
+            logger.warning(str(err))
         else:
             msg = f"{Colors.OKGREEN}'%s': found certificate - OK{Colors.ENDC}"
             logger.info(msg, filename)

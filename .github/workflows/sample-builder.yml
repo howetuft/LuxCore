@@ -126,10 +126,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.13
-      - name: Install GH CLI
-        uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
-        with:
-          gh-cli-version: 2.67.0
+
+      # TODO
+      #- name: Install GH CLI
+        #uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
+        #with:
+          #gh-cli-version: 2.67.0
 
       # Update apt: needed to install ccache-action
       - name: Update apt (Linux)
