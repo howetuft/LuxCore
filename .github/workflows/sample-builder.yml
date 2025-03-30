@@ -123,14 +123,6 @@ jobs:
                 core.exportVariable(key, value);
             }
 
-      # TODO
-      ## Update apt: needed to install ccache
-      #- name: Update apt (Linux)
-        #if: runner.os == 'Linux'
-        #shell: bash
-        #run: |
-          #sudo apt-get update -y
-
       - uses: actions/setup-python@v5
         with:
           python-version: 3.13
@@ -205,8 +197,19 @@ jobs:
           _version=$(cat SKVERSION)
           echo "version=${_version}" >> "$GITHUB_OUTPUT"
 
-      - name: Build (Windows/MacOS)
-        if: runner.os != 'Linux'
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          pip install conan
+          make deps
+          make luxcoreui
+          make luxcoreconsole
+          make package
+
+      - name: Build (MacOS)
+        if: runner.os == 'macOS'
+        shell: bash
         run: |
           pip install conan
           make deps
