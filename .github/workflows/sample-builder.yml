@@ -323,7 +323,7 @@ jobs:
           path: ${{ github.workspace }}/out/build/LuxCore-*.zip
 
   attest-samples:
-    needs: [build-wheels]
+    needs: [build-samples]
     runs-on: ubuntu-latest
     permissions:
       attestations: write
