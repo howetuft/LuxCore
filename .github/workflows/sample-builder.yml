@@ -206,12 +206,12 @@ jobs:
           echo "version=${_version}" >> "$GITHUB_OUTPUT"
 
       - name: Build (Windows/MacOS)
-        if: ${{ ! runner.os == 'Linux' }}
-        shell: bash -el {0}
+        if: runner.os != 'Linux'
         run: |
           pip install conan
           make deps
-          make
+          make luxcoreui
+          make luxcoreconsole
           make package
 
       # Build for Linux is containerized in manylinux_2_28_x86_64
