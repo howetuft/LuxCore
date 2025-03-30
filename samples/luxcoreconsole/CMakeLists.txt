@@ -31,6 +31,10 @@ if(APPLE)
   TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE expat "-framework Carbon" "-framework IOKit")
 endif()
 
+set_target_properties(luxcoreconsole PROPERTIES
+  INSTALL_RPATH "\$ORIGIN/../lib"
+)
+
 install(
     TARGETS luxcoreconsole
     RUNTIME_DEPENDENCY_SET LUXCONSOLE_DEPS
