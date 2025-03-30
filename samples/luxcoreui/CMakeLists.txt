@@ -61,7 +61,6 @@ target_link_libraries(luxcoreui PRIVATE
   imgui::imgui
   imguifiledialog::imguifiledialog
   glfw
-  opengl::opengl
 )
 install(
     TARGETS luxcoreui

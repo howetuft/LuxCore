@@ -25,7 +25,7 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.29)
 cmake_policy(VERSION 3.25)
 
 
