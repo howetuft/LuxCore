@@ -320,6 +320,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         id: upload
         with:
+          name: LuxCore-${{ runner.os }}
           path: ${{ github.workspace }}/out/build/LuxCore-*.zip
 
   attest-samples:
