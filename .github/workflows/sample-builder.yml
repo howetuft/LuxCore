@@ -200,6 +200,8 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: cmd
+        env:
+          CONAN_HOME: ${{ github.workspace }}\.conan2
         run: |
           pip install conan
           make deps
