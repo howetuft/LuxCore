@@ -55,8 +55,9 @@ set(LUXCOREUI_SRCS
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
 target_link_libraries(luxcoreui PRIVATE
+  luxrays
   boost::boost
-  luxcore_static
+  luxcore
   imgui::imgui
   imguifiledialog::imguifiledialog
   glfw
