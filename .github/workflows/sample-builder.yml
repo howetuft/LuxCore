@@ -222,6 +222,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         env:
+          CONTAINER: manylinux
           # COMMAND contains code that'll be executed in container
           COMMAND: |
             # Set Python
@@ -231,9 +232,6 @@ jobs:
             python -m pip install conan
 
             # Install toolchain (gcc, ccache...)
-            #dnf install -y epel-release
-            #dnf install -y almalinux-release-devel
-            #dnf install -y perl-IPC-Cmd perl-Digest-SHA
             CC=/opt/rh/gcc-toolset-14/root/usr/bin/gcc
             CXX=/opt/rh/gcc-toolset-14/root/usr/bin/g++
             export CMAKE_C_COMPILER_LAUNCHER=ccache
@@ -276,11 +274,10 @@ jobs:
         # run contains code that'll be executed on host side
         run: |
           # Clean (remove container if it exists)
-          CONTAINER=manylinux
           CONTAINER_LIST=$(docker container ps -a)
-          if [[ ${CONTAINER_LIST} == *${CONTAINER}* ]]; then
-            echo "Removing existing container '${CONTAINER}'"
-            docker rm --force ${CONTAINER}
+          if [[ ${CONTAINER_LIST} == *${{ env.CONTAINER }}* ]]; then
+            echo "Removing existing container '${{ env.CONTAINER }}'"
+            docker rm --force ${{ env.CONTAINER }}
           fi
 
           # Start
@@ -289,31 +286,31 @@ jobs:
           echo ""
           docker create \
             -t \
-            --name ${CONTAINER} \
+            --name ${{ env.CONTAINER }} \
             quay.io/pypa/manylinux_2_28_x86_64
-          docker start ${CONTAINER}
-          docker exec ${CONTAINER} env
+          docker start ${{ env.CONTAINER }}
+          docker exec ${{ env.CONTAINER }} env
 
           # Copy source tree
-          docker exec ${CONTAINER} sh -c "echo Copying source tree"
-          docker cp ${{ github.workspace }} ${CONTAINER}:/project
+          docker exec ${{ env.CONTAINER }} sh -c "echo Copying source tree"
+          docker cp ${{ github.workspace }} ${{ env.CONTAINER }}:/project
 
           # Copy ccache
           echo "Copying ${{ env.CCACHE_DIR }} to container"
-          docker cp ${{ env.CCACHE_DIR }}/. ${CONTAINER}:/root/.ccache
+          docker cp ${{ env.CCACHE_DIR }}/. ${{ env.CONTAINER }}:/root/.ccache
 
           # Execute COMMAND in container
-          docker exec --workdir=/project ${CONTAINER} sh -c '${{ env.COMMAND }}'
+          docker exec --workdir=/project ${{ env.CONTAINER }} sh -c '${{ env.COMMAND }}'
 
           # Copy ccache back
-          docker cp ${CONTAINER}:/root/.ccache/. ${{ env.CCACHE_DIR }}
+          docker cp ${{ env.CONTAINER }}:/root/.ccache/. ${{ env.CCACHE_DIR }}
 
           # Get artifact
           mkdir -p ${{ github.workspace }}/out/build
-          docker cp ${CONTAINER}:/project/out ${{ github.workspace }}
+          docker cp ${{ env.CONTAINER }}:/project/out ${{ github.workspace }}
 
           # Stop container
-          docker stop ${CONTAINER}
+          docker stop ${{ env.CONTAINER }}
 
       #- name: Setup tmate session (debug)
         #if: ${{ failure() }}
