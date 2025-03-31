@@ -71,9 +71,6 @@ You should try to update dependencies ('make deps').\
   ")
 ENDIF()
 
-
-
-
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
@@ -235,6 +232,31 @@ if(APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
 endif(APPLE)
 
+set(INSTALL_EXCLUDE_REGEXES
+  [[.*nvrtc.*\.alt\..*]]
+  "libgcc_s.so.1"
+  "libstdc\\+\\+.so.6"
+  "libm.so.6"
+  "libdl.so.2"
+  "librt.so.1"
+  "libc.so.6"
+  "libnsl.so.1"
+  "libutil.so.1"
+  "libpthread.so.0"
+  "libX11.so.6"
+  "libXext.so.6"
+  "libXrender.so.1"
+  "libICE.so.6"
+  "libSM.so.6"
+  "libGL.so.1"
+  "libgobject-2.0.so.0"
+  "libgthread-2.0.so.0"
+  "libglib-2.0.so.0"
+  "libresolv.so.2"
+  "libexpat.so.1"
+  "libz.so.1"
+  ".*system32/.*\\.dll"
+)
 
 ################################################################################
 #

@@ -149,11 +149,12 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set_target_properties(luxcore_static PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+message(status ${INSTALL_EXCLUDE_REGEXES})
 install(
     TARGETS luxcore
     RUNTIME_DEPENDENCIES
     PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    POST_EXCLUDE_REGEXES ${INSTALL_EXCLUDE_REGEXES}
     DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
     COMPONENT luxcore
     FRAMEWORK

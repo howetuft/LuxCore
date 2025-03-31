@@ -145,8 +145,7 @@ jobs:
         with:
           create-symlink: false
           variant: ${{ env.cache-variant }}
-          key: samples-${{ matrix.os }}-
-          restore-keys: samples-${{ matrix.os }}-
+          key: samples-${{ matrix.os }}
           max-size: 5G
           verbose: 1
 
@@ -205,7 +204,7 @@ jobs:
         env:
           CONAN_HOME: ${{ github.workspace }}\.conan2
         run: |
-          pip install conan && make deps && make && make package
+          pip install conan && make deps && make luxcore && make luxcoreui && make luxcoreconsole
 
       - name: Build (MacOS)
         if: runner.os == 'macOS'
@@ -213,9 +212,9 @@ jobs:
         run: |
           pip install conan
           make deps
+          make luxcore
           make luxcoreui
           make luxcoreconsole
-          make package
 
       # Build for Linux is containerized in manylinux_2_28_x86_64
       - name: Build (Linux)
@@ -263,9 +262,9 @@ jobs:
 
             # Build
             make deps
+            make luxcore
             make luxcoreui
             make luxcoreconsole
-            make package
 
             # Re-inspect ccache
             echo "ccache results:"
@@ -312,16 +311,30 @@ jobs:
           # Stop container
           docker stop ${{ env.CONTAINER }}
 
+          # Remove superfluous files (hack)
+          rm ${{ github.workspace }}/out/install/Release/lib/libnvrtc*.alt.*
+
       #- name: Setup tmate session (debug)
         #if: ${{ failure() }}
         #uses: mxschmitt/action-tmate@v3
+
+      - name: Install 7zip (act)
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          apt install -y p7zip-full
+
+      - name: Bundle artifacts
+        run: |
+          7z a LuxCore.7z ${{ github.workspace }}/out/install/Release
 
       # Upload artifacts
       - uses: actions/upload-artifact@v4
         id: upload
         with:
           name: LuxCore-${{ runner.os }}-${{ runner.arch }}
-          path: ${{ github.workspace }}/out/build/LuxCore-*.zip
+          path: ${{ github.workspace }}/LuxCore.7z
+          #path: ${{ github.workspace }}/out/install/Release
 
   attest-samples:
     needs: [build-samples]
