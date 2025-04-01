@@ -26,10 +26,7 @@ on:
         description: 'Build type'
         required: true
         default: 'Release'
-        type: choice
-        options:
-          - Release
-          - Debug
+        type: string
     outputs:
       commit:
         description: "The commit that has been checked out"
