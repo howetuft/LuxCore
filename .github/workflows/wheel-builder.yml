@@ -60,7 +60,7 @@ jobs:
         #os: [macos-13]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
-      BUILD_TYPE: ${{ inputs.build-type }}
+      BUILD_TYPE: ${{ inputs.build-type || 'Release' }}
       CXX_VERSION: 20
       GCC_VERSION: 14
       GLIBC_VERSION: 2_28
