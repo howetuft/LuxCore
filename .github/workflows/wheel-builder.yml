@@ -241,6 +241,7 @@ jobs:
             SKBUILD_CMAKE_ARGS='--preset conan-default;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }};-G Ninja Multi-Config'
             SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
