@@ -22,6 +22,14 @@ on:
       version:
         description: 'The version to build - must comply to semver, or blank for default'
         type: string
+      build-type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
     outputs:
       commit:
         description: "The commit that has been checked out"
@@ -55,7 +63,7 @@ jobs:
         #os: [macos-13]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
-      BUILD_TYPE: Release
+      BUILD_TYPE: ${{ inputs.build-type }}
       CXX_VERSION: 20
       GCC_VERSION: 14
       GLIBC_VERSION: 2_28
