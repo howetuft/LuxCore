@@ -7,6 +7,15 @@ name: LuxCore Python Wheels Builder
 
 on:
   workflow_dispatch:
+      inputs:
+        build-type:
+          description: 'Build type'
+          required: true
+          default: 'Release'
+          type: choice
+          options:
+            - Release
+            - Debug
   workflow_call:
     inputs:
       repository:
@@ -60,7 +69,7 @@ jobs:
         #os: [macos-13]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
-      BUILD_TYPE: ${{ inputs.build-type || 'Release' }}
+      BUILD_TYPE: ${{ github.event.inputs.build-type || 'Release' }}
       CXX_VERSION: 20
       GCC_VERSION: 14
       GLIBC_VERSION: 2_28

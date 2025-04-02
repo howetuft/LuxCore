@@ -19,6 +19,7 @@ act workflow_dispatch \
   -s GITHUB_TOKEN="$(gh auth token)" \
   --matrix os:ubuntu-latest \
   --matrix python-minor:${python_version_minor} \
+  --input build-type=Debug \
   --artifact-server-path /tmp/pyluxcore \
   --rm \
   | tee /tmp/pyluxcore.log
