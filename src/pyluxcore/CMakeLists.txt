@@ -58,6 +58,14 @@ endif(MSVC)
 # Install
 INSTALL(TARGETS pyluxcore DESTINATION pyluxcore COMPONENT pyluxcore)
 
+# Install pdb file (if msvc and debug)
+if(MSVC)
+  install(FILES "$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:pyluxcore>>"
+    DESTINATION pyluxcore
+    COMPONENT pyluxcore
+  )
+endif()
+
 # OIDN
 # oidnDenoise
 add_executable(oidn-denoise IMPORTED)
