@@ -66,6 +66,14 @@ if(MSVC)
   )
 endif()
 
+# MacOS debug info
+if(APPLE)
+  set(
+    CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT
+    "$<$<CONFIG:Debug>:dwarf-with-dsym>")
+endif()
+
+
 # OIDN
 # oidnDenoise
 add_executable(oidn-denoise IMPORTED)
