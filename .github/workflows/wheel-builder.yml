@@ -179,7 +179,7 @@ jobs:
           echo "AR=${_T}/usr/bin/ar" >> $GITHUB_ENV
           echo "RANLIB=${_T}/usr/bin/ranlib" >> $GITHUB_ENV
 
-      - name: Set MacOS deployment target
+      - name: Set MacOS deployment target and other set-ups
         if: runner.os == 'macOS'
         uses: actions/github-script@v7
         with:
@@ -198,6 +198,18 @@ jobs:
             }
             core.exportVariable('MACOSX_DEPLOYMENT_TARGET', target);
             core.exportVariable('PKG_ARCH', arch);
+
+      - name: Prepare MacOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+            _T=$(brew --prefix llvm@15)
+            echo "CXX=${_T}/bin/clang++" >> $GITHUB_ENV
+            echo "CC=${_T}/bin/clang" >> $GITHUB_ENV
+            #echo "AR=${_T}/bin/ar" >> $GITHUB_ENV
+            #echo "RANLIB=${_T}/bin/ranlib" >> $GITHUB_ENV
+            echo "LDFLAGS=-fuse-ld=$_T/bin/ld64.lld" >> $GITHUB_ENV
+
 
       # TODO: The following block is an ugly hack but, at the moment (2025-02-25),
       # scikit-build-core lacks a preset parameter, so this is the only way
