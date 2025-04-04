@@ -225,6 +225,12 @@ if(MSVC)
   # Add compile and link options
   add_compile_options("/arch:AVX" "/DWIN32" "/D_WINDOWS" "/EHsc")
   add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
+
+  # Debug information format (embedded)
+  set(
+    CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+    "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>"
+  )
 endif(MSVC)
 
 if(APPLE)
