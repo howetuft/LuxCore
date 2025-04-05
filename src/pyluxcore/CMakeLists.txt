@@ -66,6 +66,23 @@ if(MSVC)
   )
 endif()
 
+# MacOS debug info
+if(APPLE)
+  find_program(DSYMUTIL_PROGRAM dsymutil)
+  if (DSYMUTIL_PROGRAM)
+    MESSAGE(STATUS "Found dsymutil: ${DSYMUTIL_PROGRAM}")
+    foreach(lang C CXX)
+      foreach(var LINK_EXECUTABLE CREATE_SHARED_LIBRARY CREATE_SHARED_MODULE)
+        set(CMAKE_${lang}_${var} "${CMAKE_${lang}_${var}}" "${DSYMUTIL_PROGRAM} $<TARGET_FILE>")
+      endforeach()
+    endforeach()
+    install(FILES "$<$<CONFIG:Debug,RelWithDebInfo>:$<TARGET_FILE:pyluxcore>.dsym>"
+      DESTINATION pyluxcore
+      COMPONENT pyluxcore
+    )
+  endif()
+endif()
+
 # OIDN
 # oidnDenoise
 add_executable(oidn-denoise IMPORTED)

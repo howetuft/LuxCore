@@ -238,17 +238,19 @@ if(APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
   # Debug
   add_compile_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
+  add_link_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
 
-  ## MacOS debug info
-  #find_program(DSYMUTIL_PROGRAM dsymutil)
-  #if (DSYMUTIL_PROGRAM)
-    #MESSAGE(STATUS "Found dsymutil: ${DSYMUTIL_PROGRAM}")
-    #foreach(lang C CXX)
-      #foreach(var LINK_EXECUTABLE CREATE_SHARED_LIBRARY)
-        #set(CMAKE_${lang}_${var} "${CMAKE_${lang}_${var}}" "${DSYMUTIL_PROGRAM} <TARGET>")
-      #endforeach()
-    #endforeach()
-  #endif()
+  # MacOS debug info
+  find_program(DSYMUTIL_PROGRAM dsymutil)
+  if (DSYMUTIL_PROGRAM)
+    MESSAGE(STATUS "Found dsymutil: ${DSYMUTIL_PROGRAM}")
+    foreach(lang C CXX)
+      foreach(var LINK_EXECUTABLE CREATE_SHARED_LIBRARY)
+        set(CMAKE_${lang}_${var} "${CMAKE_${lang}_${var}}" "${DSYMUTIL_PROGRAM} $<TARGET_FILE:pyluxcore>")
+      endforeach()
+    endforeach()
+  endif()
+
 endif(APPLE)
 
 set(INSTALL_EXCLUDE_REGEXES
