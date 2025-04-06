@@ -229,7 +229,7 @@ def main(call_args=None):
 
     # Get settings
     logger.info("Reading settings")
-    with open("luxcore.json", encoding="utf-8") as f:
+    with open("build-helpers/build-settings.json", encoding="utf-8") as f:
         settings = json.load(f)
     logger.info("Output directory: %s", output_dir)
 
@@ -344,7 +344,10 @@ def main(call_args=None):
             build_types += ["RelWithDebInfo", "MinSizeRel"]
         for build_type in build_types:
             logger.info("Generating '%s'", build_type)
-            end_block = [f"--settings=&:build_type={build_type}", "."]
+            end_block = [
+                f"--settings=&:build_type={build_type}",
+                Path("build-helpers", "conan", "conanfile.py"),
+            ]
             run_conan(main_block + end_block)
 
         # Show presets

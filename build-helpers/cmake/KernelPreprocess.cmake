@@ -30,7 +30,7 @@ FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 		COMMAND ${CMAKE_COMMAND}
 			-DDST=${DST} -DSRC=${SRC}
 			-DNAMESPACE=${NAMESPACE} -DKERNEL=${KERNEL}
-			-P "${PROJECT_SOURCE_DIR}/cmake/Scripts/PreprocessKernel.cmake"
+			-P "${PROJECT_SOURCE_DIR}/build-helpers/cmake/Scripts/PreprocessKernel.cmake"
 		MAIN_DEPENDENCY ${SRC}
 	)
 

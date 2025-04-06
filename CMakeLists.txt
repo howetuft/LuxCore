@@ -37,30 +37,30 @@ project(LuxCore)
 #
 # Version number can be set by external caller (for instance, Github action)
 # by setting LUXCORE_VERSION.
-# Otherwise (like in a plain make build), we'll fallback to luxcore.json
+# Otherwise (like in a plain make build), we'll fallback to build-settings
 # default version
 #
 # Versioning should comply to semver standard: https://semver.org
 #
-FILE(READ "${CMAKE_CURRENT_LIST_DIR}/luxcore.json" luxcore_json)
-STRING(JSON _DEFAULT_VERSION_MAJOR GET "${luxcore_json}" DefaultVersion major)
-STRING(JSON _DEFAULT_VERSION_MINOR GET "${luxcore_json}" DefaultVersion minor)
-STRING(JSON _DEFAULT_VERSION_PATCH GET "${luxcore_json}" DefaultVersion patch)
+FILE(READ "${CMAKE_CURRENT_LIST_DIR}/build-helpers/build-settings.json" settings_json)
+STRING(JSON _DEFAULT_VERSION_MAJOR GET "${settings_json}" DefaultVersion major)
+STRING(JSON _DEFAULT_VERSION_MINOR GET "${settings_json}" DefaultVersion minor)
+STRING(JSON _DEFAULT_VERSION_PATCH GET "${settings_json}" DefaultVersion patch)
 SET(
   _DEFAULT_VERSION_BASE
   "${_DEFAULT_VERSION_MAJOR}.${_DEFAULT_VERSION_MINOR}.${_DEFAULT_VERSION_PATCH}"
 )
-STRING(JSON _DEFAULT_VERSION_PRERELEASE GET "${luxcore_json}" DefaultVersion prerelease)
+STRING(JSON _DEFAULT_VERSION_PRERELEASE GET "${settings_json}" DefaultVersion prerelease)
 if (NOT "${_DEFAULT_VERSION_PRERELEASE}" STREQUAL "")
-  SET(_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}-${_DEFAULT_VERSION_PRERELEASE}")
+  SET(_DEFAULT_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}-${_DEFAULT_VERSION_PRERELEASE}")
 else()
-  SET(_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}")
+  SET(_DEFAULT_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}")
 endif()
 
-SET(LUXCORE_VERSION "${_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
+SET(LUXCORE_VERSION "${_DEFAULT_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
 
 # Dependencies check
-STRING(JSON REQUIRED_LUXCOREDEPS_VERSION GET "${luxcore_json}" Dependencies release)
+STRING(JSON REQUIRED_LUXCOREDEPS_VERSION GET "${settings_json}" Dependencies release)
 MESSAGE(STATUS "LuxCore Dependencies - Provided version: ${LUXCOREDEPS_VERSION}")
 MESSAGE(STATUS "LuxCore Dependencies - Required version: ${REQUIRED_LUXCOREDEPS_VERSION}")
 IF(NOT ${REQUIRED_LUXCOREDEPS_VERSION} VERSION_EQUAL ${LUXCOREDEPS_VERSION})
@@ -143,7 +143,7 @@ endif()
 include(GNUInstallDirs)
 
 # Set path to modules (keep it after project declaration)
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/build-helpers/cmake")
 
 ################################################################################
 #

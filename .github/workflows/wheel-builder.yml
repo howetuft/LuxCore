@@ -231,10 +231,12 @@ jobs:
         shell: python
         run: |
           import json
+          from pathlib import Path
           if (input_version := "${{ inputs.release-version }}"):
             result = input_version
           else:
-            with open("luxcore.json") as in_file:
+            build_settings_file = Path("build-helpers", "build-settings.json")
+            with open(build_settings_file) as in_file:
               default_version = json.load(in_file)["DefaultVersion"]
             result = ".".join(default_version[i] for i in ("major", "minor", "patch"))
             if (prerelease := default_version["prerelease"]):
@@ -337,7 +339,7 @@ jobs:
               {wheel}
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: |
-            bash.exe ${{ env.WORKSPACE }}/scripts/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%' '${{ env.WORKSPACE }}'
+            bash.exe ${{ env.WORKSPACE }}/build-helpers/wheels/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%' '${{ env.WORKSPACE }}'
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             cp {wheel} ${{ env.WORKSPACE }}
             paths=$(find ${{ env.WORKSPACE }} -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")

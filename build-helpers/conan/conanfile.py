@@ -11,7 +11,10 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.env import VirtualBuildEnv
 
-with open("luxcore.json") as config:
+THIS_FILE = Path(__file__)
+BUILD_SETTINGS_FILE = THIS_FILE.parent / ".." / "build-settings.json"
+
+with open(BUILD_SETTINGS_FILE) as config:
     config_json = json.load(config)
     LUXDEPS_VERSION = config_json["Dependencies"]["release"]
 
@@ -135,4 +138,10 @@ class LuxCore(ConanFile):
         cd.generate()
 
     def layout(self):
-        cmake_layout(self, generator="Ninja Multi-Config")
+        # Mandatory to get a CMakeUserPresets.json, see
+        # https://docs.conan.io/2/reference/tools/cmake/cmaketoolchain.html
+        cmake_layout(
+            self,
+            src_folder=Path("..", ".."),
+            generator="Ninja Multi-Config"
+        )
