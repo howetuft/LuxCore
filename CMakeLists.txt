@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2020 by authors (see AUTHORS.txt)
+# Copyright 1998-2025 by Authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -240,16 +240,6 @@ if(APPLE)
   add_compile_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
   add_link_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
 
-  # MacOS debug info
-  find_program(DSYMUTIL_PROGRAM dsymutil)
-  if (DSYMUTIL_PROGRAM)
-    MESSAGE(STATUS "Found dsymutil: ${DSYMUTIL_PROGRAM}")
-    foreach(lang C CXX)
-      foreach(var LINK_EXECUTABLE CREATE_SHARED_LIBRARY)
-        set(CMAKE_${lang}_${var} "${CMAKE_${lang}_${var}}" "${DSYMUTIL_PROGRAM} $<TARGET_FILE:pyluxcore>")
-      endforeach()
-    endforeach()
-  endif()
 
 endif(APPLE)
 

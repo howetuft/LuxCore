@@ -1,5 +1,10 @@
 @echo off
 
+REM SPDX-FileCopyrightText: 2024-2025 Authors (see AUTHORS.txt)
+REM
+REM SPDX-License-Identifier: Apache-2.0
+
+
 REM Convenience wrapper for CMake commands
 
 REM Script command (1st parameter)

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2025 Authors (see AUTHORS.txt)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import subprocess
 import sys
 import re
