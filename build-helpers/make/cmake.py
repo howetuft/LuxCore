@@ -13,17 +13,36 @@ import sys
 import logging
 import shutil
 import argparse
-from pathlib import Path
-from functools import cache
+from pathlib import (
+    Path,
+)
+from functools import (
+    cache,
+)
 import re
-from enum import Enum
+from enum import (
+    Enum,
+)
 
 import make_deps
 
 # External variables
-BINARY_DIR = Path(os.getenv("LUX_BINARY_DIR", "out"))
-SOURCE_DIR = Path(os.getenv("LUX_SOURCE_DIR", os.getcwd()))
-BUILD_TYPE = os.getenv("LUX_BUILD_TYPE", "Release")
+BINARY_DIR = Path(
+    os.getenv(
+        "LUX_BINARY_DIR",
+        "out",
+    )
+)
+SOURCE_DIR = Path(
+    os.getenv(
+        "LUX_SOURCE_DIR",
+        os.getcwd(),
+    )
+)
+BUILD_TYPE = os.getenv(
+    "LUX_BUILD_TYPE",
+    "Release",
+)
 
 # Computed variables
 BUILD_DIR = BINARY_DIR / "build"
@@ -53,16 +72,27 @@ def ensure_cmake_app():
     if not (res := shutil.which("cmake")):
         logger.error("CMake not found!")
         sys.exit(1)
-    logger.debug("CMake found: '%s'", res)
+    logger.debug(
+        "CMake found: '%s'",
+        res,
+    )
     return res
 
 
-def run_cmake(args, **kwargs):
+def run_cmake(
+    args,
+    **kwargs,
+):
     """Run cmake statement."""
     cmake_app = ensure_cmake_app()
     args = [cmake_app] + args
     logger.debug(args)
-    res = subprocess.run(args, shell=False, check=False, **kwargs)
+    res = subprocess.run(
+        args,
+        shell=False,
+        check=False,
+        **kwargs,
+    )
     if res.returncode:
         logger.error("Error while executing cmake")
         print(res.stdout)
@@ -71,7 +101,9 @@ def run_cmake(args, **kwargs):
     return res
 
 
-def config(_):
+def config(
+    _,
+):
     """CMake config."""
     cmd = [
         "--preset conan-default",
@@ -89,21 +121,37 @@ PRESETS = {
 }
 
 
-def get_preset_from_build_type(build_type):
+def get_preset_from_build_type(
+    build_type,
+):
     """Get conan preset from build type."""
     try:
         preset = PRESETS[build_type]
     except KeyError:
-        logger.error("Unknown build type '%s'", build_type)
-        logger.error("Valid values (case sensitive) are: %s", PRESETS.keys())
+        logger.error(
+            "Unknown build type '%s'",
+            build_type,
+        )
+        logger.error(
+            "Valid values (case sensitive) are: %s",
+            PRESETS.keys(),
+        )
         sys.exit(1)
     if preset not in (presets := get_presets(PresetType.BUILD)):
-        logger.error("Preset '%s' missing", preset)
-        logger.error("Available presets: %s", presets)
+        logger.error(
+            "Preset '%s' missing",
+            preset,
+        )
+        logger.error(
+            "Available presets: %s",
+            presets,
+        )
     return preset
 
 
-def build(args):
+def build(
+    args,
+):
     """CMake build."""
     preset = get_preset_from_build_type(BUILD_TYPE)
     cmd = [
@@ -114,7 +162,9 @@ def build(args):
     run_cmake(cmd)
 
 
-def install(args):
+def install(
+    args,
+):
     """CMake install."""
     cmd = [
         "--install",
@@ -126,17 +176,25 @@ def install(args):
     run_cmake(cmd)
 
 
-def build_and_install(args):
+def build_and_install(
+    args,
+):
     """CMake build and install."""
     build(args)
     install(args)
 
 
-def get_presets(preset_type: PresetType):
+def get_presets(
+    preset_type: PresetType,
+):
     """CMake get presets for a given type."""
     preset_type = str(preset_type.value)
     cmd = [f"--list-presets={preset_type}"]
-    res = run_cmake(cmd, capture_output=True, text=True)
+    res = run_cmake(
+        cmd,
+        capture_output=True,
+        text=True,
+    )
     presets = [
         preset[1]
         for line in res.stdout.splitlines()
@@ -154,15 +212,22 @@ def get_all_presets():
     return presets
 
 
-def list_presets(_):
+def list_presets(
+    _,
+):
     """List all presets."""
     print(get_all_presets())
 
 
-def clean(_):
+def clean(
+    _,
+):
     """CMake clean."""
     for preset in get_presets(PresetType.BUILD):
-        logger.info("Cleaning preset '%s'", preset)
+        logger.info(
+            "Cleaning preset '%s'",
+            preset,
+        )
         cmd = [
             "--build",
             f"--preset {preset}",
@@ -171,20 +236,37 @@ def clean(_):
         run_cmake(cmd)
 
 
-def clear(_):
+def clear(
+    _,
+):
     """Clear binary directory."""
     # We just remove the subdirectories, in order to avoid
     # unwanted removals if BINARY_DIR points to a wrong directory
-    for subdir in ("build", "dependencies", "install"):
+    for subdir in (
+        "build",
+        "dependencies",
+        "install",
+    ):
         directory = BINARY_DIR / subdir
-        logger.info("Removing '%s'", directory)
+        logger.info(
+            "Removing '%s'",
+            directory,
+        )
         try:
-            shutil.rmtree(directory, ignore_errors=True)
+            shutil.rmtree(
+                directory,
+                ignore_errors=True,
+            )
         except FileNotFoundError:
-            logger.debug("'%s' not found", directory)
+            logger.debug(
+                "'%s' not found",
+                directory,
+            )
 
 
-def deps(_):
+def deps(
+    _,
+):
     """Install dependencies."""
     make_deps.main([f"--output={BINARY_DIR}"])
 
@@ -196,7 +278,10 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     # Get command-line parameters
-    parser = argparse.ArgumentParser(prog="make", add_help=False)
+    parser = argparse.ArgumentParser(
+        prog="make",
+        add_help=False,
+    )
     parser.add_argument(
         "-v",
         "--verbose",
