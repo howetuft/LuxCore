@@ -135,7 +135,7 @@ jobs:
                 'cache-variant': String.raw`ccache`,
                 'CMAKE_CXX_COMPILER_LAUNCHER': String.raw`ccache`,
                 'CMAKE_C_COMPILER_LAUNCHER': String.raw`ccache`,
-                'CCACHE_CONFIGPATH': String.raw`${workspace}/ccache.conf`,
+                'CCACHE_CONFIGPATH': String.raw`${workspace}/build-helpers/ccache.conf`,
                 'CCACHE_DIR': String.raw`${workspace}/.ccache`,
                 'CCACHE_DEBUGDIR': String.raw`${workspace}/ccache-debug`,
                 'CCACHE_LOGFILE': String.raw`${workspace}/ccache.log`
