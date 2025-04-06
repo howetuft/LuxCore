@@ -6,10 +6,18 @@
 
 import os
 import tempfile
-from urllib.request import urlretrieve
-from urllib.parse import urlparse
-from pathlib import Path
-from zipfile import ZipFile
+from urllib.request import (
+    urlretrieve,
+)
+from urllib.parse import (
+    urlparse,
+)
+from pathlib import (
+    Path,
+)
+from zipfile import (
+    ZipFile,
+)
 import subprocess
 import logging
 import shutil
@@ -17,8 +25,12 @@ import argparse
 import json
 import platform
 import sys
-from functools import cache
-from dataclasses import dataclass
+from functools import (
+    cache,
+)
+from dataclasses import (
+    dataclass,
+)
 
 
 CONAN_ALL_PACKAGES = '"*"'
@@ -39,6 +51,7 @@ URL_SUFFIXES = {
 @dataclass
 class Colors:
     """Colors for terminal output."""
+
     HEADER = "\033[95m"
     OKBLUE = "\033[94m"
     OKCYAN = "\033[96m"
@@ -70,7 +83,10 @@ def find_platform():
     return res
 
 
-def build_url(user, release):
+def build_url(
+    user,
+    release,
+):
     """Build the url to download from."""
     suffix = URL_SUFFIXES[find_platform()]
 
@@ -102,11 +118,17 @@ def ensure_conan_app():
     if not (res := shutil.which("conan")):
         logger.error("Conan not found!")
         sys.exit(1)
-    logger.info("Conan found: '%s'", res)
+    logger.info(
+        "Conan found: '%s'",
+        res,
+    )
     return res
 
 
-def run_conan(args, **kwargs):
+def run_conan(
+    args,
+    **kwargs,
+):
     """Run conan statement."""
     conan_app = ensure_conan_app()
     if "env" not in kwargs:
@@ -114,10 +136,18 @@ def run_conan(args, **kwargs):
     else:
         kwargs["env"].update(CONAN_ENV)
     kwargs["env"].update(os.environ)
-    kwargs["text"] = kwargs.get("text", True)
+    kwargs["text"] = kwargs.get(
+        "text",
+        True,
+    )
     args = [conan_app] + args
     logger.debug(args)
-    res = subprocess.run(args, shell=False, check=False, **kwargs)
+    res = subprocess.run(
+        args,
+        shell=False,
+        check=False,
+        **kwargs,
+    )
     if res.returncode:
         logger.error("Error while executing conan")
         print(res.stdout)
@@ -126,16 +156,28 @@ def run_conan(args, **kwargs):
     return res
 
 
-def download(url, destdir):
+def download(
+    url,
+    destdir,
+):
     """Download file from url into destdir."""
     # Download artifact
     destdir = Path(destdir)
     filename = urlparse(url).path.split("/")[-1]
     filepath = destdir / filename
-    local_filename, _ = urlretrieve(url, filename=filepath)
+    (
+        local_filename,
+        _,
+    ) = urlretrieve(
+        url,
+        filename=filepath,
+    )
 
     # Check attestation
-    logger.info("Checking '%s'", local_filename)
+    logger.info(
+        "Checking '%s'",
+        local_filename,
+    )
 
     if not (gh_app := shutil.which("gh")):
         msg = (
@@ -151,7 +193,7 @@ def download(url, destdir):
             "Dependencies origin cannot be checked.",
             Colors.ENDC,
         )
-        msg = ''.join(msg)
+        msg = "".join(msg)
         logger.warning(msg)
     else:
         gh_cmd = [
@@ -165,29 +207,54 @@ def download(url, destdir):
         ]
         errormsg = f"{Colors.WARNING}SIGNATURE CHECKING ERROR{Colors.ENDC}"
         try:
-            gh_output = subprocess.check_output(gh_cmd, text=True)
+            gh_output = subprocess.check_output(
+                gh_cmd,
+                text=True,
+            )
         except subprocess.CalledProcessError as err:
             logger.warning(errormsg)
-            logger.warning("gh return code: %s", err.returncode)
+            logger.warning(
+                "gh return code: %s",
+                err.returncode,
+            )
             logger.warning(err.output)
         except OSError as err:
             logger.warning(errormsg)
             logger.warning(str(err))
         else:
             msg = f"{Colors.OKGREEN}'%s': found certificate - OK{Colors.ENDC}"
-            logger.info(msg, filename)
-            signature, *_ = json.loads(gh_output)
-            certificate = signature["verificationResult"]["signature"]["certificate"]
-            logger.debug(json.dumps(certificate, indent=2))
+            logger.info(
+                msg,
+                filename,
+            )
+            (
+                signature,
+                *_,
+            ) = json.loads(gh_output)
+            certificate = signature["verificationResult"]["signature"][
+                "certificate"
+            ]
+            logger.debug(
+                json.dumps(
+                    certificate,
+                    indent=2,
+                )
+            )
 
     # Unzip
     with ZipFile(local_filename) as downloaded:
         downloaded.extractall(destdir)
 
 
-def install(filename, destdir):
+def install(
+    filename,
+    destdir,
+):
     """Install file from local directory into destdir."""
-    logger.info("Importing %s", filename)
+    logger.info(
+        "Importing %s",
+        filename,
+    )
     with ZipFile(str(filename)) as zipfile:
         zipfile.extractall(destdir)
 
@@ -196,7 +263,11 @@ def conan_home():
     """Get Conan home path."""
     conan_app = ensure_conan_app()
     res = subprocess.run(
-        [conan_app, "config", "home"],
+        [
+            conan_app,
+            "config",
+            "home",
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -209,17 +280,31 @@ def conan_home():
     return Path(res.stdout.strip())
 
 
-def copy_conf(dest):
+def copy_conf(
+    dest,
+):
     """Copy global.conf into conan tree."""
     home = conan_home()
     source = home / "global.conf"
-    logger.info("Copying %s to %s", source, dest)
-    shutil.copy(source, dest)
+    logger.info(
+        "Copying %s to %s",
+        source,
+        dest,
+    )
+    shutil.copy(
+        source,
+        dest,
+    )
 
 
-def main(call_args=None):
+def main(
+    call_args=None,
+):
     """Entry point."""
-    output_dir = os.getenv("output_dir", "out")
+    output_dir = os.getenv(
+        "output_dir",
+        "out",
+    )
 
     # Set-up logger
     logger.setLevel(logging.INFO)
@@ -229,9 +314,15 @@ def main(call_args=None):
 
     # Get settings
     logger.info("Reading settings")
-    with open("build-helpers/build-settings.json", encoding="utf-8") as f:
+    with open(
+        "build-helpers/build-settings.json",
+        encoding="utf-8",
+    ) as f:
         settings = json.load(f)
-    logger.info("Output directory: %s", output_dir)
+    logger.info(
+        "Output directory: %s",
+        output_dir,
+    )
 
     # Get optional command-line parameters
     # Nota: --local option is used by LuxCoreDeps CI
@@ -288,18 +379,37 @@ def main(call_args=None):
         # Initialize
         user = settings["Dependencies"]["user"]
         release = settings["Dependencies"]["release"]
-        url = build_url(user, release)
+        url = build_url(
+            user,
+            release,
+        )
 
         # Download and unzip
         if not args.local:
-            logger.info("Downloading dependencies (url='%s')", url)
-            download(url, tmpdir)
+            logger.info(
+                "Downloading dependencies (url='%s')",
+                url,
+            )
+            download(
+                url,
+                tmpdir,
+            )
         else:
-            logger.info("Using local dependency set ('%s')", args.local)
+            logger.info(
+                "Using local dependency set ('%s')",
+                args.local,
+            )
 
         # Clean
         logger.info("Cleaning local cache")
-        res = run_conan(["remove", "-c", "*"], capture_output=True)
+        res = run_conan(
+            [
+                "remove",
+                "-c",
+                "*",
+            ],
+            capture_output=True,
+        )
         for line in res.stderr.splitlines():
             logger.info(line)
         copy_conf(_conan_home)  # Copy global.conf in current conan home
@@ -311,7 +421,11 @@ def main(call_args=None):
         else:
             archive = local
         res = run_conan(
-            ["cache", "restore", archive],
+            [
+                "cache",
+                "restore",
+                archive,
+            ],
             capture_output=True,
         )
         for line in res.stderr.splitlines():
@@ -319,16 +433,31 @@ def main(call_args=None):
 
         # Check
         logger.info("Checking integrity")
-        res = run_conan(["cache", "check-integrity", "*"], capture_output=True)
+        res = run_conan(
+            [
+                "cache",
+                "check-integrity",
+                "*",
+            ],
+            capture_output=True,
+        )
         logger.info("Integrity check: OK")
 
         # Installing profiles
         logger.info("Installing profiles")
-        run_conan(["config", "install-pkg", f"luxcoreconf/{release}@luxcore/luxcore"])
+        run_conan(
+            [
+                "config",
+                "install-pkg",
+                f"luxcoreconf/{release}@luxcore/luxcore",
+            ]
+        )
 
         # Generate & deploy
-        # About release/debug mixing, see https://github.com/conan-io/conan/issues/12656
+        # About release/debug mixing, see
+        # https://github.com/conan-io/conan/issues/12656
         logger.info("Generating...")
+        generator = "Ninja Multi-Config"
         main_block = [
             "install",
             "--build=missing",
@@ -337,22 +466,44 @@ def main(call_args=None):
             f"--deployer-folder={output_dir}/dependencies",
             f"--output-folder={output_dir}",
             "--settings=build_type=Release",
-            "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja Multi-Config",
+            f"--conf:all=tools.cmake.cmaketoolchain:generator={generator}",
         ]
-        build_types = ["Debug", "Release"]
+        build_types = [
+            "Debug",
+            "Release",
+        ]
         if args.extended:
-            build_types += ["RelWithDebInfo", "MinSizeRel"]
+            build_types += [
+                "RelWithDebInfo",
+                "MinSizeRel",
+            ]
         for build_type in build_types:
-            logger.info("Generating '%s'", build_type)
+            logger.info(
+                "Generating '%s'",
+                build_type,
+            )
             end_block = [
                 f"--settings=&:build_type={build_type}",
-                Path("build-helpers", "conan", "conanfile.py"),
+                Path(
+                    "build-helpers",
+                    "conan",
+                    "conanfile.py",
+                ),
             ]
             run_conan(main_block + end_block)
 
         # Show presets
-        subprocess.run(["cmake", "--list-presets=build"], check=False)
-        print("", flush=True)
+        subprocess.run(
+            [
+                "cmake",
+                "--list-presets=build",
+            ],
+            check=False,
+        )
+        print(
+            "",
+            flush=True,
+        )
 
     msg = Colors.OKBLUE + "END" + Colors.ENDC
     logger.info(msg)

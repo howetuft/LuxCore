@@ -159,7 +159,7 @@ class LuxCore(ConanFile):
         self._generate_oidn(toolchain)
 
         # Nvidia runtime compiler (nvrtoolchain)
-        self._generate_nvrtoolchain(toolchain)
+        self._generate_nvrtc(toolchain)
 
         # Bison/Flex
         self._generate_bison_flex(toolchain)
