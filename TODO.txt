@@ -1,8 +1,5 @@
-Add debug targets
-Sign deps zip (security)
 Move OpenCL translation in build step
 Remove boost deps that are superseded by C++20 std
-Add packaging workflow (deb, rpm, msi...)
 
 Black py files
 Add demo targets
