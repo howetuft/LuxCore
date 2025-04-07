@@ -250,6 +250,11 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 	Spectrum YCbCr = uvWeights.x * color0 + uvWeights.y * color1 + uvWeights.z * color2;
 
 	YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], uvWeights.x + uvWeights.y + uvWeights.z);
+    // According to the paper, the following weight W should be used.
+    // It appears to increase/improve contrast over the current implementation,
+	// but currently increases residual color errors in some texttures.
+    // float W = sqrtf(uvWeights.x * uvWeights.x + uvWeights.y * uvWeights.y + uvWeights.z * uvWeights.z);
+    // YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], W);
 
 	YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
 
