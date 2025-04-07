@@ -59,16 +59,17 @@ unique_ptr<ImageMap> ImageMapTexture::randomImageMap(AllocRandomImageMap(512));
 #define RT_LUT_SIZE (RT_HISTOGRAM_SIZE * 4)
 
 static inline Spectrum RGBToYCbCr(const Spectrum &rgb) {
-	// ITU-R BT.601 from https://en.wikipedia.org/wiki/YCbCr
+    // ITU-T T.871 from https://www.itu.int/rec/T-REC-T.871-201105-I/en
+	const float offset = 128.f/255.f;
 	static const float RGBToYCbCrOff[3] = {
-		 16.f / 255.f,
-		128.f / 255.f,
-		128.f / 255.f
+		0.f,
+		offset,
+		offset,
 	};
     static const float RGBToYCbCrMat[3][3] = {
-        {  65.481f / 255.f, 128.553f / 255.f,   24.966f / 255.f },
-        { -37.797f / 255.f, -74.203f / 255.f,  112.f    / 255.f },
-        { 112.f    / 255.f, -93.786f / 255.f, -18.214f  / 255.f }
+        {0.299,         0.587,        0.114},
+        {-0.299/1.772, -0.587/1.772,  0.886/1.772},
+        { 0.701/1.402, -0.587/1.402, -0.114/1.402}
 	};
 
 	// RGB to YCbCr color space transformation
@@ -80,27 +81,24 @@ static inline Spectrum RGBToYCbCr(const Spectrum &rgb) {
 }
 
 static inline Spectrum YCbCrToRGB(const Spectrum &YCbCr) {
-	// ITU-R BT.601 from https://en.wikipedia.org/wiki/YCbCr
-	static const float YCbCrToRGBOff[3] = {
-		-222.921f / 256.f,
-		 135.576f / 256.f,
-		-276.836f / 256.f
+	// ITU-T T.871 from https://www.itu.int/rec/T-REC-T.871-201105-I/en
+    const float offset = 128.f/255.f;
+	static const float YCbCrToRGBMat[3][3] = {
+		{1.f,  0.f,          1.402f},
+		{1.f, -0.114*1.772/0.587, -0.299*1.402/0.587},
+		{1.f,  1.772f,        0.f}
 	};
-    static const float YCbCrToRGBMat[3][3] = {
-		{ 298.082f / 256.f,    0.f    / 256.f,  408.583f / 256.f },
-		{ 298.082f / 256.f, -100.291f / 256.f, -208.120f / 256.f },
-		{ 298.082f / 256.f,  516.412f / 256.f,    0.f    / 256.f }
-	};
-
-	// YCbCr to RGB color space transformation
-	const float r = YCbCrToRGBOff[0] + YCbCrToRGBMat[0][0] * YCbCr.c[0] + YCbCrToRGBMat[0][1] * YCbCr.c[1] + YCbCrToRGBMat[0][2] * YCbCr.c[2];
-	const float g = YCbCrToRGBOff[1] + YCbCrToRGBMat[1][0] * YCbCr.c[0] + YCbCrToRGBMat[1][1] * YCbCr.c[1] + YCbCrToRGBMat[1][2] * YCbCr.c[2];
-	const float b = YCbCrToRGBOff[2] + YCbCrToRGBMat[2][0] * YCbCr.c[0] + YCbCrToRGBMat[2][1] * YCbCr.c[1] + YCbCrToRGBMat[2][2] * YCbCr.c[2];
+	const float r = YCbCrToRGBMat[0][0] * YCbCr.c[0] + YCbCrToRGBMat[0][1] * (YCbCr.c[1] - offset) + YCbCrToRGBMat[0][2] * (YCbCr.c[2] - offset);
+	const float g = YCbCrToRGBMat[1][0] * YCbCr.c[0] + YCbCrToRGBMat[1][1] * (YCbCr.c[1] - offset) + YCbCrToRGBMat[1][2] * (YCbCr.c[2] - offset);
+	const float b = YCbCrToRGBMat[2][0] * YCbCr.c[0] + YCbCrToRGBMat[2][1] * (YCbCr.c[1] - offset) + YCbCrToRGBMat[2][2] * (YCbCr.c[2] - offset);
 
 	return Spectrum(r, g, b).Clamp(0.f, 1.f);
 }
 
 static inline float Erf(float x) {
+	// Note from re-reading: This approximation can be found in equation 7.1.26 of
+	// Abramowitz and Stegun: Handbook of Mathematical Functions
+	// https://personal.math.ubc.ca/%7Ecbm/aands/page_299.htm
     static const float a1 =   .254829592f;
     static const float a2 = -0.284496736f;
     static const float a3 =  1.421413741f;
@@ -242,15 +240,21 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 
 	Vector uvWeights(1.f - uv.u - uv.v, uv.u, uv.v);
 
-	uvWeights.x = uvWeights.x * uvWeights.x * uvWeights.x;
-	uvWeights.y = uvWeights.y * uvWeights.y * uvWeights.y;
-	uvWeights.z = uvWeights.z * uvWeights.z * uvWeights.z;
+	const float gamma = 3.; // could be exposed as a variable, paper suggests between 2 and 8 might be a valid range
+	uvWeights.x = powf(uvWeights.x, gamma);
+	uvWeights.y = powf(uvWeights.y, gamma);
+	uvWeights.z = powf(uvWeights.z, gamma);
 
 	uvWeights /= uvWeights.x + uvWeights.y + uvWeights.z;
 
 	Spectrum YCbCr = uvWeights.x * color0 + uvWeights.y * color1 + uvWeights.z * color2;
 
 	YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], uvWeights.x + uvWeights.y + uvWeights.z);
+    // According to the paper, the following weight W should be used.
+    // It appears to increase/improve contrast over the current implementation,
+	// but currently increases residual color errors in some texttures.
+    // float W = sqrtf(uvWeights.x * uvWeights.x + uvWeights.y * uvWeights.y + uvWeights.z * uvWeights.z);
+    // YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], W);
 
 	YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
 
