@@ -10,7 +10,6 @@ endif()
 
 macro(generate_doc target)
   if(DOXYGEN_FOUND)
-    message(STATUS "Generating ${target} documentation")
 
     # Generate doxygen.template
     set(DOXYGEN_${target}_TEMPLATE ${PROJECT_SOURCE_DIR}/doxygen/${target}.template)
@@ -29,7 +28,7 @@ macro(generate_doc target)
 
     add_custom_command(
       OUTPUT ${DOXYGEN_${target}_OUTPUT}
-      # Creating custom doxygen-luxrays.conf
+      # Creating custom doxygen-xxx.conf
       COMMAND mkdir -p ${DOXYGEN_${target}_OUTPUT_DIR}
       COMMAND cp ${DOXYGEN_${target}_TEMPLATE} ${DOXYGEN_${target}_INPUT}
       COMMAND echo "INPUT = " ${PROJECT_SOURCE_DIR}/include/${target}  ${PROJECT_SOURCE_DIR}/src/${target} >> ${DOXYGEN_${target}_INPUT}
@@ -38,12 +37,13 @@ macro(generate_doc target)
       # Launch doxygen
       COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_${target}_INPUT}
       DEPENDS ${DOXYGEN_${target}_TEMPLATE}
-      #WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../..
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     )
 
-    add_custom_target(apidoc_${target} DEPENDS ${DOXYGEN_${target}_OUTPUT})
-    add_dependencies(doc apidoc_${target})
+
+    add_custom_target(doc-${target} DEPENDS ${DOXYGEN_${target}_OUTPUT})
+    add_dependencies(doc doc-${target})
+    message(STATUS "Target 'doc-${target}' declared for ${target} documentation")
   else()
     message(AUTHOR_WARNING "Doxygen not found, could not create ${target} documentation")
   endif(DOXYGEN_FOUND)
