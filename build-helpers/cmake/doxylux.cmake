@@ -12,11 +12,13 @@ macro(generate_doc target)
   if(DOXYGEN_FOUND)
 
     # Generate doxygen.template
-    set(DOXYGEN_${target}_TEMPLATE ${PROJECT_SOURCE_DIR}/doxygen/${target}.template)
-    configure_file("${DOXYGEN_${target}_TEMPLATE}.in" "${DOXYGEN_${target}_TEMPLATE}")
+    set(DOXYGEN_${target}_TEMPLATE_IN ${PROJECT_SOURCE_DIR}/doxygen/${target}.template.in)
+    set(DOXYGEN_${target}_TEMPLATE ${PROJECT_BINARY_DIR}/doxygen/${target}.template)
+    configure_file("${DOXYGEN_${target}_TEMPLATE_IN}" "${DOXYGEN_${target}_TEMPLATE}")
 
-    set(DOXYGEN_${target}_INPUT ${CMAKE_BINARY_DIR}/doc/doxygen-${target}.conf)
-    set(DOXYGEN_${target}_OUTPUT_DIR ${CMAKE_BINARY_DIR}/doc/${target})
+    # Set Doxygen input and output
+    set(DOXYGEN_${target}_INPUT ${PROJECT_BINARY_DIR}/doc/doxygen-${target}.conf)
+    set(DOXYGEN_${target}_OUTPUT_DIR ${PROJECT_BINARY_DIR}/doc/${target})
     set(DOXYGEN_${target}_OUTPUT ${DOXYGEN_${target}_OUTPUT_DIR}/html/index.html)
 
     message(STATUS "Doxygen ${target} output: " ${DOXYGEN_${target}_OUTPUT})
