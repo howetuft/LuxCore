@@ -18,6 +18,8 @@ if (NOT TARGET doc)
       COMMENT "Generating API documentation"
       CONFIG_FILE ${DOC_BUILD_DIR}/Doxyfile
     )
+    # Config/Release is not relevant for doc (thus ../doc/html)
+    install(DIRECTORY ${DOC_BUILD_DIR}/html/ DESTINATION ../doc/html COMPONENT doc)
   else()
     message(AUTHOR_WARNING "Doxygen not found, could not create documentation")
   endif(DOXYGEN_FOUND)
