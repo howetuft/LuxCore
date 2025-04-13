@@ -189,11 +189,21 @@ find_package(imgui)
 find_package(glfw3)
 find_package(imguifiledialog)
 
-# Include embedded dependencies
+# Documentation
+find_package(Doxygen)
+
+
+################################################################################
+#
+# Complementary includes
+#
+################################################################################
+
 
 SET(LuxRays_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
+# Embedded dependencies
 include_directories("${PROJECT_SOURCE_DIR}/deps/cuew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/clew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")

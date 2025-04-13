@@ -46,45 +46,10 @@ add_subdirectory(luxparser)
 #
 ################################################################################
 
-find_package(Doxygen)
 
-if(DOXYGEN_FOUND)
-  message(STATUS "Found Doxygen and generating LuxCore documentation")
+include(doxylux)
+generate_doc(luxcore)
 
-  # Generate doxygen.template
-  set(DOXYGEN_LUXCORE_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../doxygen/luxcore.template)
-  configure_file(
-    "${DOXYGEN_LUXCORE_TEMPLATE}.in"
-    "${DOXYGEN_LUXCORE_TEMPLATE}"
-    )
-
-  set(DOXYGEN_LUXCORE_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../../doxygen-luxcore.conf)
-  set(DOXYGEN_LUXCORE_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../doc/luxcore)
-  set(DOXYGEN_LUXCORE_OUTPUT ${DOXYGEN_OUTPUT_DIR}/luxcore/html/index.html)
-
-  message(STATUS "Doxygen LuxCore output: " ${DOXYGEN_LUXCORE_OUTPUT})
-
-  if(DOXYGEN_DOT_FOUND)
-      message(STATUS "Found dot")
-      set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
-  endif(DOXYGEN_DOT_FOUND)
-
-  add_custom_command(
-    OUTPUT ${DOXYGEN_LUXCORE_OUTPUT}
-    # Creating custom doxygen-luxrays.conf
-    COMMAND mkdir -p ${DOXYGEN_LUXCORE_OUTPUT_DIR}
-    COMMAND cp ${DOXYGEN_LUXCORE_TEMPLATE} ${DOXYGEN_LUXCORE_INPUT}
-    COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxcore/luxcore.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/properties.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/cyhair/cyHairFile.h >> ${DOXYGEN_LUXCORE_INPUT}
-    COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXCORE_OUTPUT_DIR} >> ${DOXYGEN_LUXCORE_INPUT}
-    COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXCORE_INPUT}
-    # Launch doxygen
-    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_LUXCORE_INPUT}
-    DEPENDS ${DOXYGEN_LUXCORE_TEMPLATE}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-  )
-
-  add_custom_target(apidoc_luxcore DEPENDS ${DOXYGEN_LUXCORE_OUTPUT})
-endif(DOXYGEN_FOUND)
 
 ################################################################################
 #

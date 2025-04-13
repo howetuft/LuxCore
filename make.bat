@@ -38,6 +38,9 @@ if "%COMMAND%" == "" (
     call :Config
     call :BuildAndInstall luxcore
     call :BuildAndInstall luxcoreconsole
+) else if "%COMMAND%" == "doc" (
+    call :Config
+    call :BuildAndInstall doc
 ) else if "%COMMAND%" == "config" (
     call :Config
 ) else if "%COMMAND%" == "package" (
