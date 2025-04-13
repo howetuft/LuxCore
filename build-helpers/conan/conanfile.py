@@ -30,7 +30,7 @@ class LuxCore(ConanFile):
     channel = "luxcore"
 
     requires = f"luxcoredeps/{LUXDEPS_VERSION}@luxcore/luxcore"
-    tool_requires = "ninja/[*]"
+    tool_requires = "ninja/[*]", "doxygen/[*]"
     settings = "os", "compiler", "build_type", "arch"
 
     def _generate_oidn(self, toolchain):
@@ -175,6 +175,15 @@ class LuxCore(ConanFile):
         toolchain.cache_variables["LUXCOREDEPS_VERSION"] = str(
             self.dependencies["luxcoredeps"].ref.version
         )
+
+        doxygen_root = os.path.join(
+            self.dependencies["luxcoredeps"]
+            .dependencies["doxygen"]
+            .package_folder,
+            "bin",
+            "doxygen",
+        ).replace("\\", "/")
+        toolchain.cache_variables["DOXYGEN_ROOT"] = doxygen_root
 
         toolchain.generate()
 
