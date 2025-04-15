@@ -184,6 +184,8 @@ class LuxCore(ConanFile):
             "doxygen",
         ).replace("\\", "/")
         toolchain.cache_variables["DOXYGEN_ROOT"] = doxygen_root
+        toolchain.cache_variables["Doxygen_ROOT"] = doxygen_root
+        toolchain.cache_variables["DOXYGEN_EXECUTABLE"] = doxygen_root
 
         toolchain.generate()
 
