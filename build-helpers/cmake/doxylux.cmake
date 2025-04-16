@@ -43,21 +43,37 @@ macro(generate_doc target)
 
     if(DOXYGEN_DOT_FOUND)
         message(STATUS "Found dot")
-        set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
+        set(DOXYGEN_DOT_CONF YES)
     endif(DOXYGEN_DOT_FOUND)
 
     # Generate tag file
-    add_custom_command(
-      OUTPUT ${DOXYGEN_OUTPUT_TAGFILE} ${DOXYGEN_OUTPUT_HTML}
-      # Customizing doxygen-xxx.conf
-      COMMAND echo "INPUT = " ${PROJECT_SOURCE_DIR}/include/${target}  ${PROJECT_SOURCE_DIR}/src/${target} >> ${DOXYGEN_INPUT_CONFIG}
-      COMMAND echo "OUTPUT_DIRECTORY = " ${DOC_BUILD_DIR} >> ${DOXYGEN_INPUT_CONFIG}
-      COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_INPUT_CONFIG}
-      # Launch doxygen
-      COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_INPUT_CONFIG}
-      DEPENDS ${DOXYGEN_INPUT_CONFIG}
-      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    )
+    if(NOT WIN32)
+        add_custom_command(
+          OUTPUT ${DOXYGEN_OUTPUT_TAGFILE} ${DOXYGEN_OUTPUT_HTML}
+          # Customizing doxygen-xxx.conf
+          COMMAND echo "INPUT = " ${PROJECT_SOURCE_DIR}/include/${target}  ${PROJECT_SOURCE_DIR}/src/${target} >> ${DOXYGEN_INPUT_CONFIG}
+          COMMAND echo "OUTPUT_DIRECTORY = " ${DOC_BUILD_DIR} >> ${DOXYGEN_INPUT_CONFIG}
+          COMMAND echo "HAVE_DOT = ${DOXYGEN_DOT_CONF}" >> ${DOXYGEN_INPUT_CONFIG}
+          # Launch doxygen
+          COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_INPUT_CONFIG}
+          DEPENDS ${DOXYGEN_INPUT_CONFIG}
+          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        )
+    else()
+        message(STATUS "DOXYGEN ${DOXYGEN_EXECUTABLE}")
+        add_custom_command(
+          OUTPUT ${DOXYGEN_OUTPUT_TAGFILE} ${DOXYGEN_OUTPUT_HTML}
+          # Customizing doxygen-xxx.conf
+          COMMAND @echo INPUT = "${PROJECT_SOURCE_DIR}/include/${target}"  "${PROJECT_SOURCE_DIR}/src/${target}" >> ${DOXYGEN_INPUT_CONFIG}
+          COMMAND @echo OUTPUT_DIRECTORY = \"${DOC_BUILD_DIR}\" >> ${DOXYGEN_INPUT_CONFIG}
+          COMMAND @echo HAVE_DOT = ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_INPUT_CONFIG}
+          COMMAND @echo on
+          # Launch doxygen
+          COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_INPUT_CONFIG}
+          DEPENDS ${DOXYGEN_INPUT_CONFIG}
+          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        )
+    endif()
 
     # Generate html
 
