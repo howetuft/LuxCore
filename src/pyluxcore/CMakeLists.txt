@@ -45,7 +45,7 @@ target_link_libraries(pyluxcore PRIVATE
 )
 
 if(APPLE)
-  target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
+  target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP)
 else()
   target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
 endif(APPLE)
