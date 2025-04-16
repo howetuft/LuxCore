@@ -515,6 +515,7 @@ else()
   target_link_libraries(slg-core PRIVATE OpenMP::OpenMP_CXX)
 endif(APPLE)
 
+
 #############################################################################
 #
 # SLG Kernels library
@@ -653,6 +654,11 @@ set(SLG_KERNEL_SRCS
 SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})
 
 add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
+if(APPLE)
+  target_link_libraries(slg-kernels PRIVATE OpenMP::OpenMP)
+else()
+  target_link_libraries(slg-kernels PRIVATE OpenMP::OpenMP_CXX)
+endif(APPLE)
 
 target_link_libraries(slg-kernels PRIVATE boost::boost)
 
@@ -725,6 +731,11 @@ set(SLG_FILM_SRCS
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 
 add_library(slg-film STATIC ${SLG_FILM_SRCS})
+if(APPLE)
+  target_link_libraries(slg-film PRIVATE OpenMP::OpenMP)
+else()
+  target_link_libraries(slg-film PRIVATE OpenMP::OpenMP_CXX)
+endif(APPLE)
 
 target_link_libraries(slg-film PRIVATE
     boost::boost
