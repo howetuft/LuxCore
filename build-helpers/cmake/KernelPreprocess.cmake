@@ -23,7 +23,7 @@
 ################################################################################
 
 FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
-	MESSAGE(STATUS "Preprocessing OpenCL kernel: " ${SRC} " => " ${DST} )
+    MESSAGE(DEBUG "Preprocessing OpenCL kernel: " ${SRC} " => " ${DST} )
 
 	add_custom_command(
 		OUTPUT ${DST}
@@ -41,6 +41,7 @@ FUNCTION(PreprocessOCLKernels)
 	set(namespace ${ARGV1})
 	list(REMOVE_AT ARGV 0 1)
 
+    MESSAGE(STATUS "Preprocessing OpenCL kernels")
 	foreach(kernel ${ARGV})
 		get_filename_component(kernel_filename ${kernel} NAME)
 		string(LENGTH ${kernel_filename} kernel_filename_length)
