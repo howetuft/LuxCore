@@ -27,6 +27,8 @@ Ensure the following software is also installed and available in the PATH:
 - Conan (`pip install conan`)
 - CMake
 
+For Windows, ensure the command line is configured for building (`vcvarsall.bat`).
+
 #### Quick build
 
 ```
@@ -56,7 +58,7 @@ Available build types are `Release` and `Debug` (case sensitive). Default is `Re
 - `make clear`: remove build tree
 - `make config`: configure/reconfigure project
 - `make deps`: update dependencies
-- `make package`: create a package (nota bene: `make` must have been run before)
+- `make doc`: build Doxygen documentation
 
 
 ### LuxCore library
