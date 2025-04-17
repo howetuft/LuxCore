@@ -75,19 +75,34 @@ the [`samples/luxcoreui`](samples/luxcoreui) directory.
 
 To see how it works, just run `luxcoreui` from the root directory:
 
+Linux/MacOS:
 ```
 ./out/install/Release/bin/luxcoreui scenes/cornell/cornell.cfg
 ```
+
+Windows:
+```
+out\install\Release\bin\luxcoreui scenes\cornell\cornell.cfg
+```
+
 (assuming you selected Release as a build type)
+
 ### LuxCoreConsole
 
 This is a simple example of a command line renderer written using LuxCore API and it is
 available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
 Just run `luxcoreconsole` from the root directory with:
 
+Linux/MacOS:
 ```
 ./out/install/Release/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
 ```
+
+Windows:
+```
+out\install\Release\bin\luxcoreconsole -D batch.halttime 10 scenes\cornell\cornell.cfg
+```
+
 (assuming you selected Release as a build type)
 ### Authors
 
