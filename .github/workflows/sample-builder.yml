@@ -25,16 +25,16 @@ on:
     outputs:
       commit:
         description: "The commit that has been checked out"
-        value: ${{ jobs.build-wheels.outputs.commit }}
+        value: ${{ jobs.build-samples.outputs.commit }}
       branch:
         description: "The branch that has been checked out"
-        value: ${{ jobs.build-wheels.outputs.branch }}
+        value: ${{ jobs.build-samples.outputs.branch }}
       attestation-url:
         description: "The url to the attestations"
-        value: ${{ jobs.attest-wheels.outputs.attestation-url }}
+        value: ${{ jobs.attest-samples.outputs.attestation-url }}
       version:
         description: "The version actually built"
-        value: ${{ jobs.build-wheels.outputs.version }}
+        value: ${{ jobs.build-samples.outputs.version }}
 
 jobs:
   build-samples:
