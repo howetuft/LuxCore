@@ -295,16 +295,17 @@ jobs:
 
       - name: Bundle artifacts
         working-directory: ${{ github.workspace }}/out/install
+        shell: bash
         run: |
           mv Release LuxCore
-          zip -9 --symlinks -r ${{ github.workspace }}/LuxCoreSamples-${{ runner.os }}-${{ runner.arch }}.zip LuxCore/
+          7z a -snl ${{ github.workspace }}/LuxCoreSamples-${{ runner.os }}-${{ runner.arch }}.zip LuxCore/
 
       # Upload artifacts
       - uses: actions/upload-artifact@v4
         id: upload
         with:
           name: LuxCore-Samples-${{ runner.os }}-${{ runner.arch }}
-          path: ${{ github.workspace }}/LuxCoreSamples.zip
+          path: ${{ github.workspace }}/LuxCoreSamples-${{ runner.os }}-${{ runner.arch }}.zip
           #path: ${{ github.workspace }}/out/install/Release
 
   attest-samples:
