@@ -98,7 +98,7 @@ jobs:
         uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87
         with:
           name: "LuxCore Wheels ${{ env.RELEASE_TAG }}"
-          tag: ${{ env.RELEASE_TAG }}
+          tag: wheels-${{ env.RELEASE_TAG }}
           artifacts: artifacts/*
           removeArtifacts: true
           allowUpdates: ${{ inputs.allow-updates }}
@@ -119,4 +119,3 @@ jobs:
       - run: |
           echo "### Release""" >> $GITHUB_STEP_SUMMARY
           echo ${{ steps.make-release.outputs.html_url }} >> $GITHUB_STEP_SUMMARY
-
