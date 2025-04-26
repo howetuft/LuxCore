@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2024-2025 Authors (see AUTHORS.txt)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyluxcore"
+dynamic = ["version"]
+dependencies = [
+  "numpy >= 2; python_version > '3.8'",
+  "numpy < 2; python_version <= '3.8'",
+  "nvidia-cuda-nvrtc-cu12; sys_platform != 'darwin'",
+]
+requires-python = ">= 3.8"
+description = "LuxCore Python bindings"
+authors = [{name="LuxCoreRender"}]
+## See https://pypi.org/classifiers/
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Development Status :: 7 - Inactive",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+]
+readme = "README.md"
+keywords = [
+  "raytracing",
+  "ray tracing",
+  "rendering",
+  "pbr",
+  "physical based rendering",
+  "path tracing",
+]
+
+[project.urls]
+Homepage = "https://luxcorerender.org/"
+Documentation = "http://wiki.luxcorerender.org/LuxCoreRender_Wiki"
+GitHub = "https://github.com/LuxCoreRender/LuxCore"
+
+[project.scripts]
+pyluxcoretest = "pyluxcoretest:main"
+
+[tool.scikit-build]
+logging.level = "DEBUG"
+build.verbose = true
+cmake.source-dir = "."
+build.targets = ["pyluxcore"]
+wheel.cmake = true
+wheel.packages = ["python/pyluxcore", "python/pyluxcoretest"]
+build-dir = "out"
+ninja.make-fallback = false
+install.components = ["pyluxcore"]
+experimental = true
+
+[tool.scikit-build.cmake.define]
+CMAKE_INSTALL_PREFIX = "install"
+#CMAKE_TOOLCHAIN_FILE = "out/build/Release/conan_toolchain.cmake"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+regex = "(?P<version>.*)"
+input = "SKVERSION"
+result = "{version}"
+
+[tool.black]
+line-length = 79

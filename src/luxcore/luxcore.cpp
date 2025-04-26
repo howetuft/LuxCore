@@ -19,8 +19,6 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 
-#include "spdlog/spdlog.h"
-
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
 #include "slg/slg.h"
@@ -135,7 +133,7 @@ Properties luxcore::GetPlatformDesc() {
 
 	Properties props;
 
-	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	static const string luxCoreVersion(LUXCORE_VERSION);
 	props << Property("version.number")(luxCoreVersion);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2020 by authors (see AUTHORS.txt)
+# Copyright 1998-2025 by Authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -22,14 +22,29 @@
 #
 #############################################################################
 
-set(LUXCORECONSOLE_SRCS
-	luxcoreconsole.cpp
-	)
+set(LUXCORECONSOLE_SRCS luxcoreconsole.cpp)
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
+TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE luxrays luxcore boost::boost)
 
 if(APPLE)
-TARGET_LINK_LIBRARIES(luxcoreconsole expat "-framework Carbon" "-framework IOKit" ${LUXCORE_LIBRARY} ${Boost_LIBRARIES})
-else()
-TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY} ${Boost_LIBRARIES})
+  TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE expat "-framework Carbon" "-framework IOKit")
 endif()
+
+set_target_properties(luxcoreconsole PROPERTIES
+  INSTALL_RPATH "\$ORIGIN/../lib"
+)
+
+install(
+    TARGETS luxcoreconsole
+    RUNTIME_DEPENDENCY_SET LUXCONSOLE_DEPS
+    COMPONENT luxcoreconsole
+    FRAMEWORK
+        DESTINATION luxcore
+    OPTIONAL
+)
+install(RUNTIME_DEPENDENCY_SET LUXCONSOLE_DEPS
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ${INSTALL_EXCLUDE_REGEXES}
+    DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}"
+)

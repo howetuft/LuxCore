@@ -28,18 +28,9 @@
 #include <opensubdiv/osd/cpuPatchTable.h>
 #include <opensubdiv/osd/cpuVertexBuffer.h>
 
-#if defined(_OPENMP)
-
 #include <omp.h>
-#include <opensubdiv/osd/ompEvaluator.h>
-#define OSD_EVALUATOR Osd::OmpEvaluator
-
-#else
-
-#include <opensubdiv/osd/cpuEvaluator.h>
-#define OSD_EVALUATOR Osd::CpuEvaluator
-
-#endif
+#include <opensubdiv/osd/tbbEvaluator.h>
+#define OSD_EVALUATOR Osd::TbbEvaluator
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"

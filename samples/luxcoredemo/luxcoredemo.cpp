@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 	try {
 		luxcore::Init();
 
-		cout << "LuxCore v" << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
+		cout << "LuxCore v" << LUXCORE_VERSION << "\n\n" ;
 
 		{
 			//------------------------------------------------------------------

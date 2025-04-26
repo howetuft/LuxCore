@@ -1,15 +1,21 @@
-# SPDX-FileCopyrightText: 2024 Howetuft
+# SPDX-FileCopyrightText: 2024-2025 Authors (see AUTHORS.txt)
 #
 # SPDX-License-Identifier: Apache-2.0
-
-# This action is the 1st part of a larger toolchain. You will find the other
-# components in LuxCoreRender/LuxCoreWheels repository
 
 
 name: LuxCore Python Wheels Builder
 
 on:
   workflow_dispatch:
+      inputs:
+        build-type:
+          description: 'Build type'
+          required: true
+          default: 'Release'
+          type: choice
+          options:
+            - Release
+            - Debug
   workflow_call:
     inputs:
       repository:
@@ -24,6 +30,11 @@ on:
         type: string
       version:
         description: 'The version to build - must comply to semver, or blank for default'
+        type: string
+      build-type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
         type: string
     outputs:
       commit:
@@ -58,7 +69,7 @@ jobs:
         #os: [macos-13]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
-      BUILD_TYPE: Release
+      BUILD_TYPE: ${{ github.event.inputs.build-type || 'Release' }}
       CXX_VERSION: 20
       GCC_VERSION: 14
       GLIBC_VERSION: 2_28
@@ -124,7 +135,7 @@ jobs:
                 'cache-variant': String.raw`ccache`,
                 'CMAKE_CXX_COMPILER_LAUNCHER': String.raw`ccache`,
                 'CMAKE_C_COMPILER_LAUNCHER': String.raw`ccache`,
-                'CCACHE_CONFIGPATH': String.raw`${workspace}/ccache.conf`,
+                'CCACHE_CONFIGPATH': String.raw`${workspace}/build-helpers/ccache.conf`,
                 'CCACHE_DIR': String.raw`${workspace}/.ccache`,
                 'CCACHE_DEBUGDIR': String.raw`${workspace}/ccache-debug`,
                 'CCACHE_LOGFILE': String.raw`${workspace}/ccache.log`
@@ -168,7 +179,7 @@ jobs:
           echo "AR=${_T}/usr/bin/ar" >> $GITHUB_ENV
           echo "RANLIB=${_T}/usr/bin/ranlib" >> $GITHUB_ENV
 
-      - name: Set MacOS deployment target
+      - name: Set MacOS deployment target and other set-ups
         if: runner.os == 'macOS'
         uses: actions/github-script@v7
         with:
@@ -187,6 +198,18 @@ jobs:
             }
             core.exportVariable('MACOSX_DEPLOYMENT_TARGET', target);
             core.exportVariable('PKG_ARCH', arch);
+
+      - name: Prepare MacOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+            _T=$(brew --prefix llvm@15)
+            echo "CXX=${_T}/bin/clang++" >> $GITHUB_ENV
+            echo "CC=${_T}/bin/clang" >> $GITHUB_ENV
+            #echo "AR=${_T}/bin/ar" >> $GITHUB_ENV
+            #echo "RANLIB=${_T}/bin/ranlib" >> $GITHUB_ENV
+            echo "LDFLAGS=-fuse-ld=$_T/bin/ld64.lld" >> $GITHUB_ENV
+
 
       # TODO: The following block is an ugly hack but, at the moment (2025-02-25),
       # scikit-build-core lacks a preset parameter, so this is the only way
@@ -208,10 +231,12 @@ jobs:
         shell: python
         run: |
           import json
+          from pathlib import Path
           if (input_version := "${{ inputs.release-version }}"):
             result = input_version
           else:
-            with open("luxcore.json") as in_file:
+            build_settings_file = Path("build-helpers", "build-settings.json")
+            with open(build_settings_file) as in_file:
               default_version = json.load(in_file)["DefaultVersion"]
             result = ".".join(default_version[i] for i in ("major", "minor", "patch"))
             if (prerelease := default_version["prerelease"]):
@@ -241,9 +266,10 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_${{ env.GLIBC_VERSION }}_x86_64
           CIBW_ENVIRONMENT: >
-            SKBUILD_CMAKE_ARGS='--preset ${{ env.CONAN_PRESET }};-G Ninja;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }}'
+            SKBUILD_CMAKE_ARGS='--preset conan-default;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }};-G Ninja Multi-Config'
             SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
-            LUX_GENERATOR='Ninja'
+            GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -268,14 +294,25 @@ jobs:
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
             dnf install -y ccache
-            dnf install -y sudo  # for gtk3...
             dnf install -y perl-IPC-Cmd perl-Digest-SHA
 
-            # Manylinux_2_34 compatibility
+            # Install gh (via conda)
+            dnf install -y wget
+            mkdir -p miniconda3
+            wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda3/miniconda.sh
+            bash miniconda3/miniconda.sh -b -u -p miniconda3
+            rm miniconda3/miniconda.sh
+            source miniconda3/bin/activate
+            conda init --all
+            conda install gh --channel conda-forge -y
+            echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
+
+            # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
               dnf install -y perl-FindBin perl-lib
             fi
 
+            # Install dependencies
             pip install conan && make deps
 
           CIBW_BEFORE_ALL_MACOS: |
@@ -302,7 +339,7 @@ jobs:
               {wheel}
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: |
-            bash.exe ${{ env.WORKSPACE }}/scripts/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%' '${{ env.WORKSPACE }}'
+            bash.exe ${{ env.WORKSPACE }}/build-helpers/wheels/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%' '${{ env.WORKSPACE }}'
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             cp {wheel} ${{ env.WORKSPACE }}
             paths=$(find ${{ env.WORKSPACE }} -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")
@@ -336,9 +373,6 @@ jobs:
         with:
           path: conan-cache
           key: deps-${{ matrix.os }}-${{ matrix.python-minor}}-${{ hashFiles('**/conan-cache') }}
-
-      #- name: Setup tmate session
-        #uses: mxschmitt/action-tmate@v3
 
       #- name: Setup tmate session (debug)
         #if: ${{ failure() }}

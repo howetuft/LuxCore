@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       release-tag:
-        description: "Tag of the release to publish"
+        description: "Version of the release to publish (major.minor.patch[-rev])"
         required: True
-        default: v0.0.1
+        default: 0.0.1
         type: string
       test:
         description: "Publish on Pypi test"
@@ -43,7 +43,7 @@ jobs:
         run: |
           # Warning: Target release must not be in 'draft' status,
           # otherwise gh release won't find it
-          gh release download ${{ inputs.release-tag}} -D tmp -R LuxCoreRender/LuxCoreWheels
+          gh release download wheels-v${{ inputs.release-tag}} -D tmp -R LuxCoreRender/LuxCore
           mkdir dist
           for d in tmp/*.zip ; do
               echo "unzip ${d}"

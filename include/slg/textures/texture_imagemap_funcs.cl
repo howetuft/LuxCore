@@ -23,16 +23,17 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 RGBToYCbCr(const float3 rgb) {
-	// ITU-R BT.601 from https://en.wikipedia.org/wiki/YCbCr
+	// ITU-T T.871 from https://www.itu.int/rec/T-REC-T.871-201105-I/en
+	const float offset = 128.f/255.f;
 	const float RGBToYCbCrOff[3] = {
-		 16.f / 255.f,
-		128.f / 255.f,
-		128.f / 255.f
+		0.f,
+		offset,
+		offset,
 	};
     const float RGBToYCbCrMat[3][3] = {
-        {  65.481f / 255.f, 128.553f / 255.f,   24.966f / 255.f },
-        { -37.797f / 255.f, -74.203f / 255.f,  112.f    / 255.f },
-        { 112.f    / 255.f, -93.786f / 255.f, -18.214f  / 255.f }
+        {0.299,         0.587,        0.114},
+        {-0.299/1.772, -0.587/1.772,  0.886/1.772},
+        { 0.701/1.402, -0.587/1.402, -0.114/1.402}
 	};
 
 	// RGB to YCbCr color space transformation
@@ -44,22 +45,16 @@ OPENCL_FORCE_INLINE float3 RGBToYCbCr(const float3 rgb) {
 }
 
 OPENCL_FORCE_INLINE float3 YCbCrToRGB(const float3 YCbCr) {
-	// ITU-R BT.601 from https://en.wikipedia.org/wiki/YCbCr
-	const float YCbCrToRGBOff[3] = {
-		-222.921f / 256.f,
-		 135.576f / 256.f,
-		-276.836f / 256.f
+	// ITU-T T.871 from https://www.itu.int/rec/T-REC-T.871-201105-I/en
+    const float offset = 128.f/255.f;
+	const float YCbCrToRGBMat[3][3] = {
+		{1.f,  0.f,          1.402f},
+		{1.f, -0.114*1.772/0.587, -0.299*1.402/0.587},
+		{1.f,  1.772f,        0.f}
 	};
-    const float YCbCrToRGBMat[3][3] = {
-		{ 298.082f / 256.f,    0.f    / 256.f,  408.583f / 256.f },
-		{ 298.082f / 256.f, -100.291f / 256.f, -208.120f / 256.f },
-		{ 298.082f / 256.f,  516.412f / 256.f,    0.f    / 256.f }
-	};
-
-	// YCbCr to RGB color space transformation
-	const float r = YCbCrToRGBOff[0] + YCbCrToRGBMat[0][0] * YCbCr.x + YCbCrToRGBMat[0][1] * YCbCr.y + YCbCrToRGBMat[0][2] * YCbCr.z;
-	const float g = YCbCrToRGBOff[1] + YCbCrToRGBMat[1][0] * YCbCr.x + YCbCrToRGBMat[1][1] * YCbCr.y + YCbCrToRGBMat[1][2] * YCbCr.z;
-	const float b = YCbCrToRGBOff[2] + YCbCrToRGBMat[2][0] * YCbCr.x + YCbCrToRGBMat[2][1] * YCbCr.y + YCbCrToRGBMat[2][2] * YCbCr.z;
+	const float r = YCbCrToRGBMat[0][0] * YCbCr.x + YCbCrToRGBMat[0][1] * (YCbCr.y - offset) + YCbCrToRGBMat[0][2] * (YCbCr.z - offset);
+	const float g = YCbCrToRGBMat[1][0] * YCbCr.x + YCbCrToRGBMat[1][1] * (YCbCr.y - offset) + YCbCrToRGBMat[1][2] * (YCbCr.z - offset);
+	const float b = YCbCrToRGBMat[2][0] * YCbCr.x + YCbCrToRGBMat[2][1] * (YCbCr.y - offset) + YCbCrToRGBMat[2][2] * (YCbCr.z - offset);
 
 	return clamp(MAKE_FLOAT3(r, g, b), 0.f, 1.f);
 }
@@ -149,9 +144,10 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_RandomizedTilingGetSpectrumValue(
 
 	float3 uvWeights = MAKE_FLOAT3(1.f - uv.x - uv.y, uv.x, uv.y);
 
-	uvWeights.x = uvWeights.x * uvWeights.x * uvWeights.x;
-	uvWeights.y = uvWeights.y * uvWeights.y * uvWeights.y;
-	uvWeights.z = uvWeights.z * uvWeights.z * uvWeights.z;
+	float gamma = 3.f;
+	uvWeights.x = pow(uvWeights.x, gamma);
+	uvWeights.y = pow(uvWeights.y, gamma);
+	uvWeights.z = pow(uvWeights.z, gamma);
 
 	uvWeights /= uvWeights.x + uvWeights.y + uvWeights.z;
 

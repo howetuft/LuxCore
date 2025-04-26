@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2020 by authors (see AUTHORS.txt)
+# Copyright 1998-2025 by Authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -18,87 +18,63 @@
 
 #############################################################################
 #
-# GLFW library
-#
-#############################################################################
-
-add_subdirectory(deps/glfw-3.1.1)
-include_directories(deps/glfw-3.1.1/include)
-include_directories(deps/nfd/include)
-
-#############################################################################
-#
 # luxcore UI binary
 #
 #############################################################################
 
-include_directories(deps/imgui-1.46)
-
 set(LUXCOREUI_SRCS
-	luxcoreui.cpp
-	luxcoreapp.cpp
-	uiloop.cpp
-	uikeys.cpp
-	uimenu.cpp
-	uimouse.cpp
-	helpwindow.cpp
-	logwindow.cpp
-	objectwindow.cpp
-	objecteditorwindow.cpp
-	acceleratorwindow.cpp
-	epsilonwindow.cpp
-	filmchannelswindow.cpp
-	filmoutputswindow.cpp
-	filmradiancegroupswindow.cpp
-	imagewindow.cpp
-	lightstrategywindow.cpp
-	ocldevicewindow.cpp
-	pixelfilterwindow.cpp
-	renderenginewindow.cpp
-	samplerwindow.cpp
-	haltconditionswindow.cpp
-	statswindow.cpp
-	importancewindow.cpp
-	imgui_impl_glfw.cpp
-	bake.cpp
-	resources/luxlogo_bg.cpp
-	deps/imgui-1.46/imgui.cpp
-	deps/imgui-1.46/imgui_demo.cpp
-	deps/imgui-1.46/imgui_draw.cpp
-	deps/nfd/nfd_common.c
-	)
-
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_win.cpp)
-ENDIF()
-
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_gtk.c)
-	add_definitions(${GTK3_CFLAGS_OTHER})
-ENDIF()
-
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_cocoa.m)
-ENDIF()
+  luxcoreui.cpp
+  luxcoreapp.cpp
+  uiloop.cpp
+  uikeys.cpp
+  uimenu.cpp
+  uimouse.cpp
+  helpwindow.cpp
+  logwindow.cpp
+  objectwindow.cpp
+  objecteditorwindow.cpp
+  acceleratorwindow.cpp
+  epsilonwindow.cpp
+  filmchannelswindow.cpp
+  filmoutputswindow.cpp
+  filmradiancegroupswindow.cpp
+  imagewindow.cpp
+  lightstrategywindow.cpp
+  ocldevicewindow.cpp
+  pixelfilterwindow.cpp
+  renderenginewindow.cpp
+  samplerwindow.cpp
+  haltconditionswindow.cpp
+  statswindow.cpp
+  importancewindow.cpp
+  bake.cpp
+  resources/luxlogo_bg.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_opengl2.cpp
+)
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
-
-if(APPLE)
-
-TARGET_LINK_LIBRARIES(luxcoreui
-	glfw
-	expat
-	${GLFW_LIBRARIES}
-	${LUXCORE_LIBRARY}
-	${OPENGL_LIBRARIES}
-	${GTK3_LIBRARIES}
-	${Boost_LIBRARIES})
-else()
-TARGET_LINK_LIBRARIES(luxcoreui
-	glfw
-	${GLFW_LIBRARIES}
-	${LUXCORE_LIBRARY}
-	${OPENGL_LIBRARIES}
-	${GTK3_LIBRARIES}
-	${Boost_LIBRARIES})
-endif()
+target_link_libraries(luxcoreui PRIVATE
+  luxrays
+  boost::boost
+  luxcore
+  imgui::imgui
+  imguifiledialog::imguifiledialog
+  glfw
+)
+set_target_properties(luxcoreui PROPERTIES
+  INSTALL_RPATH "\$ORIGIN/../lib"
+)
+install(
+  TARGETS luxcoreui
+  RUNTIME_DEPENDENCY_SET LUXUI_DEPS
+  COMPONENT luxcoreui
+  FRAMEWORK
+      DESTINATION luxcore
+  OPTIONAL
+)
+install(RUNTIME_DEPENDENCY_SET LUXUI_DEPS
+  PRE_EXCLUDE_REGEXES ${DEP_EXCLUDE}
+  POST_EXCLUDE_REGEXES ${INSTALL_EXCLUDE_REGEXES}
+  DIRECTORIES "${CONAN_RUNTIME_LIB_DIRS}"
+)

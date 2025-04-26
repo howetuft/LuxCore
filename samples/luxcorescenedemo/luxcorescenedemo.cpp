@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
 	try {
 		luxcore::Init();
 
-		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n" ;
+		cout << "LuxCore " << LUXCORE_VERSION << "\n" ;
 
 		//----------------------------------------------------------------------
 		// Build the scene to render
