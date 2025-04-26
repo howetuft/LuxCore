@@ -58,7 +58,6 @@ jobs:
     with:
       repository: LuxCoreRender/LuxCore
       version: ${{ inputs.release-version }}
-      build-type: Release
 
   create-release:
     name: 'Create release'
