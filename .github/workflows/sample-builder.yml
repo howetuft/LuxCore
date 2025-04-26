@@ -297,7 +297,7 @@ jobs:
         working-directory: ${{ github.workspace }}/out/install
         run: |
           mv Release LuxCore
-          zip -9 --symlinks -r ${{ github.workspace }}/LuxCoreSamples.zip LuxCore/
+          zip -9 --symlinks -r ${{ github.workspace }}/LuxCoreSamples-${{ runner.os }}-${{ runner.arch }}.zip LuxCore/
 
       # Upload artifacts
       - uses: actions/upload-artifact@v4
