@@ -294,15 +294,17 @@ jobs:
           apt install -y p7zip-full
 
       - name: Bundle artifacts
+        working-directory: ${{ github.workspace }}/out/install
         run: |
-          7z a LuxCore.7z ${{ github.workspace }}/out/install/Release
+          mv Release LuxCore
+          zip -9 --symlinks -r ${{ github.workspace }}/LuxCoreSamples.zip LuxCore/
 
       # Upload artifacts
       - uses: actions/upload-artifact@v4
         id: upload
         with:
           name: LuxCore-Samples-${{ runner.os }}-${{ runner.arch }}
-          path: ${{ github.workspace }}/LuxCore.7z
+          path: ${{ github.workspace }}/LuxCoreSamples.zip
           #path: ${{ github.workspace }}/out/install/Release
 
   attest-samples:
