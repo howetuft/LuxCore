@@ -608,7 +608,7 @@ void ClothMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 }
 
-void ClothMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void ClothMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Warp_Ks->AddReferencedTextures(referencedTexs);

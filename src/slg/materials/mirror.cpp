@@ -49,7 +49,7 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	return Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }
 
-void MirrorMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void MirrorMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);

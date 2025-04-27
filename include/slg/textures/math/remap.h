@@ -42,7 +42,7 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		valueTex->AddReferencedTextures(referencedTexs);
@@ -51,7 +51,7 @@ public:
 		targetMinTex->AddReferencedTextures(referencedTexs);
 		targetMaxTex->AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		valueTex->AddReferencedImageMaps(referencedImgMaps);
 		sourceMinTex->AddReferencedImageMaps(referencedImgMaps);
 		sourceMaxTex->AddReferencedImageMaps(referencedImgMaps);

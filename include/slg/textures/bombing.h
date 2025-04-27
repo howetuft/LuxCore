@@ -45,8 +45,8 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }

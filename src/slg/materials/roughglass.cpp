@@ -333,7 +333,7 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void RoughGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);

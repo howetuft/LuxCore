@@ -154,7 +154,7 @@ void HomogeneousVolume::Pdf(const HitPoint &hitPoint,
 	schlickScatter.Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-void HomogeneousVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void HomogeneousVolume::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Volume::AddReferencedTextures(referencedTexs);
 
 	sigmaA->AddReferencedTextures(referencedTexs);

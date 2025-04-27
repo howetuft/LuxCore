@@ -72,7 +72,7 @@ public:
 	// Update any reference to oldMesh with newMesh. It returns also the
 	// list of modified objects
 	void UpdateMeshReferences(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh,
-		boost::unordered_set<SceneObject *> &modifiedObjsList);
+		std::unordered_set<SceneObject *> &modifiedObjsList);
 
 	void DeleteSceneObject(const std::string &name) {
 		objs.DeleteObj(name);

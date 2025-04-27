@@ -280,7 +280,7 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void Glossy2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void Glossy2Material::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);

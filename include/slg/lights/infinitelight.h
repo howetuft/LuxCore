@@ -58,7 +58,7 @@ public:
 		float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
 	}
 

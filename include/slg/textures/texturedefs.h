@@ -72,7 +72,7 @@ public:
 
 private:
 	void GetTextureSortedNamesImpl(const Texture *tex, std::vector<std::string> &names,
-			boost::unordered_set<std::string> &doneNames) const;
+			std::unordered_set<std::string> &doneNames) const;
 
 	luxrays::NamedObjectVector texs;
 };

@@ -63,9 +63,9 @@ public:
 	u_int GetBakeMapUVIndex() const { return bakeMapUVIndex; }
 	luxrays::Spectrum GetBakeMapValue(const luxrays::UV &uv) const;
 
-	void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
-	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
-	void AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const;
+	void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
+	void AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const;
+	void AddReferencedMeshes(std::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const;
 
 	// Update any reference to oldMat with newMat
 	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);

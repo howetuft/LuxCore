@@ -263,7 +263,7 @@ void Material::UpdateMaterialReferences(const Material *oldMat, const Material *
 		exteriorVolume = (const Volume *)newMat;
 }
 
-void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+void Material::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
 	referencedMats.insert(this);
 	if (interiorVolume)
 		referencedMats.insert((const Material *)interiorVolume);
@@ -271,7 +271,7 @@ void Material::AddReferencedMaterials(boost::unordered_set<const Material *> &re
 		referencedMats.insert((const Material *)exteriorVolume);
 }
 
-void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void Material::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	if (frontTransparencyTex)
 		frontTransparencyTex->AddReferencedTextures(referencedTexs);
 	if (backTransparencyTex)
@@ -282,7 +282,7 @@ void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &refe
 		bumpTex->AddReferencedTextures(referencedTexs);
 }
 
-void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void Material::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (emissionMap)
 		referencedImgMaps.insert(emissionMap);
 }

@@ -167,7 +167,7 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localLightDir, wh));
 }
 
-void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void Metal2Material::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	if (fresnelTex)

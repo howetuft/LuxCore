@@ -96,7 +96,7 @@ public:
 		const Texture * newTex
 	);
 
-	void AddReferencedTextures(boost::unordered_set<const Texture*>& referencedTexs) const;
+	void AddReferencedTextures(std::unordered_set<const Texture*>& referencedTexs) const;
 
 	const Texture *GetBaseColor() const { return BaseColor; };
 	const Texture *GetSubsurface() const { return Subsurface; };

@@ -436,13 +436,13 @@ bool GlossyCoatingMaterial::IsReferencing(const Material *mat) const {
 	return matBase->IsReferencing(mat);
 }
 
-void GlossyCoatingMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+void GlossyCoatingMaterial::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
 	Material::AddReferencedMaterials(referencedMats);
 
 	matBase->AddReferencedMaterials(referencedMats);
 }
 
-void GlossyCoatingMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void GlossyCoatingMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matBase->AddReferencedTextures(referencedTexs);

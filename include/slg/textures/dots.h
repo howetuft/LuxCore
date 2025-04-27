@@ -43,13 +43,13 @@ public:
 		return (insideTex->Filter() + outsideTex->Filter()) * .5f;
 	}
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		insideTex->AddReferencedTextures(referencedTexs);
 		outsideTex->AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		insideTex->AddReferencedImageMaps(referencedImgMaps);
 		outsideTex->AddReferencedImageMaps(referencedImgMaps);
 	}

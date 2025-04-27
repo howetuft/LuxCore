@@ -29,7 +29,7 @@ using namespace slg;
 // SceneObject
 //------------------------------------------------------------------------------
 
-void SceneObject::AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const {
+void SceneObject::AddReferencedMeshes(std::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const {
 	referencedMesh.insert(mesh);
 
 	// Check if it is an instance and add referenced mesh
@@ -122,11 +122,11 @@ Spectrum SceneObject::GetBakeMapValue(const UV &uv) const {
 	return bakeMap->GetSpectrum(uv);
 }
 
-void SceneObject::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void SceneObject::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (bakeMap)
 		referencedImgMaps.insert(bakeMap);
 }
 
-void SceneObject::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+void SceneObject::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
 	mat->AddReferencedMaterials(referencedMats);
 }

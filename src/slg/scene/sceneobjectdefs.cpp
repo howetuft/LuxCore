@@ -86,7 +86,7 @@ void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, co
 }
 
 void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh* oldMesh, ExtMesh* newMesh,
-	boost::unordered_set<SceneObject*>& modifiedObjsList) {
+	std::unordered_set<SceneObject*>& modifiedObjsList) {
 
 	auto p = meshToSceneObjects.equal_range(oldMesh->GetName());
 	auto it = p.first;

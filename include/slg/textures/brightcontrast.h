@@ -43,14 +43,14 @@ public:
 		return 0.f;  // TODO
 	}
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
 		brightnessTex->AddReferencedTextures(referencedTexs);
 		contrastTex->AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		tex->AddReferencedImageMaps(referencedImgMaps);
 		brightnessTex->AddReferencedImageMaps(referencedImgMaps);
 		contrastTex->AddReferencedImageMaps(referencedImgMaps);

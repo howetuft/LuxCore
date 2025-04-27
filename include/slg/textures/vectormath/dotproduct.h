@@ -38,13 +38,13 @@ public:
 	virtual float Y() const { return 0.f; } // TODO
 	virtual float Filter() const { return 0.f; } // TODO
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		tex1->AddReferencedImageMaps(referencedImgMaps);
 		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}

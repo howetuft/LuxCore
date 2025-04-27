@@ -184,7 +184,7 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 
 		// Replace old mesh direct references with new one and get the list
 		// of scene objects referencing the old mesh
-		boost::unordered_set<SceneObject *> modifiedObjsList;
+		std::unordered_set<SceneObject *> modifiedObjsList;
 		objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
 
 		// For each scene object
@@ -359,7 +359,7 @@ void Scene::Parse(const Properties &props) {
 
 void Scene::RemoveUnusedImageMaps() {
 	// Build a list of all referenced image maps
-	boost::unordered_set<const ImageMap *> referencedImgMaps;
+	std::unordered_set<const ImageMap *> referencedImgMaps;
 	for (u_int i = 0; i < texDefs.GetSize(); ++i)
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
@@ -406,7 +406,7 @@ void Scene::RemoveUnusedImageMaps() {
 
 void Scene::RemoveUnusedTextures() {
 	// Build a list of all referenced textures names
-	boost::unordered_set<const Texture *> referencedTexs;
+	std::unordered_set<const Texture *> referencedTexs;
 	for (u_int i = 0; i < matDefs.GetSize(); ++i)
 		matDefs.GetMaterial(i)->AddReferencedTextures(referencedTexs);
 
@@ -432,7 +432,7 @@ void Scene::RemoveUnusedTextures() {
 
 void Scene::RemoveUnusedMaterials() {
 	// Build a list of all referenced material names
-	boost::unordered_set<const Material *> referencedMats;
+	std::unordered_set<const Material *> referencedMats;
 
 	// Add the camera volume
 	if (camera && camera->volume)
@@ -467,7 +467,7 @@ void Scene::RemoveUnusedMaterials() {
 
 void Scene::RemoveUnusedMeshes() {
 	// Build a list of all referenced meshes
-	boost::unordered_set<const ExtMesh *> referencedMesh;
+	std::unordered_set<const ExtMesh *> referencedMesh;
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMeshes(referencedMesh);
 

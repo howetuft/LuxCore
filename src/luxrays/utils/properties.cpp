@@ -1103,7 +1103,7 @@ Properties &Properties::Set(const Property &prop) {
 		// It is a new name
 		names.push_back(propName);
 	} else {
-		// boost::unordered_set::insert() doesn't overwrite an existing entry
+		// std::unordered_set::insert() doesn't overwrite an existing entry
 		props.erase(propName);
 	}
 

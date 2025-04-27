@@ -265,7 +265,7 @@ void GlassMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = 0.f;
 }
 
-void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void GlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);

@@ -42,7 +42,7 @@ void TextureDefinitions::DefineTexture(Texture *newTex) {
 }
 
 void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const {
-	boost::unordered_set<string> doneNames;
+	std::unordered_set<string> doneNames;
 
 	for (u_int i = 0; i < GetSize(); ++i) {
 		const Texture *tex = GetTexture(i);
@@ -52,14 +52,14 @@ void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const
 }
 
 void TextureDefinitions::GetTextureSortedNamesImpl(const Texture *tex,
-		vector<std::string> &names, boost::unordered_set<string> &doneNames) const {
+		vector<std::string> &names, std::unordered_set<string> &doneNames) const {
 	// Check it has not been already added
 	const string &texName = tex->GetName();
 	if (doneNames.count(texName) != 0)
 		return;
 
 	// Get the list of reference textures by this one
-	boost::unordered_set<const Texture *> referencedTexs;
+	std::unordered_set<const Texture *> referencedTexs;
 	tex->AddReferencedTextures(referencedTexs);
 
 	// Add all referenced texture names

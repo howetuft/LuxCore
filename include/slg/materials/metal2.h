@@ -53,7 +53,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

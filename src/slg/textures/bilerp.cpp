@@ -68,7 +68,7 @@ float BilerpTexture::Filter() const
 	return (t00->Filter() + t01->Filter() + t10->Filter() + t11->Filter()) * .25f;
 }
 
-void BilerpTexture::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const
+void BilerpTexture::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const
 {
 	Texture::AddReferencedTextures(referencedTexs);
 
@@ -77,7 +77,7 @@ void BilerpTexture::AddReferencedTextures(boost::unordered_set<const Texture *> 
 	t10->AddReferencedTextures(referencedTexs);
 	t11->AddReferencedTextures(referencedTexs);
 }
-void BilerpTexture::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const
+void BilerpTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const
 {
 	t00->AddReferencedImageMaps(referencedImgMaps);
 	t01->AddReferencedImageMaps(referencedImgMaps);

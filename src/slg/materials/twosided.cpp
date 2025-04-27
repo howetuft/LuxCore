@@ -209,7 +209,7 @@ bool TwoSidedMaterial::IsReferencing(const Material *mat) const {
 		backMat == mat || backMat->IsReferencing(mat);
 }
 
-void TwoSidedMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+void TwoSidedMaterial::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
 	Material::AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(frontMat);
@@ -219,7 +219,7 @@ void TwoSidedMaterial::AddReferencedMaterials(boost::unordered_set<const Materia
 	backMat->AddReferencedMaterials(referencedMats);
 }
 
-void TwoSidedMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void TwoSidedMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	frontMat->AddReferencedTextures(referencedTexs);

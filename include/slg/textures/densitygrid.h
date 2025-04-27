@@ -45,7 +45,7 @@ public:
 	u_int GetDepth() const { return nz; }
 	const ImageMap *GetImageMap() const { return imageMap; }
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
 	}
 

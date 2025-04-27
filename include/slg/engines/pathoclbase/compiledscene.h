@@ -177,7 +177,7 @@ private:
 	const PathTracer *pathTracer;
 
 	size_t maxMemPageSize;
-	boost::unordered_set<std::string> enabledCode;
+	std::unordered_set<std::string> enabledCode;
 }; 
 
 }

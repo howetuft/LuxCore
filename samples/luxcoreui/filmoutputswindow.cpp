@@ -18,9 +18,9 @@
 
 #include <iostream>
 #include <memory>
+#include <unordered_set>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
-#include <boost/unordered_set.hpp>
 
 #include "luxcoreapp.h"
 
@@ -438,7 +438,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (ImGui::CollapsingHeader("Current Film output(s)", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-		boost::unordered_set<string> outputNames;
+		std::unordered_set<string> outputNames;
 		std::unordered_map<string, unsigned int> typeCount;
 		vector<string> outputKeys = props.GetAllNames("film.outputs.");
 		for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {

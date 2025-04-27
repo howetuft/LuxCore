@@ -67,8 +67,8 @@ public:
 
 	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
-	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

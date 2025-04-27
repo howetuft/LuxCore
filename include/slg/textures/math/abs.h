@@ -38,12 +38,12 @@ public:
 	virtual float Y() const { return fabsf(tex->Y()); } // This can be not correct
 	virtual float Filter() const { return fabsf(tex->Filter()); } // This can be not correct
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 

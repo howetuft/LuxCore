@@ -128,7 +128,7 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return result;
 }
 
-void BombingTexture::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void BombingTexture::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Texture::AddReferencedTextures(referencedTexs);
 
 	backgroundTex->AddReferencedTextures(referencedTexs);
@@ -136,7 +136,7 @@ void BombingTexture::AddReferencedTextures(boost::unordered_set<const Texture *>
 	bulletMaskTex->AddReferencedTextures(referencedTexs);
 }
 
-void BombingTexture::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void BombingTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	backgroundTex->AddReferencedImageMaps(referencedImgMaps);
 	bulletTex->AddReferencedImageMaps(referencedImgMaps);
 	bulletMaskTex->AddReferencedImageMaps(referencedImgMaps);

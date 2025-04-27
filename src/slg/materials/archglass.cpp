@@ -213,7 +213,7 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	}
 }
 
-void ArchGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);

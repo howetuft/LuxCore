@@ -366,7 +366,7 @@ bool MixMaterial::IsReferencing(const Material *mat) const {
 		matB == mat || matB->IsReferencing(mat);
 }
 
-void MixMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+void MixMaterial::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
 	Material::AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(matA);
@@ -376,7 +376,7 @@ void MixMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> 
 	matB->AddReferencedMaterials(referencedMats);
 }
 
-void MixMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void MixMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matA->AddReferencedTextures(referencedTexs);

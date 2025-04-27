@@ -49,7 +49,7 @@ void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const T
 }
 
 void MaterialDefinitions::GetMaterialSortedNames(vector<std::string> &names) const {
-	boost::unordered_set<string> doneNames;
+	std::unordered_set<string> doneNames;
 
 	for (u_int i = 0; i < GetSize(); ++i) {
 		const Material *mat = GetMaterial(i);
@@ -59,14 +59,14 @@ void MaterialDefinitions::GetMaterialSortedNames(vector<std::string> &names) con
 }
 
 void MaterialDefinitions::GetMaterialSortedNamesImpl(const Material *mat,
-		vector<std::string> &names, boost::unordered_set<string> &doneNames) const {
+		vector<std::string> &names, std::unordered_set<string> &doneNames) const {
 	// Check it has not been already added
 	const string &matName = mat->GetName();
 	if (doneNames.count(matName) != 0)
 		return;
 
 	// Get the list of reference materials by this one
-	boost::unordered_set<const Material *> referencedTexs;
+	std::unordered_set<const Material *> referencedTexs;
 	mat->AddReferencedMaterials(referencedTexs);
 
 	// Add all referenced texture names

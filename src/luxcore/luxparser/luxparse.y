@@ -116,7 +116,7 @@ static std::unordered_map<string, Properties> namedMaterials;
 // The named Volumes
 static std::unordered_map<string, Properties> namedVolumes;
 // The named Textures
-static boost::unordered_set<string> namedTextures;
+static std::unordered_set<string> namedTextures;
 // The named Object
 static std::unordered_map<string, vector<string> > namedObjectShapes;
 static std::unordered_map<string, vector<string> > namedObjectMaterials;

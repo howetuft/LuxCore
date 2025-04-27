@@ -164,7 +164,7 @@ static std::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
 static std::unordered_map<string, Properties> namedMaterials;
 // The named Textures
-static boost::unordered_set<string> namedTextures;
+static std::unordered_set<string> namedTextures;
 static u_int freeObjectID, freeLightID;
 
 void ResetParser() {

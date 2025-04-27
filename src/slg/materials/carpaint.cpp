@@ -382,7 +382,7 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = (pdf + fabsf(localFixedDir.z) * INV_PI) / n;
 }
 
-void CarPaintMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void CarPaintMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);

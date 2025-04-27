@@ -585,7 +585,7 @@ void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 		UpdateGlossiness();
 }
 
-void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void DisneyMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	BaseColor->AddReferencedTextures(referencedTexs);

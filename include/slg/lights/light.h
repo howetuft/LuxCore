@@ -111,7 +111,7 @@ public:
 	
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
 
 	static std::string LightSourceType2String(const LightSourceType type);

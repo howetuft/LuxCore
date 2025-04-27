@@ -354,7 +354,7 @@ ImageMapTexture::~ImageMapTexture() {
 	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 
-void ImageMapTexture::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void ImageMapTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	referencedImgMaps.insert(imageMap);
 	if (randomizedTilingLUT)
 		referencedImgMaps.insert(randomizedTilingLUT);

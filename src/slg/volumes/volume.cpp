@@ -29,7 +29,7 @@ using namespace slg;
 // Volume
 //------------------------------------------------------------------------------
 
-void Volume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void Volume::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	if (iorTex)

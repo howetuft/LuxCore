@@ -22,10 +22,10 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <unordered_set>
+#include <unordered_map>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -89,10 +89,10 @@ public:
 	// Used for bump/normal mapping support
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
