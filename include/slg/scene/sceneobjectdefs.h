@@ -86,7 +86,7 @@ private:
 	luxrays::NamedObjectVector objs;
 
 	// mapping mesh.name -> scene object list using it
-	boost::unordered_multimap<std::string, std::string> meshToSceneObjects;
+	std::unordered_multimap<std::string, std::string> meshToSceneObjects;
 };
 
 }
