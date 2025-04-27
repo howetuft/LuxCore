@@ -107,7 +107,7 @@ jobs:
           updateOnlyUnreleased: true
           draft: true
           body: |
-            ## LuxCore Python Samples
+            ## LuxCore C++ Samples
 
             This release was built from the following point in LuxCoreRender/LuxCore:
             - Branch: ${{ needs.call-build-samples.outputs.branch }}

@@ -25,16 +25,16 @@ on:
     outputs:
       commit:
         description: "The commit that has been checked out"
-        value: ${{ jobs.build-wheels.outputs.commit }}
+        value: ${{ jobs.build-samples.outputs.commit }}
       branch:
         description: "The branch that has been checked out"
-        value: ${{ jobs.build-wheels.outputs.branch }}
+        value: ${{ jobs.build-samples.outputs.branch }}
       attestation-url:
         description: "The url to the attestations"
-        value: ${{ jobs.attest-wheels.outputs.attestation-url }}
+        value: ${{ jobs.attest-samples.outputs.attestation-url }}
       version:
         description: "The version actually built"
-        value: ${{ jobs.build-wheels.outputs.version }}
+        value: ${{ jobs.build-samples.outputs.version }}
 
 jobs:
   build-samples:
@@ -83,6 +83,30 @@ jobs:
           echo "branch=$(git symbolic-ref HEAD)" >> $GITHUB_OUTPUT
           echo "commit=$(git rev-parse HEAD)"
           echo "branch=$(git symbolic-ref HEAD)"
+
+      - name: Output version
+        id: output-version
+        shell: python
+        run: |
+          import os
+          import json
+          from pathlib import Path
+
+          if (input_version := "${{ inputs.release-version }}"):
+            version = input_version
+          else:
+            # Fall back to default
+            build_settings_file = Path("build-helpers", "build-settings.json")
+            with open(build_settings_file) as in_file:
+              default_version = json.load(in_file)["DefaultVersion"]
+            version = ".".join(default_version[i] for i in ("major", "minor", "patch"))
+            if (prerelease := default_version["prerelease"]):
+              version = f"{version}-{prerelease}"
+
+          print(f"Version: {version}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output_file:
+            output_file.write(f"version={version}\n")
 
       - name: Find workspace
         shell: bash
