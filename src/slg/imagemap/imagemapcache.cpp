@@ -88,7 +88,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 	string key = GetCacheKey(fileName);
 
 	// Check if the image map has been already defined
-	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
+	std::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
 		//SDL_LOG("Cached defined image map: " << fileName);
@@ -136,7 +136,7 @@ void ImageMapCache::DefineImageMap(ImageMap *im) {
 	// Compose the cache key
 	const string key = GetCacheKey(name);
 
-	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
+	std::unordered_map<std::string, ImageMap *>::const_iterator it = mapByKey.find(key);
 	if (it == mapByKey.end()) {
 		// Add the new image definition
 		mapByKey.insert(make_pair(key, im));
@@ -160,7 +160,7 @@ void ImageMapCache::DefineImageMap(ImageMap *im) {
 }
 
 void ImageMapCache::DeleteImageMap(const ImageMap *im) {
-	for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
+	for (std::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
 		if (it->second == im) {
 			delete it->second;
 			mapByKey.erase(it);

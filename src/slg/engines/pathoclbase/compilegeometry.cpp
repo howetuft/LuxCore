@@ -60,7 +60,7 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//--------------------------------------------------------------------------
 
-	// Not using boost::unordered_map because the key is an ExtMesh pointer
+	// Not using std::unordered_map because the key is an ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(const Mesh *, const Mesh *)> definedMeshs(MeshPtrCompare);
 
 	u_int vertsOffset = 0;

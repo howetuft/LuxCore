@@ -107,20 +107,20 @@ static GraphicsState currentGraphicsState;
 static vector<Transform> transformsStack;
 static Transform currentTransform;
 // The named coordinate systems
-static boost::unordered_map<string, Transform> namedCoordinateSystems;
+static std::unordered_map<string, Transform> namedCoordinateSystems;
 // The light groups
 static u_int freeLightGroupIndex;
-static boost::unordered_map<string, u_int> namedLightGroups;
+static std::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
-static boost::unordered_map<string, Properties> namedMaterials;
+static std::unordered_map<string, Properties> namedMaterials;
 // The named Volumes
-static boost::unordered_map<string, Properties> namedVolumes;
+static std::unordered_map<string, Properties> namedVolumes;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
 // The named Object
-static boost::unordered_map<string, vector<string> > namedObjectShapes;
-static boost::unordered_map<string, vector<string> > namedObjectMaterials;
-static boost::unordered_map<string, vector<Transform> > namedObjectTransforms;
+static std::unordered_map<string, vector<string> > namedObjectShapes;
+static std::unordered_map<string, vector<string> > namedObjectMaterials;
+static std::unordered_map<string, vector<Transform> > namedObjectTransforms;
 static string currentObjectName;
 static u_int freeObjectID, freeLightID;
 

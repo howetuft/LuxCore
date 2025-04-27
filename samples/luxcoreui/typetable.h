@@ -69,8 +69,8 @@ public:
 	}
 
 private:
-	boost::unordered_map<std::string, int> toValTable;
-	boost::unordered_map<int, std::string> toStringTable;
+	std::unordered_map<std::string, int> toValTable;
+	std::unordered_map<int, std::string> toStringTable;
 
 	std::string defaultTag;
 	

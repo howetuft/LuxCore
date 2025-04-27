@@ -77,7 +77,7 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	boost::unordered_map<std::string, ImageMap *> mapByKey;
+	std::unordered_map<std::string, ImageMap *> mapByKey;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<std::string> mapNames;
 	std::vector<ImageMap *> maps;

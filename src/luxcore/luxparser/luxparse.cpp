@@ -157,12 +157,12 @@ static GraphicsState currentGraphicsState;
 static vector<Transform> transformsStack;
 static Transform currentTransform;
 // The named coordinate systems
-static boost::unordered_map<string, Transform> namedCoordinateSystems;
+static std::unordered_map<string, Transform> namedCoordinateSystems;
 // The light groups
 static u_int freeLightGroupIndex;
-static boost::unordered_map<string, u_int> namedLightGroups;
+static std::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
-static boost::unordered_map<string, Properties> namedMaterials;
+static std::unordered_map<string, Properties> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
 static u_int freeObjectID, freeLightID;

@@ -38,9 +38,9 @@ public:
 	~StaticTable() { }
 
 	bool Get(const K &key, T &val) const {
-		const boost::unordered_map<K, T> &table = GetTable();
+		const std::unordered_map<K, T> &table = GetTable();
 
-		typename boost::unordered_map<K, T>::const_iterator it = table.find(key);
+		typename std::unordered_map<K, T>::const_iterator it = table.find(key);
 		if (it == table.end())
 			return false;
 		else {
@@ -55,9 +55,9 @@ public:
 		std::stringstream ss;
 
 		ss << "StaticTable[";
-		boost::unordered_map<K, T> &table = GetTable();
+		std::unordered_map<K, T> &table = GetTable();
 		bool first = true;
-		for (typename boost::unordered_map<K, T>::const_iterator it = table.begin(); it != table.end(); ++it) {
+		for (typename std::unordered_map<K, T>::const_iterator it = table.begin(); it != table.end(); ++it) {
 			if (first)
 				first = false;
 			else
@@ -73,12 +73,12 @@ public:
 	class RegisterTableValue {
 	public:
 		RegisterTableValue(const K &key, const T &val) {
-			boost::unordered_map<K, T> &table = GetTable();
+			std::unordered_map<K, T> &table = GetTable();
 
 			/* This safety check is triggered when importing LuxCore module in
 			 * Blender Python on Linux like if static fields were initialized 2
 			 * times. Something wrong with the compiler and/or Blender.
-			typename boost::unordered_map<K, T>::const_iterator it = table.find(key);
+			typename std::unordered_map<K, T>::const_iterator it = table.find(key);
 			if (it == table.end())
 				table[key] = val;
 			else
@@ -92,8 +92,8 @@ public:
 	};
 
 private:
-	static boost::unordered_map<K, T> &GetTable() {
-		static boost::unordered_map<K, T> table;
+	static std::unordered_map<K, T> &GetTable() {
+		static std::unordered_map<K, T> table;
 		
 		return table;
 	}

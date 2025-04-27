@@ -819,7 +819,7 @@ static bool Scene_DefineBlenderMesh(
   }
 
   u_int vertFreeIndex = 0;
-  boost::unordered_map<u_int, u_int> vertexMap;
+  std::unordered_map<u_int, u_int> vertexMap;
 
   const float normalScale = 1.f / 32767.f;
   const float rgbScale = 1.f / 255.f;

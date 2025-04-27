@@ -59,7 +59,7 @@ DataSet::DataSet(const Context *luxRaysContext) {
 }
 
 DataSet::~DataSet() {
-	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
+	for (std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
 		delete it->second;
 }
 
@@ -105,13 +105,13 @@ void DataSet::UpdateBBoxes() {
 }
 
 bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
-	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	
 	return !(it == accels.end());
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
-	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	if (it == accels.end()) {
 		boost::unique_lock<boost::mutex> lock(accelsMutex);
 
@@ -156,7 +156,7 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 }
 
 bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
-	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		if (!it->second->DoesSupportUpdate())
 			return false;
 	}
@@ -165,7 +165,7 @@ bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
 }
 
 void DataSet::UpdateAccelerators() {
-	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		assert(it->second->DoesSupportUpdate());
 		it->second->Update();
 	}

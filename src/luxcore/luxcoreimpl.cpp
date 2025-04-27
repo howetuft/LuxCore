@@ -1667,7 +1667,7 @@ void RenderSessionImpl::UpdateStats() {
 	// Intersection devices statistics
 	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
 
-	boost::unordered_map<string, unsigned int> devCounters;
+	std::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
 	BOOST_FOREACH(IntersectionDevice *dev, idevices) {

@@ -52,7 +52,7 @@ private:
 	void ConvertFromOpenColorIO(const std::string &configFileName,
 		const std::string &inputColorSpace, luxrays::Spectrum &c);
 
-	boost::unordered_map<std::string, OCIO::ConstCPUProcessorRcPtr> ocioProcessorCache;
+	std::unordered_map<std::string, OCIO::ConstCPUProcessorRcPtr> ocioProcessorCache;
 };
 
 }

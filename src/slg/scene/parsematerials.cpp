@@ -69,7 +69,7 @@ void Scene::ParseMaterials(const Properties &props) {
 
 	// Cache isLightSource values before we go deleting materials (required for
 	// updating mix material)
-	boost::unordered_map<const Material *, bool> cachedIsLightSource;
+	std::unordered_map<const Material *, bool> cachedIsLightSource;
 
 	BOOST_FOREACH(const string &key, matKeys) {
 		const string matName = Property::ExtractField(key, 2);
