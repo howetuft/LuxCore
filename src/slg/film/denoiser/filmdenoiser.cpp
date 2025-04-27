@@ -119,7 +119,7 @@ float *FilmDenoiser::GetHistoImage() {
 
 void FilmDenoiser::CheckReferenceFilm() {
 	if (referenceFilm->filmDenoiser.warmUpDone) {
-		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 
 		sampleScale = referenceFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
@@ -146,7 +146,7 @@ void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
 
 void FilmDenoiser::CopyReferenceFilm(const Film *refFilm) {
 	if (!warmUpDone && refFilm->filmDenoiser.warmUpDone) {
-		boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 
 		sampleScale = refFilm->filmDenoiser.sampleScale;
 		radianceChannelScales = refFilm->filmDenoiser.radianceChannelScales;
@@ -203,7 +203,7 @@ void FilmDenoiser::CheckIfWarmUpDone() {
 
 // This method must be thread safe
 void FilmDenoiser::WarmUpDone() {
-	boost::unique_lock<boost::mutex> lock(warmUpDoneMutex);
+	std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 
 	if (warmUpDone)
 		return;

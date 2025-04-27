@@ -61,7 +61,7 @@ private:
 	void ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const;
 
 	// Used for Embree initialization
-	static boost::mutex initMutex;
+	static std::mutex initMutex;
 	// Used to count the number of existing EmbreeAccel instances
 	static u_int initCount;
 

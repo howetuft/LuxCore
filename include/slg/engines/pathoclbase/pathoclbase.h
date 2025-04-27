@@ -80,7 +80,7 @@ protected:
 	void SetCachedKernels(const RenderConfig &renderConfig);
 	static std::string GetCachedKernelsHash(const RenderConfig &renderConfig);
 
-	boost::mutex setKernelArgsMutex;
+	std::mutex setKernelArgsMutex;
 
 	slg::ocl::pathoclbase::GPUTaskConfiguration taskConfig;
 	CompiledScene *compiledScene;

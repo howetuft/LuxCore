@@ -1019,7 +1019,7 @@ protected:
 
 		std::map<boost::thread::id, ThreadData *> threadInfo;
 
-		boost::mutex classLock;
+		std::mutex classLock;
 	};
 	
 	// Used by serialization

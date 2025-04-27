@@ -95,8 +95,8 @@ void RenderEngine::SetRenderState(RenderState *state, Film *oldFilm) {
 	startFilm = oldFilm;
 }
 
-void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
+void RenderEngine::Start(Film *flm, std::mutex *flmMutex) {
+	std::unique_lock<std::mutex> lock(engineMutex);
 
 	assert (!started);
 	started = true;
@@ -138,7 +138,7 @@ void RenderEngine::Start(Film *flm, boost::mutex *flmMutex) {
 }
 
 void RenderEngine::Stop() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
+	std::unique_lock<std::mutex> lock(engineMutex);
 
 	StopLockLess();
 
@@ -155,7 +155,7 @@ void RenderEngine::Stop() {
 }
 
 void RenderEngine::BeginSceneEdit() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
+	std::unique_lock<std::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (!editMode);
@@ -165,7 +165,7 @@ void RenderEngine::BeginSceneEdit() {
 }
 
 void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
+	std::unique_lock<std::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (editMode);
@@ -196,7 +196,7 @@ void RenderEngine::BeginFilmEdit() {
 	Stop();
 }
 
-void RenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
+void RenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
 	film = NULL;
 	filmMutex = NULL;
 
@@ -215,7 +215,7 @@ void RenderEngine::GenerateNewSeedBase() {
 }
 
 void RenderEngine::UpdateFilm() {
-	boost::unique_lock<boost::mutex> lock(engineMutex);
+	std::unique_lock<std::mutex> lock(engineMutex);
 
 	if (started) {
 		UpdateFilmLockLess();

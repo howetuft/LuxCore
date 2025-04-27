@@ -47,7 +47,7 @@ using namespace slg;
 template <class T>
 SceneVisibility<T>::TraceVisibilityThread::TraceVisibilityThread(SceneVisibility<T> &svis, const u_int index,
 		SobolSamplerSharedData &sobolSharedData,
-		IndexOctree<T> *octree, boost::mutex &octreeMutex,
+		IndexOctree<T> *octree, std::mutex &octreeMutex,
 		boost::atomic<u_int> &gParticlesCount,
 		u_int &cacheLookUp, u_int &cacheHits,
 		bool &warmUp) :
@@ -269,7 +269,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 		//----------------------------------------------------------------------
 		
 		if (visibilityParticles.size() > 0) {
-			boost::unique_lock<boost::mutex> lock(particlesOctreeMutex);
+			std::unique_lock<std::mutex> lock(particlesOctreeMutex);
 
 			u_int cacheLookUp = 0;
 			u_int cacheHits = 0;
@@ -354,7 +354,7 @@ void SceneVisibility<T>::Build() {
 	//
 	// Note: I use an Octree because it can be built at runtime.
 	unique_ptr<IndexOctree<T> > particlesOctree(AllocOctree());
-	boost::mutex particlesOctreeMutex;
+	std::mutex particlesOctreeMutex;
 
 	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
 

@@ -50,7 +50,7 @@ namespace luxcore {
 // Module functions
 //------------------------------------------------------------------------------
 
-static boost::mutex luxCoreInitMutex;
+static std::mutex luxCoreInitMutex;
 static py::object luxCoreLogHandler;
 
 #if (PY_VERSION_HEX >= 0x03040000)
@@ -81,12 +81,12 @@ static void PythonDebugHandler(const char *msg) {
 #endif
 
 static void LuxCore_Init() {
-  boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
+  std::unique_lock<std::mutex> lock(luxCoreInitMutex);
   Init();
 }
 
 static void LuxCore_InitDefaultHandler(py::object &logHandler) {
-  boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
+  std::unique_lock<std::mutex> lock(luxCoreInitMutex);
   // I wonder if I should increase the reference count for Python
   luxCoreLogHandler = logHandler;
 

@@ -201,7 +201,7 @@ void PathOCLRenderEngine::MergeThreadFilms() {
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
+	std::unique_lock<std::mutex> lock(*filmMutex);
 
 	MergeThreadFilms();
 }

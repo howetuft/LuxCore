@@ -19,8 +19,8 @@
 #ifndef _SLG_RTPATHCPU_H
 #define	_SLG_RTPATHCPU_H
 
+#include <condition_variable>
 #include <boost/thread/barrier.hpp>
-#include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>    
 
 #include "slg/engines/pathcpu/pathcpu.h"
@@ -92,7 +92,7 @@ protected:
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *film, boost::mutex *flmMutex);
+	virtual void EndFilmEdit(Film *film, std::mutex *flmMutex);
 
 	virtual void UpdateFilmLockLess();
 
@@ -102,8 +102,8 @@ protected:
 	u_int zoomFactor;
 	float zoomWeight;
 
-	boost::mutex firstFrameMutex;
-    boost::condition_variable firstFrameCondition;
+	std::mutex firstFrameMutex;
+    std::condition_variable firstFrameCondition;
 	u_int firstFrameThreadDoneCount;
 	bool firstFrameDone;
 

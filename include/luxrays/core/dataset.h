@@ -81,7 +81,7 @@ private:
 	BBox bbox;
 	BSphere bsphere;
 
-	boost::mutex accelsMutex;
+	std::mutex accelsMutex;
 	std::unordered_map<AcceleratorType, Accelerator *> accels;
 
 	AcceleratorType accelType;

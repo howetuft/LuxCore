@@ -96,7 +96,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 
 	// Update all kernel args
 	{
-		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+		std::unique_lock<std::mutex> lock(engine->setKernelArgsMutex);
 
 		SetInitKernelArgs(filmIndex);
 

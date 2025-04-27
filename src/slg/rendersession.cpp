@@ -190,7 +190,7 @@ void RenderSession::SaveFilm(const string &fileName) {
 	renderEngine->UpdateFilm();
 
 	// renderEngine->UpdateFilm() uses the film lock on its own
-	boost::unique_lock<boost::mutex> lock(filmMutex);
+	std::unique_lock<std::mutex> lock(filmMutex);
 
 	if (renderConfig->GetProperty("film.safesave").Get<bool>()) {
 		SafeSave safeSave(fileName);
@@ -207,7 +207,7 @@ void RenderSession::SaveFilmOutputs() {
 	renderEngine->UpdateFilm();
 
 	// renderEngine->UpdateFilm() uses the film lock on its own
-	boost::unique_lock<boost::mutex> lock(filmMutex);
+	std::unique_lock<std::mutex> lock(filmMutex);
 
 	// Save the film
 	film->Output();
@@ -245,7 +245,7 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 
 		renderEngine->EndFilmEdit(film, &filmMutex);
 	} else {
-		boost::unique_lock<boost::mutex> lock(filmMutex);
+		std::unique_lock<std::mutex> lock(filmMutex);
 		film->Parse(props);
 
 		// Update render config properties

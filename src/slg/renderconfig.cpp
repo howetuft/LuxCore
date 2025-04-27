@@ -58,7 +58,7 @@ using namespace slg;
 // RenderConfig
 //------------------------------------------------------------------------------
 
-static boost::mutex defaultPropertiesMutex;
+static std::mutex defaultPropertiesMutex;
 static unique_ptr<Properties> defaultProperties;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
@@ -66,7 +66,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 void RenderConfig::InitDefaultProperties() {
 	// Check if I have to initialize the default Properties
 	if (!defaultProperties.get()) {
-		boost::unique_lock<boost::mutex> lock(defaultPropertiesMutex);
+		std::unique_lock<std::mutex> lock(defaultPropertiesMutex);
 		if (!defaultProperties.get()) {
 			Properties *props = new Properties();
 			*props << RenderConfig::ToProperties(Properties());

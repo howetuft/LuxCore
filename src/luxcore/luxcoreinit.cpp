@@ -105,8 +105,8 @@ static void UpdateLuxCoreLogger() {
 
 void luxcore::Init(void (*LogHandler)(const char *)) {
 	// To be thread safe
-	static boost::mutex initMutex;
-	boost::unique_lock<boost::mutex> lock(initMutex);
+	static std::mutex initMutex;
+	std::unique_lock<std::mutex> lock(initMutex);
 
 	slg::Init();
 

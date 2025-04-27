@@ -115,7 +115,7 @@ private:
 	// Image pipeline can be edited, delteted, etc.
 	std::vector<RadianceChannelScale> radianceChannelScales;
 	float sampleScale;
-	boost::mutex warmUpDoneMutex;
+	std::mutex warmUpDoneMutex;
 	float warmUpSPP;
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command

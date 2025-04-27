@@ -273,7 +273,7 @@ void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer,
 	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type,
 				buffer, index, executeImagePipeline);
@@ -289,7 +289,7 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type,
 				buffer, index, executeImagePipeline);
@@ -308,7 +308,7 @@ void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
 		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		slg::Film *film = renderSession->renderSession->film;
 		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
@@ -364,7 +364,7 @@ const float *FilmImpl::GetChannelFloat(const FilmChannelType type,
 
 	const float *result;
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		result = renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
@@ -383,7 +383,7 @@ const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
 
 	const unsigned int *result;
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		result = renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
@@ -405,7 +405,7 @@ float *FilmImpl::UpdateChannelFloat(const FilmChannelType type,
 
 	float *result;
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		result = renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
@@ -442,7 +442,7 @@ void FilmImpl::DeleteAllImagePipelines()  {
 	API_BEGIN_NOARGS();
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->SetImagePipelines(NULL);
 		renderSession->renderSession->renderConfig->DeleteAllFilmImagePipelinesProperties();
@@ -454,7 +454,7 @@ void FilmImpl::DeleteAllImagePipelines()  {
 
 void FilmImpl::ExecuteImagePipeline(const u_int index) {
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->ExecuteImagePipeline(index);
 	} else
@@ -465,7 +465,7 @@ void FilmImpl::AsyncExecuteImagePipeline(const u_int index) {
 	API_BEGIN("{}", index);
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->AsyncExecuteImagePipeline(index);
 	} else
@@ -478,7 +478,7 @@ void FilmImpl::WaitAsyncExecuteImagePipeline() {
 	API_BEGIN_NOARGS();
 
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->WaitAsyncExecuteImagePipeline();
 	} else
@@ -492,7 +492,7 @@ bool FilmImpl::HasDoneAsyncExecuteImagePipeline() {
 
 	bool result;
 	if (renderSession) {
-		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		result = renderSession->renderSession->film->HasDoneAsyncExecuteImagePipeline();
 	} else

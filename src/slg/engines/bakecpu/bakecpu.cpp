@@ -298,7 +298,7 @@ void BakeCPURenderEngine::StopLockLess() {
 }
 
 void BakeCPURenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
+	std::unique_lock<std::mutex> lock(*filmMutex);
 
 	// Film may have been not initialized because of an error during Start()
 	if (film->IsInitiliazed()) {

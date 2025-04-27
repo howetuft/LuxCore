@@ -75,14 +75,14 @@ ImageMap::InstrumentationInfo::~InstrumentationInfo() {
 void ImageMap::InstrumentationInfo::ThreadSetUp() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadSetUp() [" << this << "]" << endl;
 
-	boost::unique_lock<boost::mutex> lock(classLock);
+	std::unique_lock<std::mutex> lock(classLock);
 	threadInfo[boost::this_thread::get_id()] = new ThreadData();
 }
 
 void ImageMap::InstrumentationInfo::ThreadFinalize() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadFinalize() [" << this << "]" << endl;
 	
-	boost::unique_lock<boost::mutex> lock(classLock);
+	std::unique_lock<std::mutex> lock(classLock);
 	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
 	if (ti->samplesCount > 0) {
 //		cout << "Min. U distance in pixel: " << (ti->minDistance * originalWidth) << endl;

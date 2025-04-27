@@ -496,7 +496,7 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
 
-	boost::unique_lock<boost::mutex> lock(renderEngine->setKernelArgsMutex);
+	std::unique_lock<std::mutex> lock(renderEngine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
 	// advancePathsKernels

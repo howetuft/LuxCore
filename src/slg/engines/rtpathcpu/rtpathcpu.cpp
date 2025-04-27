@@ -56,7 +56,7 @@ void RTPathCPURenderEngine::StopLockLess() {
 void RTPathCPURenderEngine::WaitNewFrame() {
 	if (!firstFrameDone && !pauseMode && !editMode) {
 		// Wait for the signal from all the rendering threads
-		boost::unique_lock<boost::mutex> lock(firstFrameMutex);
+		std::unique_lock<std::mutex> lock(firstFrameMutex);
 		while (firstFrameThreadDoneCount < renderThreads.size())
 			firstFrameCondition.wait(lock);
 
@@ -120,7 +120,7 @@ void RTPathCPURenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathCPURenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
+void RTPathCPURenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
 	filmMutex = flmMutex;

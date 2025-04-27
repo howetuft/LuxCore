@@ -35,11 +35,11 @@ using namespace luxrays;
 using namespace std;
 
 static u_int DataSetID = 0;
-static boost::mutex DataSetIDMutex;
+static std::mutex DataSetIDMutex;
 
 DataSet::DataSet(const Context *luxRaysContext) {
 	{
-		boost::unique_lock<boost::mutex> lock(DataSetIDMutex);
+		std::unique_lock<std::mutex> lock(DataSetIDMutex);
 		dataSetID = DataSetID++;
 	}
 	context = luxRaysContext;
@@ -113,7 +113,7 @@ bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 	std::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	if (it == accels.end()) {
-		boost::unique_lock<boost::mutex> lock(accelsMutex);
+		std::unique_lock<std::mutex> lock(accelsMutex);
 
 		// Try again under mutex
 		it = accels.find(accelType);

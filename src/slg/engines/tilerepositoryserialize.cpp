@@ -97,7 +97,7 @@ template void Tile::load(LuxInputArchive &ar, const u_int version);
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::TileRepository)
 
 template<class Archive> void TileRepository::load(Archive &ar, const u_int version) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	ar & tileWidth;
 	ar & tileHeight;
@@ -133,7 +133,7 @@ template<class Archive> void TileRepository::load(Archive &ar, const u_int versi
 }
 
 template<class Archive> void TileRepository::save(Archive &ar, const u_int version) const {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	ar & tileWidth;
 	ar & tileHeight;

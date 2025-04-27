@@ -41,7 +41,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	Scene *scene = engine->renderConfig->scene;
 
 	// Lock the main film
-	boost::unique_lock<boost::mutex> lock(*engine->filmMutex);
+	std::unique_lock<std::mutex> lock(*engine->filmMutex);
 
 	// Print some information
 	SLG_LOG("Baking map: " << mapInfo.fileName);

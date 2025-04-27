@@ -34,20 +34,20 @@ public:
 	}
 
 	void Clear() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
+		std::unique_lock<std::mutex> lock(queueMutex);
 
 		itemQueue.clear();
 	}
 	
 	size_t GetSize() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
+		std::unique_lock<std::mutex> lock(queueMutex);
 
 		return itemQueue.size();
 	}
 
 	void Push(T item) {
 		{
-			boost::unique_lock<boost::mutex> lock(queueMutex);
+			std::unique_lock<std::mutex> lock(queueMutex);
 			itemQueue.push_back(item);
 		}
 
@@ -55,7 +55,7 @@ public:
 	}
 
 	T Pop() {
-		boost::unique_lock<boost::mutex> lock(queueMutex);
+		std::unique_lock<std::mutex> lock(queueMutex);
 
 		while (itemQueue.size() < 1) {
 			// Wait for a new buffer to arrive
@@ -69,8 +69,8 @@ public:
 	}
 
 private:
-	boost::mutex queueMutex;
-	boost::condition_variable queueCondition;
+	std::mutex queueMutex;
+	std::condition_variable queueCondition;
 	std::deque<T> itemQueue;
 };
 

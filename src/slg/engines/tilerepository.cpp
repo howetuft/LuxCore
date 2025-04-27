@@ -326,19 +326,19 @@ void TileRepository::Restart(Film *film, const u_int startPass, const u_int mult
 }
 
 void TileRepository::GetPendingTiles(deque<const Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	tiles.insert(tiles.end(), pendingTiles.begin(), pendingTiles.end());
 }
 
 void TileRepository::GetNotConvergedTiles(deque<const Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	tiles.insert(tiles.end(), todoTiles.begin(), todoTiles.end());
 }
 
 void TileRepository::GetConvergedTiles(deque<const Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	tiles.insert(tiles.end(), convergedTiles.begin(), convergedTiles.end());
 }
@@ -477,10 +477,10 @@ bool TileRepository::GetNewTileWork(TileWork &tileWork) {
 	return true;
 }
 
-bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
+bool TileRepository::NextTile(Film *film, std::mutex *filmMutex,
 		TileWork &tileWork, Film *tileFilm) {
 	// Now I have to lock the repository
-	boost::unique_lock<boost::mutex> lock(tileMutex);
+	std::unique_lock<std::mutex> lock(tileMutex);
 
 	// Check if I have to add the tile to the film
 	if (tileWork.HasWork()) {
@@ -504,7 +504,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		}
 
 		// Add the tile also to the global film
-		boost::unique_lock<boost::mutex> lock(*filmMutex);
+		std::unique_lock<std::mutex> lock(*filmMutex);
 
 		// This allow to avoid to have to clear the film
 		if (enableFirstPassClear && (tileWork.passToRender == 1)) {

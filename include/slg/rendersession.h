@@ -59,7 +59,7 @@ public:
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;
 
-	boost::mutex filmMutex;
+	std::mutex filmMutex;
 	Film *film;
 
 protected:

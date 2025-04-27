@@ -63,8 +63,8 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	API_BEGIN("{}, {}, {}", ToArgString(fileName), ToArgString(renderConfigProps), ToArgString(sceneProps));
 
 	// Otherwise the code is not thread-safe
-	static boost::mutex parseLXSMutex;
-	boost::unique_lock<boost::mutex> lock(parseLXSMutex);
+	static std::mutex parseLXSMutex;
+	std::unique_lock<std::mutex> lock(parseLXSMutex);
 
 	luxcore::parselxs::renderConfigProps = &renderConfigProps;
 	luxcore::parselxs::sceneProps = &sceneProps;

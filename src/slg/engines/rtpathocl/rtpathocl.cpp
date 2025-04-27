@@ -155,7 +155,7 @@ void RTPathOCLRenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
+void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
 	filmMutex = flmMutex;

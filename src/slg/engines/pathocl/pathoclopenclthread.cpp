@@ -176,7 +176,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 			// This is required for updating film denoiser parameter
 			if (threadFilms[0]->film->GetDenoiser().IsEnabled()) {
-				boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+				std::unique_lock<std::mutex> lock(engine->setKernelArgsMutex);
 				SetAllAdvancePathsKernelArgs(0);
 			}
 

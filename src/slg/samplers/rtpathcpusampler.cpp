@@ -142,7 +142,7 @@ void RTPathCPUSampler::NextPixel() {
 			if (!stillOnFirstFrame) {
 				// Signal the main thread after have finished the rendering
 				// of the first frame
-				boost::unique_lock<boost::mutex> lock(engine->firstFrameMutex);
+				std::unique_lock<std::mutex> lock(engine->firstFrameMutex);
 
 				++(engine->firstFrameThreadDoneCount);
 

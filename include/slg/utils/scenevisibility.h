@@ -44,7 +44,7 @@ protected:
 	public:
 		TraceVisibilityThread(SceneVisibility<T> &sv, const u_int index,
 				SobolSamplerSharedData &visibilitySobolSharedData,
-				IndexOctree<T> *particlesOctree, boost::mutex &particlesOctreeMutex,
+				IndexOctree<T> *particlesOctree, std::mutex &particlesOctreeMutex,
 				boost::atomic<u_int> &globalVisibilityParticlesCount,
 				u_int &visibilityCacheLookUp, u_int &visibilityCacheHits,
 				bool &visibilityWarmUp);
@@ -64,7 +64,7 @@ protected:
 
 		SobolSamplerSharedData &visibilitySobolSharedData;
 		IndexOctree<T> *particlesOctree;
-		boost::mutex &particlesOctreeMutex;
+		std::mutex &particlesOctreeMutex;
 		boost::atomic<u_int> &globalVisibilityParticlesCount;
 		u_int &visibilityCacheLookUp;
 		u_int &visibilityCacheHits;
