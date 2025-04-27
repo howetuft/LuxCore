@@ -322,10 +322,10 @@ private:
 	void TraceVisibilityParticles();
 	void TracePhotons(const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
-		boost::atomic<u_int> &globalIndirectPhotonsTraced,
-		boost::atomic<u_int> &globalCausticPhotonsTraced,
-		boost::atomic<u_int> &globalIndirectSize,
-		boost::atomic<u_int> &globalCausticSize);
+		std::atomic<u_int> &globalIndirectPhotonsTraced,
+		std::atomic<u_int> &globalCausticPhotonsTraced,
+		std::atomic<u_int> &globalIndirectSize,
+		std::atomic<u_int> &globalCausticSize);
 	void TracePhotons(const bool indirectEnabled, const bool causticEnabled);
 	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::SpectrumGroup> &radianceValues,
 			std::vector<luxrays::SpectrumGroup> &filteredRadianceValues) const;

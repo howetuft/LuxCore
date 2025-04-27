@@ -183,22 +183,22 @@ inline bool AtomicMin(unsigned int *val, const unsigned int a) {
 class SpinLock {
 public:
 	SpinLock() {
-		lock.store(true, boost::memory_order_release);
+		lock.store(true, std::memory_order_release);
 	}
 
-	boost::atomic<bool> lock;
+	std::atomic<bool> lock;
 };
 
 class SpinLocker {
 public:
 	SpinLocker(SpinLock &lock) : spinLock(lock) {
-		while (spinLock.lock.exchange(false, boost::memory_order_acquire) == false) {
+		while (spinLock.lock.exchange(false, std::memory_order_acquire) == false) {
 			// Busy-wait
 		}
 	}
 
 	~SpinLocker() {
-		spinLock.lock.store(true, boost::memory_order_release);
+		spinLock.lock.store(true, std::memory_order_release);
 	}
 
 private:

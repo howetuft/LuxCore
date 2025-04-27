@@ -48,7 +48,7 @@ template <class T>
 SceneVisibility<T>::TraceVisibilityThread::TraceVisibilityThread(SceneVisibility<T> &svis, const u_int index,
 		SobolSamplerSharedData &sobolSharedData,
 		IndexOctree<T> *octree, std::mutex &octreeMutex,
-		boost::atomic<u_int> &gParticlesCount,
+		std::atomic<u_int> &gParticlesCount,
 		u_int &cacheLookUp, u_int &cacheHits,
 		bool &warmUp) :
 		sv(svis), threadIndex(index),
@@ -358,7 +358,7 @@ void SceneVisibility<T>::Build() {
 
 	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
 
-	boost::atomic<u_int> globalVisibilityParticlesCount(0);
+	std::atomic<u_int> globalVisibilityParticlesCount(0);
 	u_int visibilityCacheLookUp = 0;
 	u_int visibilityCacheHits = 0;
 	bool visibilityWarmUp = true;

@@ -38,9 +38,9 @@ using namespace slg;
 TracePhotonsThread::TracePhotonsThread(PhotonGICache &cache, const u_int index,
 		const u_int seed, const u_int photonCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
-		boost::atomic<u_int> &gPhotonsCounter, boost::atomic<u_int> &gIndirectPhotonsTraced,
-		boost::atomic<u_int> &gCausticPhotonsTraced, boost::atomic<u_int> &gIndirectSize,
-		boost::atomic<u_int> &gCausticSize) :
+		std::atomic<u_int> &gPhotonsCounter, std::atomic<u_int> &gIndirectPhotonsTraced,
+		std::atomic<u_int> &gCausticPhotonsTraced, std::atomic<u_int> &gIndirectSize,
+		std::atomic<u_int> &gCausticSize) :
 	pgic(cache), threadIndex(index), seedBase(seed), photonTracedCount(photonCount),
 	globalPhotonsCounter(gPhotonsCounter),
 	globalIndirectPhotonsTraced(gIndirectPhotonsTraced),

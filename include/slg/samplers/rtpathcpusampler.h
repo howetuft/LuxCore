@@ -55,7 +55,7 @@ public:
 			luxrays::RandomGenerator *rndGen, Film *film);
 
 	Film *engineFilm;
-	boost::atomic<u_int> step;
+	std::atomic<u_int> step;
 	u_int filmSubRegion[4], filmSubRegionWidth, filmSubRegionHeight;
 	std::vector<PixelCoord> pixelRenderSequence;
 };
