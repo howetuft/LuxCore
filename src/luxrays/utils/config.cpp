@@ -40,31 +40,31 @@ string SanitizeFileName(const string &name) {
 	return sanitizedName;
 }
 
-boost::filesystem::path GetConfigDir() {
+std::filesystem::path GetConfigDir() {
 #if defined(__linux__)
-	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
+	// std::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is often deleted at each reboot
-	boost::filesystem::path kernelConfigDir = getenv("HOME");
+	std::filesystem::path kernelConfigDir = getenv("HOME");
 	kernelConfigDir = kernelConfigDir / ".config" / "luxcorerender.org";
 #elif defined(__APPLE__)
-	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
+	// std::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is deleted at each reboot on MacOS
 	
 	// This may not work on MacOS for application started from the GUI
-	//boost::filesystem::path kernelConfigDir(getenv("HOME"));
+	//std::filesystem::path kernelConfigDir(getenv("HOME"));
 
-	boost::filesystem::path kernelConfigDir;
+	std::filesystem::path kernelConfigDir;
 
 	const uid_t uid = getuid();
 	const struct passwd *pwd = getpwuid(uid);
 	if (!pwd)
-		kernelConfigDir = boost::filesystem::temp_directory_path();
+		kernelConfigDir = std::filesystem::temp_directory_path();
 	else
 		kernelConfigDir = string(pwd->pw_dir);
 	
 	kernelConfigDir = kernelConfigDir / "luxcorerender.org";
 #else
-	boost::filesystem::path kernelConfigDir= boost::filesystem::temp_directory_path() / "luxcorerender.org";
+	std::filesystem::path kernelConfigDir= std::filesystem::temp_directory_path() / "luxcorerender.org";
 #endif
 
 	return kernelConfigDir;

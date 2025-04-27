@@ -18,7 +18,7 @@
 
 #include <imgui.h>
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/string/predicate.hpp>
 #include <ImGuiFileDialog.h>
 
@@ -583,8 +583,8 @@ void LuxCoreApp::MainMenuBar() {
       {
         showExportFileDialog = false;
         LA_LOG("Export current scene to directory in text format: " << fileToExport);
-        boost::filesystem::path dir(fileToExport);
-        boost::filesystem::create_directories(dir);
+        std::filesystem::path dir(fileToExport);
+        std::filesystem::create_directories(dir);
 
         // Save the current render engine
         const string renderEngine = config->GetProperty("renderengine.type").Get<string>();

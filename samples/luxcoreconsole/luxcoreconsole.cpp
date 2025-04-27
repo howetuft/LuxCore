@@ -24,11 +24,11 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
 
 #include "luxrays/utils/oclerror.h"
@@ -39,7 +39,7 @@ using namespace luxrays;
 using namespace luxcore;
 
 static string GetFileNameExt(const string &fileName) {
-	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
+	return boost::algorithm::to_lower_copy(std::filesystem::path(fileName).extension().string());
 }
 
 static void BatchRendering(RenderConfig *config, RenderState *startState, Film *startFilm,
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
 					i += 2;
 				}
 
-				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
+				else if (argv[i][1] == 'd') std::filesystem::current_path(std::filesystem::path(argv[++i]));
 
 				else if (argv[i][1] == 'c') removeUnused = true;
 				
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
 			// Add the current directory to the list of place where to look for files
 			luxcore::AddFileNameResolverPath(".");
 			// Add the .cfg directory to the list of place where to look for files
-			boost::filesystem::path path(configFileName);
+			std::filesystem::path path(configFileName);
 			luxcore::AddFileNameResolverPath(path.parent_path().generic_string());
 		}
 		

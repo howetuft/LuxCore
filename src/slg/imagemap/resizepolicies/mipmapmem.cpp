@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "slg/scene/scene.h"
 #include "slg/imagemap/imagemapcache.h"
@@ -39,8 +39,8 @@ ImageMap *ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &fi
 	const string dstFileName = srcFileName + ".tx";
 
 	// Check if the TX file exist and it is up to date
-	if (!boost::filesystem::exists(dstFileName) ||
-			(boost::filesystem::last_write_time(srcFileName) > boost::filesystem::last_write_time(dstFileName))) {
+	if (!std::filesystem::exists(dstFileName) ||
+			(std::filesystem::last_write_time(srcFileName) > std::filesystem::last_write_time(dstFileName))) {
 		SDL_LOG("Creating TX image for file:  " << srcFileName);
 
 		ImageMap::MakeTx(srcFileName, dstFileName);

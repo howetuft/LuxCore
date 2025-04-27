@@ -19,7 +19,7 @@
 #include <math.h>
 
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/utils/thread.h"
 #include "luxrays/utils/strutils.h"
@@ -372,7 +372,7 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist
-		if (boost::filesystem::exists(params.persistent.fileName)) {
+		if (std::filesystem::exists(params.persistent.fileName)) {
 			// Load the cache from the file
 			LoadPersistentCache(params.persistent.fileName);
 

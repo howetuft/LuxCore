@@ -21,7 +21,7 @@
 #include <cstring>
 
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"

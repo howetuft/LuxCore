@@ -238,20 +238,20 @@ string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderC
 void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig) {
 	const string kernelHash = GetCachedKernelsHash(renderConfig);
 
-	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
-	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+	const std::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
+	const std::filesystem::path filePath = dirPath / (kernelHash + ".ck");
 	const string fileName = filePath.generic_string();
 
-	if (!boost::filesystem::exists(filePath)) {
+	if (!std::filesystem::exists(filePath)) {
 		// Create an empty file
-		boost::filesystem::create_directories(dirPath);
+		std::filesystem::create_directories(dirPath);
 
-		// The use of boost::filesystem::path is required for UNICODE support: fileName
+		// The use of std::filesystem::path is required for UNICODE support: fileName
 		// is supposed to be UTF-8 encoded.
-		boost::filesystem::ofstream file(boost::filesystem::path(fileName),
-				boost::filesystem::ofstream::out |
-				boost::filesystem::ofstream::binary |
-				boost::filesystem::ofstream::trunc);
+		std::ofstream file(std::filesystem::path(fileName),
+				std::ofstream::out |
+				std::ofstream::binary |
+				std::ofstream::trunc);
 
 		file.close();
 	}
@@ -260,10 +260,10 @@ void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig)
 bool PathOCLBaseRenderEngine::HasCachedKernels(const RenderConfig &renderConfig) {
 	const string kernelHash = GetCachedKernelsHash(renderConfig);
 
-	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
-	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+	const std::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION);
+	const std::filesystem::path filePath = dirPath / (kernelHash + ".ck");
 
-	return boost::filesystem::exists(filePath);
+	return std::filesystem::exists(filePath);
 }
 
 void PathOCLBaseRenderEngine::StartLockLess() {

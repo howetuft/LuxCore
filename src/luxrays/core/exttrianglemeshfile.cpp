@@ -21,7 +21,6 @@
 #include <cstring>
 
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
@@ -436,7 +435,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 //------------------------------------------------------------------------------
 
 ExtTriangleMesh *ExtTriangleMesh::Load(const string &fileName) {
-	const boost::filesystem::path ext = boost::filesystem::path(fileName).extension();
+	const std::filesystem::path ext = std::filesystem::path(fileName).extension();
 	if (ext == ".ply")
 		return LoadPly(fileName);
 	else if (ext == ".bpy")
@@ -450,7 +449,7 @@ ExtTriangleMesh *ExtTriangleMesh::Load(const string &fileName) {
 //------------------------------------------------------------------------------
 
 void ExtTriangleMesh::Save(const string &fileName) const {
-	const boost::filesystem::path ext = boost::filesystem::path(fileName).extension();
+	const std::filesystem::path ext = std::filesystem::path(fileName).extension();
 	if (ext == ".ply")
 		SavePly(fileName);
 	else if (ext == ".bpy")
@@ -460,12 +459,12 @@ void ExtTriangleMesh::Save(const string &fileName) const {
 }
 
 void ExtTriangleMesh::SavePly(const string &fileName) const {
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	boost::filesystem::ofstream plyFile(boost::filesystem::path(fileName),
-			boost::filesystem::ofstream::out |
-			boost::filesystem::ofstream::binary |
-			boost::filesystem::ofstream::trunc);
+	std::ofstream plyFile(std::filesystem::path(fileName),
+			std::ofstream::out |
+			std::ofstream::binary |
+			std::ofstream::trunc);
 	if(!plyFile.is_open())
 		throw runtime_error("Unable to open: " + fileName);
 

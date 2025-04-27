@@ -387,7 +387,7 @@ int main(int argc, char *argv[]) {
 		session->Start();
 
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image0.png");
+		std::filesystem::rename("image.png", "image0.png");
 
 		//----------------------------------------------------------------------
 		// Edit a texture
@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
 
 		// And redo the rendering
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image1.png");
+		std::filesystem::rename("image.png", "image1.png");
 
 		//----------------------------------------------------------------------
 		// Edit a material
@@ -417,7 +417,7 @@ int main(int argc, char *argv[]) {
 
 		// And redo the rendering
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image2.png");
+		std::filesystem::rename("image.png", "image2.png");
 
 		//----------------------------------------------------------------------
 		// Edit an object
@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
 
 		// And redo the rendering
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image3.png");
+		std::filesystem::rename("image.png", "image3.png");
 
 		//----------------------------------------------------------------------
 		// Add a strands object
@@ -477,7 +477,7 @@ int main(int argc, char *argv[]) {
 
 		// And redo the rendering
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image4.png");
+		std::filesystem::rename("image.png", "image4.png");
 
 		//----------------------------------------------------------------------
 		// Add a box with multiple UV sets
@@ -499,7 +499,7 @@ int main(int argc, char *argv[]) {
 
 		// And redo the rendering
 		DoRendering(session);
-		boost::filesystem::rename("image.png", "image5.png");
+		std::filesystem::rename("image.png", "image5.png");
 
 		//----------------------------------------------------------------------
 

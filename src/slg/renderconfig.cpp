@@ -21,7 +21,7 @@
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/regex.hpp>
 
 #include "luxrays/utils/serializationutils.h"

@@ -20,20 +20,20 @@
 #define	_LUXRAYS_FILEEXT_H
 
 #include <string>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
 
 namespace luxrays {
 
 inline std::string GetFileNameExt(const std::string &fileName) {
-	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
+	return boost::algorithm::to_lower_copy(std::filesystem::path(fileName).extension().string());
 }
 
 inline std::string GetFileNamePath(const std::string &fileName) {
-	boost::filesystem::path path(fileName);
+	std::filesystem::path path(fileName);
 
 	if (path.has_parent_path())
-		return boost::filesystem::path(fileName).parent_path().string() + "/";
+		return std::filesystem::path(fileName).parent_path().string() + "/";
 	else
 		return "";
 }

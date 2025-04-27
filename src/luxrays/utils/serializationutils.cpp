@@ -27,14 +27,14 @@ using namespace luxrays;
 
 SerializationOutputFile::SerializationOutputFile(const std::string &fileName) :
 		outArchive(NULL) {
-	outFile.exceptions(boost::filesystem::ofstream::failbit |
-			boost::filesystem::ofstream::badbit |
-			boost::filesystem::ofstream::eofbit);
+	outFile.exceptions(std::ofstream::failbit |
+			std::ofstream::badbit |
+			std::ofstream::eofbit);
 
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	outFile.open(boost::filesystem::path(fileName),
-			boost::filesystem::ofstream::binary | boost::filesystem::ofstream::trunc);
+	outFile.open(std::filesystem::path(fileName),
+			std::ofstream::binary | std::ofstream::trunc);
 
 	// Enable compression
 	outStream.push(boost::iostreams::gzip_compressor(4));
@@ -70,14 +70,14 @@ std::streampos SerializationOutputFile::GetPosition() {
 
 SerializationInputFile::SerializationInputFile(const std::string &fileName) :
 		inArchive(NULL) {
-	inFile.exceptions(boost::filesystem::ifstream::failbit |
-		boost::filesystem::ifstream::badbit |
-		boost::filesystem::ifstream::eofbit);
+	inFile.exceptions(std::ifstream::failbit |
+		std::ifstream::badbit |
+		std::ifstream::eofbit);
 
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	inFile.open(boost::filesystem::path(fileName),
-			boost::filesystem::ifstream::binary);
+	inFile.open(std::filesystem::path(fileName),
+			std::ifstream::binary);
 
 	// Enable compression
 	inStream.push(boost::iostreams::gzip_decompressor());

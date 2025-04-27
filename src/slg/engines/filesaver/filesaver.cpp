@@ -20,7 +20,7 @@
 #include <iostream>
 #include <fstream>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/format.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
@@ -36,7 +36,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-using namespace boost::filesystem;
+using namespace std::filesystem;
 using namespace nlohmann;
 
 //------------------------------------------------------------------------------
@@ -397,12 +397,12 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 	//SLG_LOG("glTF: ");
 	//SLG_LOG(endl << std::setw(4) << j);
 	
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	boost::filesystem::ofstream gltfFile(boost::filesystem::path(fileName),
-			boost::filesystem::ofstream::out |
-			boost::filesystem::ofstream::binary |
-			boost::filesystem::ofstream::trunc);
+	std::ofstream gltfFile(std::filesystem::path(fileName),
+			std::ofstream::out |
+			std::ofstream::binary |
+			std::ofstream::trunc);
 
 	if(!gltfFile.is_open())
 		throw std::runtime_error("Unable to open: " + fileName);

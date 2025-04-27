@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <ImGuiFileDialog.h>
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
           i += 2;
         }
 
-        else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
+        else if (argv[i][1] == 'd') std::filesystem::current_path(std::filesystem::path(argv[++i]));
 
         else if (argv[i][1] == 'c') removeUnused = true;
 
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
       // Add the current directory to the list of place where to look for files
       luxcore::AddFileNameResolverPath(".");
       // Add the .cfg directory to the list of place where to look for files
-      boost::filesystem::path path(configFileName);
+      std::filesystem::path path(configFileName);
       luxcore::AddFileNameResolverPath(path.parent_path().generic_string());
     }
 

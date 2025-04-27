@@ -875,10 +875,10 @@ Properties &Properties::SetFromStream(istream &stream) {
 }
 
 Properties &Properties::SetFromFile(const string &fileName) {
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	boost::filesystem::ifstream inFile(boost::filesystem::path(fileName),
-			boost::filesystem::ifstream::in); 
+	std::ifstream inFile(std::filesystem::path(fileName),
+			std::ifstream::in); 
 
 	if (inFile.fail())
 		throw runtime_error("Unable to open properties file: " + fileName);
@@ -899,10 +899,10 @@ Properties &Properties::SetFromString(const string &propDefinitions) {
 }
 
 void Properties::Save(const std::string &fileName) {
-	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
-	boost::filesystem::ofstream outFile(boost::filesystem::path(fileName),
-			boost::filesystem::ofstream::trunc);
+	std::ofstream outFile(std::filesystem::path(fileName),
+			std::ofstream::trunc);
 	
 	// Force to use C locale
 	outFile.imbue(cLocale);

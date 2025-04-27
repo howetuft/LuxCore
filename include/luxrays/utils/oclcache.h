@@ -20,7 +20,7 @@
 #define	_LUXRAYS_OPENCLCACHE_H
 
 #include <string>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/unordered_map.hpp>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -72,7 +72,7 @@ public:
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);
 
-	static boost::filesystem::path GetCacheDir(const std::string &applicationName);
+	static std::filesystem::path GetCacheDir(const std::string &applicationName);
 
 private:
 	std::string appName;

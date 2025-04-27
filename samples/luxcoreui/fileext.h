@@ -20,11 +20,11 @@
 #define	_LUXCOREAPP_FILEEXT_H
 
 #include <string>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
 
 inline std::string GetFileNameExt(const std::string &fileName) {
-	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
+	return boost::algorithm::to_lower_copy(std::filesystem::path(fileName).extension().string());
 }
 
 #endif	/* _LUXCOREAPP_FILEEXT_H */

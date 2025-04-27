@@ -480,7 +480,7 @@ void DirectLightSamplingCache::Build(const Scene *scn) {
 
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist
-		if (boost::filesystem::exists(params.persistent.fileName)) {
+		if (std::filesystem::exists(params.persistent.fileName)) {
 			// Load the cache from the file
 			LoadPersistentCache(params.persistent.fileName);
 

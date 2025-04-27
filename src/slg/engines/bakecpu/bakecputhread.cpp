@@ -52,7 +52,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	
 	if (engine->skipExistingMapFiles) {
 		// Check if the file exist
-		if (boost::filesystem::exists(mapInfo.fileName)) {
+		if (std::filesystem::exists(mapInfo.fileName)) {
 			SLG_LOG("Bake map file already exists: " << mapInfo.fileName);
 			// Skip this map
 			return;

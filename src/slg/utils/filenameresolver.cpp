@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/utils/proputils.h"
 #include "slg/utils/filenameresolver.h"
@@ -48,25 +48,25 @@ void FileNameResolver::Print() {
 string FileNameResolver::ResolveFile(const std::string &fileName) {
 	//SLG_LOG("Try to resolve file name: " << fileName);
 
-	boost::filesystem::path path(fileName);
+	std::filesystem::path path(fileName);
 
 	//SLG_LOG("  Is absolute: " << path.is_absolute());
-	//SLG_LOG("  Exists: " << boost::filesystem::exists(path));
+	//SLG_LOG("  Exists: " << std::filesystem::exists(path));
 	
 	if (!path.is_absolute()) {
 		// It is a relative path
 
-		if (!boost::filesystem::exists(path)) {
+		if (!std::filesystem::exists(path)) {
 			// File doesn't exist
 			
 			// Check if the complete file name exists in all paths
 			//SLG_LOG("    Checking complete: ");
 			for (auto const &dir : filePaths) {
 				// Check all possible appending paths
-				path = boost::filesystem::path(dir) / boost::filesystem::path(fileName);
+				path = std::filesystem::path(dir) / std::filesystem::path(fileName);
 				//SLG_LOG("    Checking: " << path.generic_string());
 				
-				if (boost::filesystem::exists(path)) {
+				if (std::filesystem::exists(path)) {
 					//SLG_LOG("    Found: " << path.generic_string());
 					return path.generic_string();
 				}
@@ -76,10 +76,10 @@ string FileNameResolver::ResolveFile(const std::string &fileName) {
 			//SLG_LOG("    Checking alone: ");
 			for (auto const &dir : filePaths) {
 				// Check all possible appending paths
-				path = boost::filesystem::path(dir) / boost::filesystem::path(fileName).filename();
+				path = std::filesystem::path(dir) / std::filesystem::path(fileName).filename();
 				//SLG_LOG("    Checking: " << path.generic_string());
 				
-				if (boost::filesystem::exists(path)) {
+				if (std::filesystem::exists(path)) {
 					//SLG_LOG("    Found: " << path.generic_string());
 					return path.generic_string();
 				}
@@ -95,7 +95,7 @@ void FileNameResolver::AddPath(const std::string &filePath) {
 }
 
 void FileNameResolver::AddFileNamePath(const std::string &fileName) {
-	boost::filesystem::path path(fileName);
+	std::filesystem::path path(fileName);
 	
 	AddPath(path.parent_path().generic_string());
 }

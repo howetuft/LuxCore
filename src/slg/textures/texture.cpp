@@ -21,7 +21,7 @@
 #include <memory>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>

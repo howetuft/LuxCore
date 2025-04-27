@@ -21,14 +21,14 @@
 
 #include <string>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/utils/utils.h"
 
 namespace luxrays {
 	
 extern std::string SanitizeFileName(const std::string &name);
-extern boost::filesystem::path GetConfigDir();
+extern std::filesystem::path GetConfigDir();
 
 }
 

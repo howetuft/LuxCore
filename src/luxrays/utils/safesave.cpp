@@ -19,7 +19,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/utils/safesave.h"
 #include "luxrays/utils/fileext.h"
@@ -47,17 +47,17 @@ void SafeSave::Process() const {
 	const string fileNameCopy = fileName + ".bak";
 
 	// Check if the file already exists
-	if (boost::filesystem::exists(fileName)) {
+	if (std::filesystem::exists(fileName)) {
 		// Check if there is an old copy
-		if (boost::filesystem::exists(fileNameCopy)) {
+		if (std::filesystem::exists(fileNameCopy)) {
 			// Erase the old copy
-			boost::filesystem::remove(fileNameCopy);
+			std::filesystem::remove(fileNameCopy);
 		}
 
 		// Rename the new copy
-		boost::filesystem::rename(fileName, fileNameCopy);
+		std::filesystem::rename(fileName, fileNameCopy);
 	}
 
 	// Rename the temporary file to file name
-	boost::filesystem::rename(fileNameTmp, fileName);
+	std::filesystem::rename(fileNameTmp, fileName);
 }

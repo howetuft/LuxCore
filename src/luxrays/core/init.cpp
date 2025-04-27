@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "luxrays/luxrays.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -48,7 +48,7 @@ void Init() {
 	// all file names are UTF-8 encoded. This works fine on Linux/MacOS but
 	// requires a conversion to UTF-16 on Windows.
 
-	boost::filesystem::path::imbue(
+	std::filesystem::path::imbue(
 			std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>()));
 #endif
 
