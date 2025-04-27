@@ -17,8 +17,8 @@
  ***************************************************************************/
 
 #include <stdexcept>
+#include <regex>
 #include <boost/foreach.hpp>
-#include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/kernels/kernels.h"
@@ -344,12 +344,12 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		crfdata = ss.str();
 	}
 	
-	boost::regex func_expr("(?-s)(?<funcname>\\S+)\\s+graph.+\\s+I\\s*=\\s*(?<I>.+$)\\s+B\\s*=\\s*(?<B>.+$)");
-	boost::regex channel_expr("^(?<name>.*)(?<channel>Red|Green|Blue)$");
-	boost::regex float_expr("-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
+	std::regex func_expr("(?-s)(?<funcname>\\S+)\\s+graph.+\\s+I\\s*=\\s*(?<I>.+$)\\s+B\\s*=\\s*(?<B>.+$)");
+	std::regex channel_expr("^(?<name>.*)(?<channel>Red|Green|Blue)$");
+	std::regex float_expr("-?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
 
-	boost::sregex_iterator rit(crfdata.begin(), crfdata.end(), func_expr);
-	boost::sregex_iterator rend;
+	std::sregex_iterator rit(crfdata.begin(), crfdata.end(), func_expr);
+	std::sregex_iterator rend;
 	
 	bool red, green, blue;
 	red = green = blue = false;
@@ -357,20 +357,25 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 	string crfname("");
 
 	for (; rit != rend; ++rit) {
-		const boost::smatch &m = *rit;
-		boost::smatch cm;
+		const std::smatch &m = *rit;
+		std::smatch cm;
 
 		// Smatch references input string, keep copy
-		const string funcname = m["funcname"].str();
+                // const string funcname = m["funcname"].str(); Boost
+		const string funcname = m[1].str();
 		string name = funcname;
 		string channel = "Red";
 
-		if (boost::regex_match(funcname, cm, channel_expr)) {
-			name = cm["name"].str();
-			channel = cm["channel"].str();
+		if (std::regex_match(funcname, cm, channel_expr)) {
+			//name = cm["name"].str();
+			//channel = cm["channel"].str();
+			name = cm[1].str();
+			channel = cm[2].str();
 		}
-		const string Istr = m["I"].str();
-		const string Bstr = m["B"].str();
+		//const string Istr = m["I"].str();
+		//const string Bstr = m["B"].str();
+		const string Istr = m[2].str();
+		const string Bstr = m[3].str();
 
 		if (crfname == "")
 			crfname = name;
@@ -402,11 +407,11 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		}
 
 		// Parse functions
-		for (boost::sregex_iterator rit(Istr.begin(), Istr.end(), float_expr); rit != rend; ++rit) {
+		for (std::sregex_iterator rit(Istr.begin(), Istr.end(), float_expr); rit != rend; ++rit) {
 			I->push_back(boost::lexical_cast<float>(rit->str(0)));
 		}
 
-		for (boost::sregex_iterator rit(Bstr.begin(), Bstr.end(), float_expr); rit != rend; ++rit) {
+		for (std::sregex_iterator rit(Bstr.begin(), Bstr.end(), float_expr); rit != rend; ++rit) {
 			B->push_back(boost::lexical_cast<float>(rit->str(0)));
 		}
 

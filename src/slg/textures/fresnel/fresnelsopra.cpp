@@ -18,7 +18,7 @@
 
 #include <fstream>
 #include <boost/lexical_cast.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "luxrays/core/color/spds/irregular.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
@@ -65,12 +65,12 @@ FresnelTexture *slg::AllocFresnelSopraTex(const Properties &props, const string 
 	if (!getline(fs, line).good())
 		throw runtime_error("Unable to read sopra file: " + fileName);
 
-	boost::smatch m;
+	std::smatch m;
 
 	// Read initial line, containing metadata
-	boost::regex header_expr("(\\d+)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d+)");
+	std::regex header_expr("(\\d+)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d+)");
 
-	if (!boost::regex_search(line, m, header_expr))
+	if (!std::regex_search(line, m, header_expr))
 		throw runtime_error("Bad sopra header in: " + fileName);
 
 	// Used to convert file units to wavelength in nm
@@ -99,13 +99,13 @@ FresnelTexture *slg::AllocFresnelSopraTex(const Properties &props, const string 
 		lambda_last = boost::lexical_cast<float>(m[3]);
 		tolambda = &nmtolambda;
 	} else
-		throw runtime_error("Unknown sopra unit code '" + m[1] + "' in: " + fileName);
+		throw runtime_error("Unknown sopra unit code '" + m[1].str() + "' in: " + fileName);
 
 	// Number of lines of nk data
 	const int count = boost::lexical_cast<int>(m[4]);  
 
 	// Read nk data
-	boost::regex sample_expr("(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)");
+	std::regex sample_expr("(\\d*\\.?\\d+(?:[eE]-?\\d+)?)[^\\.[:digit:]]+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)");
 
 	vector<float> wl(count + 1);
 	vector<float> n(count + 1);
@@ -118,7 +118,7 @@ FresnelTexture *slg::AllocFresnelSopraTex(const Properties &props, const string 
 		if (getline(fs, line).bad())
 			throw runtime_error("Not enough sopra data in: " + fileName);
 
-		if (!boost::regex_search(line, m, sample_expr))
+		if (!std::regex_search(line, m, sample_expr))
 			throw runtime_error("Unparseable sopra data at data line " + ToString(count - i) + "' in: " + fileName);
 
 		// Linearly interpolate units in file

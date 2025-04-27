@@ -18,7 +18,7 @@
 
 #include <fstream>
 #include <boost/lexical_cast.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "luxrays/core/color/spds/irregular.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
@@ -44,10 +44,10 @@ FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string
 
 	string line;
 
-	boost::smatch m;
+	std::smatch m;
 
 	// Read nk data
-	boost::regex sample_expr("(\\d*\\.?\\d+(?:[eE]-?\\d+)?)\\s+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)\\s+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)");
+	std::regex sample_expr("(\\d*\\.?\\d+(?:[eE]-?\\d+)?)\\s+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)\\s+(\\d*\\.?\\d+(?:[eE]-?\\d+)?)");
 
 	// We want lambda to go from low to high
 	while (!getline(fs, line).eof()) {
@@ -58,7 +58,7 @@ FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string
 		if (!line.empty() && line[0] == ';')
 			continue;
 
-		if (!boost::regex_search(line, m, sample_expr))
+		if (!std::regex_search(line, m, sample_expr))
 			throw runtime_error("Unparseable luxpop data in file " + fileName + " at line: " + line);
 
 		// Wavelength in data file is in Angstroms, we want nm

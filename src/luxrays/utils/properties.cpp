@@ -23,6 +23,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <regex>
 
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -30,7 +31,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
@@ -937,11 +937,11 @@ vector<string> Properties::GetAllNames(const string &prefix) const {
 }
 
 vector<string> Properties::GetAllNamesRE(const string &regularExpression) const {
-	boost::regex re(regularExpression);
+	std::regex re(regularExpression);
 	
 	vector<string> namesSubset;
 	BOOST_FOREACH(const string &name, names) {
-		if (boost::regex_match(name, re))
+		if (std::regex_match(name, re))
 			namesSubset.push_back(name);
 	}
 
@@ -1019,10 +1019,10 @@ bool Properties::HaveNames(const string &prefix) const {
 }
 
 bool Properties::HaveNamesRE(const string &regularExpression) const {
-	boost::regex re(regularExpression);
+	std::regex re(regularExpression);
 
 	BOOST_FOREACH(const string &name, names) {
-		if (boost::regex_match(name, re))
+		if (std::regex_match(name, re))
 			return true;
 	}
 
