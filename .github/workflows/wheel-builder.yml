@@ -185,7 +185,7 @@ jobs:
         with:
           script: |
             if ('${{ runner.arch }}' == 'X64') {
-              target = '10.15';
+              target = '11.0';
               arch='x86_64';
             }
             else if ('${{ env.PYTHON_MINOR }}' != '8') {
