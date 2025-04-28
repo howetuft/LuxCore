@@ -30,14 +30,16 @@ using namespace slg;
 // RTPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
+static RTPathOCLRenderEngine::completion_t completion = []() {};
+
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg) :
 		TilePathOCLRenderEngine(rcfg, false) {
 	if (nativeRenderThreadCount > 0)
 		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
 
-	syncBarrier = new boost::barrier(2);
+	syncBarrier = new std::barrier(2, completion);
 	if (renderOCLThreads.size() > 1)
-		frameBarrier = new boost::barrier(renderOCLThreads.size());
+		frameBarrier = new std::barrier(renderOCLThreads.size(), completion);
 	else
 		frameBarrier = nullptr;
 
@@ -91,19 +93,19 @@ void RTPathOCLRenderEngine::StartLockLess() {
 
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 }
 
 void RTPathOCLRenderEngine::StopLockLess() {
 	syncType = SYNCTYPE_STOP;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
 	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 
 	// Render threads will now detect the interruption
 
@@ -123,31 +125,31 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	} else {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
 		updateActions.AddActions(editActions.GetActions());
-		syncBarrier->wait();
+		syncBarrier->arrive_and_wait();
 		
 		TilePathOCLRenderEngine::EndSceneEdit(editActions);
 		cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
 				(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
-		syncBarrier->wait();
+		syncBarrier->arrive_and_wait();
 		
 		// Here, rendering thread 0 will update all OpenCL buffers here
 
 		syncType = SYNCTYPE_NONE;
-		syncBarrier->wait();
+		syncBarrier->arrive_and_wait();
 	}
 }
 
 // A fast path for film resize
 void RTPathOCLRenderEngine::BeginFilmEdit() {
 	syncType = SYNCTYPE_BEGINFILMEDIT;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
 	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 
 	// Render threads will now detect the interruption
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
@@ -180,7 +182,7 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
 
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
+	syncBarrier->arrive_and_wait();
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {

@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <barrier>
 
 #include <boost/unordered_map.hpp>
 
@@ -63,15 +64,18 @@ public:
 			const Scene *scene, const std::vector<u_int> &imgMapsIndices);
 	
 	friend class boost::serialization::access;
+        using completion_t = std::function<void (void) >;
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 	}
 
+
+
 	static void RenderFunc(const u_int threadIndex,
 		ImageMapCache *imc, const std::vector<u_int> *imgMapsIndices, u_int *workCounter,
 		const Scene *scene, SobolSamplerSharedData *sobolSharedData,
-		boost::barrier *threadsSyncBarrier);
+		std::barrier<completion_t> *threadsSyncBarrier);
 };
 
 //------------------------------------------------------------------------------

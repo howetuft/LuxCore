@@ -420,7 +420,7 @@ void BakeCPURenderThread::RenderFunc() {
 		}
 		
 		// Synchronize
-		engine->threadsSyncBarrier->wait();
+		engine->threadsSyncBarrier->arrive_and_wait();
 
 		if (engine->currentSceneObjsToBake.size() == 0) {
 			// Nothing to do
@@ -529,7 +529,7 @@ void BakeCPURenderThread::RenderFunc() {
 		delete eyeSampler;
 		delete rndGen;
 
-		engine->threadsSyncBarrier->wait();
+		engine->threadsSyncBarrier->arrive_and_wait();
 
 		if ((threadIndex == 0) && !boost::this_thread::interruption_requested()) {
 			// Execute the image pipeline
@@ -548,7 +548,7 @@ void BakeCPURenderThread::RenderFunc() {
 					&props, false);			
 		}
 
-		engine->threadsSyncBarrier->wait();
+		engine->threadsSyncBarrier->arrive_and_wait();
 
 		if (boost::this_thread::interruption_requested())
 			break;

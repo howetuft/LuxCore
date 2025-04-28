@@ -114,7 +114,7 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & causticPhotonTracedCount;
 	ar & causticPhotonPass;
 
-	threadsSyncBarrier.reset(new boost::barrier(threadCount));
+	threadsSyncBarrier.reset(new std::barrier(threadCount, pgic_completion));
 }
 
 namespace slg {

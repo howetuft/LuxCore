@@ -78,10 +78,10 @@ void RTPathCPURenderThread::RTRenderFunc() {
 		// Check if we are in pause or edit mode
 		if (engine->threadsPauseMode) {
 			// Synchronize all threads
-			engine->threadsSyncBarrier->wait();
+			engine->threadsSyncBarrier->arrive_and_wait();
 
 			// Wait for the main thread
-			engine->threadsSyncBarrier->wait();
+			engine->threadsSyncBarrier->arrive_and_wait();
 
 			if (boost::this_thread::interruption_requested())
 				break;

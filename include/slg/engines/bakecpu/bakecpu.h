@@ -91,6 +91,7 @@ public:
 	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	friend class BakeCPURenderThread;
+        using completion_t = std::function<void (void)>;
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
@@ -123,7 +124,7 @@ protected:
 	luxrays::Distribution1D *currentSceneObjsDist;
 	std::vector<luxrays::Distribution1D *> currentSceneObjDist;
 
-	boost::barrier *threadsSyncBarrier;
+	std::barrier<completion_t> *threadsSyncBarrier;
 };
 
 }

@@ -20,7 +20,7 @@
 #define	_SLG_RTPATHCPU_H
 
 #include <condition_variable>
-#include <boost/thread/barrier.hpp>
+#include <barrier>
 #include <boost/thread/mutex.hpp>    
 
 #include "slg/engines/pathcpu/pathcpu.h"
@@ -75,6 +75,8 @@ public:
 	friend class RTPathCPURenderThread;
 	friend class RTPathCPUSampler;
 
+        using completion_t = std::function<void (void)>;
+
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
@@ -107,7 +109,7 @@ protected:
 	u_int firstFrameThreadDoneCount;
 	bool firstFrameDone;
 
-	boost::barrier *threadsSyncBarrier;
+	std::barrier<completion_t> *threadsSyncBarrier;
 	bool threadsPauseMode;
 };
 

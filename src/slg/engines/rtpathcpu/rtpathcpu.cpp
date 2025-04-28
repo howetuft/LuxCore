@@ -28,9 +28,11 @@ using namespace slg;
 // RTPathCPURenderEngine
 //------------------------------------------------------------------------------
 
+static RTPathCPURenderEngine::completion_t completion = []() {};
+
 RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg) :
 		PathCPURenderEngine(rcfg) {
-	threadsSyncBarrier = new boost::barrier(renderThreads.size() + 1);
+	threadsSyncBarrier = new std::barrier(renderThreads.size() + 1, completion);
 }
 
 RTPathCPURenderEngine::~RTPathCPURenderEngine() {
@@ -69,7 +71,7 @@ void RTPathCPURenderEngine::PauseThreads() {
 	threadsPauseMode = true;
 
 	// Wait for the threads
-	threadsSyncBarrier->wait();
+	threadsSyncBarrier->arrive_and_wait();
 }
 
 void RTPathCPURenderEngine::ResumeThreads() {
@@ -78,7 +80,7 @@ void RTPathCPURenderEngine::ResumeThreads() {
 	firstFrameThreadDoneCount = 0;
 
 	// Let's the threads to resume the rendering
-	threadsSyncBarrier->wait();
+	threadsSyncBarrier->arrive_and_wait();
 }
 
 void RTPathCPURenderEngine::Pause() {

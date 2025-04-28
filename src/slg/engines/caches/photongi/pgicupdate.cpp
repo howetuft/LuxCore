@@ -32,7 +32,7 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 	if (deltaSpp > params.caustic.updateSpp) {
 		// Time to update the caustic cache
 
-		threadsSyncBarrier->wait();
+		threadsSyncBarrier->arrive_and_wait();
 
 		bool result = false;
 		if ((threadIndex == 0) && !finishUpdateFlag) {
@@ -84,7 +84,7 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 			SLG_LOG("Updating PhotonGI caustic cache done in: " << std::setprecision(3) << dt << " secs");
 		}
 
-		threadsSyncBarrier->wait();
+		threadsSyncBarrier->arrive_and_wait();
 
 		return result;
 	} else
@@ -96,8 +96,8 @@ void PhotonGICache::FinishUpdate(const u_int threadIndex) {
 		if (finishUpdateFlag)
 			return;
 
-		threadsSyncBarrier->wait();
+		threadsSyncBarrier->arrive_and_wait();
 		finishUpdateFlag = true;
-		threadsSyncBarrier->wait();
+		threadsSyncBarrier->arrive_and_wait();
 	}
 }

@@ -20,9 +20,9 @@
 #define	_SLG_PHOTONGICACHE_H
 
 #include <vector>
+#include <barrier>
 #include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/barrier.hpp>
 #include <boost/function.hpp>
 
 #include "luxrays/core/color/spectrumgroup.h"
@@ -340,7 +340,9 @@ private:
 	PhotonGICacheParams params;
 
 	u_int threadCount;
-	std::unique_ptr<boost::barrier> threadsSyncBarrier;
+        using completion_t = std::function<void (void) >;
+        completion_t pgic_completion = []() noexcept {};
+	std::unique_ptr< std::barrier<completion_t> > threadsSyncBarrier;
 	u_int lastUpdateSpp, updateSeedBase;
 	bool finishUpdateFlag;
 

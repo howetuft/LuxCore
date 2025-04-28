@@ -166,19 +166,19 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	boost::this_thread::disable_interruption di;
 
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
-	boost::barrier *syncBarrier = engine->syncBarrier;
-	boost::barrier *frameBarrier = engine->frameBarrier;
+	auto *syncBarrier = engine->syncBarrier;
+	auto *frameBarrier = engine->frameBarrier;
 
 	intersectionDevice->PushThreadCurrentDevice();
 
 	// To synchronize with RTPathOCLRenderEngine::StartLockLess()
 	if (threadIndex == 0)
-		syncBarrier->wait();
+		syncBarrier->arrive_and_wait();
 
 	// To synchronize the start of all threads. frameBarrier can be nullptr if
 	// there is only one rendering threads.
 	if (frameBarrier)
-		frameBarrier->wait();
+		frameBarrier->arrive_and_wait();
 
 	const u_int taskCount = engine->taskCount;
 
@@ -234,7 +234,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			//------------------------------------------------------------------
 			if (frameBarrier)
-				frameBarrier->wait();
+				frameBarrier->arrive_and_wait();
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
@@ -272,17 +272,17 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 							break;
 						case SYNCTYPE_BEGINFILMEDIT:
 						case SYNCTYPE_STOP:
-							syncBarrier->wait();
+							syncBarrier->arrive_and_wait();
 							// The main thread send an interrupt to all render threads
-							syncBarrier->wait();
+							syncBarrier->arrive_and_wait();
 							requestedStop = true;
 							break;
 						case SYNCTYPE_ENDSCENEEDIT:
-							syncBarrier->wait();
+							syncBarrier->arrive_and_wait();
 
 							// Engine thread compile the scene
 
-							syncBarrier->wait();
+							syncBarrier->arrive_and_wait();
 
 							// Update OpenCL buffers if there is any edit action. It
 							// is done by thread #0 for all threads.
@@ -290,7 +290,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 							frameCounter = 0;
 							engine->film->Reset(true);
 
-							syncBarrier->wait();
+							syncBarrier->arrive_and_wait();
 							break;
 						default:
 							throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
@@ -312,7 +312,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			//------------------------------------------------------------------
 			if (frameBarrier)
-				frameBarrier->wait();
+				frameBarrier->arrive_and_wait();
 			//------------------------------------------------------------------
 
 			// Time to render a new frame

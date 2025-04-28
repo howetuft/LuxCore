@@ -23,7 +23,7 @@
 #include <vector>
 
 #include <boost/atomic.hpp>
-#include <boost/thread/barrier.hpp>
+#include <barrier>
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"

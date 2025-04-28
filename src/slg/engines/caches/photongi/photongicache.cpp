@@ -365,7 +365,8 @@ void PhotonGICache::CreateRadiancePhotons() {
 
 void PhotonGICache::Preprocess(const u_int threadCnt) {
 	threadCount = threadCnt;
-	threadsSyncBarrier.reset(new boost::barrier(threadCount));
+        completion_t completion = []() noexcept {};
+	threadsSyncBarrier.reset(new std::barrier(threadCount, completion));
 	lastUpdateSpp = 0;
 	updateSeedBase = 1;
 	finishUpdateFlag = false;

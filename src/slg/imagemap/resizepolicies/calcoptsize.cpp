@@ -55,7 +55,7 @@ static void GenerateEyeRay(const Camera *camera, const UV &sampleOffestUV, Ray &
 void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 		ImageMapCache *imc, const vector<u_int> *imgMapsIndices, u_int *workCounter,
 		const Scene *scene, SobolSamplerSharedData *sobolSharedData,
-		boost::barrier *threadsSyncBarrier) {
+		std::barrier<completion_t> *threadsSyncBarrier) {
 	// Hard coded parameters
 	const u_int passesCount = 1;
 	const u_int workSize = 4096;
@@ -73,7 +73,7 @@ void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 	for (auto i : *imgMapsIndices)
 		imc->maps[i]->instrumentationInfo->ThreadSetUp();
 	
-	threadsSyncBarrier->wait();
+	threadsSyncBarrier->arrive_and_wait();
 
 	const Camera *camera = scene->camera;
 
@@ -237,7 +237,7 @@ void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 
 	//frameBuffer.SaveHDR("thread" + ToString(threadIndex) + ".exr");
 	
-	threadsSyncBarrier->wait();
+	threadsSyncBarrier->arrive_and_wait();
 
 	// Delete thread image maps instrumentation
 	for (auto i : *imgMapsIndices)
@@ -248,17 +248,19 @@ void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 // ImageMapResizeMinMemPolicy::CalcOptimalImageMapSizes()
 //------------------------------------------------------------------------------
 
+static ImageMapResizePolicy::completion_t completion = []() {};
+
 void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, const Scene *scene,
 		const vector<u_int> &imgMapsIndices) {
-	// Do a test render to establish the optimal image maps sizes	
+	// Do a test render to establish the optimal image maps sizes
 	const size_t renderThreadCount = GetHardwareThreadCount();
 	vector<boost::thread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Optimal image map size preprocess thread count: " << renderThreadCount);
 
-	boost::barrier threadsSyncBarrier(renderThreadCount);
-	
+	std::barrier threadsSyncBarrier(renderThreadCount, completion);
+
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
-	
+
 	// Start the preprocessing threads
 	u_int workCounter = 0;
 	for (size_t i = 0; i < renderThreadCount; ++i)

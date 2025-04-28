@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/thread/barrier.hpp>
+#include <barrier>
 
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/engines/bakecpu/bakecpurenderstate.h"
@@ -122,6 +122,8 @@ RenderState *BakeCPURenderEngine::GetRenderState() {
 	return new BakeCPURenderState(bootStrapSeed, photonGICache);
 }
 
+static BakeCPURenderEngine::completion_t completion = []() {};
+
 void BakeCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -197,7 +199,7 @@ void BakeCPURenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 	
-	threadsSyncBarrier = new boost::barrier(renderThreads.size());
+	threadsSyncBarrier = new std::barrier(renderThreads.size(), completion);
 
 	//--------------------------------------------------------------------------
 	// Auto map size support
