@@ -28,11 +28,9 @@ using namespace slg;
 // RTPathCPURenderEngine
 //------------------------------------------------------------------------------
 
-static RTPathCPURenderEngine::completion_t completion = []() {};
-
 RTPathCPURenderEngine::RTPathCPURenderEngine(const RenderConfig *rcfg) :
 		PathCPURenderEngine(rcfg) {
-	threadsSyncBarrier = new std::barrier(renderThreads.size() + 1, completion);
+	threadsSyncBarrier = new std::barrier(renderThreads.size() + 1, completion_t());
 }
 
 RTPathCPURenderEngine::~RTPathCPURenderEngine() {

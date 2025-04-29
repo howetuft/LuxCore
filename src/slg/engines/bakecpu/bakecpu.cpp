@@ -122,8 +122,6 @@ RenderState *BakeCPURenderEngine::GetRenderState() {
 	return new BakeCPURenderState(bootStrapSeed, photonGICache);
 }
 
-static BakeCPURenderEngine::completion_t completion = []() {};
-
 void BakeCPURenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -199,7 +197,7 @@ void BakeCPURenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 	
-	threadsSyncBarrier = new std::barrier(renderThreads.size(), completion);
+	threadsSyncBarrier = new std::barrier(renderThreads.size(), completion_t());
 
 	//--------------------------------------------------------------------------
 	// Auto map size support

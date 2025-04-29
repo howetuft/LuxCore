@@ -340,8 +340,11 @@ private:
 	PhotonGICacheParams params;
 
 	u_int threadCount;
-        using completion_t = std::function<void (void) >;
-        completion_t pgic_completion = []() noexcept {};
+
+    struct completion_t {
+        void operator()() noexcept { }
+    };
+    completion_t pgic_completion();
 	std::unique_ptr< std::barrier<completion_t> > threadsSyncBarrier;
 	u_int lastUpdateSpp, updateSeedBase;
 	bool finishUpdateFlag;

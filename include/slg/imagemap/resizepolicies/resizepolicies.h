@@ -64,7 +64,9 @@ public:
 			const Scene *scene, const std::vector<u_int> &imgMapsIndices);
 	
 	friend class boost::serialization::access;
-        using completion_t = std::function<void (void) >;
+    struct completion_t {
+        void operator()() noexcept { }
+    };
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {

@@ -91,7 +91,9 @@ public:
 	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
 	friend class BakeCPURenderThread;
-        using completion_t = std::function<void (void)>;
+    struct completion_t {
+        void operator()() noexcept { }
+    };
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

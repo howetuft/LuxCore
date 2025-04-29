@@ -30,16 +30,14 @@ using namespace slg;
 // RTPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-static RTPathOCLRenderEngine::completion_t completion = []() {};
-
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg) :
 		TilePathOCLRenderEngine(rcfg, false) {
 	if (nativeRenderThreadCount > 0)
 		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
 
-	syncBarrier = new std::barrier(2, completion);
+	syncBarrier = new std::barrier(2, completion_t());
 	if (renderOCLThreads.size() > 1)
-		frameBarrier = new std::barrier(renderOCLThreads.size(), completion);
+		frameBarrier = new std::barrier(renderOCLThreads.size(), completion_t());
 	else
 		frameBarrier = nullptr;
 

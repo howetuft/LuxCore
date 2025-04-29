@@ -248,7 +248,6 @@ void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 // ImageMapResizeMinMemPolicy::CalcOptimalImageMapSizes()
 //------------------------------------------------------------------------------
 
-static ImageMapResizePolicy::completion_t completion = []() {};
 
 void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, const Scene *scene,
 		const vector<u_int> &imgMapsIndices) {
@@ -257,7 +256,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, const Sc
 	vector<boost::thread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("Optimal image map size preprocess thread count: " << renderThreadCount);
 
-	std::barrier threadsSyncBarrier(renderThreadCount, completion);
+	std::barrier threadsSyncBarrier(renderThreadCount, completion_t());
 
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
 
