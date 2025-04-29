@@ -222,7 +222,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		// Update the RenderConfig properties with the new image pipeline definition
 		std::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*");
 		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.imagepipeline.radiancescales.") ||
+			if (propName.starts_with("film.imagepipeline.radiancescales.") ||
 					std::regex_match(propName, reNewSyntax))
 				cfg.Set(props.Get(propName));
 		}
@@ -241,7 +241,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		
 		// Update the RenderConfig properties with the new outputs definition properties
 		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.outputs."))
+			if (propName.starts_with("film.outputs."))
 				cfg.Set(props.Get(propName));
 		}
 

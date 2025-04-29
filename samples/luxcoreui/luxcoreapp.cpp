@@ -314,7 +314,7 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	session = NULL;
 	
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
-	if (boost::starts_with(engineType, "RT")) {
+	if (engineType.starts_with("RT")) {
 		if (config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() > 25)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 		optRealTimeMode = true;

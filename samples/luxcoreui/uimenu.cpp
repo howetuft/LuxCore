@@ -499,7 +499,7 @@ void LuxCoreApp::MenuWindow() {
     if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
       renderEngineWindow.Toggle();
     if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
-        !boost::starts_with(currentRenderEngineType, "TILE") && !boost::starts_with(currentRenderEngineType, "RT")))
+        !currentRenderEngineType.starts_with("TILE") && !currentRenderEngineType.starts_with("RT")))
       samplerWindow.Toggle();
     if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
       pixelFilterWindow.Toggle();
@@ -698,8 +698,8 @@ void LuxCoreApp::MainMenuBar() {
         ImGui::EndMenu();
       }
 
-      if ((!boost::starts_with(currentEngineType, "TILE")) &&
-          (!boost::starts_with(currentEngineType, "RT")) &&
+      if ((!currentEngineType.starts_with("TILE")) &&
+          (!currentEngineType.starts_with("RT")) &&
           ImGui::BeginMenu("Sampler")) {
         MenuSampler();
         ImGui::EndMenu();
@@ -710,7 +710,7 @@ void LuxCoreApp::MainMenuBar() {
         ImGui::EndMenu();
       }
 
-      if (boost::starts_with(currentEngineType, "TILE") && ImGui::BeginMenu("Tiles")) {
+      if (currentEngineType.starts_with("TILE") && ImGui::BeginMenu("Tiles")) {
         MenuTiles();
         ImGui::EndMenu();
       }

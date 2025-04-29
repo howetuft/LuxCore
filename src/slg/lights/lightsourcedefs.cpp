@@ -122,7 +122,7 @@ void LightSourceDefinitions::DeleteLightSourceStartWith(const string &namePrefix
 	for (auto const &e : lightsByName) {
 		const string &name = e.first;
 
-		if (boost::starts_with(name, namePrefix))
+		if (name.starts_with(namePrefix))
 			nameList.push_back(name);
 	}
 

@@ -107,7 +107,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		for (auto const &texName : texNames) {
 			// I can skip all textures starting with Implicit-ConstFloatTexture(3)
 			// because they are expanded inline
-			if (boost::starts_with(texName, "Implicit-ConstFloatTexture"))
+			if (texName.starts_with("Implicit-ConstFloatTexture"))
 				continue;
 
 			const Texture *tex = texDefs.GetTexture(texName);
