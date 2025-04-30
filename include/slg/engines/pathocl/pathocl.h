@@ -43,7 +43,7 @@ public:
 
 protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
-	virtual void RenderThreadImpl();
+	virtual void RenderThreadImpl(std::stop_token stop_token);
 };
 
 //------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ public:
 
 protected:
 	virtual void StartRenderThread();
-	virtual void RenderThreadImpl();
+	virtual void RenderThreadImpl(std::stop_token stop_token);
 	
 	// Only the first thread allocate a film. It is than used by all
 	// other threads too.

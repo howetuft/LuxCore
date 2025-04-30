@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
 
 			// Run the rendering for 5 secs
 			for (unsigned int i = 0; i < 5;++i) {
-				boost::this_thread::sleep(boost::posix_time::millisec(1000));
+				std::this_thread::sleep(boost::posix_time::millisec(1000));
 
 				// Print some information about the rendering progress
 

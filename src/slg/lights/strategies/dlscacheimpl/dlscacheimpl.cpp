@@ -300,7 +300,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 		
 #ifdef WIN32
 			// Work around Windows bad scheduling
-			boost::this_thread::yield();
+			std::this_thread::yield();
 #endif
 		}
 

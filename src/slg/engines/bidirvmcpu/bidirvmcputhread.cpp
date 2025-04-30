@@ -18,6 +18,7 @@
 
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz) and http://www.smallvcm.com)
+#include <thread>
 
 #include "luxrays/utils/thread.h"
 
@@ -26,6 +27,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace std::literals::chrono_literals;
 
 //------------------------------------------------------------------------------
 // BiDirVMCPU RenderThread
@@ -36,7 +38,7 @@ BiDirVMCPURenderThread::BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine,
 		BiDirCPURenderThread(engine, index, device) {
 }
 
-void BiDirVMCPURenderThread::RenderFuncVM() {
+void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 	//SLG_LOG("[BiDirVMCPURenderThread::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
@@ -74,14 +76,15 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	vector<Point> lensPoints(samplers.size());
 	HashGrid hashGrid;
 
-	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+
+	for(u_int steps = 0; !stop_token.stop_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
-			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-				boost::this_thread::sleep(boost::posix_time::millisec(100));
+			while (!stop_token.stop_requested() && engine->pauseMode)
+				std::this_thread::sleep_for(100ms);
 
-			if (boost::this_thread::interruption_requested())
+			if (stop_token.stop_requested())
 				break;
 		}
 

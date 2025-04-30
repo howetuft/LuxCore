@@ -100,9 +100,9 @@ public:
 	friend class BiDirVMCPURenderEngine;
 
 private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirVMCPURenderThread::RenderFuncVM, this); }
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&BiDirVMCPURenderThread::RenderFuncVM, this)); }
 
-	void RenderFuncVM();
+	void RenderFuncVM(std::stop_token stop_token);
 };
 
 class BiDirVMCPURenderEngine : public BiDirCPURenderEngine {

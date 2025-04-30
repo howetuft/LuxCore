@@ -47,7 +47,7 @@ protected:
 			slg::ocl::TilePathSamplerSharedData &samplerData);
 
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
-	virtual void RenderThreadImpl();
+	virtual void RenderThreadImpl(std::stop_token stop_token);
 	
 	void RenderTileWork(const TileWork &tileWork,
 			slg::ocl::TilePathSamplerSharedData &samplerData,
@@ -68,7 +68,7 @@ public:
 
 protected:
 	virtual void StartRenderThread();
-	virtual void RenderThreadImpl();
+	virtual void RenderThreadImpl(std::stop_token stop_token);
 
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;

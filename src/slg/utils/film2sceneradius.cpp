@@ -98,7 +98,7 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	}
 }
 
-// To work around boost::thread() 10 arguments limit
+// To work around std::jthread() 10 arguments limit
 typedef struct Film2SceneRadiusThreadParams {
 	Film2SceneRadiusThreadParams() : accumulatedRadiusSize(0.f), radiusSizeCount(0) {
 	}
@@ -260,7 +260,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
-		boost::this_thread::yield();
+		std::this_thread::yield();
 #endif
 	}
 }
@@ -275,7 +275,7 @@ float Film2SceneRadius(const Scene *scene,
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
 
 	vector<Film2SceneRadiusThreadParams> params(renderThreadCount);
-	vector<boost::thread *> renderThreads(renderThreadCount);
+	vector<std::jthread *> renderThreads(renderThreadCount);
 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		params[i].threadIndex = i;
@@ -287,7 +287,7 @@ float Film2SceneRadius(const Scene *scene,
 		params[i].timeEnd = timeEnd;
 		params[i].validator = validator;
 
-		renderThreads[i] = new boost::thread(&Film2SceneRadiusThread, boost::ref(params[i]));
+		renderThreads[i] = new std::jthread(&Film2SceneRadiusThread, boost::ref(params[i]));
 	}
 
 	float totalAccumulatedRadiusSize = 0.f;

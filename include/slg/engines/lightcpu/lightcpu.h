@@ -43,9 +43,9 @@ public:
 	friend class LightCPURenderEngine;
 
 private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&LightCPURenderThread::RenderFunc, this); }
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&LightCPURenderThread::RenderFunc, this)); }
 
-	void RenderFunc();
+	void RenderFunc(std::stop_token stop_token);
 };
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {

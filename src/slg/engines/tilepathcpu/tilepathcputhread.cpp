@@ -25,6 +25,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace std::literals::chrono_literals;
 
 //------------------------------------------------------------------------------
 // TilePathCPU RenderThread
@@ -47,7 +48,7 @@ void TilePathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int si
 	}
 }
 
-void TilePathCPURenderThread::RenderFunc() {
+void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
@@ -78,15 +79,15 @@ void TilePathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	TileWork tileWork;
-	bool interruptionRequested = boost::this_thread::interruption_requested();
+	bool interruptionRequested = stop_token.stop_requested();
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, tileFilm) && !interruptionRequested) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
-			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-				boost::this_thread::sleep(boost::posix_time::millisec(100));
+			while (!stop_token.stop_requested() && engine->pauseMode)
+				std::this_thread::sleep_for(100ms);
 
-			if (boost::this_thread::interruption_requested())
+			if (stop_token.stop_requested())
 				break;
 		}
 
@@ -114,22 +115,19 @@ void TilePathCPURenderThread::RenderFunc() {
 					}
 				}
 
-				interruptionRequested = boost::this_thread::interruption_requested();
+				interruptionRequested = stop_token.stop_requested();
 #ifdef WIN32
 				// Work around Windows bad scheduling
 				renderThread->yield();
 #endif
 			}
 		}
+                if (stop_token.stop_requested())
+                        break;
 		
 		if (engine->photonGICache) {
-			try {
-				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
-				engine->photonGICache->Update(threadIndex, spp);
-			} catch (boost::thread_interrupted &ti) {
-				// I have been interrupted, I must stop
-				break;
-			}
+			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			engine->photonGICache->Update(threadIndex, spp);
 		}
 	}
 

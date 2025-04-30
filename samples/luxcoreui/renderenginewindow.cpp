@@ -21,7 +21,7 @@
 #include <string>
 #include <cstring>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 
 #include "luxcoreapp.h"
 
@@ -328,7 +328,7 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 		}
 
 		ival = props.Get("opencl.native.threads.count").Get<int>();
-		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, std::jthread::hardware_concurrency())) {
 			props.Set(Property("opencl.native.threads.count")(ival));
 			modifiedProps = true;
 		}
@@ -350,7 +350,7 @@ void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps) 
 		LuxCoreApp::HelpMarker("tilepathocl.devices.maxtiles");
 
 		ival = props.Get("opencl.native.threads.count").Get<int>();
-		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+		if (ImGui::SliderInt("Native rendering threads count", &ival, 1, std::jthread::hardware_concurrency())) {
 			props.Set(Property("opencl.native.threads.count")(ival));
 			modifiedProps = true;
 		}
@@ -400,7 +400,7 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 void RenderEngineWindow::ThreadsGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::CollapsingHeader("Threads", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		int ival = props.Get("native.threads.count").Get<int>();
-		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+		if (ImGui::SliderInt("Threads count", &ival, 1, std::jthread::hardware_concurrency())) {
 			props.Set(Property("native.threads.count")(ival));
 			modifiedProps = true;
 		}

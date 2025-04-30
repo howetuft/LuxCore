@@ -42,8 +42,8 @@ public:
 	friend class RTPathCPURenderEngine;
 
 protected:
-	void RTRenderFunc();
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&RTPathCPURenderThread::RTRenderFunc, this); }
+	void RTRenderFunc(std::stop_token stop_token);
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&RTPathCPURenderThread::RTRenderFunc, this)); }
 
 	virtual void StartRenderThread();
 };

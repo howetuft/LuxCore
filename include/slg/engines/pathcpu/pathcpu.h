@@ -45,8 +45,8 @@ public:
 	friend class PathCPURenderEngine;
 
 protected:
-	void RenderFunc();
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&PathCPURenderThread::RenderFunc, this); }
+	void RenderFunc(std::stop_token stop_token);
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&PathCPURenderThread::RenderFunc, this)); }
 };
 
 class PathCPURenderEngine : public CPUNoTileRenderEngine {

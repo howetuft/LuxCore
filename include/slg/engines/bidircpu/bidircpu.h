@@ -72,12 +72,12 @@ protected:
 		return a * a; // Power heuristic
 	}
 
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&BiDirCPURenderThread::RenderFunc, this)); }
 
-	void AOVWarmUp(luxrays::RandomGenerator *rndGen);
+	void AOVWarmUp(std::stop_token stop_token, luxrays::RandomGenerator *rndGen);
 	
 	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
-	void RenderFunc();
+	void RenderFunc(std::stop_token stop_token);
 
 	void DirectLightSampling(const float time,
 		const float u0, const float u1, const float u2,

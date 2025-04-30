@@ -19,6 +19,7 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz and http://www.smallvcm.com)
 
+#include <thread>
 #include <boost/format.hpp>
 #include <boost/function.hpp>
 
@@ -29,6 +30,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace std::literals::chrono_literals;
 
 //------------------------------------------------------------------------------
 // BiDirCPU RenderThread
@@ -50,7 +52,7 @@ BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
-void BiDirCPURenderThread::AOVWarmUp(RandomGenerator *rndGen) {
+void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator *rndGen) {
 	if (threadIndex == 0)
 		SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] AOV warmup started");
 	
@@ -90,7 +92,7 @@ void BiDirCPURenderThread::AOVWarmUp(RandomGenerator *rndGen) {
 	maxPathDepthInfo.specularDepth = engine->maxEyePathDepth;
 
 	while (sampler.GetPassCount() < engine->aovWarmupSPP) {
-		if (boost::this_thread::interruption_requested())
+		if (stop_token.stop_requested())
 			return;
 
 		sampleResult.filmX = sampler.GetSample(0);
@@ -709,7 +711,7 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	return true;
 }
 
-void BiDirCPURenderThread::RenderFunc() {
+void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
@@ -729,8 +731,8 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	// Albedo and Normal AOV warm up
 	if (engine->aovWarmupSPP > 0)
-		AOVWarmUp(rndGen);
-	
+		AOVWarmUp(stop_token, rndGen);
+
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
 			engine->samplerSharedData, Properties());
@@ -750,14 +752,14 @@ void BiDirCPURenderThread::RenderFunc() {
 	vector<SampleResult> sampleResults;
 	vector<PathVertexVM> lightPathVertices;
 
-	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+	for(u_int steps = 0; !stop_token.stop_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
-			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-				boost::this_thread::sleep(boost::posix_time::millisec(100));
+			while (!stop_token.stop_requested() && engine->pauseMode)
+				std::this_thread::sleep_for(100ms);
 
-			if (boost::this_thread::interruption_requested())
+			if (stop_token.stop_requested())
 				break;
 		}
 
@@ -979,15 +981,10 @@ void BiDirCPURenderThread::RenderFunc() {
 			break;
 
 		if (photonGICache) {
-			try {
-				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
-				photonGICache->Update(threadIndex, spp);
-			} catch (boost::thread_interrupted &ti) {
-				// I have been interrupted, I must stop
-				break;
-			}
-		}
-	}
+                        const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+                        photonGICache->Update(threadIndex, spp);
+                }
+	} // ~for
 
 	delete sampler;
 	delete rndGen;

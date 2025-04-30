@@ -56,7 +56,7 @@ void CPURenderThread::Start() {
 
 void CPURenderThread::Interrupt() {
 	if (renderThread)
-		renderThread->interrupt();
+		renderThread->request_stop();
 }
 
 void CPURenderThread::Stop() {
@@ -74,7 +74,7 @@ void CPURenderThread::StartRenderThread() {
 
 void CPURenderThread::StopRenderThread() {
 	if (renderThread) {
-		renderThread->interrupt();
+		renderThread->request_stop();
 		renderThread->join();
 		delete renderThread;
 		renderThread = NULL;

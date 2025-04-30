@@ -132,7 +132,7 @@ void Film::AsyncExecuteImagePipeline(const u_int index) {
 	isAsyncImagePipelineRunning = true;
 	
 	delete imagePipelineThread;
-	imagePipelineThread = new boost::thread(&Film::ExecuteImagePipelineThreadImpl, this, index);
+	imagePipelineThread = new std::jthread(&Film::ExecuteImagePipelineThreadImpl, this, index);
 }
 
 bool Film::HasDoneAsyncExecuteImagePipeline() {
@@ -152,12 +152,7 @@ void Film::ExecuteImagePipeline(const u_int index) {
 }
 
 void Film::ExecuteImagePipelineThreadImpl(const u_int index) {
-	try {
-		ExecuteImagePipelineImpl(index);
-	} catch (boost::thread_interrupted) {
-		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread halted");
-	}
-
+        ExecuteImagePipelineImpl(index);
 	isAsyncImagePipelineRunning = false;
 }
 

@@ -44,9 +44,9 @@ public:
 	friend class TilePathCPURenderEngine;
 
 private:
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&TilePathCPURenderThread::RenderFunc, this); }
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&TilePathCPURenderThread::RenderFunc, this)); }
 
-	void RenderFunc();
+	void RenderFunc(std::stop_token stop_token);
 
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;

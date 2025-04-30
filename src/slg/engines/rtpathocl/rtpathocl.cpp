@@ -100,7 +100,7 @@ void RTPathOCLRenderEngine::StopLockLess() {
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
+		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->request_stop();
 
 	syncType = SYNCTYPE_NONE;
 	syncBarrier->arrive_and_wait();
@@ -144,7 +144,7 @@ void RTPathOCLRenderEngine::BeginFilmEdit() {
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
+		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->request_stop();
 
 	syncType = SYNCTYPE_NONE;
 	syncBarrier->arrive_and_wait();

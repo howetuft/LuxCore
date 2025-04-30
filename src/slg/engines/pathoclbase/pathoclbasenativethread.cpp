@@ -57,7 +57,7 @@ void PathOCLBaseNativeRenderThread::Start() {
 
 void PathOCLBaseNativeRenderThread::Interrupt() {
 	if (renderThread)
-		renderThread->interrupt();
+		renderThread->request_stop();
 }
 
 void PathOCLBaseNativeRenderThread::Stop() {
@@ -73,12 +73,12 @@ void PathOCLBaseNativeRenderThread::StartRenderThread() {
 	threadDone = false;
 	
 	// Create the thread for the rendering
-	renderThread = new boost::thread(&PathOCLBaseNativeRenderThread::RenderThreadImpl, this);
+	renderThread = new std::jthread(std::bind_front(&PathOCLBaseNativeRenderThread::RenderThreadImpl, this));
 }
 
 void PathOCLBaseNativeRenderThread::StopRenderThread() {
 	if (renderThread) {
-		renderThread->interrupt();
+		renderThread->request_stop();
 		renderThread->join();
 		delete renderThread;
 		renderThread = NULL;

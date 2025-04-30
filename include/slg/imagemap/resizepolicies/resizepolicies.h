@@ -74,7 +74,7 @@ private:
 
 
 
-	static void RenderFunc(const u_int threadIndex,
+	static void RenderFunc(std::stop_token stop_token, const u_int threadIndex,
 		ImageMapCache *imc, const std::vector<u_int> *imgMapsIndices, u_int *workCounter,
 		const Scene *scene, SobolSamplerSharedData *sobolSharedData,
 		std::barrier<completion_t> *threadsSyncBarrier);

@@ -47,7 +47,7 @@ public:
 	friend class RTPathOCLRenderEngine;
 
 protected:
-	virtual void RenderThreadImpl();
+	virtual void RenderThreadImpl(std::stop_token stop_token);
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 	void UpdateAllThreadsOCLBuffers();

@@ -31,7 +31,7 @@ size_t luxrays::GetHardwareThreadCount() {
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 	return (size_t)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 #else 
-	return (size_t)boost::thread::hardware_concurrency();
+	return (size_t)std::jthread::hardware_concurrency();
 #endif
 }
 
@@ -54,7 +54,7 @@ void luxrays::SetThreadGroupAffinity(const size_t threadIndex) {
 #endif
 }
 
-bool luxrays::SetThreadRRPriority(boost::thread *thread, int pri) {
+bool luxrays::SetThreadRRPriority(std::jthread *thread, int pri) {
 #if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	{
 		const pthread_t tid = (pthread_t)thread->native_handle();

@@ -30,6 +30,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace std::literals::chrono_literals;
 
 //------------------------------------------------------------------------------
 // RTPathOCLRenderThread
@@ -157,13 +158,8 @@ void RTPathOCLRenderThread::UpdateAllCameraThreadsOCLBuffers() {
 	}
 }
 
-void RTPathOCLRenderThread::RenderThreadImpl() {
+void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
-
-	// Boost barriers are supposed to be not interruptible but they are
-	// and seem to be missing a way to reset them. So better to disable
-	// interruptions.
-	boost::this_thread::disable_interruption di;
 
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	auto *syncBarrier = engine->syncBarrier;
@@ -182,145 +178,144 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 	const u_int taskCount = engine->taskCount;
 
-	try {
-		//----------------------------------------------------------------------
-		// Execute initialization kernels
-		//----------------------------------------------------------------------
+        //----------------------------------------------------------------------
+        // Execute initialization kernels
+        //----------------------------------------------------------------------
 
-		// Initialize OpenCL structures
-		intersectionDevice->EnqueueKernel(initSeedKernel,
-				HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
+        // Initialize OpenCL structures
+        intersectionDevice->EnqueueKernel(initSeedKernel,
+                        HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
-		//----------------------------------------------------------------------
-		// Rendering loop
-		//----------------------------------------------------------------------
+        //----------------------------------------------------------------------
+        // Rendering loop
+        //----------------------------------------------------------------------
 
-		double frameStartTime = WallClockTime();
-		u_int frameCounter = 0;
-		tileWork.Reset();
-		slg::ocl::TilePathSamplerSharedData samplerData;
+        double frameStartTime = WallClockTime();
+        u_int frameCounter = 0;
+        tileWork.Reset();
+        slg::ocl::TilePathSamplerSharedData samplerData;
 
-		while (!boost::this_thread::interruption_requested()) {
-			//------------------------------------------------------------------
-			// Render the tile (there is only one tile for each device
-			// in RTPATHOCL)
-			//------------------------------------------------------------------
+        while (!stop_token.stop_requested()) {
+                //------------------------------------------------------------------
+                // Render the tile (there is only one tile for each device
+                // in RTPATHOCL)
+                //------------------------------------------------------------------
 
-			engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
+                engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
 
-			// tileWork can be NULL after a scene edit
-			if (tileWork.HasWork()) {
-				//const double t0 = WallClockTime();
-				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
+                // tileWork can be NULL after a scene edit
+                if (tileWork.HasWork()) {
+                        //const double t0 = WallClockTime();
+                        //SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
-				RenderTileWork(tileWork, samplerData, 0);
+                        RenderTileWork(tileWork, samplerData, 0);
 
-				// Async. transfer of GPU task statistics
-				intersectionDevice->EnqueueReadBuffer(
-					taskStatsBuff,
-					CL_FALSE,
-					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-					gpuTaskStats);
-				intersectionDevice->FinishQueue();
+                        // Async. transfer of GPU task statistics
+                        intersectionDevice->EnqueueReadBuffer(
+                                taskStatsBuff,
+                                CL_FALSE,
+                                sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
+                                gpuTaskStats);
+                        intersectionDevice->FinishQueue();
 
-				engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
+                        engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
 
-				// There is only one tile for each device in RTPATHOCL
-				tileWork.Reset();
+                        // There is only one tile for each device in RTPATHOCL
+                        tileWork.Reset();
 
-				//const double t1 = WallClockTime();
-				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
-			}
+                        //const double t1 = WallClockTime();
+                        //SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
+                }
 
-			//------------------------------------------------------------------
-			if (frameBarrier)
-				frameBarrier->arrive_and_wait();
-			//------------------------------------------------------------------
+                //------------------------------------------------------------------
+                if (frameBarrier)
+                        frameBarrier->arrive_and_wait();
+                //------------------------------------------------------------------
 
-			if (threadIndex == 0) {
-				//--------------------------------------------------------------
-				// Update frame time
-				//--------------------------------------------------------------
+                if (threadIndex == 0) {
+                        //--------------------------------------------------------------
+                        // Update frame time
+                        //--------------------------------------------------------------
 
-				const double now = WallClockTime();
-				engine->frameTime = now - frameStartTime;
-				frameStartTime = now;
-				
-				//--------------------------------------------------------------
-				// This is a special optimized path for CAMERA_EDIT action only
-				// (when custom camera bokeh is not used)
-				//--------------------------------------------------------------
-				
-				if (engine->useFastCameraEditPath) {
-					engine->useFastCameraEditPath = false;
+                        const double now = WallClockTime();
+                        engine->frameTime = now - frameStartTime;
+                        frameStartTime = now;
+                        
+                        //--------------------------------------------------------------
+                        // This is a special optimized path for CAMERA_EDIT action only
+                        // (when custom camera bokeh is not used)
+                        //--------------------------------------------------------------
+                        
+                        if (engine->useFastCameraEditPath) {
+                                engine->useFastCameraEditPath = false;
 
-					// Update OpenCL camera buffer if there is only a CAMERA_EDIT. It
-					// is done by thread #0 for all threads.
-					UpdateAllCameraThreadsOCLBuffers();
-					frameCounter = 0;
-					engine->film->Reset(true);					
-				}
+                                // Update OpenCL camera buffer if there is only a CAMERA_EDIT. It
+                                // is done by thread #0 for all threads.
+                                UpdateAllCameraThreadsOCLBuffers();
+                                frameCounter = 0;
+                                engine->film->Reset(true);					
+                        }
 
-				//--------------------------------------------------------------
-				// Check if there is a sync. request from the main thread
-				//--------------------------------------------------------------
+                        //--------------------------------------------------------------
+                        // Check if there is a sync. request from the main thread
+                        //--------------------------------------------------------------
 
-				for (;;) {
-					bool requestedStop = false;
-					switch (engine->syncType) {
-						case SYNCTYPE_NONE:
-							break;
-						case SYNCTYPE_BEGINFILMEDIT:
-						case SYNCTYPE_STOP:
-							syncBarrier->arrive_and_wait();
-							// The main thread send an interrupt to all render threads
-							syncBarrier->arrive_and_wait();
-							requestedStop = true;
-							break;
-						case SYNCTYPE_ENDSCENEEDIT:
-							syncBarrier->arrive_and_wait();
+                        for (;;) {
+                                bool requestedStop = false;
+                                switch (engine->syncType) {
+                                        case SYNCTYPE_NONE:
+                                                break;
+                                        case SYNCTYPE_BEGINFILMEDIT:
+                                        case SYNCTYPE_STOP:
+                                                syncBarrier->arrive_and_wait();
+                                                // The main thread send an interrupt to all render threads
+                                                syncBarrier->arrive_and_wait();
+                                                requestedStop = true;
+                                                break;
+                                        case SYNCTYPE_ENDSCENEEDIT:
+                                                syncBarrier->arrive_and_wait();
 
-							// Engine thread compile the scene
+                                                // Engine thread compile the scene
 
-							syncBarrier->arrive_and_wait();
+                                                syncBarrier->arrive_and_wait();
 
-							// Update OpenCL buffers if there is any edit action. It
-							// is done by thread #0 for all threads.
-							UpdateAllThreadsOCLBuffers();
-							frameCounter = 0;
-							engine->film->Reset(true);
+                                                // Update OpenCL buffers if there is any edit action. It
+                                                // is done by thread #0 for all threads.
+                                                UpdateAllThreadsOCLBuffers();
+                                                frameCounter = 0;
+                                                engine->film->Reset(true);
 
-							syncBarrier->arrive_and_wait();
-							break;
-						default:
-							throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
-					}
+                                                syncBarrier->arrive_and_wait();
+                                                break;
+                                        default:
+                                                throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
+                                }
 
-					// Check if we are in pause mode
-					if (engine->pauseMode) {
-						if (requestedStop)
-							break;
+                                // Check if we are in pause mode
+                                if (engine->pauseMode) {
+                                        if (requestedStop)
+                                                break;
 
-						boost::this_thread::sleep(boost::posix_time::millisec(100));
-					} else
-						break;
-				}
+                                        std::this_thread::sleep_for(100ms);
+                                } else
+                                        break;
+                        }
 
-				// Re-initialize the tile queue for the next frame
-				engine->tileRepository->Restart(engine->film, frameCounter++);
-			}
+                        // Re-initialize the tile queue for the next frame
+                        engine->tileRepository->Restart(engine->film, frameCounter++);
+                }
 
-			//------------------------------------------------------------------
-			if (frameBarrier)
-				frameBarrier->arrive_and_wait();
-			//------------------------------------------------------------------
+                //------------------------------------------------------------------
+                if (frameBarrier)
+                        frameBarrier->arrive_and_wait();
+                //------------------------------------------------------------------
 
-			// Time to render a new frame
-		}
-		//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (boost::thread_interrupted) {
+                // Time to render a new frame
+
+        } // ~while (!stop_token.stop_requested())
+
+        if (stop_token.stop_requested())
 		SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	}
 
 	intersectionDevice->FinishQueue();
 

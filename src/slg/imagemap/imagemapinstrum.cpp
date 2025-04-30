@@ -76,14 +76,14 @@ void ImageMap::InstrumentationInfo::ThreadSetUp() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadSetUp() [" << this << "]" << endl;
 
 	std::unique_lock<std::mutex> lock(classLock);
-	threadInfo[boost::this_thread::get_id()] = new ThreadData();
+	threadInfo[std::this_thread::get_id()] = new ThreadData();
 }
 
 void ImageMap::InstrumentationInfo::ThreadFinalize() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadFinalize() [" << this << "]" << endl;
 	
 	std::unique_lock<std::mutex> lock(classLock);
-	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
+	ThreadData *ti = threadInfo[std::this_thread::get_id()];
 	if (ti->samplesCount > 0) {
 //		cout << "Min. U distance in pixel: " << (ti->minDistance * originalWidth) << endl;
 //		cout << "Min. V distance in pixel: " << (ti->minDistance * originalHeigth) << endl;
@@ -99,27 +99,27 @@ void ImageMap::InstrumentationInfo::ThreadFinalize() {
 	}
 
 	delete ti;
-	threadInfo.erase(boost::this_thread::get_id());
+	threadInfo.erase(std::this_thread::get_id());
 }
 
 void ImageMap::InstrumentationInfo::ThreadSetSampleIndex(const InstrumentationSampleIndex index) {
 //	cout << "ImageMap::InstrumentationInfo::ThreadSetSampleIndex(" << index << ") [" << this << "]" << endl;
 
-	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
+	ThreadData *ti = threadInfo[std::this_thread::get_id()];
 	ti->currentSamplesIndex = (u_int)index;
 }
 
 void ImageMap::InstrumentationInfo::ThreadAddSample(const luxrays::UV &uv) {
 //	cout << "ImageMap::InstrumentationInfo::ThreadAddSample(" << uv << ") [" << this << ", " << ti->currentSamplesIndex << "]" << endl;
 
-	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
+	ThreadData *ti = threadInfo[std::this_thread::get_id()];
 	ti->samples[ti->currentSamplesIndex].push_back(uv);
 }
 
 void ImageMap::InstrumentationInfo::ThreadAccumulateSamples() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadAccumulateSamples() [" << this << "]" << endl;
 
-	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
+	ThreadData *ti = threadInfo[std::this_thread::get_id()];
 	if ((ti->samples[0].size() > 0) &&
 			(ti->samples[0].size() == ti->samples[1].size()) &&
 			(ti->samples[0].size() == ti->samples[2].size())) {

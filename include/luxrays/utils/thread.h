@@ -19,7 +19,7 @@
 #ifndef _LUXRAYS_THREAD_H
 #define	_LUXRAYS_THREAD_H
 
-#include <boost/thread.hpp>
+#include <thread>
 
 #include "luxrays/utils/utils.h"
 
@@ -27,7 +27,7 @@ namespace luxrays {
 
 extern size_t GetHardwareThreadCount();
 extern void SetThreadGroupAffinity(const size_t threadIndex);
-extern bool SetThreadRRPriority(boost::thread *thread, int pri = 0);
+extern bool SetThreadRRPriority(std::jthread *thread, int pri = 0);
 
 }
 

@@ -79,7 +79,7 @@ private:
 			const std::vector<RadiancePhotonEntry> &newIndirectPhotons,
 			const std::vector<Photon> &newCausticPhotons);
 
-	void RenderFunc();
+	void RenderFunc(std::stop_token stop_token);
 
 	PhotonGICache &pgic;
 	const u_int threadIndex, seedBase, photonTracedCount;
@@ -90,7 +90,7 @@ private:
 	std::atomic<u_int> &globalIndirectSize;
 	std::atomic<u_int> &globalCausticSize;
 
-	boost::thread *renderThread;
+	std::jthread *renderThread;
 
 	u_int sampleBootSize, sampleStepSize, sampleSize;
 	bool indirectDone, causticDone;

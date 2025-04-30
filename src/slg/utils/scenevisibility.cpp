@@ -67,7 +67,7 @@ SceneVisibility<T>::TraceVisibilityThread::~TraceVisibilityThread() {
 
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::Start() {
-	renderThread = new boost::thread(&TraceVisibilityThread::RenderFunc, this);
+	renderThread = new std::jthread(std::bind_front(&TraceVisibilityThread::RenderFunc, this));
 }
 
 template <class T>
@@ -97,7 +97,7 @@ void SceneVisibility<T>::TraceVisibilityThread::GenerateEyeRay(const Camera *cam
 }
 
 template <class T>
-void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
+void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_token) {
 	const u_int workSize = 4096;
 	
 	// Hard coded RR parameters
@@ -152,7 +152,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 	const double startTime = WallClockTime();
 	double lastPrintTime = startTime;	
 	double cacheHitRate = 0.0;
-	while(!boost::this_thread::interruption_requested()) {
+	while(!stop_token.stop_requested()) {
 		// Get some work to do
 		u_int workCounter;
 		do {
@@ -172,7 +172,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 
 		visibilityParticles.clear();
 		u_int workToDoIndex = workToDo;
-		while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+		while (workToDoIndex-- && !stop_token.stop_requested()) {
 			sampleResult.radiance[0] = Spectrum();
 
 			Ray eyeRay;
@@ -260,7 +260,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 
 #ifdef WIN32
 			// Work around Windows bad scheduling
-			boost::this_thread::yield();
+			std::this_thread::yield();
 #endif
 		}
 

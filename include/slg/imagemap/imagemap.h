@@ -24,6 +24,7 @@
 #include <string>
 #include <limits>
 #include <unordered_map>
+#include <thread>
 
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
@@ -1017,7 +1018,7 @@ protected:
 			ar & enabled;
 		}
 
-		std::map<boost::thread::id, ThreadData *> threadInfo;
+		std::map<std::jthread::id, ThreadData *> threadInfo;
 
 		std::mutex classLock;
 	};

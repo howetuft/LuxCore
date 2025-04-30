@@ -66,9 +66,9 @@ protected:
 			const luxrays::Spectrum &lightPathFlux, std::vector<SampleResult> &sampleResults) const;
 	void RenderLightSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
 	void RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
-	void RenderFunc();
+	void RenderFunc(std::stop_token stop_token);
 
-	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BakeCPURenderThread::RenderFunc, this); }
+	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(std::bind_front(&BakeCPURenderThread::RenderFunc, this))); }
 };
 
 class BakeCPURenderEngine : public CPUNoTileRenderEngine {

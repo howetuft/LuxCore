@@ -39,6 +39,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace std::literals::chrono_literals;
 
 //------------------------------------------------------------------------------
 // PathOCLNativeRenderThread
@@ -86,7 +87,7 @@ void PathOCLNativeRenderThread::StartRenderThread() {
 	PathOCLBaseNativeRenderThread::StartRenderThread();
 }
 
-void PathOCLNativeRenderThread::RenderThreadImpl() {
+void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//SLG_LOG("[PathOCLRenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
@@ -142,14 +143,14 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// Trace paths
 	//--------------------------------------------------------------------------
 
-	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+	for (u_int steps = 0; !stop_token.stop_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
-			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
-				boost::this_thread::sleep(boost::posix_time::millisec(100));
+			while (!stop_token.stop_requested() && engine->pauseMode)
+				std::this_thread::sleep_for(100ms);
 
-			if (boost::this_thread::interruption_requested())
+			if (stop_token.stop_requested())
 				break;
 		}
 
@@ -163,14 +164,11 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 		// Check halt conditions
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+                if (stop_token.stop_requested())
+                        break;
 
 		if (engine->photonGICache) {
-			try {
-				engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, engine->GetTotalEyeSPP());
-			} catch (boost::thread_interrupted &ti) {
-				// I have been interrupted, I must stop
-				break;
-			}
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, engine->GetTotalEyeSPP());
 		}
 	}
 

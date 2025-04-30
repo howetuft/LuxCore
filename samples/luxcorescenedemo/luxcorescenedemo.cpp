@@ -252,7 +252,7 @@ static void DoRendering(RenderSession *session) {
 	char buf[512];
 	const Properties &stats = session->GetStats();
 	while (!session->HasDone()) {
-		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+		std::this_thread::sleep(boost::posix_time::millisec(1000));
 
 		session->UpdateStats();
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();

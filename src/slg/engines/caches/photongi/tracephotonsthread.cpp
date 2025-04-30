@@ -59,7 +59,7 @@ void TracePhotonsThread::Start() {
 	indirectPhotons.clear();
 	causticPhotons.clear();
 
-	renderThread = new boost::thread(&TracePhotonsThread::RenderFunc, this);
+	renderThread = new std::jthread(std::bind_front(&TracePhotonsThread::RenderFunc, this));
 }
 
 void TracePhotonsThread::Join() {
@@ -280,7 +280,7 @@ void TracePhotonsThread::AddPhotons(const float currentPhotonsScale,
 //  "Robust Adaptive Photon Tracing using Photon Path Visibility"
 //  by TOSHIYA HACHISUKA and HENRIK WANN JENSEN
 
-void TracePhotonsThread::RenderFunc() {
+void TracePhotonsThread::RenderFunc(std::stop_token stop_token) {
 	const u_int workSize = 4096;
 
 	//--------------------------------------------------------------------------
@@ -318,7 +318,7 @@ void TracePhotonsThread::RenderFunc() {
 	const double startTime = WallClockTime();
 	double lastPrintTime = startTime;
 	bool foundUsefulFirstPrint = true;
-	while(!boost::this_thread::interruption_requested()) {
+	while(!stop_token.stop_requested()) {
 		// Get some work to do
 		u_int workCounter;
 		do {
@@ -409,7 +409,7 @@ void TracePhotonsThread::RenderFunc() {
 				u_int mutatedCount = 1;
 				u_int uniformCount = 1;
 				u_int workToDoIndex = workToDo;
-				while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+				while (workToDoIndex-- && !stop_token.stop_requested()) {
 					UniformMutate(rndGen, uniformPathSamples);
 
 					if (TracePhotonPath(rndGen, uniformPathSamples, uniformIndirectPhotons,
@@ -481,7 +481,7 @@ void TracePhotonsThread::RenderFunc() {
 			// Trace light paths
 
 			u_int workToDoIndex = workToDo;
-			while (workToDoIndex-- && !boost::this_thread::interruption_requested()) {
+			while (workToDoIndex-- && !stop_token.stop_requested()) {
 				UniformMutate(rndGen, currentPathSamples);
 
 				TracePhotonPath(rndGen, currentPathSamples, currentIndirectPhotons, currentCausticPhotons);
@@ -495,7 +495,7 @@ void TracePhotonsThread::RenderFunc() {
 #endif
 			}
 		} else
-			throw runtime_error("Unknown sampler type in TracePhotonsThread::RenderFunc(): " + ToString(pgic.params.samplerType));
+			throw runtime_error("Unknown sampler type in TracePhotonsThread::RenderFunc(std::stop_token stop_token): " + ToString(pgic.params.samplerType));
 
 		//----------------------------------------------------------------------
 		

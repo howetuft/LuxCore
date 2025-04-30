@@ -44,7 +44,7 @@ void RTPathCPURenderThread::StartRenderThread() {
 	CPURenderThread::StartRenderThread();
 }
 
-void RTPathCPURenderThread::RTRenderFunc() {
+void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
@@ -74,7 +74,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
-	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
+	for (u_int steps = 0; !stop_token.stop_requested(); ++steps) {
 		// Check if we are in pause or edit mode
 		if (engine->threadsPauseMode) {
 			// Synchronize all threads
@@ -83,7 +83,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			// Wait for the main thread
 			engine->threadsSyncBarrier->arrive_and_wait();
 
-			if (boost::this_thread::interruption_requested())
+			if (stop_token.stop_requested())
 				break;
 
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);

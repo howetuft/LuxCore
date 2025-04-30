@@ -27,6 +27,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_set>
+#include <thread>
 
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
@@ -514,7 +515,7 @@ private:
 	FilmSamplesCounts samplesCounts;
 
 	std::vector<ImagePipeline *> imagePipelines;
-	boost::thread *imagePipelineThread;
+	std::jthread *imagePipelineThread;
 	bool isAsyncImagePipelineRunning;
 
 	// Halt conditions

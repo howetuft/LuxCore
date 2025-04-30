@@ -187,7 +187,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 
 Film::~Film() {
 	if (imagePipelineThread) {
-		imagePipelineThread->interrupt();
+		imagePipelineThread->request_stop();
 		imagePipelineThread->join();
 		delete imagePipelineThread;
 	}

@@ -27,7 +27,7 @@
 #include <filesystem>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 #include <filesystem>
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -54,7 +54,7 @@ static void BatchRendering(RenderConfig *config, RenderState *startState, Film *
 
 	const Properties &stats = session->GetStats();
 	while (!session->HasDone()) {
-		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+		std::this_thread::sleep_for(1000ms);
 		session->UpdateStats();
 
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();

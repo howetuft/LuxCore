@@ -57,7 +57,7 @@ protected:
 		void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
 				PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 
-		void RenderFunc();
+		void RenderFunc(std::stop_token stop_token);
 
 		SceneVisibility<T> &sv;
 		const u_int threadIndex;
@@ -70,7 +70,7 @@ protected:
 		u_int &visibilityCacheHits;
 		bool &visibilityWarmUp;
 
-		boost::thread *renderThread;
+		std::jthread *renderThread;
 	};
 
 	virtual IndexOctree<T> *AllocOctree() const = 0;
