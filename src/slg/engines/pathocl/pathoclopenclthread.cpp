@@ -121,7 +121,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	double totalTransferTime = 0.0;
 	double totalKernelTime = 0.0;
 
-	const boost::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
+	const std::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
 
 	while (!stop_token.stop_requested()) {
 		//if (threadIndex == 0)

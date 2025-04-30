@@ -23,7 +23,7 @@ using namespace luxrays;
 using namespace slg;
 
 bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
-		const boost::function<void()> &threadZeroCallback) {
+		const std::function<void()> &threadZeroCallback) {
 	if (!params.caustic.enabled || (params.caustic.updateSpp == 0) || finishUpdateFlag)
 		return false;
 

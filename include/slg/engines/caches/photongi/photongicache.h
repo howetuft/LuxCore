@@ -281,9 +281,9 @@ public:
 
 	void Preprocess(const u_int threadCount);
 	bool Update(const u_int threadIndex, const u_int filmSPP,
-		const boost::function<void()> &threadZeroCallback);
+		const std::function<void()> &threadZeroCallback);
 	bool Update(const u_int threadIndex, const u_int filmSPP) {
-		const boost::function<void()> noCallback;
+		const std::function<void()> noCallback;
 		return Update(threadIndex, filmSPP, noCallback);
 	}
 	void FinishUpdate(const u_int threadIndex);
