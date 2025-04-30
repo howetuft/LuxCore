@@ -157,7 +157,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
         vector<TileWork> tileWorks(1);
         vector<slg::ocl::TilePathSamplerSharedData> samplerDatas(1);
-        const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
+        const boost::function<void()> pgicUpdateCallBack = std::bind(PGICUpdateCallBack, engine->compiledScene);
 
         while (!stop_token.stop_requested()) {
                 // Check if we are in pause mode
