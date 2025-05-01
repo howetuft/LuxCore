@@ -492,7 +492,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 #ifdef WIN32
 			// Work around Windows bad scheduling
-			renderThread->yield();
+            std::this_thread::yield();
 #endif
 
 			if (threadIndex == 0) {

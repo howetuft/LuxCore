@@ -136,7 +136,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 				interruptionRequested = stop_token.stop_requested();
 #ifdef WIN32
 				// Work around Windows bad scheduling
-				renderThread->yield();
+                std::this_thread::yield();
 #endif
 			}
 		}
