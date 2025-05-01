@@ -203,7 +203,8 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-            _T=$(brew --prefix llvm@15)
+            brew install llvm@20
+            _T=$(brew --prefix llvm@20)
             echo "CXX=${_T}/bin/clang++" >> $GITHUB_ENV
             echo "CC=${_T}/bin/clang" >> $GITHUB_ENV
             #echo "AR=${_T}/bin/ar" >> $GITHUB_ENV
