@@ -237,14 +237,12 @@ set(LUXRAYS_LIB_SRCS
 
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
-if(APPLE)
-  target_link_libraries(luxrays PRIVATE OpenMP::OpenMP)
-else()
-  target_link_libraries(luxrays PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
-
-
-target_link_libraries(luxrays PRIVATE embree openimageio::openimageio boost::boost)
+target_link_libraries(luxrays PRIVATE
+  embree
+  openimageio::openimageio
+  boost::boost
+  OpenMP::OpenMP_CXX
+)
 
 ################################################################################
 #

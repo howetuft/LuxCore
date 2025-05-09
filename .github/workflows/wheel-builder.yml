@@ -183,13 +183,16 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/github-script@v7
         with:
+          # Minimum targets driven by:
+          # Intel: libomp
+          # Arm: opensubdiv
           script: |
             if ('${{ runner.arch }}' == 'X64') {
-              target = '10.15';
+              target = '13.0';
               arch='x86_64';
             }
             else {
-              target = '12.0';
+              target = '14.2';
               arch='armv8';
             }
             core.exportVariable('MACOSX_DEPLOYMENT_TARGET', target);
@@ -204,6 +207,7 @@ jobs:
             # actually we use recent version of llvm, to get full compatibility
             # with C++20
             brew install llvm@20
+
             LLVM_PREFIX=$(brew --prefix llvm@20)
             echo "PATH=$LLVM_PREFIX/bin:$PATH" >> $GITHUB_ENV
             echo "CC=clang" >> $GITHUB_ENV
@@ -211,6 +215,14 @@ jobs:
             echo "AR=llvm-ar" >> $GITHUB_ENV
             echo "RANLIB=llvm-ranlib" >> $GITHUB_ENV
             echo "LD=ld.lld" >> $GITHUB_ENV
+            echo "DYLD_LIBRARY_PATH=$LLVM_PREFIX/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+
+
+            brew install libomp
+            OMP_PREFIX=$(brew --prefix libomp)
+            echo "LIBOMP=$OMP_PREFIX/lib/libomp.dylib" >> $GITHUB_ENV
+            echo "LDFLAGS=-L/usr/local/opt/libomp/lib:LDFLAGS" >> $GITHUB_ENV
+            echo "CPPFLAGS=-I/usr/local/opt/libomp/include" >> $GITHUB_ENV
             #echo "LDFLAGS=-fuse-ld=ld.lld" >> $GITHUB_ENV
 
 

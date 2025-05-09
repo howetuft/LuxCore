@@ -68,13 +68,7 @@ include_directories(${PROJECT_SOURCE_DIR}/deps/lut)
 
 add_library(bcd STATIC ${BCD_SRCS})
 
-target_link_libraries(bcd PRIVATE boost::boost Eigen3::Eigen)
-
-if(APPLE)
-  target_link_libraries(bcd PRIVATE OpenMP::OpenMP)
-else()
-  target_link_libraries(bcd PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
+target_link_libraries(bcd PRIVATE boost::boost Eigen3::Eigen OpenMP::OpenMP_CXX)
 
 # Required by VisualStudio to have M_PI defined
 add_definitions("-D_USE_MATH_DEFINES")
@@ -496,25 +490,19 @@ SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 
 target_link_libraries(slg-core PRIVATE
-    luxrays
-    boost::boost
-    OpenColorIO::OpenColorIO
-    OpenVDB::openvdb
-    openexr::openexr
-    opensubdiv::opensubdiv
-    Imath::Imath
-    embree
-    openimageio::openimageio
-    nlohmann_json::nlohmann_json
-    robin_hood::robin_hood
+  luxrays
+  boost::boost
+  OpenColorIO::OpenColorIO
+  OpenVDB::openvdb
+  openexr::openexr
+  opensubdiv::opensubdiv
+  Imath::Imath
+  embree
+  openimageio::openimageio
+  nlohmann_json::nlohmann_json
+  robin_hood::robin_hood
+  OpenMP::OpenMP_CXX
 )
-
-if(APPLE)
-  target_link_libraries(slg-core PRIVATE OpenMP::OpenMP)
-else()
-  target_link_libraries(slg-core PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
-
 
 #############################################################################
 #
@@ -654,13 +642,7 @@ set(SLG_KERNEL_SRCS
 SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})
 
 add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
-if(APPLE)
-  target_link_libraries(slg-kernels PRIVATE OpenMP::OpenMP)
-else()
-  target_link_libraries(slg-kernels PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
-
-target_link_libraries(slg-kernels PRIVATE boost::boost)
+target_link_libraries(slg-kernels PRIVATE boost::boost OpenMP::OpenMP_CXX)
 
 #############################################################################
 #
@@ -731,18 +713,13 @@ set(SLG_FILM_SRCS
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 
 add_library(slg-film STATIC ${SLG_FILM_SRCS})
-if(APPLE)
-  target_link_libraries(slg-film PRIVATE OpenMP::OpenMP)
-else()
-  target_link_libraries(slg-film PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
-
 target_link_libraries(slg-film PRIVATE
     boost::boost
     OpenColorIO::OpenColorIO
     embree
     oidn::oidn
     openimageio::openimageio
+    OpenMP::OpenMP_CXX
 )
 
 ###########################################################################

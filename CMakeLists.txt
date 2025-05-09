@@ -247,11 +247,10 @@ endif(MSVC)
 
 if(APPLE)
   # OpenMP
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp=libomp -Wno-register")
   # Debug
   add_compile_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
   add_link_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
-
 
 endif(APPLE)
 
