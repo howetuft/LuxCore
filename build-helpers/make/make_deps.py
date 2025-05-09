@@ -468,8 +468,6 @@ def main(
             "--settings=build_type=Release",
             f"--conf:all=tools.cmake.cmaketoolchain:generator={generator}",
         ]
-        if platform.system() == "Darwin" and platform.machine() == "x86_64":
-            main_block += ["--settings=os.version=11.0"]
         build_types = [
             "Debug",
             "Release",
