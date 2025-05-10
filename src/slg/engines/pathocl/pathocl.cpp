@@ -26,8 +26,8 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <mutex>
 
-#include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"

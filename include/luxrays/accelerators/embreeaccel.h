@@ -19,8 +19,6 @@
 #ifndef _LUXRAYS_EMBREEACCEL_H
 #define	_LUXRAYS_EMBREEACCEL_H
 
-#include <boost/thread.hpp>
-
 #include <embree3/rtcore.h>
 
 #include "luxrays/luxrays.h"

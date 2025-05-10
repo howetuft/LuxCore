@@ -21,7 +21,6 @@
 
 #include <condition_variable>
 #include <barrier>
-#include <boost/thread/mutex.hpp>    
 
 #include "slg/engines/pathcpu/pathcpu.h"
 

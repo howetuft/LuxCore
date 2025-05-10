@@ -21,9 +21,7 @@
 
 #include <deque>
 #include <vector>
-
-#include <boost/thread/mutex.hpp>
-#include <boost/unordered_map.hpp>
+#include <mutex>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"

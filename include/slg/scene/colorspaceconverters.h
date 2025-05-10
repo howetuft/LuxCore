@@ -20,7 +20,6 @@
 #define	_SLG_COLORSPACECONVERTERS_H
 
 #include <string>
-#include <boost/unordered_map.hpp>
 
 #include <OpenColorIO/OpenColorIO.h>
 namespace OCIO = OCIO_NAMESPACE;

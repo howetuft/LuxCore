@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include <stdexcept>
-#include <boost/foreach.hpp>
-#include <boost/regex.hpp>
 
 #include "luxrays/kernels/kernels.h"
 #include "slg/kernels/kernels.h"

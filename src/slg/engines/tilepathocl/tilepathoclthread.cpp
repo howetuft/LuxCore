@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <thread>
+#include <mutex>
 
 #include "luxrays/devices/ocldevice.h"
 

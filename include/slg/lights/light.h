@@ -19,8 +19,6 @@
 #ifndef _SLG_LIGHT_H
 #define	_SLG_LIGHT_H
 
-#include <boost/unordered_map.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/randomgen.h"

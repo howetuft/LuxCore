@@ -9,7 +9,6 @@
 #include "DenoisingUnit.h"
 
 #include "Denoiser.h"
-#include "boost/chrono/process_cpu_clocks.hpp"
 
 #ifdef FOUND_CUDA
 #include "CudaHistogramDistance.h"

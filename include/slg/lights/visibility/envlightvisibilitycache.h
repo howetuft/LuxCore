@@ -19,8 +19,6 @@
 #ifndef _SLG_LIGHTVISIBILITYCACHE_H
 #define	_SLG_LIGHTVISIBILITYCACHE_H
 
-#include <boost/atomic.hpp>
-
 #include "luxrays/utils/mcdistribution.h"
 #include "luxrays/utils/serializationutils.h"
 

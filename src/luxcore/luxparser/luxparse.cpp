@@ -77,7 +77,6 @@
 #include <sstream>
 #include <vector>
 
-#include <boost/foreach.hpp>
 #include <boost/algorithm/string/replace.hpp>
 	
 #include "luxcore/luxcore.h"

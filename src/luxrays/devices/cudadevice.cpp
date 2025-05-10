@@ -18,7 +18,6 @@
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
-#include <boost/regex.hpp>
 
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/cudadevice.h"

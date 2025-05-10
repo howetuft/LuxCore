@@ -18,7 +18,6 @@
 
 #include <limits>
 #include <boost/format.hpp>
-#include <boost/thread/condition_variable.hpp>
 
 #include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"

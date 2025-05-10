@@ -21,7 +21,6 @@
 
 #include <string>
 #include <filesystem>
-#include <boost/unordered_map.hpp>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 

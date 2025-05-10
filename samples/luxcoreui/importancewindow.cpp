@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 

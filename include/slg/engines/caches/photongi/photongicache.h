@@ -21,9 +21,6 @@
 
 #include <vector>
 #include <barrier>
-#include <boost/atomic.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/function.hpp>
 
 #include "luxrays/core/color/spectrumgroup.h"
 #include "luxrays/utils/properties.h"

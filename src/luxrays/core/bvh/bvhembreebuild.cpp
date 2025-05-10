@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include <vector>
-#include <boost/foreach.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_builder.h>

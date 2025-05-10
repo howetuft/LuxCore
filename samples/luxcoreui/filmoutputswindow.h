@@ -20,6 +20,7 @@
 #define	_LUXCOREAPP_FILMOUTPUTSWINDOW_H
 
 #include <string>
+#include <unordered_map>
 
 #include <imgui.h>
 

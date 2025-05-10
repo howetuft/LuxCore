@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include <stdexcept>
-#include <boost/foreach.hpp>
-#include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "slg/film/film.h"

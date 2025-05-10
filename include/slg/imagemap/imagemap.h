@@ -25,9 +25,7 @@
 #include <limits>
 #include <unordered_map>
 #include <thread>
-
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"

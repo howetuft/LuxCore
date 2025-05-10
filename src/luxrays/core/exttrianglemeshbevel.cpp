@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include "luxrays/core/exttrianglemesh.h"
-#include "boost/unordered/unordered_set.hpp"
 
 using namespace std;
 using namespace luxrays;

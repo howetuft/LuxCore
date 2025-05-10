@@ -21,7 +21,6 @@
 #include <exception>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>

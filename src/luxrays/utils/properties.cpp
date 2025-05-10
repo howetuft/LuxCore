@@ -25,7 +25,6 @@
 #include <stdexcept>
 #include <regex>
 
-#include <boost/foreach.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>

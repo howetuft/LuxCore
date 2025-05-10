@@ -18,6 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <mutex>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"

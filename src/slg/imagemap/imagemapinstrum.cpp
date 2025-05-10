@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <mutex>
+
 #include "luxrays/utils/atomic.h"
 #include "slg/imagemap/imagemap.h"
 

@@ -18,7 +18,6 @@
 
 #include <sstream>
 #include <algorithm>
-#include <boost/foreach.hpp>
 
 #include "luxrays/utils/strutils.h"
 #include "luxrays/core/namedobjectvector.h"

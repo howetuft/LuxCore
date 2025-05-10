@@ -23,8 +23,6 @@
 #include <vector>
 #include <barrier>
 
-#include <boost/unordered_map.hpp>
-
 #include "luxrays/devices/ocldevice.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/core/sdl.h"

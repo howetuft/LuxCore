@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <filesystem>
-#include <boost/filesystem/fstream.hpp>
+#include <fstream>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/archive/basic_archive.hpp>

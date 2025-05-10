@@ -20,8 +20,6 @@
 #include <filesystem>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/thread/thread.hpp> 
 
 #include <imgui.h>
 #include "imgui_impl_glfw.h"

@@ -20,7 +20,6 @@
 #define	_SLG_TRACEPHOTONSTHREAD_H
 
 #include <vector>
-#include <boost/thread.hpp>
 
 #include "luxrays/utils/utils.h"
 

@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <mutex>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "slg/rendersession.h"

@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include <stdexcept>
-#include <boost/foreach.hpp>
-#include <boost/regex.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"

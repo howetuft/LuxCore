@@ -18,7 +18,6 @@
 
 #include <vector>
 
-#include <boost/thread.hpp>
 
 #include "luxrays/utils/thread.h"
 

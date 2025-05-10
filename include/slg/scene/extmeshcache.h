@@ -21,9 +21,6 @@
 
 #include <string>
 #include <vector>
-#include <map>
-
-#include <boost/unordered_map.hpp>
 
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/context.h"

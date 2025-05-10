@@ -21,8 +21,7 @@
 
 #include <string>
 #include <sstream>
-#include <boost/unordered_map.hpp>
-#include <boost/foreach.hpp>
+#include <unordered_map>
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/luxrays.h"

@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <boost/format.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/rotating_file_sink.h"

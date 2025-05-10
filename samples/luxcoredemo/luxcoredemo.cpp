@@ -23,7 +23,6 @@
 
 #include <boost/assign.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
 
 #include <luxcore/luxcore.h>
 

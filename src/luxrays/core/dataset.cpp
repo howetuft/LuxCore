@@ -20,6 +20,7 @@
 #include <cassert>
 #include <deque>
 #include <sstream>
+#include <mutex>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"

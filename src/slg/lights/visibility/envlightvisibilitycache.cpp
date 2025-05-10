@@ -25,8 +25,6 @@
 #endif
 
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
-#include <boost/chrono.hpp>
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"

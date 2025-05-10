@@ -21,7 +21,6 @@
 
 #include <deque>
 #include <boost/heap/priority_queue.hpp>
-#include <boost/thread/condition_variable.hpp>
 
 #include "luxrays/utils/utils.h"
 

@@ -19,8 +19,6 @@
 #ifndef _SLG_TILEREPOSITORY_H
 #define	_SLG_TILEREPOSITORY_H
 
-#include <boost/thread/mutex.hpp>
-
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"

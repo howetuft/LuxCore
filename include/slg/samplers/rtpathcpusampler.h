@@ -22,7 +22,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/atomic.hpp>
 #include <barrier>
 
 #include "luxrays/core/randomgen.h"

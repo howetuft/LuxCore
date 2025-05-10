@@ -30,9 +30,6 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <boost/foreach.hpp>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
 #include <boost/format.hpp>
 
 #include <OpenImageIO/imagebufalgo.h>

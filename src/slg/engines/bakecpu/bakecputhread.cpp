@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <thread>
+#include <mutex>
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bakecpu/bakecpu.h"

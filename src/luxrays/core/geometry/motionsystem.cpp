@@ -22,7 +22,6 @@ using std::memset;
 #include <vector>
 #include <algorithm>
 #include <utility>
-#include <boost/foreach.hpp>
 
 #include "luxrays/core/geometry/motionsystem.h"
 

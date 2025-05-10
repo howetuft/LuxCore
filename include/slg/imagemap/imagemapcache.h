@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/unordered_map.hpp>
-
 #include "luxrays/devices/ocldevice.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/resizepolicies/resizepolicies.h"

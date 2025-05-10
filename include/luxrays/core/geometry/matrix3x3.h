@@ -20,8 +20,6 @@
 #ifndef _LUXRAYS_MATRIX3X3_H
 #define _LUXRAYS_MATRIX3X3_H
 
-#include <boost/limits.hpp>
-
 #include "luxrays/core/geometry/vector.h"
 
 namespace luxrays {

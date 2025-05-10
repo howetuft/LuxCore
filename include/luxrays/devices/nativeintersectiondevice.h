@@ -22,7 +22,6 @@
 #include <string>
 #include <cstdlib>
 
-#include <boost/thread/thread.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"

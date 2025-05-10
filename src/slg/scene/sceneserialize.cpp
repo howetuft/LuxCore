@@ -19,7 +19,6 @@
 #include <memory>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/scene/scene.h"

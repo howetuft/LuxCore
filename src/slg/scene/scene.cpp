@@ -24,13 +24,11 @@
 #include <vector>
 #include <memory>
 
-#include <boost/detail/container_fwd.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/format.hpp>
-#include <boost/unordered_set.hpp>
 
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/properties.h"

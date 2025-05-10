@@ -16,10 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 #include <memory>
+#include <mutex>
 
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include "luxrays/utils/thread.h"
 

@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/unordered_set.hpp>
-
 #include "luxrays/core/namedobjectvector.h"
 #include "slg/textures/texture.h"
 

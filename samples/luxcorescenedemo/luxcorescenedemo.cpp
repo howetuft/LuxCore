@@ -19,8 +19,6 @@
 #include <limits>
 #include <iostream>
 
-#include <boost/thread.hpp>
-#include <boost/filesystem/operations.hpp>
 
 #include <luxcore/luxcore.h>
 

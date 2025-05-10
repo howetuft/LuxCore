@@ -19,8 +19,6 @@
 #ifndef _SLG_PATHTRACER_H
 #define	_SLG_PATHTRACER_H
 
-#include <boost/thread/mutex.hpp>
-
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"

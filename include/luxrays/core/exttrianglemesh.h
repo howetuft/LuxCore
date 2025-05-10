@@ -24,7 +24,6 @@
 #include <array>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/bvh/bvhbuild.h"

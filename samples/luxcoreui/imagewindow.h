@@ -20,7 +20,6 @@
 #define	_LUXCOREAPP_IMAGEWINDOW_H
 
 #include <string>
-#include <boost/unordered_map.hpp>
 
 #include <imgui.h>
 

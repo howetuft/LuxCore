@@ -21,7 +21,6 @@
 
 #include <thread>
 #include <boost/format.hpp>
-#include <boost/function.hpp>
 
 #include "luxrays/utils/thread.h"
 

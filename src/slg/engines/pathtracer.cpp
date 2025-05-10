@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/function.hpp>
 
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"

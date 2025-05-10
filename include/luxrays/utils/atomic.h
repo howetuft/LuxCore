@@ -21,9 +21,7 @@
 
 #include <atomic>
 
-#include <boost/version.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
-#include <boost/atomic.hpp>
 
 namespace luxrays {
 

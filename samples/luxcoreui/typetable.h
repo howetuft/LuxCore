@@ -20,7 +20,7 @@
 #define	_LUXCOREAPP_TYPETABLE_H
 
 #include <string>
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 class TypeTable {
 public:

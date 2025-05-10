@@ -19,9 +19,9 @@
 #include <limits>
 #include <algorithm>
 #include <exception>
+#include <mutex>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"

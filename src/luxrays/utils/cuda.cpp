@@ -1,4 +1,4 @@
-#include <boost/filesystem/fstream.hpp> /***************************************************************************
+/***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
@@ -19,11 +19,11 @@
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <iostream>
+#include <fstream>
 #include <string.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/filesystem/fstream.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"

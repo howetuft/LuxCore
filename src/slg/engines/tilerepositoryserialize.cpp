@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <mutex>
 #include <boost/format.hpp>
 
 #include "slg/engines/tilerepository.h"

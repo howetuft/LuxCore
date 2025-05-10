@@ -29,7 +29,6 @@
 #include <unordered_set>
 #include <thread>
 
-#include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
 
 #include "luxrays/core/hardwaredevice.h"

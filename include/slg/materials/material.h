@@ -21,8 +21,6 @@
 
 #include <vector>
 
-#include <boost/unordered_set.hpp>
-
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/point.h"

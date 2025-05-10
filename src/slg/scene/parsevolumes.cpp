@@ -16,13 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/detail/container_fwd.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
 
 #include "slg/scene/scene.h"
 #include "slg/textures/constfloat.h"

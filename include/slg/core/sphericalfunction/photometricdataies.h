@@ -23,7 +23,7 @@
 #include <sstream>
 #include <cstring>
 
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 namespace slg {
 

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <barrier>
+#include <mutex>
 
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/engines/bakecpu/bakecpurenderstate.h"

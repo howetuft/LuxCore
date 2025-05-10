@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/thread/mutex.hpp>
 
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/intersectiondevice.h"

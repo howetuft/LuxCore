@@ -17,12 +17,12 @@
  ***************************************************************************/
 
 #include <memory>
-
-#include <boost/thread.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp> 
 #include <filesystem>
 #include <regex>
+#include <mutex>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp> 
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/renderconfig.h"

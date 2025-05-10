@@ -21,8 +21,6 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <boost/thread/thread.hpp>
-
 #include "luxrays/devices/nativeintersectiondevice.h"
 #include "slg/slg.h"
 

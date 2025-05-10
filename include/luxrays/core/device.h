@@ -23,8 +23,6 @@
 #include <cstdlib>
 #include <limits>
 
-#include <boost/thread/thread.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"

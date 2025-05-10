@@ -768,7 +768,6 @@ char *luxcore_parserlxs_yytext;
 
 #include <sstream>
 
-#include <boost/foreach.hpp>
 	
 #include "luxcore/luxcore.h"
 #include "luxrays/utils/utils.h"

@@ -21,7 +21,6 @@
 #include <numeric>
 #include <memory>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 #include <filesystem>
 
 #include <OpenColorIO/OpenColorIO.h>
