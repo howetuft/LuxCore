@@ -20,7 +20,6 @@
 #include <memory>
 #include <unordered_set>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 
@@ -286,7 +285,7 @@ void FilmOutputsWindow::Close() {
 }
 
 void FilmOutputsWindow::DeleteAllWindow() {
-	BOOST_FOREACH(FilmOutputWindowMap::value_type e, filmOutputWindows)
+	for(FilmOutputWindowMap::value_type e: filmOutputWindows)
 		DeleteWindow(e.first);
 }
 
@@ -649,7 +648,7 @@ void FilmOutputsWindow::Draw() {
 
 	if (opened) {
 		// Draw all channel windows
-		BOOST_FOREACH(FilmOutputWindowMap::value_type e, filmOutputWindows)
+		for(FilmOutputWindowMap::value_type e: filmOutputWindows)
 			e.second->Draw();
 	} else
 		DeleteAllWindow();

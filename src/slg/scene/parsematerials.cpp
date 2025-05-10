@@ -71,7 +71,7 @@ void Scene::ParseMaterials(const Properties &props) {
 	// updating mix material)
 	std::unordered_map<const Material *, bool> cachedIsLightSource;
 
-	BOOST_FOREACH(const string &key, matKeys) {
+	for(const string &key: matKeys) {
 		const string matName = Property::ExtractField(key, 2);
 		if (matName == "")
 			throw runtime_error("Syntax error in material definition: " + matName);
@@ -83,7 +83,7 @@ void Scene::ParseMaterials(const Properties &props) {
 	}
 
 	// Now I can update the materials
-	BOOST_FOREACH(const string &key, matKeys) {
+	for(const string &key: matKeys) {
 		// Extract the material name
 		const string matName = Property::ExtractField(key, 2);
 		if (matName == "")

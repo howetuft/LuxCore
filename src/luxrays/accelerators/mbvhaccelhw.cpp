@@ -25,8 +25,6 @@
 #include <algorithm>
 #include <limits>
 
-#include <boost/foreach.hpp>
-
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/hardwareintersectiondevice.h"
@@ -141,7 +139,7 @@ public:
 		if (mbvh.uniqueLeafsTransform.size() > 0) {
 			// Transform CPU data structures in OpenCL data structures
 			vector<Matrix4x4> mats;
-			BOOST_FOREACH(const Transform *t, mbvh.uniqueLeafsTransform)
+			for(const Transform *t: mbvh.uniqueLeafsTransform)
 				mats.push_back(t->mInv);
 
 			// Allocate the transformation buffer
@@ -156,11 +154,11 @@ public:
 			
 			vector<luxrays::ocl::MotionSystem> motionSystems;
 			vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
-			BOOST_FOREACH(const MotionSystem *ms, mbvh.uniqueLeafsMotionSystem) {
+			for(const MotionSystem *ms: mbvh.uniqueLeafsMotionSystem) {
 				luxrays::ocl::MotionSystem oclMotionSystem;
 
 				oclMotionSystem.interpolatedTransformFirstIndex = interpolatedTransforms.size();
-				BOOST_FOREACH(const InterpolatedTransform &it, ms->interpolatedTransforms) {
+				for(const InterpolatedTransform &it: ms->interpolatedTransforms) {
 					// Here, I assume that luxrays::ocl::InterpolatedTransform and
 					// luxrays::InterpolatedTransform are the same
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
@@ -456,7 +454,7 @@ void MBVHKernel::Update(const DataSet *newDataSet) {
 	// Transform CPU data structures in OpenCL data structures
 	vector<Matrix4x4> mats;
 	mats.reserve(mbvh.uniqueLeafsTransform.size());
-	BOOST_FOREACH(const Transform *t, mbvh.uniqueLeafsTransform)
+	for(const Transform *t: mbvh.uniqueLeafsTransform)
 		mats.push_back(t->mInv);
 
 	device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),

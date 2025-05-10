@@ -21,7 +21,6 @@
 #include <exception>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -197,7 +196,7 @@ Film::~Film() {
 	if (hardwareDevice)
 		hardwareDevice->PushThreadCurrentDevice();
 		
-	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+	for(ImagePipeline *ip: imagePipelines)
 		delete ip;
 
 	if (hardwareDevice)
@@ -223,7 +222,7 @@ void Film::CopyDynamicSettings(const Film &film) {
 
 	// Copy the image pipeline
 	imagePipelines.resize(0);
-	BOOST_FOREACH(ImagePipeline *ip, film.imagePipelines)
+	for(ImagePipeline *ip: film.imagePipelines)
 		imagePipelines.push_back(ip->Copy());
 
 	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
@@ -350,7 +349,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 
 	// Update the radiance group count of all image pipelines
-	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+	for(ImagePipeline *ip: imagePipelines)
 		ip->SetRadianceGroupCount(radianceGroupCount);
 
 	if (HasChannel(ALPHA)) {

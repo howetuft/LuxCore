@@ -24,7 +24,6 @@
 #include <functional>
 #include <algorithm>
 #include <limits>
-#include <boost/foreach.hpp>
 
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/core/context.h"
@@ -45,7 +44,7 @@ MBVHAccel::MBVHAccel(const Context *context) : ctx(context) {
 
 MBVHAccel::~MBVHAccel() {
 	if (initialized) {
-		BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
+		for(const BVHAccel *bvh: uniqueLeafs)
 			delete bvh;
 		delete bvhRootTree;
 	}
@@ -207,7 +206,7 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 	LR_LOG(ctx, "MBVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	size_t totalMem = nRootNodes;
-	BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
+	for(const BVHAccel *bvh: uniqueLeafs)
 		totalMem += bvh->nNodes;
 	totalMem *= sizeof(luxrays::ocl::BVHArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");

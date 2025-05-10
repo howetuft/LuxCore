@@ -523,7 +523,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 		Scene *scene = engine->renderConfig->scene;
 
-		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
+		for(EnvLightSource *el: scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene,
 					(eyeVertex.depth == 1) ? nullptr : &eyeVertex.bsdf,
 					eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);

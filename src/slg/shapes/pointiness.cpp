@@ -106,7 +106,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 	// Build the vertex information
 	vector<Vector> vertexEdgeVecs(originalVertCount, Vector());
 	vector<u_int> vertexCounters(originalVertCount, 0);
-	BOOST_FOREACH(const Edge &e, edges) {
+	for(const Edge &e: edges) {
 		const Vector ev = Normalize(originalVertices[e.v0] - originalVertices[e.v1]);
 
 		vertexEdgeVecs[e.v0] += ev;
@@ -151,7 +151,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 	float *curvature = new float[originalVertCount];
 	fill(curvature, curvature + originalVertCount, 0.f);
 	fill(vertexCounters.begin(), vertexCounters.end(), 1);
-	BOOST_FOREACH(const Edge &e, edges) {
+	for(const Edge &e: edges) {
 		curvature[e.v0] += rawCurvature[e.v1];
 		vertexCounters[e.v0]++;
 

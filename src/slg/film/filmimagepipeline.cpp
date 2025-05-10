@@ -21,7 +21,6 @@
 #include <exception>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -50,7 +49,7 @@ void Film::SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline
 }
 
 void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
-	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+	for(ImagePipeline *ip: imagePipelines)
 		delete ip;
 
 	if (newImagePiepeline) {
@@ -61,7 +60,7 @@ void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
 }
 
 void Film::SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines) {
-	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
+	for(ImagePipeline *ip: imagePipelines)
 		delete ip;
 
 	imagePipelines = newImagePiepelines;

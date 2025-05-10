@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
@@ -37,7 +36,7 @@ ImageMapCache::ImageMapCache() {
 }
 
 ImageMapCache::~ImageMapCache() {
-	BOOST_FOREACH(ImageMap *m, maps) {
+	for(ImageMap *m: maps) {
 		// I avoid to free the static global ImageMapTexture::randomImageMap
 		if (m != ImageMapTexture::randomImageMap.get())
 			delete m;
@@ -196,7 +195,7 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {
 	ims.reserve(maps.size());
 
-	BOOST_FOREACH(ImageMap *im, maps)
+	for(ImageMap *im: maps)
 		ims.push_back(im);
 }
 

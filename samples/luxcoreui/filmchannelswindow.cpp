@@ -19,7 +19,6 @@
 #include <iostream>
 #include <limits>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 
@@ -193,7 +192,7 @@ void FilmChannelsWindow::Close() {
 
 void FilmChannelsWindow::DeleteAllWindow() {
 	// First close all windows
-	BOOST_FOREACH(FilmChannelWindowMap::value_type e, filmChannelWindows)
+	for(FilmChannelWindowMap::value_type e: filmChannelWindows)
 		delete filmChannelWindows[e.first];
 	// Than I can clear the map
 	filmChannelWindows.clear();
@@ -234,7 +233,7 @@ bool FilmChannelsWindow::HasDenoiser(const u_int index, string &denoiserPrefix) 
 
 	vector<string> typeProps = cfgProps.GetAllNamesRE("film\\.imagepipelines\\." + ToString(index) + ".[0-9]+\\.type");
 
-	BOOST_FOREACH(string &typeProp, typeProps) {
+	for(string &typeProp: typeProps) {
 		if (cfgProps.Get(typeProp).Get<string>() == "BCD_DENOISER") {
 			// 5 = ".type".length()
 			denoiserPrefix = typeProp.substr(0, typeProp.length() - 5);
@@ -405,7 +404,7 @@ void FilmChannelsWindow::Draw() {
 
 	if (opened) {
 		// Draw all channel windows
-		BOOST_FOREACH(FilmChannelWindowMap::value_type e, filmChannelWindows)
+		for(FilmChannelWindowMap::value_type e: filmChannelWindows)
 			e.second->Draw();
 	} else
 		DeleteAllWindow();

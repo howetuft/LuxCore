@@ -33,7 +33,6 @@
 #include <locale>
 #include <memory>
 
-#include <boost/foreach.hpp>
 #include "luxrays/luxrays.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
@@ -446,7 +445,7 @@ static luxrays::Property *Property_InitWithList(const py::str &name, const py::l
 static py::list Properties_GetAllNamesRE(luxrays::Properties *props, const string &pattern) {
   py::list l;
   const vector<string> &keys = props->GetAllNamesRE(pattern);
-  BOOST_FOREACH(const string &key, keys) {
+  for(const string &key: keys) {
     l.append(key);
   }
 
@@ -456,7 +455,7 @@ static py::list Properties_GetAllNamesRE(luxrays::Properties *props, const strin
 static py::list Properties_GetAllNames1(luxrays::Properties *props) {
   py::list l;
   const vector<string> &keys = props->GetAllNames();
-  BOOST_FOREACH(const string &key, keys) {
+  for(const string &key: keys) {
     l.append(key);
   }
 
@@ -466,7 +465,7 @@ static py::list Properties_GetAllNames1(luxrays::Properties *props) {
 static py::list Properties_GetAllNames2(luxrays::Properties *props, const string &prefix) {
   py::list l;
   const vector<string> keys = props->GetAllNames(prefix);
-  BOOST_FOREACH(const string &key, keys) {
+  for(const string &key: keys) {
     l.append(key);
   }
 
@@ -476,7 +475,7 @@ static py::list Properties_GetAllNames2(luxrays::Properties *props, const string
 static py::list Properties_GetAllUniqueSubNames(luxrays::Properties *props, const string &prefix) {
   py::list l;
   const vector<string> keys = props->GetAllUniqueSubNames(prefix);
-  BOOST_FOREACH(const string &key, keys) {
+  for(const string &key: keys) {
     l.append(key);
   }
 

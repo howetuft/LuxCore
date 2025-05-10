@@ -224,7 +224,7 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;
-		BOOST_FOREACH(DeviceDescription *devDesc, selectedDeviceDescs) {
+		for(DeviceDescription *devDesc: selectedDeviceDescs) {
 			if (devDesc->GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
 				taskCap = Min(taskCap, 256u * 1024u);
 			if (devDesc->GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards

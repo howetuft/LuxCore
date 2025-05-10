@@ -74,7 +74,7 @@ void Scene::ParseLights(const Properties &props) {
 		return;
 	}
 
-	BOOST_FOREACH(const string &key, lightKeys) {
+	for(const string &key: lightKeys) {
 		// Extract the light name
 		const string lightName = Property::ExtractField(key, 2);
 		if (lightName == "")

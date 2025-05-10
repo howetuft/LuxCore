@@ -296,7 +296,7 @@ TileRepository::~TileRepository() {
 void TileRepository::Clear() {
 	// Free all tiles in the 3 lists
 
-	BOOST_FOREACH(Tile *tile, tileList) {
+	for(Tile *tile: tileList) {
 		delete tile;
 	}
 
@@ -311,7 +311,7 @@ void TileRepository::Restart(Film *film, const u_int startPass, const u_int mult
 	pendingTiles.clear();
 	convergedTiles.clear();
 
-	BOOST_FOREACH(Tile *tile, tileList) {
+	for(Tile *tile: tileList) {
 		tile->Restart(startPass);
 		todoTiles.push(tile);		
 	}
@@ -407,7 +407,7 @@ void TileRepository::InitTiles(const Film &film) {
 		tileList[i] = new Tile(this, film, i, coords[i].x, coords[i].y);
 
 	// Initialize also the TODO list
-	BOOST_FOREACH(Tile *tile, tileList)
+	for(Tile *tile: tileList)
 		todoTiles.push(tile);
 
 	done = false;
@@ -434,7 +434,7 @@ void TileRepository::SetDone(Film *film) {
 bool TileRepository::GetNewTileWork(TileWork &tileWork) {
 	// Look for the tile with less passes in pendingTiles
 	Tile *pendingTile = nullptr;
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
+	for(Tile *tile: pendingTiles) {
 		if ((!tile->done) &&
 				(!pendingTile ||
 				(pendingTile->pass + pendingTile->pendingPasses > tile->pass + tile->pendingPasses)))
@@ -549,7 +549,7 @@ bool TileRepository::NextTile(Film *film, std::mutex *filmMutex,
 			// Check the status of pending tiles (one or more of them could be a
 			// copy of mine and now done)
 			bool pendingAllDone = true;
-			BOOST_FOREACH(Tile *tile, pendingTiles) {
+			for(Tile *tile: pendingTiles) {
 				if (!tile->done) {
 					pendingAllDone = false;
 					break;

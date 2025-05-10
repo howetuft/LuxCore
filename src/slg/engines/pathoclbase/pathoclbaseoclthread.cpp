@@ -362,23 +362,23 @@ void PathOCLBaseOCLRenderThread::IncThreadFilms() {
 
 void PathOCLBaseOCLRenderThread::ClearThreadFilms() {
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+	for(ThreadFilm *threadFilm: threadFilms)
 		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 }
 
 void PathOCLBaseOCLRenderThread::TransferThreadFilms(HardwareIntersectionDevice *intersectionDevice) {
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+	for(ThreadFilm *threadFilm: threadFilms)
 		threadFilm->RecvFilm(intersectionDevice);
 }
 
 void PathOCLBaseOCLRenderThread::FreeThreadFilmsOCLBuffers() {
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+	for(ThreadFilm *threadFilm: threadFilms)
 		threadFilm->FreeAllOCLBuffers();
 }
 
 void PathOCLBaseOCLRenderThread::FreeThreadFilms() {
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+	for(ThreadFilm *threadFilm: threadFilms)
 		delete threadFilm;
 	threadFilms.clear();
 }

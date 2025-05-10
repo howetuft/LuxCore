@@ -21,7 +21,6 @@
 #include <fstream>
 #include <streambuf>
 
-#include <boost/foreach.hpp>
 #include <boost/assign.hpp>
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
@@ -145,18 +144,18 @@ int main(int argc, char *argv[]) {
 			cout << props0 << "\n";
 
 			vector<string> names0 = props0.GetAllUniqueSubNames("test1");
-			BOOST_FOREACH(const string &n, names0)
+			for(const string &n: names0)
 				cout << "[" << n << "]";
 			cout << "\n";
 			vector<string> names1 = props0.GetAllUniqueSubNames("test1.prop1");
-			BOOST_FOREACH(const string &n, names1)
+			for(const string &n: names1)
 				cout << "[" << n << "]";
 			cout << "\n\n";
 
 			cout << props0.Get(Property("doesnt.exist.test")(0, 1, 2)) << "\n\n";
 
 			names0 = props0.GetAllNamesRE(".*\\.prop1\\..*");
-			BOOST_FOREACH(const string &n, names0)
+			for(const string &n: names0)
 				cout << "[" << n << "]";
 			cout << "\n\n";
 		}
@@ -171,7 +170,7 @@ int main(int argc, char *argv[]) {
 
 			// Print device info
 			unsigned int i = 0;
-			BOOST_FOREACH(const string &prefix, prefixs) {
+			for(const string &prefix: prefixs) {
 				cout << "Device " << i << " name: " <<
 						props.Get(prefix + ".name").Get<string>() << "\n";
 				cout << "Device " << i << " type: " <<

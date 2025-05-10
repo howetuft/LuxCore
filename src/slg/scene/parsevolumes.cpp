@@ -42,7 +42,7 @@ extern atomic<u_int> defaultMaterialIDIndex;
 
 void Scene::ParseVolumes(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.volumes");
-	BOOST_FOREACH(const string &key, matKeys) {
+	for(const string &key: matKeys) {
 		// Extract the volume name
 		const string volName = Property::ExtractField(key, 2);
 		if (volName == "")

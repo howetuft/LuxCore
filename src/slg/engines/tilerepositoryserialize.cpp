@@ -128,7 +128,7 @@ template<class Archive> void TileRepository::load(Archive &ar, const u_int versi
 	ar & convergedTiles;
 
 	// Initialize the Tile::tileRepository field
-	BOOST_FOREACH(Tile *tile, tileList)
+	for(Tile *tile: tileList)
 		tile->tileRepository = this;
 }
 
@@ -154,9 +154,9 @@ template<class Archive> void TileRepository::save(Archive &ar, const u_int versi
 
 	const u_int count = todoTiles.size() + pendingTiles.size();
 	ar & count;
-	BOOST_FOREACH(Tile *tile, todoTiles)
+	for(Tile *tile: todoTiles)
 		ar & tile;
-	BOOST_FOREACH(Tile *tile, pendingTiles)
+	for(Tile *tile: pendingTiles)
 		ar & tile;
 
 	ar & convergedTiles;

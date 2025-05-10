@@ -16,8 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/foreach.hpp>
-
 #include "slg/textures/texturedefs.h"
 
 using namespace std;
@@ -33,7 +31,7 @@ void TextureDefinitions::DefineTexture(Texture *newTex) {
 
 	if (oldTex) {
 		// Update all references
-		BOOST_FOREACH(NamedObject *tex, texs.GetObjs())
+		for(NamedObject *tex: texs.GetObjs())
 			static_cast<Texture *>(tex)->UpdateTextureReferences(oldTex, newTex);
 
 		// Delete the old texture definition

@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/foreach.hpp>
 #include <unordered_set>
 
 #include "luxrays/utils/serializationutils.h"
@@ -94,7 +93,7 @@ ImagePipeline::ImagePipeline() {
 }
 
 ImagePipeline::~ImagePipeline() {
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline)
+	for(ImagePipelinePlugin *plugin: pipeline)
 		delete plugin;
 }
 
@@ -110,7 +109,7 @@ void ImagePipeline::SetRadianceChannelScale(const u_int index, const RadianceCha
 }
 
 void ImagePipeline::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
+	for(ImagePipelinePlugin *plugin: pipeline) {
 		plugin->AddHWChannelsUsed(hwChannelsUsed);
 	}
 }
@@ -118,7 +117,7 @@ void ImagePipeline::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<
 ImagePipeline *ImagePipeline::Copy() const {
 	ImagePipeline *ip = new ImagePipeline();
 
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
+	for(ImagePipelinePlugin *plugin: pipeline) {
 		ip->AddPlugin(plugin->Copy());
 	}
 
@@ -135,7 +134,7 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 	//const double t1 = WallClockTime();
 
 	bool imageInCPURam = true;
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
+	for(ImagePipelinePlugin *plugin: pipeline) {
 		//const double p1 = WallClockTime();
 
 		const bool useHWApply = film.hwEnable && film.hardwareDevice &&
@@ -188,7 +187,7 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 }
 
 const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) const {
-	BOOST_FOREACH(const ImagePipelinePlugin *plugin, pipeline) {
+	for(const ImagePipelinePlugin *plugin: pipeline) {
 		if (typeid(*plugin) == type)
 			return plugin;
 	}

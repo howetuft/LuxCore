@@ -199,7 +199,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		// Update the RenderConfig properties with the new image pipeline definition
 		std::regex reOldSyntax("film\\.imagepipeline\\.[0-9]+\\..*");
 		std::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*");
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
+		for(string propName: props.GetAllNames()) {
 			if (std::regex_match(propName, reOldSyntax) ||
 					std::regex_match(propName, reNewSyntax))
 				cfg.Set(props.Get(propName));
@@ -221,7 +221,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 
 		// Update the RenderConfig properties with the new image pipeline definition
 		std::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*");
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
+		for(string propName: props.GetAllNames()) {
 			if (propName.starts_with("film.imagepipeline.radiancescales.") ||
 					std::regex_match(propName, reNewSyntax))
 				cfg.Set(props.Get(propName));
@@ -240,7 +240,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		cfg.DeleteAll(cfg.GetAllNames("film.outputs."));
 		
 		// Update the RenderConfig properties with the new outputs definition properties
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
+		for(string propName: props.GetAllNames()) {
 			if (propName.starts_with("film.outputs."))
 				cfg.Set(props.Get(propName));
 		}

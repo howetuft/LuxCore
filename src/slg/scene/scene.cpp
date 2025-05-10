@@ -188,7 +188,7 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 		objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
 
 		// For each scene object
-		BOOST_FOREACH(SceneObject *o, modifiedObjsList) {
+		for(SceneObject *o: modifiedObjsList) {
 			// Check if is a light source
 			if (o->GetMaterial()->IsLightSource()) {
 				const string objName = o->GetName();
@@ -369,7 +369,7 @@ void Scene::RemoveUnusedImageMaps() {
 
 	// I can not use lightDefs.GetLightSources() here because the
 	// scene may have been not preprocessed
-	BOOST_FOREACH(const string &lightName, lightDefs.GetLightSourceNames()) {
+	for(const string &lightName: lightDefs.GetLightSourceNames()) {
 		const LightSource *l = lightDefs.GetLightSource(lightName);
 		l->AddReferencedImageMaps(referencedImgMaps);
 	}
@@ -385,7 +385,7 @@ void Scene::RemoveUnusedImageMaps() {
 	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
 	bool deleted = false;
-	BOOST_FOREACH(const ImageMap *im, ims) {
+	for(const ImageMap *im: ims) {
 		if (referencedImgMaps.count(im) == 0) {
 			SDL_LOG("Deleting unreferenced image map: " << im->GetName());
 			imgMapCache.DeleteImageMap(im);
@@ -414,7 +414,7 @@ void Scene::RemoveUnusedTextures() {
 	vector<string> definedTexs;
 	texDefs.GetTextureNames(definedTexs);
 	bool deleted = false;
-	BOOST_FOREACH(const string  &texName, definedTexs) {
+	for(const string &texName: definedTexs) {
 		const Texture *t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
@@ -449,7 +449,7 @@ void Scene::RemoveUnusedMaterials() {
 	vector<string> definedMats;
 	matDefs.GetMaterialNames(definedMats);
 	bool deleted = false;
-	BOOST_FOREACH(const string  &matName, definedMats) {
+	for(const string  &matName: definedMats) {
 		const Material *m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
@@ -475,7 +475,7 @@ void Scene::RemoveUnusedMeshes() {
 	vector<string> definedExtMeshes;
 	extMeshCache.GetExtMeshNames(definedExtMeshes);
 	bool deleted = false;
-	BOOST_FOREACH(const string  &extMeshName, definedExtMeshes) {
+	for(const string &extMeshName: definedExtMeshes) {
 		ExtMesh *mesh = extMeshCache.GetExtMesh(extMeshName);
 
 		if (referencedMesh.count(mesh) == 0) {
@@ -513,7 +513,7 @@ void Scene::DeleteObject(const string &objName) {
 
 void Scene::DeleteObjects(vector<string> &objNames) {
 	// Delete the light sources
-	BOOST_FOREACH(const string &objName, objNames) {
+	for(const string &objName: objNames) {
 		if (objDefs.IsSceneObjectDefined(objName)) {
 			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
 			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
@@ -546,7 +546,7 @@ void Scene::DeleteLight(const string &lightName) {
 
 void Scene::DeleteLights(vector<string> &lightNames) {
 	// Separate the objects and send them to delete
-	BOOST_FOREACH(const string &lightName, lightNames) {
+	for(const string &lightName: lightNames) {
 		DeleteLight(lightName);
 	}
 }

@@ -34,7 +34,7 @@ NamedObjectVector::NamedObjectVector() {
 }
 
 NamedObjectVector::~NamedObjectVector() {
-	BOOST_FOREACH(NamedObject *o, objs)
+	for(NamedObject *o: objs)
 		delete o;
 }
 

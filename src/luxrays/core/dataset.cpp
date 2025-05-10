@@ -20,7 +20,6 @@
 #include <cassert>
 #include <deque>
 #include <sstream>
-#include <boost/foreach.hpp>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
@@ -98,7 +97,7 @@ void DataSet::UpdateBBoxes() {
 		// Just initialize with some default value to avoid problems
 		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
 	} else {
-		BOOST_FOREACH(const Mesh *m, meshes)
+		for(const Mesh *m: meshes)
 			bbox = Union(bbox, m->GetBBox());
 	}
 	bsphere = bbox.BoundingSphere();

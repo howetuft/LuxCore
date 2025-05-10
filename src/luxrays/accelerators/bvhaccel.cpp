@@ -97,7 +97,7 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	vector<BVHTreeNode *> bvList(totalTriangleCount, NULL);
 	u_int meshIndex = 0;
 	u_int bvListIndex = 0;
-	BOOST_FOREACH(const Mesh *mesh, meshes) {
+	for(const Mesh *mesh: meshes) {
 		const Triangle *p = mesh->GetTriangles();
 		const u_int triangleCount = mesh->GetTotalTriangleCount();
 

@@ -33,7 +33,7 @@ ExtMeshCache::ExtMeshCache() {
 }
 
 ExtMeshCache::~ExtMeshCache() {
-	BOOST_FOREACH(NamedObject *no, meshes.GetObjs()) {
+	for(NamedObject *no: meshes.GetObjs()) {
 		ExtMesh *mesh = static_cast<ExtMesh *>(no);
 
 		if (deleteMeshData)
@@ -69,7 +69,7 @@ void ExtMeshCache::DefineExtMesh(ExtMesh *mesh) {
 			ExtTriangleMesh *om = static_cast<ExtTriangleMesh *>(oldMesh);
 			ExtTriangleMesh *nm = static_cast<ExtTriangleMesh *>(mesh);
 
-			BOOST_FOREACH(NamedObject *no, meshes.GetObjs()) {
+			for(NamedObject *no: meshes.GetObjs()) {
 				ExtMesh *mesh = static_cast<ExtMesh *>(no);
 
 				switch (mesh->GetType()) {

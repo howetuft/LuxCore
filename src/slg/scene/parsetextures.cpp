@@ -100,7 +100,7 @@ void Scene::ParseTextures(const Properties &props) {
 		return;
 	}
 
-	BOOST_FOREACH(const string &key, texKeys) {
+	for(const string &key: texKeys) {
 		// Extract the texture name
 		const string texName = Property::ExtractField(key, 2);
 		if (texName == "")
@@ -775,7 +775,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 			boost::split(strs, name, boost::is_any_of("\t "));
 
 			vector<float> floats;
-			BOOST_FOREACH(const string &s, strs) {
+			for(const string &s: strs) {
 				if (s.length() != 0) {
 					const double f = boost::lexical_cast<double>(s);
 					floats.push_back(static_cast<float>(f));

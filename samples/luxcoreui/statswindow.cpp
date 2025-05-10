@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 
 #include "luxcoreapp.h"
 
@@ -138,7 +137,7 @@ void StatsWindow::Draw() {
 
 			// Print device info
 			unsigned int i = 0;
-			BOOST_FOREACH(const string &prefix, prefixs) {
+			for(const string &prefix: prefixs) {
 				if (ImGui::TreeNode(("#" + ToString(i) + " => " + props.Get(prefix + ".name").Get<string>()).c_str())) {
 					LuxCoreApp::ColoredLabelText("Name:", "%s", props.Get(prefix + ".name").Get<string>().c_str());
 					LuxCoreApp::ColoredLabelText("Type:", "%s", props.Get(prefix + ".type").Get<string>().c_str());

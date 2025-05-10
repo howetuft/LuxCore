@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
 
@@ -1621,7 +1620,7 @@ static void SetTileProperties(Properties &props, const string &prefix,
 	Property tilePendingPassesProp(prefix + ".pendingpasses");
 	Property tileErrorProp(prefix + ".error");
 
-	BOOST_FOREACH(const slg::Tile *tile, tiles) {
+	for(const slg::Tile *tile: tiles) {
 		tileCoordProp.Add(tile->coord.x).Add(tile->coord.y);
 		tilePassProp.Add(tile->pass);
 		tilePendingPassesProp.Add(tile->pendingPasses);
@@ -1670,7 +1669,7 @@ void RenderSessionImpl::UpdateStats() {
 	std::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
-	BOOST_FOREACH(IntersectionDevice *dev, idevices) {
+	for(IntersectionDevice *dev: idevices) {
 		const string &devName = dev->GetName();
 		
 		// Append a device index for the case where the same device is used multiple times

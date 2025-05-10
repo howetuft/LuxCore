@@ -404,7 +404,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 		
 		// Check if I have to include vertex colors too
 		Spectrum *newMeshCols = NULL;
-		BOOST_FOREACH(const Spectrum &c, meshCols) {
+		for(const Spectrum &c: meshCols) {
 			if (c != Spectrum(1.f)) {
 				// The mesh uses vertex colors
 				SLG_LOG("Strands shape uses colors");
@@ -417,7 +417,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 
 		// Check if I have to include vertex alpha too
 		float *newMeshTransps = NULL;
-		BOOST_FOREACH(const float &a, meshTransps) {
+		for(const float &a: meshTransps) {
 			if (a != 1.f) {
 				// The mesh uses vertex alphas
 				SLG_LOG("Strands shape uses alphas");

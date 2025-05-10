@@ -23,8 +23,6 @@
 #include <intrin.h>
 #endif
 
-#include <boost/foreach.hpp>
-
 #include "luxrays/core/context.h"
 #include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/utils/strutils.h"
@@ -44,7 +42,7 @@ EmbreeAccel::~EmbreeAccel() {
 
 		// I have to free all Embree scenes used for instances
 		std::pair<const Mesh *, RTCScene> elem;
-		BOOST_FOREACH(elem, uniqueRTCSceneByMesh)
+		for(auto& elem: uniqueRTCSceneByMesh)
 			rtcReleaseScene(elem.second);
 	}
 
@@ -119,7 +117,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 
 	minTime = std::numeric_limits<float>::max();
 	maxTime = std::numeric_limits<float>::min();
-	BOOST_FOREACH(const Mesh *mesh, meshes) {
+	for(const Mesh *mesh: meshes) {
 		const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
 		
 		if (mtm) {
@@ -144,7 +142,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	rtcSetSceneBuildQuality(embreeScene, RTC_BUILD_QUALITY_HIGH);
 	rtcSetSceneFlags(embreeScene, RTC_SCENE_FLAG_DYNAMIC);
 
-	BOOST_FOREACH(const Mesh *mesh, meshes) {
+	for(const Mesh *mesh: meshes) {
 		switch (mesh->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE:
@@ -206,7 +204,7 @@ void EmbreeAccel::Update() {
 	// Update all Embree scenes used for instances
 	bool updated = false;
 	std::pair<const Mesh *, RTCGeometry> elem;
-	BOOST_FOREACH(elem, uniqueGeomByMesh) {
+	for(auto& elem: uniqueGeomByMesh) {
 		const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(elem.first);
 
 		// Check if the transformation has changed

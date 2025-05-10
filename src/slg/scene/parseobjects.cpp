@@ -36,7 +36,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 	double lastPrint = WallClockTime();
 	u_int objCount = 0;
-	BOOST_FOREACH(const string &key, objKeys) {
+	for(const string &key: objKeys) {
 		// Extract the object name
 		const string objName = Property::ExtractField(key, 2);
 		if (objName == "")

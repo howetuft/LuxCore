@@ -825,7 +825,7 @@ unsigned int Properties::GetSize() const {
 }
 
 Properties &Properties::Set(const Properties &props) {
-	BOOST_FOREACH(const string &name, props.GetAllNames()) {
+	for(const string &name: props.GetAllNames()) {
 		this->Set(props.Get(name));
 	}
 
@@ -833,11 +833,11 @@ Properties &Properties::Set(const Properties &props) {
 }
 
 Properties &Properties::Set(const Properties &props, const string &prefix) {
-	BOOST_FOREACH(const string &name, props.GetAllNames()) {
+	for(const string &name: props.GetAllNames()) {
 		Set(props.Get(name).AddedNamePrefix(prefix));
 	}
 
-	return *this;	
+	return *this;
 }
 
 Properties &Properties::SetFromStream(istream &stream) {
@@ -928,7 +928,7 @@ const vector<string> &Properties::GetAllNames() const {
 
 vector<string> Properties::GetAllNames(const string &prefix) const {
 	vector<string> namesSubset;
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (name.find(prefix) == 0)
 			namesSubset.push_back(name);
 	}
@@ -940,7 +940,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 	std::regex re(regularExpression);
 	
 	vector<string> namesSubset;
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (std::regex_match(name, re))
 			namesSubset.push_back(name);
 	}
@@ -953,7 +953,7 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool
 
 	set<string> definedNames;
 	vector<string> namesSubset;
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (name.find(prefix) == 0) {
 			// Check if it has been already defined
 
@@ -1010,7 +1010,7 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool
 }
 
 bool Properties::HaveNames(const string &prefix) const {
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (name.find(prefix) == 0)
 			return true;
 	}
@@ -1021,7 +1021,7 @@ bool Properties::HaveNames(const string &prefix) const {
 bool Properties::HaveNamesRE(const string &regularExpression) const {
 	std::regex re(regularExpression);
 
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (std::regex_match(name, re))
 			return true;
 	}
@@ -1031,7 +1031,7 @@ bool Properties::HaveNamesRE(const string &regularExpression) const {
 
 Properties Properties::GetAllProperties(const string &prefix) const {
 	Properties subset;
-	BOOST_FOREACH(const string &name, names) {
+	for(const string &name: names) {
 		if (name.find(prefix) == 0)
 			subset.Set(Get(name));
 	}
@@ -1083,7 +1083,7 @@ void Properties::Delete(const string &propName) {
 }
 
 void Properties::DeleteAll(const vector<string> &propNames) {
-	BOOST_FOREACH(const string &n, propNames)
+	for(const string &n: propNames)
 		Delete(n);
 }
 
