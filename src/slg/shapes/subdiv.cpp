@@ -30,6 +30,7 @@
 #include <opensubdiv/osd/cpuVertexBuffer.h>
 #include <opensubdiv/far/ptexIndices.h>
 #include <opensubdiv/osd/tbbEvaluator.h>
+#include <opensubdiv/far/stencilTableFactory.h>
 #define OSD_EVALUATOR Osd::TbbEvaluator
 
 #include <omp.h>
@@ -533,6 +534,7 @@ struct LocalCoords {
 		x = (weight_f * p1.x + (total_f - weight_f) * p0.x) / total_f;
 		y = (weight_f * p1.y + (total_f - weight_f) * p0.y) / total_f;
 	}
+
 };
 
 typedef std::vector<LocalCoords> CoordVector;
@@ -679,10 +681,30 @@ struct Surface {
 };
 
 
+// TODO
+Far::LimitStencilTableFactory::LocationArray convertLoc(
+	LocalCoords coords, const Surface& surface
+) {
+	Far::LimitStencilTableFactory::LocationArray res;
+	res.ptexIdx = surface.ptexIndices->GetFaceId(coords.face);
+	res.numLocations = 1;
+
+	auto sp = new float[1];
+	sp[0] = coords.x;
+	auto tp = new float[1];
+	tp[0] = coords.y;
+
+	res.s = sp;  // TODO Memory leak
+	res.t = tp;
+
+	return res;
+}
+
+
 void Tessellate (
 	const Surface& surface,
 	const size_t N,
-	CoordVector& tessCoords,
+	Far::LimitStencilTableFactory::LocationArrayVec& tessCoords,
 	Triangle * tessTris
 	) {
 	// This is triforce tessellation.
@@ -771,11 +793,12 @@ void Tessellate (
 		throw std::runtime_error("Error in getVertexLocalCoords");
 	};
 
+
 	// Step #1 - Initialize with initial (coarse) vertices
 	#pragma omp parallel for
 	for (int vertex = 0; vertex < numCoarseVertices; ++vertex) {
 		int face = topology.GetVertexFaces(vertex)[0];  // Choose first face (arbitrary)
-		tessCoords[vertex] = getVertexLocalCoords(face, vertex);
+		tessCoords[vertex] = convertLoc(getVertexLocalCoords(face, vertex), surface);
 	}
 	offset = numCoarseVertices;
 
@@ -794,7 +817,7 @@ void Tessellate (
 
 		for (int i = 1; i < N; ++i) {  // Only edge interior vertices, not extremities
 			LocalCoords coords(c0, c1, i, N);  // Interpolate from c0 and c1
-			tessCoords[offset + edge * numEdgeInteriorPoints + i - 1 ] = coords;
+			tessCoords[offset + edge * numEdgeInteriorPoints + i - 1 ] = convertLoc(coords, surface);
 		}
 	}
 	offset = numCoarseVertices + numEdgeInteriorPoints * topology.GetNumEdges();
@@ -856,7 +879,7 @@ void Tessellate (
 						+ numTriangleInteriorPoints - (N - j) * (N - j - 1) / 2
 						+ i - 1;
 					// Create position
-					tessCoords[idx] = LocalCoords(f, i, j, N);
+					tessCoords[idx] = convertLoc(LocalCoords(f, i, j, N), surface);
 					// Record point in map
 					vertex = idx;
 				}
@@ -994,10 +1017,15 @@ ExtTriangleMesh *ApplySubdiv(
 	auto tessTriangles = TriangleMesh::AllocTrianglesBuffer(triCount);
 
 	// Tessellate
-	CoordVector tessCoords;  // We temporarily store new positions as (face, x, y)
+	Far::LimitStencilTableFactory::LocationArrayVec tessCoords;  // Todo
 	Tessellate(surface, tessellationRate, tessCoords, tessTriangles);
 
-	// Evaluate
+	// Compute Limit Stencil Table
+	auto limitStencilTable = Far::LimitStencilTableFactory::Create(
+		*surface.refiner, tessCoords, 0, surface.patchTable.get()
+	);
+
+	//// Evaluate
 	Evaluate(surface, tessCoords, tessPositions, tessNormals);
 
 	SDL_LOG(
