@@ -30,6 +30,7 @@
 #include <opensubdiv/osd/cpuVertexBuffer.h>
 #include <opensubdiv/far/ptexIndices.h>
 #include <opensubdiv/osd/tbbEvaluator.h>
+#include <opensubdiv/osd/cpuEvaluator.h>
 #define OSD_EVALUATOR Osd::TbbEvaluator
 
 #include <omp.h>
@@ -588,6 +589,11 @@ struct Surface {
 	Point* localPositions;
 	int numLocalPositions;
 	int maxLevel;
+	int nBaseVertices;
+	int nRefinedVertices;
+	int nLocalPoints;
+
+
 
 	Surface(const ExtTriangleMesh * p_srcMesh, int p_maxLevel):
 		basePositions(p_srcMesh->GetVertices()),
@@ -624,9 +630,9 @@ struct Surface {
 		patchMap.reset(new Far::PatchMap(*patchTable));
 
 		// Set localPositions
-		int nBaseVertices    = refiner->GetLevel(0).GetNumVertices();
-		int nRefinedVertices = refiner->GetNumVerticesTotal() - nBaseVertices;
-		int nLocalPoints     = patchTable->GetNumLocalPoints();
+		nBaseVertices    = refiner->GetLevel(0).GetNumVertices();
+		nRefinedVertices = refiner->GetNumVerticesTotal() - nBaseVertices;
+		nLocalPoints     = patchTable->GetNumLocalPoints();
 
 		numLocalPositions = nRefinedVertices + nLocalPoints;
 		localPositions = TriangleMesh::AllocVerticesBuffer(numLocalPositions);
@@ -974,6 +980,106 @@ void Evaluate(
 	}  // ~for vertex
 }
 
+template <int STRIDE> static void
+EvaluatePatch(
+	const Surface& surface,
+	const ExtTriangleMesh * srcMesh,
+	const CoordVector& tessCoords,
+	float* dstBuffer
+)
+{
+	// Source buffer has to contain basePositions + localPositions
+	auto srcBuf = std::unique_ptr<Point>(
+		ExtTriangleMesh::AllocVerticesBuffer(
+			surface.numBasePositions + surface.numLocalPositions
+		)
+	);
+	for(int i=0; i<surface.numBasePositions;++i) {
+		srcBuf.get()[i] = surface.basePositions[i];
+	}
+	for(int i=0; i<surface.numLocalPositions;++i) {
+		srcBuf.get()[i + surface.numBasePositions] = surface.localPositions[i];
+	}
+    Osd::BufferDescriptor srcDesc(
+		0,
+		surface.numBasePositions + surface.numLocalPositions,
+		STRIDE
+	);
+
+	//
+	int numPatchCoords = tessCoords.size();
+
+	const Far::PatchTable& patchTable = *surface.patchTable;
+
+	// Destination buffer descriptor
+    Osd::BufferDescriptor dstDesc(0, numPatchCoords, STRIDE);
+
+	// Build array of PatchCoords
+	std::vector<Osd::PatchCoord> patchCoords(numPatchCoords);
+	for (int i=0; i < numPatchCoords; ++i) {
+		// Init
+		auto& coords = tessCoords[i];
+
+		// Translate in ptex face
+		int ptexFace = surface.ptexIndices->GetFaceId(coords.face);
+
+		//  Locate the patch corresponding to the face ptex idx and (s,t)
+		const Far::PatchMap::Handle * handle =
+			surface.patchMap->FindPatch(ptexFace, coords.x, coords.y);
+		assert(handle);
+
+		auto coord = Osd::PatchCoord(*handle, coords.x, coords.y);
+		patchCoords[i] = coord;
+		SDL_LOG(coord.handle.patchIndex);
+	}
+
+	//// Pack the primvar data at the start of the vertex buffer
+	//// and update every time primvar data changes
+	//buffer->UpdateData(data, 0, nCoarse);
+
+    //Osd::BufferDescriptor desc(0, DIMENSIONS, DIMENSIONS);
+    //Osd::BufferDescriptor newDesc(nCoarse * DIMENSIONS, DIMENSIONS, DIMENSIONS);
+
+	//float patchCoords[] = {1.0, 2.0, 3.0, 4.0};
+	//int numPatchCoords = 4;
+
+	//auto cpuPatchTable = std::unique_ptr<Osd::CpuPatchTable>(
+		 //Osd::CpuPatchTable::Create(&patchTable, nullptr)
+	//);
+	auto cpuPatchTable =
+		 Osd::CpuPatchTable::Create(&patchTable, nullptr);
+
+	//Far::ConstIndexArray patchIndexBuffer = patchTable.GetPatchVertices(*handle);
+
+	// Refine points (coarsePoints -> refinedPoints)
+	Osd::CpuEvaluator::EvalPatches(
+		(float *) srcBuf.get(),		  	// 	const float *src,
+		srcDesc,				  	// 	BufferDescriptor const &srcDesc,
+		dstBuffer,      	// 	float *dst,
+		dstDesc,			  	// 	BufferDescriptor const &dstDesc,
+		numPatchCoords,		  	// 	int numPatchCoords,
+		patchCoords.data(),		  	// 	const PatchCoord *patchCoords,
+		cpuPatchTable->GetPatchArrayBuffer(),          	// 	const PatchArray *patchArrays,
+		cpuPatchTable->GetPatchIndexBuffer(),  	// 	const int *patchIndexBuffer,
+		cpuPatchTable->GetPatchParamBuffer()		// 	const PatchParam *patchParamBuffer
+	);
+	// EvalPatches (
+	// 	const float *src,
+	// 	BufferDescriptor const &srcDesc,
+	// 	float *dst,
+	// 	BufferDescriptor const &dstDesc,
+	// 	int numPatchCoords,
+	// 	const PatchCoord *patchCoords,
+	// 	const PatchArray *patchArrays,
+	// 	const int *patchIndexBuffer,
+	// 	const PatchParam *patchParamBuffer
+	// )
+	
+	for (int i=0; i<numPatchCoords; ++i) {
+		SDL_LOG(dstBuffer[i]);
+	}
+}
+
 
 ExtTriangleMesh *ApplySubdiv(
 	ExtTriangleMesh *srcMesh,
@@ -999,6 +1105,11 @@ ExtTriangleMesh *ApplySubdiv(
 
 	// Evaluate
 	Evaluate(surface, tessCoords, tessPositions, tessNormals);
+
+	// TODO
+	// Reevaluate positions (test)
+
+	EvaluatePatch<3>(surface, srcMesh, tessCoords, (float *) tessPositions);
 
 	SDL_LOG(
 		"Subdivision (enhanced) - Building new mesh: "
