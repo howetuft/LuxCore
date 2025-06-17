@@ -539,7 +539,9 @@ struct LocalCoords {
 typedef std::vector<LocalCoords> CoordVector;
 
 TopologyRefinerPtr createTopologyAdaptiveRefiner(
-		const ExtTriangleMesh * srcMesh,
+		int numVertices,
+		int numTriangles,
+		const int * indicesPerFace,
 		const Far::PatchTableFactory::Options& patchOptions
 ) {
 
@@ -555,11 +557,11 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 
 	// Populate a topology descriptor with our raw data
 	Far::TopologyDescriptor desc;
-	desc.numVertices = srcMesh->GetTotalVertexCount();
-	desc.numFaces = srcMesh->GetTotalTriangleCount();
+	desc.numVertices = numVertices;
+	desc.numFaces = numTriangles;
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles());
+	desc.vertIndicesPerFace = indicesPerFace;
 
 	// Create refiner
 	using RefinerFactory = Far::TopologyRefinerFactory<Far::TopologyDescriptor>;
@@ -613,8 +615,20 @@ struct Surface {
 		patchTableOptions.endCapType =
 			Far::PatchTableFactory::Options::ENDCAP_BSPLINE_BASIS;
 
-		// Construct refiner
-		refiner = std::move(createTopologyAdaptiveRefiner(p_srcMesh, patchTableOptions));
+		// Construct refiner from coarse vertices
+		int numVertices = p_srcMesh->GetTotalVertexCount();
+		int numTriangles = p_srcMesh->GetTotalTriangleCount();
+		const int * indicesPerFace = reinterpret_cast<const int *>(
+			p_srcMesh->GetTriangles()
+		);
+		refiner = std::move(
+			createTopologyAdaptiveRefiner(
+				numVertices,
+				numTriangles,
+				indicesPerFace,
+				patchTableOptions
+			)
+		);
 
 		// Apply adaptive refinement and construct the associated PatchTable to
 		// evaluate the limit surface:
@@ -1030,54 +1044,23 @@ EvaluatePatch(
 
 		auto coord = Osd::PatchCoord(*handle, coords.x, coords.y);
 		patchCoords[i] = coord;
-		SDL_LOG(coord.handle.patchIndex);
 	}
 
-	//// Pack the primvar data at the start of the vertex buffer
-	//// and update every time primvar data changes
-	//buffer->UpdateData(data, 0, nCoarse);
-
-    //Osd::BufferDescriptor desc(0, DIMENSIONS, DIMENSIONS);
-    //Osd::BufferDescriptor newDesc(nCoarse * DIMENSIONS, DIMENSIONS, DIMENSIONS);
-
-	//float patchCoords[] = {1.0, 2.0, 3.0, 4.0};
-	//int numPatchCoords = 4;
-
-	//auto cpuPatchTable = std::unique_ptr<Osd::CpuPatchTable>(
-		 //Osd::CpuPatchTable::Create(&patchTable, nullptr)
-	//);
 	auto cpuPatchTable =
 		 Osd::CpuPatchTable::Create(&patchTable, nullptr);
 
-	//Far::ConstIndexArray patchIndexBuffer = patchTable.GetPatchVertices(*handle);
-
-	// Refine points (coarsePoints -> refinedPoints)
-	Osd::CpuEvaluator::EvalPatches(
-		(float *) srcBuf.get(),		  	// 	const float *src,
-		srcDesc,				  	// 	BufferDescriptor const &srcDesc,
-		dstBuffer,      	// 	float *dst,
-		dstDesc,			  	// 	BufferDescriptor const &dstDesc,
-		numPatchCoords,		  	// 	int numPatchCoords,
-		patchCoords.data(),		  	// 	const PatchCoord *patchCoords,
-		cpuPatchTable->GetPatchArrayBuffer(),          	// 	const PatchArray *patchArrays,
+	// Evaluate patch
+	Osd::TbbEvaluator::EvalPatches(
+		(float *) srcBuf.get(),				  	// 	const float *src,
+		srcDesc,								// 	BufferDescriptor const &srcDesc,
+		dstBuffer,								// 	float *dst,
+		dstDesc,								// 	BufferDescriptor const &dstDesc,
+		numPatchCoords,							// 	int numPatchCoords,
+		patchCoords.data(),						// 	const PatchCoord *patchCoords,
+		cpuPatchTable->GetPatchArrayBuffer(),   // 	const PatchArray *patchArrays,
 		cpuPatchTable->GetPatchIndexBuffer(),  	// 	const int *patchIndexBuffer,
-		cpuPatchTable->GetPatchParamBuffer()		// 	const PatchParam *patchParamBuffer
+		cpuPatchTable->GetPatchParamBuffer()	// 	const PatchParam *patchParamBuffer
 	);
-	// EvalPatches (
-	// 	const float *src,
-	// 	BufferDescriptor const &srcDesc,
-	// 	float *dst,
-	// 	BufferDescriptor const &dstDesc,
-	// 	int numPatchCoords,
-	// 	const PatchCoord *patchCoords,
-	// 	const PatchArray *patchArrays,
-	// 	const int *patchIndexBuffer,
-	// 	const PatchParam *patchParamBuffer
-	// )
-	
-	for (int i=0; i<numPatchCoords; ++i) {
-		SDL_LOG(dstBuffer[i]);
-	}
 }
 
 
