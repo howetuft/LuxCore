@@ -26,6 +26,7 @@
 
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
+#include <tbb/concurrent_vector.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -831,7 +832,6 @@ private:
 			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
 			debugMesh->Save("debug-candidates.ply");
 			delete debugMesh;*/
-		}
 
 		// Clear dirty flag
 		tbb::parallel_for(
