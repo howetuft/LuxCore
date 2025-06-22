@@ -720,73 +720,85 @@ private:
 			);
 		}
 
+	// Build the edge candidate queue
+	// Step 1: Find best candidate edge per triangle in parallel
+	struct Candidate {
+		u_int triIdx;
+		u_int vertIdx;
+		float error;
+	};
+	tbb::concurrent_vector<Candidate> allCandidates;
 
-		// Build the edge candidate queue
-		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
-			candidateQueue{ SimplifyRefErrCompare(*this) };
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			const SimplifyTriangle &t = triangles[i];
+	tbb::parallel_for(
+		tbb::blocked_range<u_int>(0, triangles.size()),
+		[&](const tbb::blocked_range<u_int>& r) {
+			for (u_int i = r.begin(); i != r.end(); ++i) {
+				const SimplifyTriangle &t = triangles[i];
 
-			// Look for the (valid) triangle vertex with the minimum error
-			u_int minErrorIndex = NULL_INDEX;
-			float minError = numeric_limits<float>::infinity();
-			for (u_int j = 0; j < 3; ++j) {
-				const u_int i0 = t.v[j];
-				SimplifyVertex &v0 = vertices[i0];
+				// Find min error edge for this triangle
+				u_int minErrorIndex = NULL_INDEX;
+				float minError = std::numeric_limits<float>::infinity();
+				for (u_int j = 0; j < 3; ++j) {
+					const u_int i0 = t.v[j];
+					const SimplifyVertex &v0 = vertices[i0];
+					const u_int i1 = t.v[(j + 1) % 3];
+					const SimplifyVertex &v1 = vertices[i1];
 
-				const u_int i1 = t.v[(j + 1) % 3];
-				SimplifyVertex &v1 = vertices[i1];
+					// Border check (as in your original code)
+					if (preserveBorder) {
+						if (v0.border && v1.border)
+							continue;
+					} else {
+						if (v0.border != v1.border)
+							continue;
+					}
+					// Compute collapse point
+					Point p;
+					CalculateCollapseError(i0, i1, &p);
 
-				// Border check
-				if (preserveBorder) {
-					if (v0.border && v1.border)
+					// Cull if collapse would flip
+					if (Flipped(p, i0, i1))
 						continue;
-				} else {
-					if (v0.border != v1.border)
+					if (Flipped(p, i1, i0))
 						continue;
+
+					if (t.err[j] < minError) {
+						minErrorIndex = j;
+						minError = t.err[j];
+					}
 				}
-
-				// Compute vertex to collapse to
-				Point p;
-				CalculateCollapseError(i0, i1, &p);
-
-				// Don't remove if flipped
-				if (Flipped(p, i0, i1))
-					continue;
-				if (Flipped(p, i1, i0))
-					continue;
-
-				if (t.err[j] < minError) {
-					minErrorIndex = j;
-					minError = t.err[j];
+				if (minErrorIndex != NULL_INDEX) {
+					allCandidates.push_back(Candidate{i, minErrorIndex, minError});
 				}
-			}
-
-			if (minErrorIndex == NULL_INDEX)
-				continue;
-
-			if (candidateQueue.size() < maxCandidateQueueSize) {
-				candidateQueue.push(SimplifyRef{i, minErrorIndex});
-				continue;
-			}
-
-			const SimplifyRef &top = candidateQueue.top();
-			if (t.err[minErrorIndex] < triangles[top.tid].err[top.tvertex]) {
-				candidateQueue.pop();
-				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 			}
 		}
+	);
 
-		if (candidateQueue.size() > 0) {
-			candidateList.resize(candidateQueue.size());
-			for (u_int i = candidateList.size() - 1;;) {
-				candidateList[i] = candidateQueue.top();
-				candidateQueue.pop();
+	// Step 2: Build the queue out of the best candidates
+	struct CandidateCompare {
+		bool operator()(const Candidate &a, const Candidate &b) const {
+			return a.error > b.error; // min-heap
+		}
+	};
 
-				if (i == 0)
-					break;
-				--i;
-			}
+	std::priority_queue<Candidate, std::vector<Candidate>, CandidateCompare> candidateQueue;
+	for (const auto &cand : allCandidates) {
+		if (candidateQueue.size() < maxCandidateQueueSize) {
+			candidateQueue.push(cand);
+		} else if (cand.error < candidateQueue.top().error) {
+			candidateQueue.pop();
+			candidateQueue.push(cand);
+		}
+	}
+
+	// Step 3: Write out the candidateList for further processing
+	candidateList.resize(candidateQueue.size());
+	for (int i = candidateList.size() - 1; i >= 0; --i) {
+		const Candidate &cand = candidateQueue.top();
+		candidateList[i] = SimplifyRef{cand.triIdx, cand.vertIdx};
+		candidateQueue.pop();
+	}
+		// Build the edge candidate queue
 
 			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
 				const SimplifyTriangle &t = triangles[candidateList[i].tid];
@@ -822,8 +834,13 @@ private:
 		}
 
 		// Clear dirty flag
-		for (u_int i = 0; i < triangles.size(); ++i)
-			triangles[i].dirty = false;
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i)
+					triangles[i].dirty = false;
+			}
+		);
 	}
 
 	// Finally compact mesh before exiting
