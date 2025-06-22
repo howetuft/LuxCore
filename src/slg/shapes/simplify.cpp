@@ -304,7 +304,6 @@ public:
 			if (iterationDeletedTriangles == 0)
 				break;
 		}
-		throw std::runtime_error("Stop");  // TODO
 
 		// Clean up mesh
 		CompactMesh();
