@@ -24,6 +24,9 @@
 
 #include <boost/format.hpp>
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
 #include "slg/scene/scene.h"
@@ -143,71 +146,92 @@ public:
 		const Triangle *tris = srcMesh.GetTriangles();
 
 		vertices.resize(vertCount);
-		for (u_int i = 0; i < vertCount; ++i)
-			vertices[i].p = verts[i];
-		
+
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, vertCount),
+			[&](const tbb::blocked_range<u_int>& range) {
+				for (u_int i = range.begin(); i != range.end(); ++i)
+					vertices[i].p = verts[i];
+			});
+
 		if (srcMesh.HasNormals()) {
 			const Normal *norms = srcMesh.GetNormals();
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].norm = norms[i];
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertCount),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i)
+						vertices[i].norm = norms[i];
+				});
 
 			hasNormals = true;
-		} else
+		} else {
 			hasNormals = false;
-		
+		}
+
 		if (srcMesh.HasUVs(0)) {
 			const UV *uvs = srcMesh.GetUVs(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].uv = uvs[i];
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertCount),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i)
+						vertices[i].uv = uvs[i];
+				});
 
 			hasUVs = true;
-		} else
+		} else {
 			hasUVs = false;
-		
+		}
+
 		if (srcMesh.HasColors(0)) {
 			const Spectrum *cols = srcMesh.GetColors(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].col = cols[i];
-
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertCount),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i)
+						vertices[i].col = cols[i];
+				});
 			hasColors = true;
-		} else
+		} else {
 			hasColors = false;
+		}
 
 		if (srcMesh.HasAlphas(0)) {
 			const float *alphas = srcMesh.GetAlphas(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].alpha = alphas[i];
-
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertCount),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i)
+						vertices[i].alpha = alphas[i];
+				});
 			hasAlphas = true;
-		} else
+		} else {
 			hasAlphas = false;
+		}
 
 		triangles.resize(triCount);
-		for (u_int i = 0; i < triCount; ++i) {
-			triangles[i].v[0] = tris[i].v[0];
-			triangles[i].v[1] = tris[i].v[1];
-			triangles[i].v[2] = tris[i].v[2];
-		}
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triCount),
+			[&](const tbb::blocked_range<u_int>& range) {
+				for (u_int i = range.begin(); i != range.end(); ++i) {
+					triangles[i].v[0] = tris[i].v[0];
+					triangles[i].v[1] = tris[i].v[1];
+					triangles[i].v[2] = tris[i].v[2];
+				}
+			});
 	}
 
 	~Simplify() {
 	}
-	
+
 	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
+		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
-		
+
 		Normal *newNorms = nullptr;
 		if (hasNormals) {
 			newNorms = new Normal[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newNorms[i] = vertices[i].norm;
 		}
-		
+
 		UV *newUVs = nullptr;
 		if (hasUVs) {
 			newUVs = new UV[vertCount];
@@ -221,14 +245,14 @@ public:
 			for (u_int i = 0; i < vertCount; ++i)
 				newCols[i] = vertices[i].col;
 		}
-		
+
 		float *newAlphas = nullptr;
 		if (hasAlphas) {
 			newAlphas = new float[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newAlphas[i] = vertices[i].alpha;
 		}
-		
+
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			assert (triangles[i].v[0] < vertCount);
@@ -240,7 +264,7 @@ public:
 			assert (triangles[i].v[2] < vertCount);
 			newTris[i].v[2] = triangles[i].v[2];
 		}
-		
+
 		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
 				newUVs, newCols, newAlphas);
 	}
@@ -280,6 +304,7 @@ public:
 			if (iterationDeletedTriangles == 0)
 				break;
 		}
+		throw std::runtime_error("Stop");  // TODO
 
 		// Clean up mesh
 		CompactMesh();
@@ -523,116 +548,179 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			for (u_int i = 0; i < vertices.size(); ++i)
-				vertices[i].q = SymetricMatrix(0.0);
+			// 1. Zero quadrics
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertices.size()),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i)
+						vertices[i].q = SymetricMatrix(0.0);
+				});
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				SimplifyTriangle &t = triangles[i];
+			// 2. Accumulate triangle quadric into vertices (thread-safe with mutex)
+			std::vector<std::mutex> vtx_mutex(vertices.size());
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, triangles.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+					for (u_int i = r.begin(); i != r.end(); ++i) {
+						SimplifyTriangle &t = triangles[i];
 
-				SimplifyVertex &v0 = vertices[t.v[0]];
-				SimplifyVertex &v1 = vertices[t.v[1]];
-				SimplifyVertex &v2 = vertices[t.v[2]];
+						SimplifyVertex &v0 = vertices[t.v[0]];
+						SimplifyVertex &v1 = vertices[t.v[1]];
+						SimplifyVertex &v2 = vertices[t.v[2]];
 
-				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
-				t.geometryN = geometryN;
+						const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+						t.geometryN = geometryN;
 
-				// It doesn't matter what vertex I use here because the triangle
-				// plane will pass for all 3
-				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-						-Dot(Vector(geometryN), Vector(v0.p)));
-				v0.q += sm;
-				v1.q += sm;
-				v2.q += sm;
+						const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+								-Dot(Vector(geometryN), Vector(v0.p)));
+						{
+							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[0]]);
+							v0.q += sm;
+						}
+						{
+							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[1]]);
+							v1.q += sm;
+						}
+						{
+							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[2]]);
+							v2.q += sm;
+						}
+					}
+				}
+			);
+
+			// 3. Edge error calculation
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i) {
+						// Calc Edge error
+						SimplifyTriangle &t = triangles[i];
+						UpdateTriangleError(t);
+					}
+				}
+			);
+		}  // ~if iteration==0
+
+		// 4. Zero per-vertex triangle counts
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, vertices.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					vertices[i].tstart = 0;
+					vertices[i].tcount = 0;
+				}
 			}
+		);
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				// Calc Edge Error
-				SimplifyTriangle &t = triangles[i];
+		// 5. Count per-vertex triangle incidence (use atomic for thread safety)
+		std::vector<std::atomic<u_int>> atomic_tcount(vertices.size());
+		for (auto& a : atomic_tcount) a = 0;
 
-				UpdateTriangleError(t);
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					const SimplifyTriangle &t = triangles[i];
+					atomic_tcount[t.v[0]]++;
+					atomic_tcount[t.v[1]]++;
+					atomic_tcount[t.v[2]]++;
+				}
 			}
-		}
+		);
+		// Copy atomic results back
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, vertices.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i)
+					vertices[i].tcount = atomic_tcount[i];
+			}
+		);
 
-		// Init Reference ID list
+
+		// 6. Set tstart and reset tcount
+		u_int tstart = 0;
 		for (u_int i = 0; i < vertices.size(); ++i) {
-			vertices[i].tstart = 0;
+			vertices[i].tstart = tstart;
+			tstart += vertices[i].tcount;
 			vertices[i].tcount = 0;
 		}
 
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle &t = triangles[i];
-
-			vertices[t.v[0]].tcount++;
-			vertices[t.v[1]].tcount++;
-			vertices[t.v[2]].tcount++;
-		}
-
-		u_int tstart = 0;
-		for (u_int i = 0; i < vertices.size(); ++i) {
-			SimplifyVertex &v = vertices[i];
-
-			v.tstart = tstart;
-			tstart += v.tcount;
-			v.tcount = 0;
-		}
-
-		// Write References
+		// 7. Write references (parallelize over triangles, each thread writes to refs)
 		refs.resize(triangles.size() * 3);
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle &t = triangles[i];
-
-			for (u_int j = 0; j < 3; ++j) {
-				SimplifyVertex &v = vertices[t.v[j]];
-
-				refs[v.tstart + v.tcount].tid = i;
-				refs[v.tstart + v.tcount].tvertex = j;
-
-				v.tcount++;
-			}
-		}
-
-		// Identify boundary : vertices[].border=0,1
-		//
-		// Required at the beginning (iteration == 0)
-		if (iteration == 0) {
-			for (u_int i = 0; i < vertices.size(); ++i)
-				vertices[i].border = false;
-
-			vector<u_int> vcount, vids;
-			for (u_int i = 0; i < vertices.size(); ++i) {
-				SimplifyVertex &v = vertices[i];
-				vcount.clear();
-				vids.clear();
-
-				for (u_int j = 0; j < v.tcount; ++j) {
-					int k = refs[v.tstart + j].tid;
-					SimplifyTriangle &t = triangles[k];
-
-					for (u_int k = 0; k < 3; ++k) {
-						u_int ofs = 0;
-						u_int id = t.v[k];
-
-						while (ofs < vcount.size()) {
-							if (vids[ofs] == id)
-								break;
-
-							ofs++;
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					SimplifyTriangle &t = triangles[i];
+					for (u_int j = 0; j < 3; ++j) {
+						SimplifyVertex &v = vertices[t.v[j]];
+						// tcount is not atomic, so protect with mutex:
+						static std::mutex tcount_mutex;
+							std::lock_guard<std::mutex> lock(tcount_mutex);
+							refs[v.tstart + v.tcount].tid = i;
+							refs[v.tstart + v.tcount].tvertex = j;
+							v.tcount++;
 						}
-
-						if (ofs == vcount.size()) {
-							vcount.push_back(1);
-							vids.push_back(id);
-						} else
-							vcount[ofs]++;
 					}
 				}
-				
-				for (u_int j = 0; j < vcount.size(); ++j) {
-					if (vcount[j] == 1)
-						vertices[vids[j]].border = true;
+			);
+
+			// 8. Border detection
+			// Identify boundary : vertices[].border=0,1
+			//
+			// Required at the beginning (iteration == 0)
+
+			if (iteration == 0) {
+				// Step 1: Zero all borders (already parallelized previously)
+				tbb::parallel_for(
+					tbb::blocked_range<u_int>(0, vertices.size()),
+					[&](const tbb::blocked_range<u_int>& r) {
+						for (u_int i = r.begin(); i != r.end(); ++i)
+							vertices[i].border = false;
+					}
+				);
+
+				// Step 2: Parallel border detection using TBB
+				tbb::parallel_for(
+					tbb::blocked_range<u_int>(0, vertices.size()),
+					[&](const tbb::blocked_range<u_int>& r) {
+						// Each thread maintains its own temporary containers
+						std::vector<u_int> vcount;
+						std::vector<u_int> vids;
+						for (u_int i = r.begin(); i != r.end(); ++i) {
+							SimplifyVertex &v = vertices[i];
+							vcount.clear();
+							vids.clear();
+
+							// Collect neighbor vertex IDs and their counts
+							for (u_int j = 0; j < v.tcount; ++j) {
+								int tidx = refs[v.tstart + j].tid;
+								SimplifyTriangle &t = triangles[tidx];
+								for (u_int k = 0; k < 3; ++k) {
+									u_int id = t.v[k];
+									u_int ofs = 0;
+									while (ofs < vids.size() && vids[ofs] != id)
+										++ofs;
+									if (ofs == vids.size()) {
+										vids.push_back(id);
+										vcount.push_back(1);
+									} else {
+										vcount[ofs]++;
+									}
+							}
+						}
+						// Any neighbor seen only once is a border: mark as border (thread-safe atomic set)
+						for (u_int j = 0; j < vcount.size(); ++j) {
+							if (vcount[j] == 1) {
+								// Multiple threads can write to vertices[vids[j]].border
+								// but only setting to true, so this is thread-safe.
+								vertices[vids[j]].border = true;
+							}
+						}
+					}
 				}
-			}			
+			);
 		}
+
 
 		// Build the edge candidate queue
 		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
@@ -674,10 +762,10 @@ private:
 					minError = t.err[j];
 				}
 			}
-			
+
 			if (minErrorIndex == NULL_INDEX)
 				continue;
-			
+
 			if (candidateQueue.size() < maxCandidateQueueSize) {
 				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 				continue;
@@ -689,7 +777,7 @@ private:
 				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 			}
 		}
-	
+
 		if (candidateQueue.size() > 0) {
 			candidateList.resize(candidateQueue.size());
 			for (u_int i = candidateList.size() - 1;;) {
