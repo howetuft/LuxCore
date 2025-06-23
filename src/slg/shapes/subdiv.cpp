@@ -155,7 +155,7 @@ ExtTriangleMesh *ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	std::unique_ptr<Far::TopologyRefiner> refiner(createFarTopologyRefiner(srcMesh));
 
 	// Refine the topology up to 'maxlevel'
-	SDL_LOG("Subdivision - Refining (uniform)");
+	SDL_LOG("Subdividing - Refining (uniform)");
 	Far::TopologyRefiner::UniformOptions refiner_options(maxLevel);
 	refiner_options.fullTopologyInLastLevel = true;
 	refiner->RefineUniform(refiner_options);
@@ -177,8 +177,8 @@ ExtTriangleMesh *ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	const int nRefinedFaces = refLastLevel.GetNumFaces(); // Coarse face count
 	const int totalVertsCount = nCoarseVerts + nRefinedVerts;  // Total vertex count
 
-	SDL_LOG("Subdivision - Refined vertices: " << nRefinedVerts);
-	SDL_LOG("Subdivision - Refined triangles: " << nRefinedFaces);
+	SDL_LOG("Subdividing - Refined vertices: " << nRefinedVerts);
+	SDL_LOG("Subdividing - Refined triangles: " << nRefinedFaces);
 
 
 	//--------------------------------------------------------------------------
@@ -221,7 +221,7 @@ ExtTriangleMesh *ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 		}
 	}
 
-	SDL_LOG("Subdivision - Stencil and patch tables created");
+	SDL_LOG("Subdividing - Stencil and patch tables created");
 
 	//--------------------------------------------------------------------------
 	// Set buffers and evaluate primvar from stencils
@@ -301,7 +301,7 @@ nRefinedVerts
 		}
 	}
 
-	SDL_LOG("Subdivision - Buffers built");
+	SDL_LOG("Subdividing - Buffers built");
 
 	//--------------------------------------------------------------------------
 	// Build the new mesh
@@ -369,7 +369,7 @@ nRefinedVerts
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasVertexAOV(i)) {
-			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
+			SDL_LOG("Subdividing (enhanced) - Evaluating AOV layer #" << i);
 			newVertAOVs[i] = new float[nRefinedVerts];
 
 			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
@@ -640,7 +640,7 @@ struct Surface {
 	/// @param srcMesh The mesh to be subdivided
 	Surface(const ExtTriangleMesh * srcMesh)
 	{
-		SDL_LOG("Subdivision (enhanced) - Computing patches");
+		SDL_LOG("Subdividing (enhanced) - Computing patches");
 
 		// Initialize patch table options
 		//
@@ -741,7 +741,7 @@ struct Surface {
 
 		// Check
 		SDL_LOG(
-			"Subdivision (enhanced) - Tessellating with factor N = "
+			"Subdividing (enhanced) - Tessellating with factor N = "
 			<< N
 		);
 		if (FACE_COUNT * N * N >= std::numeric_limits<int>::max()) {
@@ -1065,12 +1065,12 @@ struct Surface {
 				t /= length;
 			} else {
 				SDL_LOG(
-					"Subdivision (enhanced) - Vertex #" << vertex << ", "
+					"Subdividing (enhanced) - Vertex #" << vertex << ", "
 					<< "uv = (" << coords.x << ", " << coords.y << "), "
 					<< "du = (" << du[0] << ", " << du[1] << ", " << du[2] << "), "
 					<< "dv = (" << dv[0] << ", " << dv[1] << ", " << dv[2] << ")"
 				);
-				SDL_LOG("Subdivision (enhanced) - WARNING - "
+				SDL_LOG("Subdividing (enhanced) - WARNING - "
 					<< "Null normal (vect(du, dv) == 0)"
 				);
 			}
@@ -1275,7 +1275,7 @@ ExtTriangleMesh *ApplySubdiv(
 			surface.Interpolate(srcMesh->GetVertices(), numMeshVertex);
 
 		// Evaluate refined (interpolated) positions
-		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
+		SDL_LOG("Subdividing (enhanced) - Evaluating positions and normals");
 		tie(tessPoints, tessNormals) =
 			surface.EvaluatePositions(interpolatedPositions, tessCoords);
 	}
@@ -1304,7 +1304,7 @@ ExtTriangleMesh *ApplySubdiv(
 	// Allocate the new mesh and release buffers (transfer ownership to new
 	// mesh)
 	SDL_LOG(
-		"Subdivision (enhanced) - Building new mesh: "
+		"Subdividing (enhanced) - Building new mesh: "
 		<< numPoints << " points / "
 		<< numTriangles << " triangles"
 	);
@@ -1354,7 +1354,7 @@ SubdivShape::SubdivShape(
 
 	if (maxLevel > 0) {
 		if (camera && (maxEdgeScreenSize > 0.f)) {
-			SDL_LOG("Subdividing shape " << srcMesh->GetName()
+			SDL_LOG("Subdividing - Shape '" << srcMesh->GetName() << "'"
 					<< " - Adaptive subdivision");
 
 			mesh = srcMesh->Copy();
@@ -1369,7 +1369,7 @@ SubdivShape::SubdivShape(
 					break;
 
 				SDL_LOG(
-					"Subdivision - Adaptive - Step #" << i << " - "
+					"Subdividing - Adaptive - Step #" << i << " - "
 					<< "Current maximum edge size on screen = "
 					<< edgeScreenSize
 					<< ", target = "
@@ -1379,12 +1379,12 @@ SubdivShape::SubdivShape(
 
 				int optimizedLevel =
 					static_cast<int>(std::ceil(std::log2f(edgeScreenSize / maxEdgeScreenSize)));
-				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
+				SDL_LOG("Subdividing - Adaptive - Adapted level=" << optimizedLevel);
 
 				// Subdivide and re-try
 				ExtTriangleMesh *newMesh = ApplySubdiv(mesh, optimizedLevel, enhanced);
 				SDL_LOG(
-					"Done step #" << i
+					"Subdividing - Adaptive - Done step #" << i
 					<< " from " << mesh->GetTotalTriangleCount()
 					<< " to " << newMesh->GetTotalTriangleCount() << " faces "
 					<< "(level=" << optimizedLevel << ")"
@@ -1395,13 +1395,13 @@ SubdivShape::SubdivShape(
 				mesh = newMesh;
 			}
 		} else {
-			SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
+			SDL_LOG("Subdividing shape '" << srcMesh->GetName() << "' at level: " << maxLevel);
 
 			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced);
 		}
 	} else {
 		// Nothing to do, just make a copy
-		SDL_LOG("Subdivision: level=0 - Skipping");
+		SDL_LOG("Subdividing: level=0 - Skipping");
 		mesh = srcMesh->Copy();
 	}
 
@@ -1429,8 +1429,6 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 	const u_int threadCount = omp_get_max_threads();
 
 	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
-
-	SDL_LOG("Projection: " << worldToScreen);
 
 	std::vector<float> maxEdgeSizes(threadCount, 0.f);
 
@@ -1499,7 +1497,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(
 
 	if (enhanced) {
 		SDL_LOG(
-			"Subdivision (enhanced) - Starting - "
+			"Subdividing (enhanced) - Starting - "
 			<< srcMesh->GetTotalVertexCount() << " points / "
 			<< srcMesh->GetTotalTriangleCount() << " triangles"
 		);
@@ -1507,7 +1505,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(
 		return enhanced::ApplySubdiv(srcMesh, maxLevel);
 	}
 	else {
-		SDL_LOG("Subdivision - Starting - "
+		SDL_LOG("Subdividing - Starting - "
 			<< srcMesh->GetTotalVertexCount() << " points / "
 			<< srcMesh->GetTotalTriangleCount() << " triangles"
 		);
