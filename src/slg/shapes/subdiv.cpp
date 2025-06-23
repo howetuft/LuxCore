@@ -1363,6 +1363,7 @@ SubdivShape::SubdivShape(
 				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
 				// Check the size of the longest mesh edge on film image plane
 				const float edgeScreenSize = MaxEdgeScreenSize(camera, mesh);
+				SDL_LOG("Subdividing - Adaptive - Maximum size of visible edges is " << edgeScreenSize);
 
 				if (edgeScreenSize <= maxEdgeScreenSize)
 					break;
@@ -1429,13 +1430,20 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 
 	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
 
+	SDL_LOG("Projection: " << worldToScreen);
+
 	std::vector<float> maxEdgeSizes(threadCount, 0.f);
 
 	std::vector<Point> projectedPoints(srcMesh->GetTotalVertexCount());
+	std::vector<bool> visiblePoints(srcMesh->GetTotalVertexCount());
 	#pragma omp parallel for
 	for(int i = 0; i < srcMesh->GetTotalVertexCount(); ++i) {
-		projectedPoints[i] = worldToScreen * verts[i];
-		projectedPoints[i] /= projectedPoints[i].z;
+		float x, y;
+		bool visible = camera->GetSamplePosition(verts[i], &x, &y);
+		visiblePoints[i] = visible;
+		if (visible) {
+			projectedPoints[i] = worldToScreen * verts[i];
+		}
 	}
 
 	// Visual C++ 2013 supports only OpenMP 2.5, with int loop indices
@@ -1448,14 +1456,21 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 		//const int tid = 0;
 
 		const Triangle &tri = tris[i];
+
+		// Positions
 		const Point p0 = projectedPoints[tri.v[0]];
 		const Point p1 = projectedPoints[tri.v[1]];
 		const Point p2 = projectedPoints[tri.v[2]];
 
+		// Visibility
+		const bool p0v = visiblePoints[tri.v[0]];
+		const bool p1v = visiblePoints[tri.v[1]];
+		const bool p2v = visiblePoints[tri.v[2]];
+
 		std::array<float, 4> triMaxEdgeSize;
-		triMaxEdgeSize[0] = (p1 - p0).LengthSquared();
-		triMaxEdgeSize[1] = (p2 - p1).LengthSquared();
-		triMaxEdgeSize[2] = (p0 - p2).LengthSquared();
+		triMaxEdgeSize[0] = p1v && p0v ? (p1 - p0).LengthSquared() : 0.f;
+		triMaxEdgeSize[1] = p2v && p1v ? (p2 - p1).LengthSquared() : 0.f;
+		triMaxEdgeSize[2] = p0v && p2v ? (p0 - p2).LengthSquared() : 0.f;
 		triMaxEdgeSize[3] = maxEdgeSizes[tid];
 
 		maxEdgeSizes[tid] =
