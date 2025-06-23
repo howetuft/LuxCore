@@ -651,63 +651,68 @@ private:
 			[&](const tbb::blocked_range<u_int>& r) {
 				for (u_int i = r.begin(); i != r.end(); ++i) {
 					SimplifyTriangle &t = triangles[i];
+
 					for (u_int j = 0; j < 3; ++j) {
 						SimplifyVertex &v = vertices[t.v[j]];
 						// tcount is not atomic, so protect with mutex:
 						static std::mutex tcount_mutex;
-							std::lock_guard<std::mutex> lock(tcount_mutex);
-							refs[v.tstart + v.tcount].tid = i;
-							refs[v.tstart + v.tcount].tvertex = j;
-							v.tcount++;
-						}
-					}
+						std::lock_guard<std::mutex> lock(tcount_mutex);
+						refs[v.tstart + v.tcount].tid = i;
+						refs[v.tstart + v.tcount].tvertex = j;
+						v.tcount++;
+					}  // ~for j
+
+				}  // ~for i
+				   //
+			}  // ~lambda
+
+		);  // ~parallel_for
+
+		// 8. Border detection
+		// Identify boundary : vertices[].border=0,1
+		//
+		// Required at the beginning (iteration == 0)
+
+		if (iteration == 0) {
+			// Step 1: Zero all borders (already parallelized previously)
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, vertices.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+					for (u_int i = r.begin(); i != r.end(); ++i)
+						vertices[i].border = false;
 				}
 			);
 
-			// 8. Border detection
-			// Identify boundary : vertices[].border=0,1
-			//
-			// Required at the beginning (iteration == 0)
+			// Step 2: Parallel border detection using TBB
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, vertices.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+					// Each thread maintains its own temporary containers
+					std::vector<u_int> vcount;
+					std::vector<u_int> vids;
+					for (u_int i = r.begin(); i != r.end(); ++i) {
+						SimplifyVertex &v = vertices[i];
+						vcount.clear();
+						vids.clear();
 
-			if (iteration == 0) {
-				// Step 1: Zero all borders (already parallelized previously)
-				tbb::parallel_for(
-					tbb::blocked_range<u_int>(0, vertices.size()),
-					[&](const tbb::blocked_range<u_int>& r) {
-						for (u_int i = r.begin(); i != r.end(); ++i)
-							vertices[i].border = false;
-					}
-				);
+						// Collect neighbor vertex IDs and their counts
+						for (u_int j = 0; j < v.tcount; ++j) {
+							int tidx = refs[v.tstart + j].tid;
+							SimplifyTriangle &t = triangles[tidx];
+							for (u_int k = 0; k < 3; ++k) {
+								u_int id = t.v[k];
+								u_int ofs = 0;
+								while (ofs < vids.size() && vids[ofs] != id)
+									++ofs;
+								if (ofs == vids.size()) {
+									vids.push_back(id);
+									vcount.push_back(1);
+								} else {
+									vcount[ofs]++;
+								}
+							}  // ~for k
+						}  // ~for j
 
-				// Step 2: Parallel border detection using TBB
-				tbb::parallel_for(
-					tbb::blocked_range<u_int>(0, vertices.size()),
-					[&](const tbb::blocked_range<u_int>& r) {
-						// Each thread maintains its own temporary containers
-						std::vector<u_int> vcount;
-						std::vector<u_int> vids;
-						for (u_int i = r.begin(); i != r.end(); ++i) {
-							SimplifyVertex &v = vertices[i];
-							vcount.clear();
-							vids.clear();
-
-							// Collect neighbor vertex IDs and their counts
-							for (u_int j = 0; j < v.tcount; ++j) {
-								int tidx = refs[v.tstart + j].tid;
-								SimplifyTriangle &t = triangles[tidx];
-								for (u_int k = 0; k < 3; ++k) {
-									u_int id = t.v[k];
-									u_int ofs = 0;
-									while (ofs < vids.size() && vids[ofs] != id)
-										++ofs;
-									if (ofs == vids.size()) {
-										vids.push_back(id);
-										vcount.push_back(1);
-									} else {
-										vcount[ofs]++;
-									}
-							}
-						}
 						// Any neighbor seen only once is a border: mark as border (thread-safe atomic set)
 						for (u_int j = 0; j < vcount.size(); ++j) {
 							if (vcount[j] == 1) {
@@ -715,37 +720,26 @@ private:
 								// but only setting to true, so this is thread-safe.
 								vertices[vids[j]].border = true;
 							}
-						}
-					}
-				}
+						}  // ~for j
+					}  // ~for i
+				}  // ~lambda body
 			);
-		}
+		}  // ~if iteration == 0
 
-	// Build the edge candidate queue
-	// Step 1: Find best candidate edge per triangle in parallel
-	struct Candidate {
-		u_int triIdx;
-		u_int vertIdx;
-		float error;
-	};
-	tbb::concurrent_vector<Candidate> allCandidates;
 
-	tbb::parallel_for(
-		tbb::blocked_range<u_int>(0, triangles.size()),
-		[&](const tbb::blocked_range<u_int>& r) {
+		// Build the edge candidate queue
+		tbb::concurrent_vector<std::pair<u_int, SimplifyRef>> localCandidates;
+
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()), [&](const tbb::blocked_range<u_int>& r) {
 			for (u_int i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
-
-				// Find min error edge for this triangle
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
 				for (u_int j = 0; j < 3; ++j) {
 					const u_int i0 = t.v[j];
-					const SimplifyVertex &v0 = vertices[i0];
+					SimplifyVertex &v0 = vertices[i0];
 					const u_int i1 = t.v[(j + 1) % 3];
-					const SimplifyVertex &v1 = vertices[i1];
-
-					// Border check (as in your original code)
+					SimplifyVertex &v1 = vertices[i1];
 					if (preserveBorder) {
 						if (v0.border && v1.border)
 							continue;
@@ -753,94 +747,41 @@ private:
 						if (v0.border != v1.border)
 							continue;
 					}
-					// Compute collapse point
 					Point p;
 					CalculateCollapseError(i0, i1, &p);
-
-					// Cull if collapse would flip
 					if (Flipped(p, i0, i1))
 						continue;
 					if (Flipped(p, i1, i0))
 						continue;
-
 					if (t.err[j] < minError) {
 						minErrorIndex = j;
 						minError = t.err[j];
 					}
 				}
 				if (minErrorIndex != NULL_INDEX) {
-					allCandidates.push_back(Candidate{i, minErrorIndex, minError});
+					localCandidates.push_back({minError, SimplifyRef{i, minErrorIndex}});
 				}
 			}
-		}
-	);
+		});
 
-	// Step 2: Build the queue out of the best candidates
-	struct CandidateCompare {
-		bool operator()(const Candidate &a, const Candidate &b) const {
-			return a.error > b.error; // min-heap
-		}
-	};
+		// Sort candidates by error (ascending)
+		std::sort(localCandidates.begin(), localCandidates.end(),
+			[](const auto& a, const auto& b) { return a.first < b.first; });
 
-	std::priority_queue<Candidate, std::vector<Candidate>, CandidateCompare> candidateQueue;
-	for (const auto &cand : allCandidates) {
-		if (candidateQueue.size() < maxCandidateQueueSize) {
-			candidateQueue.push(cand);
-		} else if (cand.error < candidateQueue.top().error) {
-			candidateQueue.pop();
-			candidateQueue.push(cand);
-		}
-	}
+		// Resize to maxCandidateQueueSize if needed
+		if (localCandidates.size() > maxCandidateQueueSize)
+			localCandidates.resize(maxCandidateQueueSize);
 
-	// Step 3: Write out the candidateList for further processing
-	candidateList.resize(candidateQueue.size());
-	for (int i = candidateList.size() - 1; i >= 0; --i) {
-		const Candidate &cand = candidateQueue.top();
-		candidateList[i] = SimplifyRef{cand.triIdx, cand.vertIdx};
-		candidateQueue.pop();
-	}
-		// Build the edge candidate queue
+		// Fill candidateList
+		candidateList.resize(localCandidates.size());
+		for (size_t i = 0; i < localCandidates.size(); ++i)
+			candidateList[i] = localCandidates[i].second;
 
-			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
-				const SimplifyTriangle &t = triangles[candidateList[i].tid];
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()), [&](const tbb::blocked_range<u_int>& r) {
+			for (u_int i = r.begin(); i != r.end(); ++i)
+				triangles[i].dirty = false;
+		});
 
-				SDL_LOG("#" << i << " Min. error: " << fixed << setprecision(10) << t.err[candidateList[i].tvertex] << " (triangle " << candidateList[i].tid << ")");
-
-				const u_int i0 = t.v[candidateList[i].tvertex];
-				SimplifyVertex &v0 = vertices[i0];
-			
-				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
-				SimplifyVertex &v1 = vertices[i1];
-
-				SDL_LOG("#" << i << " Collapse screen error scale: " << fixed << setprecision(10) <<  CalculateCollapseScreenErrorScale(v0.p, v1.p));
-				SDL_LOG("#" << i << " Triangle " << candidateList[i].tid << " border: " <<
-						vertices[t.v[candidateList[i].tvertex]].border << " " <<
-						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
-			}*/
-			
-			/*ExtTriangleMeshBuilder meshBuilder;
-			for (u_int i = 0; i < candidateList.size(); ++i) {
-				const SimplifyTriangle &t = triangles[candidateList[i].tid];
-
-				const u_int index = meshBuilder.vertices.size();
-				meshBuilder.AddVertex(vertices[t.v[candidateList[i].tvertex]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 1) % 3]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 2) % 3]].p);
-
-				meshBuilder.AddTriangle(Triangle(index, index + 1, index +2));
-			}
-			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
-			debugMesh->Save("debug-candidates.ply");
-			delete debugMesh;*/
-
-		// Clear dirty flag
-		tbb::parallel_for(
-			tbb::blocked_range<u_int>(0, triangles.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i)
-					triangles[i].dirty = false;
-			}
-		);
 	}
 
 	// Finally compact mesh before exiting
@@ -967,7 +908,7 @@ private:
 		} else
 			return 1.f;
 	}
-	
+
 	void UpdateTriangleError(SimplifyTriangle &t) const {
 		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
