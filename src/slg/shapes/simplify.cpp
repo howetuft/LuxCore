@@ -21,12 +21,14 @@
 #include <string>
 #include <queue>
 #include <limits>
+#include <numeric>
 
 #include <boost/format.hpp>
 
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 #include <tbb/concurrent_vector.h>
+#include <tbb/enumerable_thread_specific.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -270,14 +272,19 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
+
 	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
 			const float screenSize, const bool border) {
+
+		RefVector refs;
+		vector<SimplifyRef> candidateList;
+
 		preserveBorder = border;
 		camera = scnCamera;
 		edgeScreenSize = screenSize;
 
 		// Work on 10% of all triangles for each iteration
-		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
+		u_int maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
@@ -285,7 +292,7 @@ public:
 
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
-		deletedTriangles = 0;
+		u_int deletedTriangles = 0;
 		vector<bool> deleted0, deleted1;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
@@ -294,14 +301,78 @@ public:
 			const u_int initialdeletedTriangles = deletedTriangles;
 
 			// Update mesh constantly
-			UpdateMesh(iteration);
+			SDL_LOG("Simplify: updating mesh");
+			UpdateMesh(iteration, refs, candidateList, maxCandidateQueueSize);
+			SDL_LOG("Simplify: " << candidateList.size() << " candidates");
 
-			// Remove vertices & mark deleted triangles
-			for (u_int i = 0; i < candidateList.size(); ++i)
-				CollapseEdge(candidateList[i].tid, candidateList[i].tvertex, deleted0, deleted1);
+			// Compute batches of separate components
+			// Each component is unconnected to others, so they can be processed in parallel
+			std::vector<std::vector<SimplifyRef>> batches;
+
+			std::vector<bool> vertexUsed; // size = vertices.size(), reused for each batch
+
+			//std::vector<SimplifyRef> candidates = candidateList;
+			SDL_LOG("Simplify: computing batches");
+			while (!candidateList.empty()) {
+				vertexUsed.assign(vertices.size(), false);
+				std::vector<SimplifyRef> batch;
+				std::vector<size_t> usedIndices;
+
+				for (size_t i = 0; i < candidateList.size(); ++i) {
+					const SimplifyRef& c = candidateList[i];
+					const SimplifyTriangle& t = triangles[c.tid];
+					u_int v0 = t.v[c.tvertex];
+					u_int v1 = t.v[(c.tvertex + 1) % 3];
+
+					if (!vertexUsed[v0] && !vertexUsed[v1]) {
+						batch.push_back(c);
+						vertexUsed[v0] = vertexUsed[v1] = true;
+						usedIndices.push_back(i);
+					}
+				}
+
+				// Remove used candidates from candidates
+				// (Do in reverse to keep indices valid)
+				for (auto it = usedIndices.rbegin(); it != usedIndices.rend(); ++it)
+					candidateList.erase(candidateList.begin() + *it);
+
+				// Add batch to batches
+				if (!batch.empty())
+					batches.push_back(std::move(batch));
+				else
+					break; // no more non-overlapping batches possible
+			}
+
+			SDL_LOG("Simplify: " << batches.size() << " batch(es)");
+			std::vector<u_int> batchDeletedTriangles(batches.size());
+			for (size_t i = 0; i< batches.size(); ++i) {
+				const auto& batch = batches[i];
+				tbb::parallel_for(size_t(0), batch.size(), [&](size_t j) {
+					std::vector<bool> deleted0, deleted1;
+					CollapseEdge(
+						batch[j].tid,	    // Triangle index
+						batch[j].tvertex,	// Start vertex index
+						deleted0,
+						deleted1,
+						refs,
+						batchDeletedTriangles[i]
+					);
+				});
+				// After each batch, you may need to update mesh state or regenerate candidateList.
+			}
+
+			deletedTriangles += std::accumulate(
+				batchDeletedTriangles.begin(),
+				batchDeletedTriangles.end(),
+				0
+			);
+			// HERE
 
 			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
-			SDL_LOG("Simplify iteration " << iteration << " (" << candidateList.size() << " edge candidates, deleted " << iterationDeletedTriangles << "/" << deletedTriangles << " of " << startTriangleCount << " triangles)");
+			SDL_LOG("Simplify iteration " << iteration <<
+					" (" << candidateList.size() << " edge candidates, deleted "
+					<< iterationDeletedTriangles << "/" << deletedTriangles <<
+					" of " << startTriangleCount << " triangles)");
 			if (iterationDeletedTriangles == 0)
 				break;
 		}
@@ -334,7 +405,9 @@ private:
 	struct SimplifyRef {
 		u_int tid, tvertex;
 	};
-	
+
+	using RefVector = tbb::concurrent_vector<SimplifyRef>;
+
 	class SimplifyRefErrCompare {
 	public:
 		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
@@ -349,19 +422,26 @@ private:
 
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
-	vector<SimplifyRef> refs;
+	//vector<SimplifyRef> refs;
+	//tbb::concurrent_vector<SimplifyRef> refs;
 
 	const Camera *camera;
 	float edgeScreenSize;
 
-	u_int maxCandidateQueueSize;
-	vector<SimplifyRef> candidateList;
+	//u_int maxCandidateQueueSize;
+	//vector<SimplifyRef> candidateList;
 
-	u_int deletedTriangles;
+	// u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
-	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
-			vector<bool> &deleted0, vector<bool> &deleted1) {
+	bool CollapseEdge(
+		const u_int trinagleIndex,
+		const u_int startVertexIndex,
+		vector<bool> &deleted0,
+		vector<bool> &deleted1,
+		RefVector& refs,
+		u_int& deletedTriangles
+	) {
 		SimplifyTriangle &t = triangles[trinagleIndex];
 
 		if (t.deleted)
@@ -388,9 +468,9 @@ private:
 		deleted1.resize(v1.tcount);
 
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, &deleted0))
+		if (Flipped(p, i0, i1, refs, &deleted0))
 			return false;
-		if (Flipped(p, i1, i0, &deleted1))
+		if (Flipped(p, i1, i0, refs, &deleted1))
 			return false;
 
 		// Save original vertex information
@@ -415,7 +495,7 @@ private:
 		const float triAlpha2 = vertices[t.v[2]].alpha;
 
 		// Not flipped, so remove edge
-		v0.p = p;		
+		v0.p = p;
 		v0.q = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
@@ -444,13 +524,13 @@ private:
 			if (hasColors)
 				v0.col = triCol0;
 			if (hasAlphas)
-				v0.alpha = triAlpha0;			
+				v0.alpha = triAlpha0;
 		}
 
 		const u_int tstart = refs.size();
 
-		UpdateTriangles(i0, v0, deleted0);
-		UpdateTriangles(i0, v1, deleted1);
+		UpdateTriangles(i0, v0, deleted0, refs, deletedTriangles);
+		UpdateTriangles(i0, v1, deleted1, refs, deletedTriangles);
 
 		const u_int tcount = refs.size() - tstart;
 
@@ -468,8 +548,11 @@ private:
 	}
 
 	// Check if a triangle flips when this edge is removed
-	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			vector<bool> *deleted = nullptr) const {
+	bool Flipped(
+		const Point &p, const u_int i0, const u_int i1,
+		const RefVector& refs,
+		vector<bool> *deleted = nullptr
+	) const {
 		const SimplifyVertex &v0 = vertices[i0];
 
 		for (u_int k = 0; k < v0.tcount; ++k) {
@@ -508,8 +591,13 @@ private:
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
-	void UpdateTriangles(const u_int i0, const SimplifyVertex &v,
-			const  vector<bool> &deleted) {
+	void UpdateTriangles(
+		const u_int i0,
+		const SimplifyVertex &v,
+		const vector<bool> &deleted,
+		RefVector& refs,
+		u_int& deletedTriangles
+	) {
 		for (u_int k = 0; k < v.tcount; ++k) {
 			const SimplifyRef &r = refs[v.tstart + k];
 			SimplifyTriangle &t = triangles[r.tid];
@@ -532,7 +620,13 @@ private:
 	}
 
 	// Compact triangles, compute edge error and build reference list
-	void UpdateMesh(const u_int iteration) {
+	void UpdateMesh(
+		const u_int iteration,
+		RefVector& refs,
+		vector<SimplifyRef>& candidateList,
+		const u_int& maxCandidateQueueSize
+	) {
+		SDL_LOG("UpdateMesh start");
 		if (iteration > 0) {
 			// Compact triangles
 			int dst = 0;
@@ -548,6 +642,7 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
+			SDL_LOG("UpdateMesh step 1");
 			// 1. Zero quadrics
 			tbb::parallel_for(tbb::blocked_range<u_int>(0, vertices.size()),
 				[&](const tbb::blocked_range<u_int>& range) {
@@ -555,39 +650,40 @@ private:
 						vertices[i].q = SymetricMatrix(0.0);
 				});
 
+			SDL_LOG("UpdateMesh step 2");
 			// 2. Accumulate triangle quadric into vertices (thread-safe with mutex)
-			std::vector<std::mutex> vtx_mutex(vertices.size());
-			tbb::parallel_for(
-				tbb::blocked_range<u_int>(0, triangles.size()),
+
+			// Step 2.1: Temporary accumulators
+			std::vector<SymetricMatrix> quadricAcc(vertices.size(), SymetricMatrix(0.0f));
+
+			// Step 2.2: Parallel accumulation
+			tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
 				[&](const tbb::blocked_range<u_int>& r) {
 					for (u_int i = r.begin(); i != r.end(); ++i) {
 						SimplifyTriangle &t = triangles[i];
 
-						SimplifyVertex &v0 = vertices[t.v[0]];
-						SimplifyVertex &v1 = vertices[t.v[1]];
-						SimplifyVertex &v2 = vertices[t.v[2]];
+						const SimplifyVertex &v0 = vertices[t.v[0]];
+						const SimplifyVertex &v1 = vertices[t.v[1]];
+						const SimplifyVertex &v2 = vertices[t.v[2]];
 
 						const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
 						t.geometryN = geometryN;
 
 						const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
 								-Dot(Vector(geometryN), Vector(v0.p)));
-						{
-							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[0]]);
-							v0.q += sm;
-						}
-						{
-							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[1]]);
-							v1.q += sm;
-						}
-						{
-							std::lock_guard<std::mutex> lock(vtx_mutex[t.v[2]]);
-							v2.q += sm;
-						}
+						// Accumulate to the temp array
+						quadricAcc[t.v[0]] += sm;
+						quadricAcc[t.v[1]] += sm;
+						quadricAcc[t.v[2]] += sm;
 					}
 				}
 			);
 
+			// Step 2.3: Assign accumulated values back to vertices
+			for (u_int i = 0; i < vertices.size(); ++i)
+				vertices[i].q += quadricAcc[i];
+
+			SDL_LOG("UpdateMesh step 3");
 			// 3. Edge error calculation
 			tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
 				[&](const tbb::blocked_range<u_int>& range) {
@@ -600,6 +696,7 @@ private:
 			);
 		}  // ~if iteration==0
 
+		SDL_LOG("UpdateMesh step 4");
 		// 4. Zero per-vertex triangle counts
 		tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, vertices.size()),
@@ -611,6 +708,7 @@ private:
 			}
 		);
 
+		SDL_LOG("UpdateMesh step 5");
 		// 5. Count per-vertex triangle incidence (use atomic for thread safety)
 		std::vector<std::atomic<u_int>> atomic_tcount(vertices.size());
 		for (auto& a : atomic_tcount) a = 0;
@@ -636,6 +734,7 @@ private:
 		);
 
 
+		SDL_LOG("UpdateMesh step 6");
 		// 6. Set tstart and reset tcount
 		u_int tstart = 0;
 		for (u_int i = 0; i < vertices.size(); ++i) {
@@ -644,35 +743,80 @@ private:
 			vertices[i].tcount = 0;
 		}
 
+		SDL_LOG("UpdateMesh step 7");
 		// 7. Write references (parallelize over triangles, each thread writes to refs)
-		refs.resize(triangles.size() * 3);
-		tbb::parallel_for(
-			tbb::blocked_range<u_int>(0, triangles.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i) {
+
+		// Step 7.1: Thread-local buffers for refs per vertex
+		using TLSVertexRefs = std::vector<std::vector<SimplifyRef>>;
+		tbb::enumerable_thread_specific<TLSVertexRefs> thread_local_refs([&]{
+			return TLSVertexRefs(vertices.size());
+		});
+
+		SDL_LOG("UpdateMesh step 7.2");
+		// Step 7.2: Parallel triangle processing, scatter-gather pattern
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& range) {
+				auto& local_refs = thread_local_refs.local();
+				for (u_int i = range.begin(); i != range.end(); ++i) {
 					SimplifyTriangle &t = triangles[i];
-
 					for (u_int j = 0; j < 3; ++j) {
-						SimplifyVertex &v = vertices[t.v[j]];
-						// tcount is not atomic, so protect with mutex:
-						static std::mutex tcount_mutex;
-						std::lock_guard<std::mutex> lock(tcount_mutex);
-						refs[v.tstart + v.tcount].tid = i;
-						refs[v.tstart + v.tcount].tvertex = j;
-						v.tcount++;
-					}  // ~for j
+						SimplifyRef ref;
+						ref.tid = i;
+						ref.tvertex = j;
+						local_refs[t.v[j]].push_back(ref);
+					}
+				}
+			}
+		);
 
-				}  // ~for i
-				   //
-			}  // ~lambda
+		SDL_LOG("UpdateMesh step 7.3");
+		// Step 7.3: Merge TLS buffers into per-vertex global refs, set tcount/tstart
+		//refs.clear();
+		//refs.reserve(triangles.size() * 3);
+		//tbb::parallel_for(tbb::blocked_range<u_int>(0, vertices.size()),
+			//[&](const tbb::blocked_range<u_int>& range) {
+				//for (u_int v = range.begin(); v != range.end(); ++v) {
+					//// Gather and flatten all refs for vertex v from every thread
+					//u_int tcount = 0;
+					//for (auto& tls : thread_local_refs) {
+						//tcount += tls[v].size();
+					//}
+					//vertices[v].tcount = tcount;
+					//vertices[v].tstart = refs.size();
 
-		);  // ~parallel_for
+					//for (auto& tls : thread_local_refs) {
+						//for (const auto& ref : tls[v]) {
+							//refs.push_back(ref);
+						//}
+					//}
+				//}
+			//}
+		//);
+		refs.clear();
+		refs.reserve(triangles.size() * 3);
+		for (u_int v = 0; v < vertices.size(); ++v) {
+			// Gather and flatten all refs for vertex v from every thread
+			u_int tcount = 0;
+			for (auto& tls : thread_local_refs) {
+				tcount += tls[v].size();
+			}
+			vertices[v].tcount = tcount;
+			vertices[v].tstart = refs.size();
+
+			for (auto& tls : thread_local_refs) {
+				for (const auto& ref : tls[v]) {
+					refs.push_back(ref);
+				}
+			}
+		}
+		SDL_LOG("Control: " << triangles.size() * 3 << " " << refs.size());
 
 		// 8. Border detection
 		// Identify boundary : vertices[].border=0,1
 		//
 		// Required at the beginning (iteration == 0)
 
+		SDL_LOG("UpdateMesh step 8");
 		if (iteration == 0) {
 			// Step 1: Zero all borders (already parallelized previously)
 			tbb::parallel_for(
@@ -727,6 +871,7 @@ private:
 		}  // ~if iteration == 0
 
 
+		SDL_LOG("UpdateMesh step 9");
 		// Build the edge candidate queue
 		tbb::concurrent_vector<std::pair<u_int, SimplifyRef>> localCandidates;
 
@@ -749,9 +894,9 @@ private:
 					}
 					Point p;
 					CalculateCollapseError(i0, i1, &p);
-					if (Flipped(p, i0, i1))
+					if (Flipped(p, i0, i1, refs))
 						continue;
-					if (Flipped(p, i1, i0))
+					if (Flipped(p, i1, i0, refs))
 						continue;
 					if (t.err[j] < minError) {
 						minErrorIndex = j;
@@ -781,9 +926,64 @@ private:
 			for (u_int i = r.begin(); i != r.end(); ++i)
 				triangles[i].dirty = false;
 		});
+		SDL_LOG("UpdateMesh end");
 
 	}
 
+	// Finally compact mesh before exiting
+	void CompactMesh() {
+		// Parallel: Zero out tcount
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, vertices.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i)
+					vertices[i].tcount = 0;
+			}
+		);
+
+		// Serial: Compact triangles, set tcount
+		u_int dst = 0;
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			if (!triangles[i].deleted) {
+				const SimplifyTriangle &t = triangles[i];
+				triangles[dst++] = t;
+				vertices[t.v[0]].tcount = 1;
+				vertices[t.v[1]].tcount = 1;
+				vertices[t.v[2]].tcount = 1;
+			}
+		}
+		triangles.resize(dst);
+
+		// Serial: Compact vertices
+		dst = 0;
+		for (u_int i = 0; i < vertices.size(); ++i) {
+			if (vertices[i].tcount) {
+				vertices[i].tstart = dst;
+				vertices[dst].p = vertices[i].p;
+				vertices[dst].norm = vertices[i].norm;
+				vertices[dst].uv = vertices[i].uv;
+				vertices[dst].col = vertices[i].col;
+				vertices[dst].alpha = vertices[i].alpha;
+				dst++;
+			}
+		}
+
+		// Parallel: Update triangle indices to new compacted vertices
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					SimplifyTriangle &t = triangles[i];
+					t.v[0] = vertices[t.v[0]].tstart;
+					t.v[1] = vertices[t.v[1]].tstart;
+					t.v[2] = vertices[t.v[2]].tstart;
+				}
+			}
+		);
+
+		vertices.resize(dst);
+	}
+
+	#if 0
+	//
 	// Finally compact mesh before exiting
 	void CompactMesh() {
 		u_int dst = 0;
@@ -827,6 +1027,7 @@ private:
 		}
 		vertices.resize(dst);
 	}
+#endif
 
 	// Error between vertex and Quadric
 	float VertexError(const SymetricMatrix &q, const float x, const float y, const float z) const {
