@@ -145,7 +145,7 @@ public:
 		vertices.resize(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			vertices[i].p = verts[i];
-		
+
 		if (srcMesh.HasNormals()) {
 			const Normal *norms = srcMesh.GetNormals();
 			for (u_int i = 0; i < vertCount; ++i)
@@ -154,7 +154,7 @@ public:
 			hasNormals = true;
 		} else
 			hasNormals = false;
-		
+
 		if (srcMesh.HasUVs(0)) {
 			const UV *uvs = srcMesh.GetUVs(0);
 			for (u_int i = 0; i < vertCount; ++i)
@@ -163,7 +163,7 @@ public:
 			hasUVs = true;
 		} else
 			hasUVs = false;
-		
+
 		if (srcMesh.HasColors(0)) {
 			const Spectrum *cols = srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
@@ -192,22 +192,22 @@ public:
 
 	~Simplify() {
 	}
-	
+
 	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
+		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
-		
+
 		Normal *newNorms = nullptr;
 		if (hasNormals) {
 			newNorms = new Normal[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newNorms[i] = vertices[i].norm;
 		}
-		
+
 		UV *newUVs = nullptr;
 		if (hasUVs) {
 			newUVs = new UV[vertCount];
@@ -221,14 +221,14 @@ public:
 			for (u_int i = 0; i < vertCount; ++i)
 				newCols[i] = vertices[i].col;
 		}
-		
+
 		float *newAlphas = nullptr;
 		if (hasAlphas) {
 			newAlphas = new float[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newAlphas[i] = vertices[i].alpha;
 		}
-		
+
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			assert (triangles[i].v[0] < vertCount);
@@ -240,7 +240,7 @@ public:
 			assert (triangles[i].v[2] < vertCount);
 			newTris[i].v[2] = triangles[i].v[2];
 		}
-		
+
 		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
 				newUVs, newCols, newAlphas);
 	}
@@ -309,7 +309,7 @@ private:
 	struct SimplifyRef {
 		u_int tid, tvertex;
 	};
-	
+
 	class SimplifyRefErrCompare {
 	public:
 		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
@@ -390,7 +390,7 @@ private:
 		const float triAlpha2 = vertices[t.v[2]].alpha;
 
 		// Not flipped, so remove edge
-		v0.p = p;		
+		v0.p = p;
 		v0.q = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
@@ -419,7 +419,7 @@ private:
 			if (hasColors)
 				v0.col = triCol0;
 			if (hasAlphas)
-				v0.alpha = triAlpha0;			
+				v0.alpha = triAlpha0;
 		}
 
 		const u_int tstart = refs.size();
@@ -626,12 +626,12 @@ private:
 							vcount[ofs]++;
 					}
 				}
-				
+
 				for (u_int j = 0; j < vcount.size(); ++j) {
 					if (vcount[j] == 1)
 						vertices[vids[j]].border = true;
 				}
-			}			
+			}
 		}
 
 		// Build the edge candidate queue
@@ -674,10 +674,10 @@ private:
 					minError = t.err[j];
 				}
 			}
-			
+
 			if (minErrorIndex == NULL_INDEX)
 				continue;
-			
+
 			if (candidateQueue.size() < maxCandidateQueueSize) {
 				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 				continue;
@@ -689,7 +689,7 @@ private:
 				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 			}
 		}
-	
+
 		if (candidateQueue.size() > 0) {
 			candidateList.resize(candidateQueue.size());
 			for (u_int i = candidateList.size() - 1;;) {
@@ -708,7 +708,7 @@ private:
 
 				const u_int i0 = t.v[candidateList[i].tvertex];
 				SimplifyVertex &v0 = vertices[i0];
-			
+
 				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
 				SimplifyVertex &v1 = vertices[i1];
 
@@ -717,7 +717,7 @@ private:
 						vertices[t.v[candidateList[i].tvertex]].border << " " <<
 						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
 			}*/
-			
+
 			/*ExtTriangleMeshBuilder meshBuilder;
 			for (u_int i = 0; i < candidateList.size(); ++i) {
 				const SimplifyTriangle &t = triangles[candidateList[i].tid];
@@ -863,7 +863,7 @@ private:
 		} else
 			return 1.f;
 	}
-	
+
 	void UpdateTriangleError(SimplifyTriangle &t) const {
 		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
@@ -909,7 +909,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 
 	// For some debugging
 	//mesh->Save("debug.ply");
-	
+
 	const float endTime = WallClockTime();
 	SDL_LOG("Simplify time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
