@@ -131,7 +131,7 @@ public:
 		y = 0.f;
 		z = 0.f;
     }
-	
+
 	void AddWithWeight(Normal const &src, float weight) {
         x += weight * src.x;
         y += weight * src.y;

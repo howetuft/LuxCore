@@ -217,6 +217,7 @@ include_directories("${LuxRays_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/deps/cuew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/clew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")
+include_directories("${PROJECT_SOURCE_DIR}/deps/dset")
 
 # OpenCL preprocessing
 INCLUDE(KernelPreprocess)
