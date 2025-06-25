@@ -276,6 +276,10 @@ public:
 	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
 			const float screenSize, const bool border) {
 
+		// refs maps vertices to triangles
+		// for a given vertice v, the triangles are to be found in
+		// {refs[v.tstart], ..., refs[v.tstart + v.tcount]}
+		// refs are initialized in UpdateMesh
 		RefVector refs;
 		vector<SimplifyRef> candidateList;
 
@@ -345,16 +349,19 @@ public:
 
 			SDL_LOG("Simplify: " << batches.size() << " batch(es)");
 			std::vector<u_int> batchDeletedTriangles(batches.size());
+			std::vector< std::unique_ptr<RefVector> > localRefs(batches.size());
 			for (size_t i = 0; i< batches.size(); ++i) {
 				const auto& batch = batches[i];
+				// Create localRefs on the heap, to avoid mem issues
+				localRefs[i].reset(new RefVector{refs.begin(), refs.end()});
+				std::vector<bool> deleted0, deleted1;
 				tbb::parallel_for(size_t(0), batch.size(), [&](size_t j) {
-					std::vector<bool> deleted0, deleted1;
 					CollapseEdge(
 						batch[j].tid,	    // Triangle index
 						batch[j].tvertex,	// Start vertex index
 						deleted0,
 						deleted1,
-						refs,
+						*localRefs[i],
 						batchDeletedTriangles[i]
 					);
 				});
@@ -396,17 +403,35 @@ private:
 		Spectrum col;
 		float alpha;
 
-		u_int tstart, tcount;
+		// The starting index in the refs array for this vertex's triangle references
+		u_int tstart;
+		// Number of incident triangles on this vertex
+		u_int tcount;
+
+
 		SymetricMatrix q;
 
 		bool border;
 	};
 
+	// A specific vertex in a specific triangle
 	struct SimplifyRef {
 		u_int tid, tvertex;
+		SimplifyRef(u_int p_tid, u_int p_tvertex) : tid(p_tid), tvertex(p_tvertex)
+		{}
+		SimplifyRef(const SimplifyRef& other) {
+			this->tid = other.tid;
+			this->tvertex = other.tvertex;
+		}
+		SimplifyRef& operator=(const SimplifyRef& other) {
+			this->tid = other.tid;
+			this->tvertex = other.tvertex;
+			return *this;
+		}
 	};
 
-	using RefVector = tbb::concurrent_vector<SimplifyRef>;
+	//using RefVector = tbb::concurrent_vector<SimplifyRef>;
+	using RefVector = std::vector<SimplifyRef>;
 
 	class SimplifyRefErrCompare {
 	public:
@@ -600,6 +625,7 @@ private:
 	) {
 		for (u_int k = 0; k < v.tcount; ++k) {
 			const SimplifyRef &r = refs[v.tstart + k];
+			//const SimplifyRef r(refs[v.tstart + k]);
 			SimplifyTriangle &t = triangles[r.tid];
 
 			if (t.deleted)
@@ -611,11 +637,11 @@ private:
 				continue;
 			}
 
-			t.v[r.tvertex] = i0;
+			t.v[r.tvertex] = i0;  // TODO possible race condition?
 			t.dirty = true;
 			UpdateTriangleError(t);
 
-			refs.push_back(r);
+			refs.emplace_back(refs[v.tstart + k]);
 		}
 	}
 
@@ -760,9 +786,7 @@ private:
 				for (u_int i = range.begin(); i != range.end(); ++i) {
 					SimplifyTriangle &t = triangles[i];
 					for (u_int j = 0; j < 3; ++j) {
-						SimplifyRef ref;
-						ref.tid = i;
-						ref.tvertex = j;
+						SimplifyRef ref(i, j);
 						local_refs[t.v[j]].push_back(ref);
 					}
 				}
@@ -804,8 +828,8 @@ private:
 			vertices[v].tstart = refs.size();
 
 			for (auto& tls : thread_local_refs) {
-				for (const auto& ref : tls[v]) {
-					refs.push_back(ref);
+				for (const auto ref : tls[v]) {
+					refs.emplace_back(ref);
 				}
 			}
 		}
@@ -915,12 +939,15 @@ private:
 
 		// Resize to maxCandidateQueueSize if needed
 		if (localCandidates.size() > maxCandidateQueueSize)
-			localCandidates.resize(maxCandidateQueueSize);
+			//localCandidates.resize(maxCandidateQueueSize); TODO
+			localCandidates =
+			{localCandidates.begin(), localCandidates.begin() + maxCandidateQueueSize};
 
 		// Fill candidateList
-		candidateList.resize(localCandidates.size());
+		candidateList.clear();
+		candidateList.reserve(localCandidates.size());
 		for (size_t i = 0; i < localCandidates.size(); ++i)
-			candidateList[i] = localCandidates[i].second;
+			candidateList.push_back(localCandidates[i].second);
 
 		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()), [&](const tbb::blocked_range<u_int>& r) {
 			for (u_int i = r.begin(); i != r.end(); ++i)
