@@ -26,6 +26,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <tbb/parallel_for.h>
+#include <tbb/concurrent_vector.h>
 
 #include <boost/format.hpp>
 
@@ -300,16 +301,6 @@ public:
 				iteration, edgeScreenSize, camera, maxCandidateQueueSize, preserveBorder
 			);
 
-#if 0
-			// Remove vertices & mark deleted triangles
-			for (auto& candidate_edge: candidateList) {
-				auto resCollapse = CollapseEdge(
-					candidate_edge, edgeScreenSize, camera, preserveBorder
-				);
-				deletedTriangles += resCollapse;
-			}
-#endif
-
 			auto PartitionIndependentEdgeBatches = [&](const std::vector<SimplifyRef>& candidateList) {
 				std::vector<std::vector<SimplifyRef>> batches;
 				std::vector<bool> used(candidateList.size(), false);
@@ -341,6 +332,7 @@ public:
 
 			// Partition candidates into independent batches
 			auto batches = PartitionIndependentEdgeBatches(candidateList);
+
 			SDL_LOG("Simplify - Number of batches: " << batches.size());
 
 			for (const auto& batch : batches) {
@@ -707,13 +699,10 @@ private:
 		//
 		// Required at the beginning (iteration == 0)
 		if (iteration == 0) {
-			//for (u_int i = 0; i < vertices.size(); ++i)
 			for (auto& v: vertices)
 				v.border = false;
 
 			vector<u_int> vcount, vids;
-			//for (u_int i = 0; i < vertices.size(); ++i) {
-				//SimplifyVertex &v = vertices[i];
 			for (const auto& v: vertices) {
 				vcount.clear();
 				vids.clear();
@@ -750,59 +739,64 @@ private:
 			}
 		}
 
-		// Build the edge candidate queue
+		// Build candidate buffer
+		// 1. Thread-safe candidate buffer
+		tbb::concurrent_vector<SimplifyRef> candidateRefs;
+
+		// 2. Parallel candidate search
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					const SimplifyTriangle &t = triangles[i];
+
+					u_int minErrorIndex = NULL_INDEX;
+					float minError = std::numeric_limits<float>::infinity();
+					for (u_int j = 0; j < 3; ++j) {
+						const u_int i0 = t.v[j];
+						SimplifyVertex &v0 = vertices[i0];
+						const u_int i1 = t.v[(j + 1) % 3];
+						SimplifyVertex &v1 = vertices[i1];
+
+						// Border check
+						if (preserveBorder) {
+							if (v0.border && v1.border)
+								continue;
+						} else {
+							if (v0.border != v1.border)
+								continue;
+						}
+
+						auto [error, p] = CalculateCollapseError(i0, i1, preserveBorder);
+						if (std::get<bool>(Flipped(p, i0, i1)))
+							continue;
+						if (std::get<bool>(Flipped(p, i1, i0)))
+							continue;
+
+						if (t.err[j] < minError) {
+							minErrorIndex = j;
+							minError = t.err[j];
+						}
+					}
+					if (minErrorIndex != NULL_INDEX)
+						candidateRefs.push_back(SimplifyRef{i, minErrorIndex});
+				}
+			}
+		);
+
+		// 3. Serial step: Build the priority queue with a size cap
 		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
 			candidateQueue{ SimplifyRefErrCompare(*this) };
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			const SimplifyTriangle &t = triangles[i];
 
-			// Look for the (valid) triangle vertex with the minimum error
-			u_int minErrorIndex = NULL_INDEX;
-			float minError = numeric_limits<float>::infinity();
-			for (u_int j = 0; j < 3; ++j) {
-				const u_int i0 = t.v[j];
-				SimplifyVertex &v0 = vertices[i0];
-
-				const u_int i1 = t.v[(j + 1) % 3];
-				SimplifyVertex &v1 = vertices[i1];
-
-				// Border check
-				if (preserveBorder) {
-					if (v0.border && v1.border)
-						continue;
-				} else {
-					if (v0.border != v1.border)
-						continue;
-				}
-
-				// Compute vertex to collapse to
-				auto [error, p] = CalculateCollapseError(i0, i1, preserveBorder);
-
-
-				// Don't remove if flipped
-				if (std::get<bool>(Flipped(p, i0, i1)))
-					continue;
-				if (std::get<bool>(Flipped(p, i1, i0)))
-					continue;
-
-				if (t.err[j] < minError) {
-					minErrorIndex = j;
-					minError = t.err[j];
-				}
-			}
-
-			if (minErrorIndex == NULL_INDEX)
-				continue;
-
+		for (const auto& ref : candidateRefs) {
 			if (candidateQueue.size() < maxCandidateQueueSize) {
-				candidateQueue.push(SimplifyRef{i, minErrorIndex});
+				candidateQueue.push(ref);
 				continue;
 			}
-
 			const SimplifyRef &top = candidateQueue.top();
-			if (t.err[minErrorIndex] < triangles[top.tid].err[top.tvertex]) {
+			// Compare error for cap logic
+			if (triangles[ref.tid].err[ref.tvertex] < triangles[top.tid].err[top.tvertex]) {
 				candidateQueue.pop();
-				candidateQueue.push(SimplifyRef{i, minErrorIndex});
+				candidateQueue.push(ref);
 			}
 		}
 
@@ -812,7 +806,6 @@ private:
 			candidateList.push_back(candidateQueue.top());
 			candidateQueue.pop();
 		}
-
 
 		// Clear dirty flag
 		for (u_int i = 0; i < triangles.size(); ++i)
