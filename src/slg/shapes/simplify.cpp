@@ -296,10 +296,9 @@ public:
 			UpdateMesh(iteration);
 
 			// Remove vertices & mark deleted triangles
-			for (u_int i = 0; i < candidateList.size(); ++i) {
+			for (auto& candidate_edge: candidateList) {
 				CollapseEdge(
-					candidateList[i].tid,
-					candidateList[i].tvertex,
+					candidate_edge,
 					deleted0,
 					deleted1
 				);
@@ -389,11 +388,12 @@ private:
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
 	bool CollapseEdge(
-		const u_int triangleIndex,    // Index of the triangle containing the edge
-		const u_int startVertexIndex, // Index of the 1st vertex of the edge
-		vector<bool> &deleted0,       // Out: true/false if the triangles incident to the 1st vertex are deleted
-		vector<bool> &deleted1        // Out: the same as above for 2nd vertex
+		const SimplifyRef& edge,	  // Candidate vertex to collapse
+		vector<bool> &deleted0,       // In/Out: true/false if the triangles incident to the 1st vertex are deleted
+		vector<bool> &deleted1        // In/Out: the same as above for 2nd vertex
 	) {
+		const u_int triangleIndex = edge.tid;
+		const u_int startVertexIndex = edge.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (t.deleted)
@@ -481,6 +481,7 @@ private:
 		auto newRefs1 = UpdateTriangles(i0, v0, deleted0);
 		auto newRefs2 = UpdateTriangles(i0, v1, deleted1);
 
+		// Update incident edges of vertex
 		auto& refs = v0.refs;
 		refs.clear();
 		refs.insert(
@@ -504,8 +505,6 @@ private:
 
 		for (const auto& [k, ref]: enumerate(v0.refs)) {
 			const SimplifyTriangle &t = triangles[ref.tid];
-		//for (u_int k = 0; k < v0.tcount; ++k) {
-			//const SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
 
 			if (t.deleted)
 				continue;
