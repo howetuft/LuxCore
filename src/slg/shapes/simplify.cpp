@@ -278,7 +278,6 @@ public:
 		preserveBorder = border;
 		camera = scnCamera;
 
-
 		// Work on 10% of all triangles for each iteration
 		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
 
@@ -301,10 +300,12 @@ public:
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
 				auto resCollapse = CollapseEdge(candidate_edge, edgeScreenSize);
-				deletedTriangles += std::get<3>(resCollapse);
+				deletedTriangles += std::get<u_int>(resCollapse);
 			}
 
-			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
+			const u_int iterationDeletedTriangles =
+				deletedTriangles - initialdeletedTriangles;
+
 			SDL_LOG(
 				"Simplify iteration " << iteration
 				<< " (" << candidateList.size()
@@ -402,7 +403,7 @@ private:
 		const u_int startVertexIndex = edge.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
 		std::vector<bool> empty_deleted;
-		u_int deletedTriangles;
+		u_int deletedTriangles = 0;
 
 		if (t.deleted)
 			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
