@@ -658,23 +658,38 @@ private:
 			for (u_int i = 0; i < vertices.size(); ++i)
 				vertices[i].q = SymetricMatrix(0.0);
 
+			// Phase 1: Parallel computation of per-triangle quadric contributions
+			std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
+
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, triangles.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+					for (u_int i = r.begin(); i != r.end(); ++i) {
+						SimplifyTriangle &t = triangles[i];
+
+						SimplifyVertex &v0 = vertices[t.v[0]];
+						SimplifyVertex &v1 = vertices[t.v[1]];
+						SimplifyVertex &v2 = vertices[t.v[2]];
+
+						const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+						t.geometryN = geometryN;
+
+						const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+											   -Dot(Vector(geometryN), Vector(v0.p)));
+
+						triangleQuadrics[i][0] = sm;
+						triangleQuadrics[i][1] = sm;
+						triangleQuadrics[i][2] = sm;
+					}
+				}
+			);
+
+			// Phase 2: Serial accumulation into vertex quadrics
 			for (u_int i = 0; i < triangles.size(); ++i) {
-				SimplifyTriangle &t = triangles[i];
-
-				SimplifyVertex &v0 = vertices[t.v[0]];
-				SimplifyVertex &v1 = vertices[t.v[1]];
-				SimplifyVertex &v2 = vertices[t.v[2]];
-
-				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
-				t.geometryN = geometryN;
-
-				// It doesn't matter what vertex I use here because the triangle
-				// plane will pass for all 3
-				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-						-Dot(Vector(geometryN), Vector(v0.p)));
-				v0.q += sm;
-				v1.q += sm;
-				v2.q += sm;
+				const auto &t = triangles[i];
+				vertices[t.v[0]].q += triangleQuadrics[i][0];
+				vertices[t.v[1]].q += triangleQuadrics[i][1];
+				vertices[t.v[2]].q += triangleQuadrics[i][2];
 			}
 
 			for (u_int i = 0; i < triangles.size(); ++i) {
@@ -685,59 +700,80 @@ private:
 			}
 		}
 
-		for (auto& v: vertices) {
-			v.refs.clear();
-		}
-		for (const auto& [i, t]: enumerate(triangles)) {
-			for (auto [j, vertexIndex]: enumerate(t.v)) {
-				SimplifyVertex &v = vertices[vertexIndex];
-				v.refs.emplace_back(i, j);
+		// 1. Parallel clear (optional but clean)
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, vertices.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					vertices[i].refs.clear();
+				}
 			}
-		}
+		);
 
-		// Identify boundary : vertices[].border=0,1
-		//
-		// Required at the beginning (iteration == 0)
-		if (iteration == 0) {
-			for (auto& v: vertices)
-				v.border = false;
+		// 2. Temporary thread-safe concurrent_vectors for each vertex
+		std::vector<tbb::concurrent_vector<SimplifyRef>> tmp_refs(vertices.size());
 
-			vector<u_int> vcount, vids;
-			for (const auto& v: vertices) {
-				vcount.clear();
-				vids.clear();
-
-				//for (u_int j = 0; j < v.tcount; ++j) {
-				for (const auto& ref: v.refs) {
-					//int k = refs[v.tstart + j].tid;
-					int k = ref.tid;
-					SimplifyTriangle &t = triangles[k];
-
-					for (u_int k = 0; k < 3; ++k) {
-						u_int ofs = 0;
-						u_int id = t.v[k];
-
-						while (ofs < vcount.size()) {
-							if (vids[ofs] == id)
-								break;
-
-							ofs++;
-						}
-
-						if (ofs == vcount.size()) {
-							vcount.push_back(1);
-							vids.push_back(id);
-						} else
-							vcount[ofs]++;
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, triangles.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					const auto& t = triangles[i];
+					for (size_t j = 0; j < 3; ++j) {
+						size_t vertexIndex = t.v[j];
+						tmp_refs[vertexIndex].push_back(SimplifyRef(i, j));
 					}
 				}
-
-				for (u_int j = 0; j < vcount.size(); ++j) {
-					if (vcount[j] == 1)
-						vertices[vids[j]].border = true;
-				}
 			}
+		);
+
+		// 3. Serially move concurrent_vectors to real refs
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			vertices[i].refs.assign(tmp_refs[i].begin(), tmp_refs[i].end());
 		}
+
+				// Identify boundary : vertices[].border=0,1
+				//
+				// Required at the beginning (iteration == 0)
+				if (iteration == 0) {
+					for (auto& v: vertices)
+						v.border = false;
+
+					vector<u_int> vcount, vids;
+					for (const auto& v: vertices) {
+						vcount.clear();
+						vids.clear();
+
+						//for (u_int j = 0; j < v.tcount; ++j) {
+						for (const auto& ref: v.refs) {
+							//int k = refs[v.tstart + j].tid;
+							int k = ref.tid;
+							SimplifyTriangle &t = triangles[k];
+
+							for (u_int k = 0; k < 3; ++k) {
+								u_int ofs = 0;
+								u_int id = t.v[k];
+
+								while (ofs < vcount.size()) {
+									if (vids[ofs] == id)
+										break;
+
+									ofs++;
+								}
+
+								if (ofs == vcount.size()) {
+									vcount.push_back(1);
+									vids.push_back(id);
+								} else
+									vcount[ofs]++;
+							}
+						}
+
+						for (u_int j = 0; j < vcount.size(); ++j) {
+							if (vcount[j] == 1)
+								vertices[vids[j]].border = true;
+						}
+					}
+				}
 
 		// Build candidate buffer
 		// 1. Thread-safe candidate buffer
