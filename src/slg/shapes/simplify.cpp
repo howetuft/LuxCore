@@ -293,7 +293,7 @@ public:
 			const u_int initialdeletedTriangles = deletedTriangles;
 
 			// Update mesh constantly
-			UpdateMesh(iteration);
+			auto candidateList = UpdateMesh(iteration);
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
@@ -378,7 +378,7 @@ private:
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
-	vector<SimplifyRef> candidateList;
+	//vector<SimplifyRef> candidateList;
 
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
@@ -560,8 +560,9 @@ private:
 		return refs;
 	}
 
-	// Compact triangles, compute edge error and build reference list
-	void UpdateMesh(const u_int iteration) {
+	// Compact triangles, compute edge error and build candidate list
+	// Returns: candidate list
+	RefVector UpdateMesh(const u_int iteration) {
 		if (iteration > 0) {
 			// Compact triangles
 			int dst = 0;
@@ -720,22 +721,20 @@ private:
 			}
 		}
 
-		if (candidateQueue.size() > 0) {
-			candidateList.resize(candidateQueue.size());
-			for (u_int i = candidateList.size() - 1;;) {
-				candidateList[i] = candidateQueue.top();
-				candidateQueue.pop();
-
-				if (i == 0)
-					break;
-				--i;
-			}
-
+		RefVector candidateList;
+		candidateList.reserve(candidateQueue.size());
+		while (!candidateQueue.empty()) {
+			candidateList.push_back(candidateQueue.top());
+			candidateQueue.pop();
 		}
+
 
 		// Clear dirty flag
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
+
+		return candidateList;
+
 	}
 
 	// Finally compact mesh before exiting
