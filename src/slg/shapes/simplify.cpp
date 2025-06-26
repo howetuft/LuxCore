@@ -297,11 +297,7 @@ public:
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
-				CollapseEdge(
-					candidate_edge,
-					deleted0,
-					deleted1
-				);
+				CollapseEdge(candidate_edge);
 			}
 
 			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
@@ -387,19 +383,17 @@ private:
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
-	bool CollapseEdge(
-		const SimplifyRef& edge,	  // Candidate vertex to collapse
-		vector<bool> &deleted0,       // In/Out: true/false if the triangles incident to the 1st vertex are deleted
-		vector<bool> &deleted1        // In/Out: the same as above for 2nd vertex
-	) {
+	std::tuple<bool, std::vector<bool>, std::vector<bool> >  // result, deleted0, deleted1
+	CollapseEdge(const SimplifyRef& edge  /* Candidate vertex to collapse */) {
 		const u_int triangleIndex = edge.tid;
 		const u_int startVertexIndex = edge.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
+		std::vector<bool> empty_deleted;
 
 		if (t.deleted)
-			return false;
+			return std::tuple(false, empty_deleted, empty_deleted);
 		if (t.dirty)
-			return false;
+			return std::tuple(false, empty_deleted, empty_deleted);
 
 		const u_int i0 = t.v[startVertexIndex];
 		SimplifyVertex &v0 = vertices[i0];
@@ -409,20 +403,19 @@ private:
 
 		// Border check
 		if (v0.border != v1.border)
-			return false;
+			return std::tuple(false, empty_deleted, empty_deleted);
 
 		// Compute vertex to collapse to
 		const auto [error, p] = CalculateCollapseError(i0, i1);
 
-		// true/false if the triangles referencing the vertex are deleted
-		deleted0.resize(v0.refs.size());
-		deleted1.resize(v1.refs.size());
-
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, &deleted0))
-			return false;
-		if (Flipped(p, i1, i0, &deleted1))
-			return false;
+		// deleted0, deleted1: true/false if the triangles referencing the
+		// vertex are deleted
+		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
+		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
+		if (will_flip0 || will_flip1) {
+			return std::tuple(false, empty_deleted, empty_deleted);
+		}
 
 		// Save original vertex information
 		const Point triPoint0 = vertices[t.v[0]].p;
@@ -495,48 +488,48 @@ private:
 			std::make_move_iterator(newRefs2.end())
 		);
 
-		return true;
+		return std::tuple(true, deleted0, deleted1);
 	}
 
 	// Check if a triangle flips when this edge is removed
-	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			vector<bool> *deleted = nullptr) const {
+	std::tuple<bool, std::vector<bool> >
+	Flipped(const Point &p, const u_int i0, const u_int i1) const {
+
 		const SimplifyVertex &v0 = vertices[i0];
+		std::vector<bool> deleted(v0.refs.size());
 
 		for (const auto& [k, ref]: enumerate(v0.refs)) {
 			const SimplifyTriangle &t = triangles[ref.tid];
 
-			if (t.deleted)
-				continue;
+			if (t.deleted) continue;
 
-			//const u_int s = refs[v0.tstart + k].tvertex;
 			const u_int s = ref.tvertex;
 			const u_int id1 = t.v[(s + 1) % 3];
 			const u_int id2 = t.v[(s + 2) % 3];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
-				if (deleted)
-					(*deleted)[k] = true;
+				deleted[k] = true;
 				continue;
 			}
 
 			// Check if the triangle is too narrow
 			const Vector d1 = Normalize(vertices[id1].p - p);
 			const Vector d2 = Normalize(vertices[id2].p - p);
-			if (AbsDot(d1, d2) > .999f)
-				return true;
+			if (AbsDot(d1, d2) > .999f) {
+				return std::tuple(true, deleted);
+			}
 
 			// Check if the Normal is changing side
 			const Normal geometryN(Normalize(Cross(d1, d2)));
-			if (Dot(geometryN, t.geometryN) < .2f)
-				return true;
+			if (Dot(geometryN, t.geometryN) < .2f) {
+				return std::tuple(true, deleted);
+			}
 
-			if (deleted)
-				(*deleted)[k] = false;
+			deleted[k] = false;
 		}
 
-		return false;
+		return std::tuple(false, deleted);
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
@@ -701,9 +694,9 @@ private:
 
 
 				// Don't remove if flipped
-				if (Flipped(p, i0, i1))
+				if (std::get<bool>(Flipped(p, i0, i1)))
 					continue;
-				if (Flipped(p, i1, i0))
+				if (std::get<bool>(Flipped(p, i1, i0)))
 					continue;
 
 				if (t.err[j] < minError) {
