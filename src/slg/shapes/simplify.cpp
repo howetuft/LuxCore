@@ -269,11 +269,15 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
-			const float screenSize, const bool border) {
+	void Decimate(
+		const float targetTriangleCount,
+		const Camera *scnCamera,
+		const float edgeScreenSize,
+		const bool border
+	) {
 		preserveBorder = border;
 		camera = scnCamera;
-		edgeScreenSize = screenSize;
+
 
 		// Work on 10% of all triangles for each iteration
 		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
@@ -292,11 +296,11 @@ public:
 			const u_int initialdeletedTriangles = deletedTriangles;
 
 			// Update mesh constantly
-			auto candidateList = UpdateMesh(iteration);
+			auto candidateList = UpdateMesh(iteration, edgeScreenSize);
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
-				auto resCollapse = CollapseEdge(candidate_edge);
+				auto resCollapse = CollapseEdge(candidate_edge, edgeScreenSize);
 				deletedTriangles += std::get<3>(resCollapse);
 			}
 
@@ -382,7 +386,6 @@ private:
 
 
 	const Camera *camera;
-	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
 
@@ -391,7 +394,10 @@ private:
 	// Returns: status, deleted0, deleted1, deletedTriangles
 	// Modifies: triangles, vertices
 	std::tuple<bool, std::vector<bool>, std::vector<bool>, u_int >
-	CollapseEdge(const SimplifyRef& edge  /* Candidate vertex to collapse */) {
+	CollapseEdge(
+		const SimplifyRef& edge,  /* Candidate vertex to collapse */
+		const float edgeScreenSize
+	) {
 		const u_int triangleIndex = edge.tid;
 		const u_int startVertexIndex = edge.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
@@ -479,8 +485,10 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
-		auto [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
-		auto [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
+		auto [newRefs0, deletedTriangles0] =
+			UpdateTriangles(i0, v0, deleted0, edgeScreenSize);
+		auto [newRefs1, deletedTriangles1] =
+			UpdateTriangles(i0, v1, deleted1, edgeScreenSize);
 
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
@@ -547,7 +555,8 @@ private:
 	std::tuple<RefVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
-		const  vector<bool> &deleted
+		const  vector<bool> &deleted,
+		const float edgeScreenSize
 	) {
 		u_int deletedTriangles = 0;
 		RefVector refs;
@@ -565,7 +574,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			UpdateTriangleError(t);
+			UpdateTriangleError(t, edgeScreenSize);
 
 			refs.push_back(r);
 		}
@@ -574,7 +583,7 @@ private:
 
 	// Compact triangles, compute edge error and build candidate list
 	// Returns: candidate list
-	RefVector UpdateMesh(const u_int iteration) {
+	RefVector UpdateMesh(const u_int iteration, const float edgeScreenSize) {
 		if (iteration > 0) {
 			// Compact triangles
 			int dst = 0;
@@ -616,7 +625,7 @@ private:
 				// Calc Edge Error
 				SimplifyTriangle &t = triangles[i];
 
-				UpdateTriangleError(t);
+				UpdateTriangleError(t, edgeScreenSize);
 			}
 		}
 
@@ -843,7 +852,11 @@ private:
 		return std::tuple(error , pResult);
 	}
 
-	float CalculateCollapseScreenErrorScale(u_int i0, u_int i1) const {
+	float CalculateCollapseScreenErrorScale(
+		u_int i0,
+		u_int i1,
+		float edgeScreenSize
+	) const {
 		const Point& v0 = vertices[i0].p;
 		const Point& v1 = vertices[i1].p;
 		if (edgeScreenSize > 0.f) {
@@ -876,7 +889,8 @@ private:
 			return 1.f;
 	}
 
-	void UpdateTriangleError(SimplifyTriangle &t) const {
+	// TODO remove misleading const, pass i0
+	void UpdateTriangleError(SimplifyTriangle &t, const float edgeScreenSize) const {
 		using edge_t = std::pair<u_int, u_int>;
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 
@@ -884,7 +898,8 @@ private:
 			auto i0 = t.v[edge.first];
 			auto i1 = t.v[edge.second];
 			float collapseError = std::get<float>(CalculateCollapseError(i0, i1));
-			float screenErrorScale = CalculateCollapseScreenErrorScale(i0, i1);
+			float screenErrorScale =
+				CalculateCollapseScreenErrorScale(i0, i1, edgeScreenSize);
 			t.err[i] = collapseError * screenErrorScale;
 		}
 
