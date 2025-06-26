@@ -177,8 +177,9 @@ public:
 				vertices[i].norm = norms[i];
 
 			hasNormals = true;
-		} else
+		} else {
 			hasNormals = false;
+		}
 
 		if (srcMesh.HasUVs(0)) {
 			const UV *uvs = srcMesh.GetUVs(0);
@@ -186,8 +187,9 @@ public:
 				vertices[i].uv = uvs[i];
 
 			hasUVs = true;
-		} else
+		} else {
 			hasUVs = false;
+		}
 
 		if (srcMesh.HasColors(0)) {
 			const Spectrum *cols = srcMesh.GetColors(0);
@@ -410,8 +412,7 @@ private:
 			return false;
 
 		// Compute vertex to collapse to
-		Point p;
-		CalculateCollapseError(i0, i1, &p);  // TODO p as return value?
+		const auto [error, p] = CalculateCollapseError(i0, i1);
 
 		// true/false if the triangles referencing the vertex are deleted
 		deleted0.resize(v0.refs.size());
@@ -697,8 +698,7 @@ private:
 				}
 
 				// Compute vertex to collapse to
-				Point p;
-				CalculateCollapseError(i0, i1, &p);
+				auto [error, p] = CalculateCollapseError(i0, i1);
 
 
 				// Don't remove if flipped
@@ -800,9 +800,11 @@ private:
 	}
 
 	// Error for one edge
-	float CalculateCollapseError(const u_int v1Index, const u_int v2Index,
-			Point *pResult = nullptr) const {
+	std::tuple<float, Point>
+	CalculateCollapseError(const u_int v1Index, const u_int v2Index) const {
 		const SymetricMatrix q = vertices[v1Index].q + vertices[v2Index].q;
+
+		Point pResult;
 
 		// Compute interpolated vertex
 		const Point &p1 = vertices[v1Index].p;
@@ -818,30 +820,29 @@ private:
 		float error;
 		if (preserveBorder && vertices[v1Index].border) {
 			error = error1;
-			if (pResult)
-				*pResult = p1;
+			pResult = p1;
 		} else if (preserveBorder && vertices[v2Index].border) {
 			error = error2;
-			if (pResult)
-				*pResult = p2;
+			pResult = p2;
 		} else {
-			error = Min(error1, Min(error2, error3));
+			error = std::min({error1, error2, error3});
 
-			if (pResult) {
-				if (error1 == error)
-					*pResult = p1;
-				if (error2 == error)
-					*pResult = p2;
-				if (error3 == error)
-					*pResult = p3;
-			}
+			if (error1 == error)
+				pResult = p1;
+			if (error2 == error)
+				pResult = p2;
+			if (error3 == error)
+				pResult = p3;
 		}
 
 		// Adding 1.0 because error have negative values
-		return Max(error + 1.f, 0.f);
+		error = std::max(error + 1.f, 0.f);
+		return std::tuple(error , pResult);
 	}
 
-	float CalculateCollapseScreenErrorScale(const Point &v0, const Point &v1) const {
+	float CalculateCollapseScreenErrorScale(u_int i0, u_int i1) const {
+		const Point& v0 = vertices[i0].p;
+		const Point& v1 = vertices[i1].p;
 		if (edgeScreenSize > 0.f) {
 			const float notVisibleScale = .5f;
 
@@ -873,14 +874,17 @@ private:
 	}
 
 	void UpdateTriangleError(SimplifyTriangle &t) const {
-		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
+		using edge_t = std::pair<u_int, u_int>;
+		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 
-		t.err[1] = CalculateCollapseError(t.v[1], t.v[2]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[1]].p, vertices[t.v[2]].p);
+		for (auto [i, edge]: enumerate(edges)) {
+			auto i0 = t.v[edge.first];
+			auto i1 = t.v[edge.second];
+			float collapseError = std::get<float>(CalculateCollapseError(i0, i1));
+			float screenErrorScale = CalculateCollapseScreenErrorScale(i0, i1);
+			t.err[i] = collapseError * screenErrorScale;
+		}
 
-		t.err[2] = CalculateCollapseError(t.v[2], t.v[0]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[2]].p, vertices[t.v[0]].p);
 	}
 };
 
