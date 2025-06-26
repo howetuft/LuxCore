@@ -284,8 +284,7 @@ public:
 
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
-		deletedTriangles = 0;
-		vector<bool> deleted0, deleted1;
+		u_int deletedTriangles = 0;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
 				break;
@@ -297,12 +296,20 @@ public:
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
-				CollapseEdge(candidate_edge);
+				auto resCollapse = CollapseEdge(candidate_edge);
+				deletedTriangles += std::get<3>(resCollapse);
 			}
 
 			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
-			SDL_LOG("Simplify iteration " << iteration << " (" << candidateList.size() << " edge candidates, deleted " << iterationDeletedTriangles << "/" << deletedTriangles << " of " << startTriangleCount << " triangles)");
-			if (iterationDeletedTriangles == 0)
+			SDL_LOG(
+				"Simplify iteration " << iteration
+				<< " (" << candidateList.size()
+				<< " edge candidates, deleted "
+				<< iterationDeletedTriangles
+				<< "/" << deletedTriangles
+				<< " of " << startTriangleCount << " triangles)"
+			);
+			if (!iterationDeletedTriangles)
 				break;
 		}
 
@@ -378,22 +385,23 @@ private:
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
-	//vector<SimplifyRef> candidateList;
 
-	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
-	std::tuple<bool, std::vector<bool>, std::vector<bool> >  // result, deleted0, deleted1
+	// Returns: status, deleted0, deleted1, deletedTriangles
+	// Modifies: triangles, vertices
+	std::tuple<bool, std::vector<bool>, std::vector<bool>, u_int >
 	CollapseEdge(const SimplifyRef& edge  /* Candidate vertex to collapse */) {
 		const u_int triangleIndex = edge.tid;
 		const u_int startVertexIndex = edge.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
 		std::vector<bool> empty_deleted;
+		u_int deletedTriangles;
 
 		if (t.deleted)
-			return std::tuple(false, empty_deleted, empty_deleted);
+			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
 		if (t.dirty)
-			return std::tuple(false, empty_deleted, empty_deleted);
+			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
 
 		const u_int i0 = t.v[startVertexIndex];
 		SimplifyVertex &v0 = vertices[i0];
@@ -403,7 +411,7 @@ private:
 
 		// Border check
 		if (v0.border != v1.border)
-			return std::tuple(false, empty_deleted, empty_deleted);
+			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
 
 		// Compute vertex to collapse to
 		const auto [error, p] = CalculateCollapseError(i0, i1);
@@ -414,7 +422,7 @@ private:
 		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
 		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
 		if (will_flip0 || will_flip1) {
-			return std::tuple(false, empty_deleted, empty_deleted);
+			return std::tuple(false, deleted0, deleted1, deletedTriangles);
 		}
 
 		// Save original vertex information
@@ -471,27 +479,29 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
-		auto newRefs1 = UpdateTriangles(i0, v0, deleted0);
-		auto newRefs2 = UpdateTriangles(i0, v1, deleted1);
+		auto [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
+		auto [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
 
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
 		refs.clear();
 		refs.insert(
 			refs.end(),
-			std::make_move_iterator(newRefs1.begin()),
-			std::make_move_iterator(newRefs1.end())
+			std::make_move_iterator(newRefs0.begin()),
+			std::make_move_iterator(newRefs0.end())
 		);
 		refs.insert(
 			refs.end(),
-			std::make_move_iterator(newRefs2.begin()),
-			std::make_move_iterator(newRefs2.end())
+			std::make_move_iterator(newRefs0.begin()),
+			std::make_move_iterator(newRefs0.end())
 		);
+		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
-		return std::tuple(true, deleted0, deleted1);
+		return std::tuple(true, deleted0, deleted1, deletedTriangles);
 	}
 
 	// Check if a triangle flips when this edge is removed
+	// Returns: check status, deleted status of each ref (vector)
 	std::tuple<bool, std::vector<bool> >
 	Flipped(const Point &p, const u_int i0, const u_int i1) const {
 
@@ -533,11 +543,13 @@ private:
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
-	RefVector UpdateTriangles(
+	// Returns: new incident edges list, number of deleted triangles
+	std::tuple<RefVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
 		const  vector<bool> &deleted
 	) {
+		u_int deletedTriangles = 0;
 		RefVector refs;
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r.tid];
@@ -557,7 +569,7 @@ private:
 
 			refs.push_back(r);
 		}
-		return refs;
+		return std::tuple(refs, deletedTriangles);
 	}
 
 	// Compact triangles, compute edge error and build candidate list
