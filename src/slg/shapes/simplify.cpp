@@ -278,7 +278,7 @@ public:
 		preserveBorder = border;
 
 		// Work on 10% of all triangles for each iteration
-		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
+		u_int maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
@@ -294,7 +294,9 @@ public:
 			const u_int initialdeletedTriangles = deletedTriangles;
 
 			// Update mesh constantly
-			auto candidateList = UpdateMesh(iteration, edgeScreenSize, camera);
+			auto candidateList = UpdateMesh(
+				iteration, edgeScreenSize, camera, maxCandidateQueueSize
+			);
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
@@ -383,8 +385,6 @@ private:
 		}
 		SDL_LOG("No data error " + to_string(line));
 	}
-
-	u_int maxCandidateQueueSize;
 
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
@@ -586,7 +586,8 @@ private:
 	RefVector UpdateMesh(
 		const u_int iteration,
 		const float edgeScreenSize,
-		const Camera& camera
+		const Camera& camera,
+		u_int maxCandidateQueueSize
 	) {
 		if (iteration > 0) {
 			// Compact triangles
