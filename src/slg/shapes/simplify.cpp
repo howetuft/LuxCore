@@ -302,7 +302,7 @@ public:
 				auto resCollapse = CollapseEdge(
 					candidate_edge, edgeScreenSize, camera, preserveBorder
 				);
-				deletedTriangles += std::get<u_int>(resCollapse);
+				deletedTriangles += resCollapse;
 			}
 
 			const u_int iterationDeletedTriangles =
@@ -330,7 +330,6 @@ private:
 
 		SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 		{}
-		SimplifyRef(): tid(0), tvertex(0) {}  // TODO Remove
 	};
 
 	using RefVector = std::vector<SimplifyRef>;
@@ -389,10 +388,9 @@ private:
 
 	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
-	// Returns: status, deleted0, deleted1, deletedTriangles
+	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
-	std::tuple<bool, std::vector<bool>, std::vector<bool>, u_int >
-	CollapseEdge(
+	u_int CollapseEdge(
 		const SimplifyRef& edge,  /* Candidate vertex to collapse */
 		const float edgeScreenSize,
 		const Camera& camera,
@@ -405,9 +403,9 @@ private:
 		u_int deletedTriangles = 0;
 
 		if (t.deleted)
-			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
+			return deletedTriangles;
 		if (t.dirty)
-			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
+			return deletedTriangles;
 
 		const u_int i0 = t.v[startVertexIndex];
 		SimplifyVertex &v0 = vertices[i0];
@@ -417,7 +415,7 @@ private:
 
 		// Border check
 		if (v0.border != v1.border)
-			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
+			return deletedTriangles;
 
 		// Compute vertex to collapse to
 		const auto [error, p] = CalculateCollapseError(i0, i1, preserveBorder);
@@ -428,7 +426,7 @@ private:
 		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
 		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
 		if (will_flip0 || will_flip1) {
-			return std::tuple(false, deleted0, deleted1, deletedTriangles);
+			return deletedTriangles;
 		}
 
 		// Save original vertex information
@@ -506,7 +504,7 @@ private:
 		);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
-		return std::tuple(true, deleted0, deleted1, deletedTriangles);
+		return deletedTriangles;
 	}
 
 	// Check if a triangle flips when this edge is removed
@@ -775,32 +773,30 @@ private:
 			vertices[i].keep = false;
 
 		// Remove deleted triangles and mark vertices to keep
-		for (auto& t: triangles) {  // TODO use std::view::filter
-			if (!t.deleted) {
-				triangles[dst++] = t;
+		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+		for (auto& t: triangles | std::views::filter(not_deleted)) {
+			triangles[dst++] = t;
 
-				vertices[t.v[0]].keep = true;
-				vertices[t.v[1]].keep = true;
-				vertices[t.v[2]].keep = true;
-			}
+			vertices[t.v[0]].keep = true;
+			vertices[t.v[1]].keep = true;
+			vertices[t.v[2]].keep = true;
 		}
 		triangles.resize(dst);
 
 		// Keep marked vertices
 		dst = 0;
-		for (auto& v: vertices) {
-			if (v.keep) {
-				v.newIndex = dst;
-				v.refs = vertices[dst].refs;
+		auto keep_vertex = [](const SimplifyVertex& v){ return v.keep; };
+		for (auto& v: vertices | std::views::filter(keep_vertex)) {
+			v.newIndex = dst;
+			v.refs = vertices[dst].refs;
 
-				vertices[dst].p = v.p;
-				vertices[dst].norm = v.norm;
-				vertices[dst].uv = v.uv;
-				vertices[dst].col = v.col;
-				vertices[dst].alpha = v.alpha;
+			vertices[dst].p = v.p;
+			vertices[dst].norm = v.norm;
+			vertices[dst].uv = v.uv;
+			vertices[dst].col = v.col;
+			vertices[dst].alpha = v.alpha;
 
-				dst++;
-			}
+			dst++;
 		}
 
 		for (auto& t: triangles) {
@@ -902,7 +898,6 @@ private:
 			return 1.f;
 	}
 
-	// TODO remove misleading const, pass i0
 	void UpdateTriangleError(
 		SimplifyTriangle &t,
 		const float edgeScreenSize,
