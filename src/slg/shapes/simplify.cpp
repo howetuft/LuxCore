@@ -273,9 +273,8 @@ public:
 		const float targetTriangleCount,
 		const Camera& camera,
 		const float edgeScreenSize,
-		const bool border
+		const bool preserveBorder
 	) {
-		preserveBorder = border;
 
 		// Work on 10% of all triangles for each iteration
 		u_int maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
@@ -295,12 +294,14 @@ public:
 
 			// Update mesh constantly
 			auto candidateList = UpdateMesh(
-				iteration, edgeScreenSize, camera, maxCandidateQueueSize
+				iteration, edgeScreenSize, camera, maxCandidateQueueSize, preserveBorder
 			);
 
 			// Remove vertices & mark deleted triangles
 			for (auto& candidate_edge: candidateList) {
-				auto resCollapse = CollapseEdge(candidate_edge, edgeScreenSize, camera);
+				auto resCollapse = CollapseEdge(
+					candidate_edge, edgeScreenSize, camera, preserveBorder
+				);
 				deletedTriangles += std::get<u_int>(resCollapse);
 			}
 
@@ -386,7 +387,7 @@ private:
 		SDL_LOG("No data error " + to_string(line));
 	}
 
-	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
+	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
 	// Returns: status, deleted0, deleted1, deletedTriangles
 	// Modifies: triangles, vertices
@@ -394,7 +395,8 @@ private:
 	CollapseEdge(
 		const SimplifyRef& edge,  /* Candidate vertex to collapse */
 		const float edgeScreenSize,
-		const Camera& camera
+		const Camera& camera,
+		const bool preserveBorder
 	) {
 		const u_int triangleIndex = edge.tid;
 		const u_int startVertexIndex = edge.tvertex;
@@ -418,7 +420,7 @@ private:
 			return std::tuple(false, empty_deleted, empty_deleted, deletedTriangles);
 
 		// Compute vertex to collapse to
-		const auto [error, p] = CalculateCollapseError(i0, i1);
+		const auto [error, p] = CalculateCollapseError(i0, i1, preserveBorder);
 
 		// Don't remove if flipped
 		// deleted0, deleted1: true/false if the triangles referencing the
@@ -485,9 +487,9 @@ private:
 
 		// TODO
 		auto [newRefs0, deletedTriangles0] =
-			UpdateTriangles(i0, v0, deleted0, edgeScreenSize, camera);
+			UpdateTriangles(i0, v0, deleted0, edgeScreenSize, camera, preserveBorder);
 		auto [newRefs1, deletedTriangles1] =
-			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera);
+			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera, preserveBorder);
 
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
@@ -556,7 +558,8 @@ private:
 		const SimplifyVertex &v,  // Collapsed vertex
 		const  vector<bool> &deleted,
 		const float edgeScreenSize,
-		const Camera& camera
+		const Camera& camera,
+		const bool preserveBorder
 	) {
 		u_int deletedTriangles = 0;
 		RefVector refs;
@@ -574,7 +577,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			UpdateTriangleError(t, edgeScreenSize, camera);
+			UpdateTriangleError(t, edgeScreenSize, camera, preserveBorder);
 
 			refs.push_back(r);
 		}
@@ -587,7 +590,8 @@ private:
 		const u_int iteration,
 		const float edgeScreenSize,
 		const Camera& camera,
-		u_int maxCandidateQueueSize
+		const u_int maxCandidateQueueSize,
+		const bool preserveBorder
 	) {
 		if (iteration > 0) {
 			// Compact triangles
@@ -630,7 +634,7 @@ private:
 				// Calc Edge Error
 				SimplifyTriangle &t = triangles[i];
 
-				UpdateTriangleError(t, edgeScreenSize, camera);
+				UpdateTriangleError(t, edgeScreenSize, camera, preserveBorder);
 			}
 		}
 
@@ -717,7 +721,7 @@ private:
 				}
 
 				// Compute vertex to collapse to
-				auto [error, p] = CalculateCollapseError(i0, i1);
+				auto [error, p] = CalculateCollapseError(i0, i1, preserveBorder);
 
 
 				// Don't remove if flipped
@@ -818,7 +822,10 @@ private:
 
 	// Error for one edge
 	std::tuple<float, Point>
-	CalculateCollapseError(const u_int v1Index, const u_int v2Index) const {
+	CalculateCollapseError(
+		const u_int v1Index, const u_int v2Index, const bool preserveBorder
+	) const {
+
 		const SymetricMatrix q = vertices[v1Index].q + vertices[v2Index].q;
 
 		Point pResult;
@@ -899,7 +906,8 @@ private:
 	void UpdateTriangleError(
 		SimplifyTriangle &t,
 		const float edgeScreenSize,
-		const Camera& camera
+		const Camera& camera,
+		const bool preserveBorder
 	) const {
 		using edge_t = std::pair<u_int, u_int>;
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
@@ -907,7 +915,9 @@ private:
 		for (auto [i, edge]: enumerate(edges)) {
 			auto i0 = t.v[edge.first];
 			auto i1 = t.v[edge.second];
-			float collapseError = std::get<float>(CalculateCollapseError(i0, i1));
+			float collapseError = std::get<float>(
+				CalculateCollapseError(i0, i1, preserveBorder)
+			);
 			float screenErrorScale =
 				CalculateCollapseScreenErrorScale(i0, i1, edgeScreenSize, camera);
 			t.err[i] = collapseError * screenErrorScale;
