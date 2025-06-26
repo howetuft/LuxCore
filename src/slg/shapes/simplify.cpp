@@ -215,9 +215,6 @@ public:
 		}
 	}
 
-	~Simplify() {
-	}
-
 	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
@@ -341,7 +338,6 @@ private:
 		Spectrum col;
 		float alpha;
 
-		//u_int tstart, tcount;  TODO
 		RefVector refs;  // Incident edges (and triangles)
 		SymetricMatrix q;
 
@@ -366,7 +362,6 @@ private:
 
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
-	//vector<SimplifyRef> refs; TODO
 
 	void assert_data(size_t line) {
 		for (auto& v: vertices) {
@@ -421,8 +416,6 @@ private:
 		// true/false if the triangles referencing the vertex are deleted
 		deleted0.resize(v0.refs.size());
 		deleted1.resize(v1.refs.size());
-		//deleted0.resize(v0.tcount);
-		//deleted1.resize(v1.tcount);
 
 		// Don't remove if flipped
 		if (Flipped(p, i0, i1, &deleted0))
@@ -484,9 +477,6 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
-		//TODO
-		//const u_int tstart = refs.size();
-
 		auto newRefs1 = UpdateTriangles(i0, v0, deleted0);
 		auto newRefs2 = UpdateTriangles(i0, v1, deleted1);
 
@@ -502,22 +492,6 @@ private:
 			std::make_move_iterator(newRefs2.begin()),
 			std::make_move_iterator(newRefs2.end())
 		);
-		// TODO
-		for (auto& r: refs) {
-			assert(r.tid <= triangles.size());
-		}
-
-		//const u_int tcount = refs.size() - tstart;
-
-		//if (tcount <= v0.tcount) {
-			//// Save ram
-			//if (tcount)
-				//copy(&refs[tstart], &refs[tstart] + tcount, &refs[v0.tstart]);
-		//} else
-			//// Append
-			//v0.tstart = tstart;
-
-		//v0.tcount = tcount;
 
 		return true;
 	}
@@ -571,9 +545,6 @@ private:
 		const SimplifyVertex &v,  // Collapsed vertex
 		const  vector<bool> &deleted
 	) {
-		//TODO
-		//for (u_int k = 0; k < v.tcount; ++k) {
-			//const SimplifyRef &r = refs[v.tstart + k];
 		RefVector refs;
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r.tid];
@@ -643,44 +614,6 @@ private:
 			}
 		}
 
-		/// TODO
-		//// Init Reference ID list
-		//for (u_int i = 0; i < vertices.size(); ++i) {
-			//vertices[i].tstart = 0;
-			//vertices[i].tcount = 0;
-		//}
-
-		//for (u_int i = 0; i < triangles.size(); ++i) {
-			//SimplifyTriangle &t = triangles[i];
-
-			//vertices[t.v[0]].tcount++;
-			//vertices[t.v[1]].tcount++;
-			//vertices[t.v[2]].tcount++;
-		//}
-
-		//u_int tstart = 0;
-		//for (u_int i = 0; i < vertices.size(); ++i) {
-			//SimplifyVertex &v = vertices[i];
-
-			//v.tstart = tstart;
-			//tstart += v.tcount;
-			//v.tcount = 0;
-		//}
-
-		// Write References
-		//refs.resize(triangles.size() * 3);
-		//for (u_int i = 0; i < triangles.size(); ++i) {
-			//SimplifyTriangle &t = triangles[i];
-
-			//for (u_int j = 0; j < 3; ++j) {
-				//SimplifyVertex &v = vertices[t.v[j]];
-
-				//refs[v.tstart + v.tcount].tid = i;
-				//refs[v.tstart + v.tcount].tvertex = j;
-
-				//v.tcount++;
-			//}
-		//}
 		for (auto& v: vertices) {
 			v.refs.clear();
 		}
@@ -806,37 +739,6 @@ private:
 				--i;
 			}
 
-			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
-				const SimplifyTriangle &t = triangles[candidateList[i].tid];
-
-				SDL_LOG("#" << i << " Min. error: " << fixed << setprecision(10) << t.err[candidateList[i].tvertex] << " (triangle " << candidateList[i].tid << ")");
-
-				const u_int i0 = t.v[candidateList[i].tvertex];
-				SimplifyVertex &v0 = vertices[i0];
-
-				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
-				SimplifyVertex &v1 = vertices[i1];
-
-				SDL_LOG("#" << i << " Collapse screen error scale: " << fixed << setprecision(10) <<  CalculateCollapseScreenErrorScale(v0.p, v1.p));
-				SDL_LOG("#" << i << " Triangle " << candidateList[i].tid << " border: " <<
-						vertices[t.v[candidateList[i].tvertex]].border << " " <<
-						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
-			}*/
-
-			/*ExtTriangleMeshBuilder meshBuilder;
-			for (u_int i = 0; i < candidateList.size(); ++i) {
-				const SimplifyTriangle &t = triangles[candidateList[i].tid];
-
-				const u_int index = meshBuilder.vertices.size();
-				meshBuilder.AddVertex(vertices[t.v[candidateList[i].tvertex]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 1) % 3]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 2) % 3]].p);
-
-				meshBuilder.AddTriangle(Triangle(index, index + 1, index +2));
-			}
-			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
-			debugMesh->Save("debug-candidates.ply");
-			delete debugMesh;*/
 		}
 
 		// Clear dirty flag
@@ -851,9 +753,6 @@ private:
 		for (u_int i = 0; i < vertices.size(); ++i)
 			vertices[i].keep = false;
 
-		//for (u_int i = 0; i < triangles.size(); ++i) {
-			//if (!triangles[i].deleted) {
-
 		// Remove deleted triangles and mark vertices to keep
 		for (auto& t: triangles) {  // TODO use std::view::filter
 			if (!t.deleted) {
@@ -865,10 +764,6 @@ private:
 			}
 		}
 		triangles.resize(dst);
-
-		//for (u_int i = 0; i < vertices.size(); ++i) {
-			//if (vertices[i].tcount) {
-		// TODO Not sure of it yet...
 
 		// Keep marked vertices
 		dst = 0;
@@ -887,11 +782,6 @@ private:
 			}
 		}
 
-		//for (u_int i = 0; i < triangles.size(); ++i) {
-			//SimplifyTriangle &t = triangles[i];
-			//t.v[0] = vertices[t.v[0]].tstart;
-			//t.v[1] = vertices[t.v[1]].tstart;
-			//t.v[2] = vertices[t.v[2]].tstart;
 		for (auto& t: triangles) {
 			t.v[0] = vertices[t.v[0]].newIndex;
 			t.v[1] = vertices[t.v[1]].newIndex;
