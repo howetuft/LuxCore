@@ -25,10 +25,11 @@
 #include <ranges>
 #include <unordered_set>
 #include <algorithm>
+#include <format>
+
 #include <tbb/parallel_for.h>
 #include <tbb/concurrent_vector.h>
 
-#include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -1018,7 +1019,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	if ((edgeScreenSize > 0.f) && !camera)
 		throw runtime_error("The scene camera must be defined in order to enable simplify edgescreensize option");
 
-	const float startTime = WallClockTime();
+	const auto startTime = WallClockTime();
 
 	const u_int targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
 
@@ -1041,8 +1042,8 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	// For some debugging
 	//mesh->Save("debug.ply");
 
-	const float endTime = WallClockTime();
-	SDL_LOG("Simplify time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
+	const auto endTime = WallClockTime();
+	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 }
 
 SimplifyShape::~SimplifyShape() {
