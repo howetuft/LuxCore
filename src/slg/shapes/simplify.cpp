@@ -302,58 +302,12 @@ public:
 				iteration, edgeScreenSize, camera, maxCandidateQueueSize, preserveBorder
 			);
 
-			auto PartitionIndependentEdgeBatches = [&](const std::vector<SimplifyRef>& candidateList) {
-				std::vector<std::vector<SimplifyRef>> batches;
-				std::vector<bool> used(candidateList.size(), false);
-
-				while (true) {
-					std::unordered_set<u_int> batch_vertices;
-					std::vector<SimplifyRef> batch;
-
-					for (size_t i = 0; i < candidateList.size(); ++i) {
-						if (used[i]) continue;
-						const auto& c = candidateList[i];
-						const auto& tri = triangles[c.tid];
-						u_int v0 = tri.v[c.tvertex];
-						u_int v1 = tri.v[(c.tvertex + 1) % 3];
-
-						if (batch_vertices.count(v0) || batch_vertices.count(v1)) continue;
-
-						batch.push_back(c);
-						batch_vertices.insert(v0);
-						batch_vertices.insert(v1);
-						used[i] = true;
-					}
-					if (batch.empty()) break;
-					batches.push_back(std::move(batch));
-					if (std::all_of(used.begin(), used.end(), [](bool b){ return b; })) break;
-				}
-				return batches;
-			};
-
-			// Partition candidates into independent batches
-			auto batches = PartitionIndependentEdgeBatches(candidateList);
-
-			SDL_LOG("Simplify - Number of batches: " << batches.size());
-
-			for (const auto& batch : batches) {
-				// You may want an atomic if deletedTriangles needs to be thread-safe
-				std::atomic<int> batchDeleted = 0;
-
-				tbb::parallel_for(
-					tbb::blocked_range<size_t>(0, batch.size()),
-					[&](const tbb::blocked_range<size_t>& r) {
-						int localDeleted = 0;
-						for (size_t i = r.begin(); i != r.end(); ++i) {
-							localDeleted += CollapseEdge(
-								batch[i], edgeScreenSize, camera, preserveBorder
-							);
-						}
-						// Atomically add localDeleted to batchDeleted
-						batchDeleted += localDeleted;
-					}
+			// Remove vertices & mark deleted triangles
+			for (auto& candidate_edge: candidateList) {
+				auto resCollapse = CollapseEdge(
+					candidate_edge, edgeScreenSize, camera, preserveBorder
 				);
-				deletedTriangles += batchDeleted;
+				deletedTriangles += resCollapse;
 			}
 
 			const u_int iterationDeletedTriangles =
@@ -534,6 +488,7 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
+		// TODO
 		auto [newRefs0, deletedTriangles0] =
 			UpdateTriangles(i0, v0, deleted0, edgeScreenSize, camera, preserveBorder);
 		auto [newRefs1, deletedTriangles1] =
@@ -891,7 +846,7 @@ private:
 			t.v[1] = vertices[t.v[1]].newIndex;
 			t.v[2] = vertices[t.v[2]].newIndex;
 		}
-		vertices.resize(dst);
+		vertices.resize(dst);  // TODO make it not in-place
 
 	}
 
