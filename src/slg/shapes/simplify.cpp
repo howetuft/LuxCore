@@ -777,7 +777,7 @@ private:
 	RefVector BuildCandidateList(
 		bool preserveBorder,
 		u_int maxCandidateQueueSize
-	) {
+	) const {
 
 		// 1. Thread-safe candidate buffer
 		tbb::concurrent_vector<SimplifyRef> candidateRefs;
@@ -792,9 +792,9 @@ private:
 					float minError = std::numeric_limits<float>::infinity();
 					for (u_int j = 0; j < 3; ++j) {
 						const u_int i0 = t.v[j];
-						SimplifyVertex &v0 = vertices[i0];
+						const SimplifyVertex &v0 = vertices[i0];
 						const u_int i1 = t.v[(j + 1) % 3];
-						SimplifyVertex &v1 = vertices[i1];
+						const SimplifyVertex &v1 = vertices[i1];
 
 						// Border check
 						if (preserveBorder) {
