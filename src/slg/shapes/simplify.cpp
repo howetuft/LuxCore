@@ -549,16 +549,8 @@ private:
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
 		refs.clear();
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs0.begin()),
-			std::make_move_iterator(newRefs0.end())
-		);
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs0.begin()),
-			std::make_move_iterator(newRefs0.end())
-		);
+		refs.insert(refs.end(), newRefs0.begin(), newRefs0.end());
+		refs.insert(refs.end(), newRefs1.begin(), newRefs1.end());
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -734,6 +726,7 @@ private:
 	//
 	// Modify: vertices
 	void InitBorders() {
+		// Set borders to false
 		for (auto& v: vertices)
 			v.border = false;
 
@@ -999,8 +992,8 @@ private:
 	}
 
 	static float CalculateCollapseScreenErrorScale(
-		SimplifyVertex& v0,
-		SimplifyVertex& v1,
+		const SimplifyVertex& v0,
+		const SimplifyVertex& v1,
 		float edgeScreenSize,
 		const Camera& camera
 	) {
@@ -1048,8 +1041,8 @@ void Simplify::SimplifyTriangle::UpdateTriangleError(
 	constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 
 	for (auto [i, edge]: enumerate(edges)) {
-		auto v0 = vertices[this->v[edge.first]];
-		auto v1 = vertices[this->v[edge.second]];
+		const auto& v0 = vertices[this->v[edge.first]];
+		const auto& v1 = vertices[this->v[edge.second]];
 		float collapseError = std::get<float>(
 			Simplify::CalculateCollapseError(v0, v1, preserveBorder)
 		);
