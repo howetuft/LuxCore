@@ -276,7 +276,7 @@ public:
 	}
 
 	void Decimate(
-		const float targetTriangleCount,
+		const u_int targetTriangleCount,
 		const Camera& camera,
 		const float edgeScreenSize,
 		const bool preserveBorder
