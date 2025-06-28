@@ -707,6 +707,8 @@ private:
 			}
 		}
 
+		// Build per-vertex incident edge tables
+		//
 		// 1. Parallel clear (optional but clean)
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, vertices.size()),
@@ -738,49 +740,50 @@ private:
 			vertices[i].refs.assign(tmp_refs[i].begin(), tmp_refs[i].end());
 		}
 
-				// Identify boundary : vertices[].border=0,1
-				//
-				// Required at the beginning (iteration == 0)
-				if (iteration == 0) {
-					for (auto& v: vertices)
-						v.border = false;
 
-					vector<u_int> vcount, vids;
-					for (const auto& v: vertices) {
-						vcount.clear();
-						vids.clear();
+		// Identify boundary : vertices[].border=0,1
+		//
+		// Required at the beginning (iteration == 0)
+		if (iteration == 0) {
+			for (auto& v: vertices)
+				v.border = false;
 
-						//for (u_int j = 0; j < v.tcount; ++j) {
-						for (const auto& ref: v.refs) {
-							//int k = refs[v.tstart + j].tid;
-							int k = ref.tid;
-							SimplifyTriangle &t = triangles[k];
+			vector<u_int> vcount, vids;
+			for (const auto& v: vertices) {
+				vcount.clear();
+				vids.clear();
 
-							for (u_int k = 0; k < 3; ++k) {
-								u_int ofs = 0;
-								u_int id = t.v[k];
+				//for (u_int j = 0; j < v.tcount; ++j) {
+				for (const auto& ref: v.refs) {
+					//int k = refs[v.tstart + j].tid;
+					int k = ref.tid;
+					SimplifyTriangle &t = triangles[k];
 
-								while (ofs < vcount.size()) {
-									if (vids[ofs] == id)
-										break;
+					for (u_int k = 0; k < 3; ++k) {
+						u_int ofs = 0;
+						u_int id = t.v[k];
 
-									ofs++;
-								}
+						while (ofs < vcount.size()) {
+							if (vids[ofs] == id)
+								break;
 
-								if (ofs == vcount.size()) {
-									vcount.push_back(1);
-									vids.push_back(id);
-								} else
-									vcount[ofs]++;
-							}
+							ofs++;
 						}
 
-						for (u_int j = 0; j < vcount.size(); ++j) {
-							if (vcount[j] == 1)
-								vertices[vids[j]].border = true;
-						}
+						if (ofs == vcount.size()) {
+							vcount.push_back(1);
+							vids.push_back(id);
+						} else
+							vcount[ofs]++;
 					}
 				}
+
+				for (u_int j = 0; j < vcount.size(); ++j) {
+					if (vcount[j] == 1)
+						vertices[vids[j]].border = true;
+				}
+			}
+		}
 
 		// Build candidate buffer
 		// 1. Thread-safe candidate buffer
