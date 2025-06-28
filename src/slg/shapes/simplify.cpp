@@ -410,18 +410,6 @@ private:
 		size_t newIndex = 0;
 	};
 
-	class SimplifyRefErrCompare {
-	public:
-		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
-
-		bool operator()(const SimplifyRef &sr1, const SimplifyRef &sr2) const {
-			return simplify.triangles[sr1.tid].err[sr1.tvertex] < simplify.triangles[sr2.tid].err[sr2.tvertex];
-		}
-
-	private:
-		const Simplify &simplify;
-	};
-
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
 
@@ -443,13 +431,13 @@ private:
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
 	u_int CollapseEdge(
-		const SimplifyRef& edge,  /* Candidate vertex to collapse */
+		const SimplifyRef& vertex,  /* Candidate vertex to collapse */
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
 	) {
-		const u_int triangleIndex = edge.tid;
-		const u_int startVertexIndex = edge.tvertex;
+		const u_int triangleIndex = vertex.tid;
+		const u_int startVertexIndex = vertex.tvertex;
 		SimplifyTriangle &t = triangles[triangleIndex];
 		std::vector<bool> empty_deleted;
 		u_int deletedTriangles = 0;
@@ -459,6 +447,7 @@ private:
 		if (t.dirty)
 			return deletedTriangles;
 
+		// Set edge
 		const u_int i0 = t.v[startVertexIndex];
 		SimplifyVertex &v0 = vertices[i0];
 
@@ -830,17 +819,22 @@ private:
 		);
 
 		// 3. Serial step: Build the priority queue with a size cap
-		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
-			candidateQueue{ SimplifyRefErrCompare(*this) };
+		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
+			auto left_error = triangles[left.tid].err[left.tvertex];
+			auto right_error = triangles[right.tid].err[right.tvertex];
+			return  left_error < right_error;
+		};
+		std::priority_queue<SimplifyRef, RefVector, decltype(refErrorCompare)>
+			candidateQueue{ refErrorCompare };
 
 		for (const auto& ref : candidateRefs) {
 			if (candidateQueue.size() < maxCandidateQueueSize) {
 				candidateQueue.push(ref);
 				continue;
 			}
-			const SimplifyRef &top = candidateQueue.top();
 			// Compare error for cap logic
-			if (triangles[ref.tid].err[ref.tvertex] < triangles[top.tid].err[top.tvertex]) {
+			const SimplifyRef &top = candidateQueue.top();
+			if (refErrorCompare(ref, top)) {
 				candidateQueue.pop();
 				candidateQueue.push(ref);
 			}
