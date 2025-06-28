@@ -394,20 +394,22 @@ private:
 	};
 
 	struct SimplifyVertex {
-		Point p;
+		// Core data
+		Point p;              // Position
+		RefVector refs;       // Incident edges in topology
+		SymetricMatrix q;     // Quadric
+		bool border;          // Border status
+
+		// Compacting data
+		bool keep = false;
+		size_t newIndex = 0;
+
+		// LuxCore specific data
 		Normal norm;
 		UV uv;
 		Spectrum col;
 		float alpha;
 
-		RefVector refs;  // Incident edges (and triangles)
-		SymetricMatrix q;
-
-		bool border;
-
-		// For compacting
-		bool keep = false;
-		size_t newIndex = 0;
 	};
 
 	vector<SimplifyTriangle> triangles;
@@ -627,77 +629,65 @@ private:
 		return std::tuple(refs, deletedTriangles);
 	}
 
-	// Compact triangles, compute edge error and build candidate list
-	// Returns: candidate list
-	RefVector UpdateMesh(
-		const u_int iteration,
+	// Initialize quadrics on vertices
+	//
+	// Modify triangles and vertices (q values)
+	void InitQuadrics(
 		const float edgeScreenSize,
 		const Camera& camera,
-		const u_int maxCandidateQueueSize,
 		const bool preserveBorder
 	) {
-		if (iteration > 0) {
-			// Compact triangles
-			int dst = 0;
-			for (auto& t: triangles)
-				if (!t.deleted)
-					triangles[dst++] = t;
+		// Starting values
+		for (u_int i = 0; i < vertices.size(); ++i)
+			vertices[i].q = SymetricMatrix(0.0);
 
-			triangles.resize(dst);
-		}
+		// Phase 1: Parallel computation of per-triangle quadric contributions
+		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
-		// Init Quadrics by Plane & Edge Errors
-		//
-		// Required at the beginning (iteration == 0)
-		//
-		if (iteration == 0) {
-			for (u_int i = 0; i < vertices.size(); ++i)
-				vertices[i].q = SymetricMatrix(0.0);
+		tbb::parallel_for(
+			tbb::blocked_range<u_int>(0, triangles.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					SimplifyTriangle &t = triangles[i];
 
-			// Phase 1: Parallel computation of per-triangle quadric contributions
-			std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
+					SimplifyVertex &v0 = vertices[t.v[0]];
+					SimplifyVertex &v1 = vertices[t.v[1]];
+					SimplifyVertex &v2 = vertices[t.v[2]];
 
-			tbb::parallel_for(
-				tbb::blocked_range<u_int>(0, triangles.size()),
-				[&](const tbb::blocked_range<u_int>& r) {
-					for (u_int i = r.begin(); i != r.end(); ++i) {
-						SimplifyTriangle &t = triangles[i];
+					const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+					t.geometryN = geometryN;
 
-						SimplifyVertex &v0 = vertices[t.v[0]];
-						SimplifyVertex &v1 = vertices[t.v[1]];
-						SimplifyVertex &v2 = vertices[t.v[2]];
+					const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+										   -Dot(Vector(geometryN), Vector(v0.p)));
 
-						const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
-						t.geometryN = geometryN;
-
-						const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-											   -Dot(Vector(geometryN), Vector(v0.p)));
-
-						triangleQuadrics[i][0] = sm;
-						triangleQuadrics[i][1] = sm;
-						triangleQuadrics[i][2] = sm;
-					}
+					triangleQuadrics[i][0] = sm;
+					triangleQuadrics[i][1] = sm;
+					triangleQuadrics[i][2] = sm;
 				}
-			);
-
-			// Phase 2: Serial accumulation into vertex quadrics
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				const auto &t = triangles[i];
-				vertices[t.v[0]].q += triangleQuadrics[i][0];
-				vertices[t.v[1]].q += triangleQuadrics[i][1];
-				vertices[t.v[2]].q += triangleQuadrics[i][2];
 			}
+		);
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				// Calc Edge Error
-				SimplifyTriangle &t = triangles[i];
-
-				UpdateTriangleError(t, edgeScreenSize, camera, preserveBorder);
-			}
+		// Phase 2: Serial accumulation into vertex quadrics
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			const auto &t = triangles[i];
+			vertices[t.v[0]].q += triangleQuadrics[i][0];
+			vertices[t.v[1]].q += triangleQuadrics[i][1];
+			vertices[t.v[2]].q += triangleQuadrics[i][2];
 		}
 
-		// Build per-vertex incident edge tables
-		//
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			// Calc Edge Error
+			SimplifyTriangle &t = triangles[i];
+
+			UpdateTriangleError(t, edgeScreenSize, camera, preserveBorder);
+		}
+	}
+
+	// Build incident edge tables on vertices
+	//
+	// Modify: vertices
+	void InitIncidentEdges() {
+
 		// 1. Parallel clear (optional but clean)
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, vertices.size()),
@@ -728,53 +718,57 @@ private:
 		for (size_t i = 0; i < vertices.size(); ++i) {
 			vertices[i].refs.assign(tmp_refs[i].begin(), tmp_refs[i].end());
 		}
+	}
 
+	// Init border indicators on vertices
+	//
+	// Modify: vertices
+	void InitBorders() {
+		for (auto& v: vertices)
+			v.border = false;
 
-		// Identify boundary : vertices[].border=0,1
-		//
-		// Required at the beginning (iteration == 0)
-		if (iteration == 0) {
-			for (auto& v: vertices)
-				v.border = false;
+		vector<u_int> vcount, vids;
+		for (const auto& v: vertices) {
+			vcount.clear();
+			vids.clear();
 
-			vector<u_int> vcount, vids;
-			for (const auto& v: vertices) {
-				vcount.clear();
-				vids.clear();
+			for (const auto& ref: v.refs) {
+				auto k = ref.tid;
+				SimplifyTriangle &t = triangles[k];
 
-				//for (u_int j = 0; j < v.tcount; ++j) {
-				for (const auto& ref: v.refs) {
-					//int k = refs[v.tstart + j].tid;
-					int k = ref.tid;
-					SimplifyTriangle &t = triangles[k];
+				for (u_int k = 0; k < 3; ++k) {
+					u_int ofs = 0;
+					u_int id = t.v[k];
 
-					for (u_int k = 0; k < 3; ++k) {
-						u_int ofs = 0;
-						u_int id = t.v[k];
+					while (ofs < vcount.size()) {
+						if (vids[ofs] == id)
+							break;
 
-						while (ofs < vcount.size()) {
-							if (vids[ofs] == id)
-								break;
-
-							ofs++;
-						}
-
-						if (ofs == vcount.size()) {
-							vcount.push_back(1);
-							vids.push_back(id);
-						} else
-							vcount[ofs]++;
+						ofs++;
 					}
-				}
 
-				for (u_int j = 0; j < vcount.size(); ++j) {
-					if (vcount[j] == 1)
-						vertices[vids[j]].border = true;
+					if (ofs == vcount.size()) {
+						vcount.push_back(1);
+						vids.push_back(id);
+					} else
+						vcount[ofs]++;
 				}
 			}
-		}
 
-		// Build candidate buffer
+			for (u_int j = 0; j < vcount.size(); ++j) {
+				if (vcount[j] == 1)
+					vertices[vids[j]].border = true;
+			}
+		}
+	}
+
+	// Build candidate list
+	//
+	RefVector BuildCandidateList(
+		bool preserveBorder,
+		u_int maxCandidateQueueSize
+	) {
+
 		// 1. Thread-safe candidate buffer
 		tbb::concurrent_vector<SimplifyRef> candidateRefs;
 
@@ -847,7 +841,53 @@ private:
 			candidateQueue.pop();
 		}
 
-		// Clear dirty flag
+		return candidateList;
+	}
+
+	// Compact triangles, compute edge error and build candidate list
+	// Returns: candidate list
+	RefVector UpdateMesh(
+		const u_int iteration,
+		const float edgeScreenSize,
+		const Camera& camera,
+		const u_int maxCandidateQueueSize,
+		const bool preserveBorder
+	) {
+		if (iteration > 0) {
+			// Compact triangles
+			int dst = 0;
+			for (auto& t: triangles)
+				if (!t.deleted)
+					triangles[dst++] = t;
+
+			triangles.resize(dst);
+		}
+
+		// Init Quadrics by Plane & Edge Errors
+		//
+		// Required at the beginning (iteration == 0)
+		//
+		if (iteration == 0) {
+			InitQuadrics(edgeScreenSize, camera, preserveBorder);
+		}
+
+		// Build per-vertex incident edge tables
+		//
+		InitIncidentEdges();
+
+
+		// Identify boundary : vertices[].border=0,1
+		//
+		// Required at the beginning (iteration == 0)
+		if (iteration == 0) {
+			InitBorders();
+		}
+
+		// Build candidate list
+		//
+		auto candidateList = BuildCandidateList(preserveBorder, maxCandidateQueueSize);
+
+		// Clear triangles dirty flags
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
 
@@ -899,14 +939,26 @@ private:
 	}
 
 	// Error between vertex and Quadric
-	float VertexError(const SymetricMatrix &q, const float x, const float y, const float z) const {
-		return q[0] * x * x + 2.f * q[1] * x * y + 2.f * q[2] * x * z + 2.f * q[3] * x +
-				q[4] * y * y + 2.f * q[5] * y * z + 2.f * q[6] * y +
-				q[7] * z * z + 2.f * q[8] * z +
-				q[9];
+	float VertexError(
+		const SymetricMatrix &q,
+		const float x,
+		const float y,
+		const float z
+	) const {
+		return  q[0] * x * x
+				+ 2.f * q[1] * x * y
+				+ 2.f * q[2] * x * z
+				+ 2.f * q[3] * x
+				+ q[4] * y * y
+				+ 2.f * q[5] * y * z
+				+ 2.f * q[6] * y
+				+ q[7] * z * z
+				+ 2.f * q[8] * z
+				+ q[9];
 	}
 
 	// Error for one edge
+	// Returns: error, interpolated point
 	std::tuple<float, Point>
 	CalculateCollapseError(
 		const u_int v1Index, const u_int v2Index, const bool preserveBorder
