@@ -532,12 +532,6 @@ public:
 			points.erase(pos->first);
 		}
 
-		// Comparaison function on points
-		using valtype = decltype(points)::value_type;
-		auto comp = [](const valtype& v0, const valtype& v1) {
-			return v0.second < v1.second;
-		};
-
 		// Init remaining centroids in k-mean++ fashion
 		for (u_int i = 0; i < K - 1 ; ++i) {  // for each remaining centroid
 			// Compute points distances to the current set of centroids
@@ -545,6 +539,7 @@ public:
 			//   of centroids
 			// - nota2: the cloud of centroids expands at each loop
 
+			// TODO parallelize
 			// Compute distance from the points to the cloud of centroids
 			tbb::parallel_for(points.range(), [&](PointMap::range_type& r) {
 				for (auto it = r.begin(); it != r.end(); ++it) {
@@ -561,34 +556,13 @@ public:
 
 			// Find the farthest candidate to the current cloud of centroids
 			// and make it the next centroid
-			auto next_centroid_pos = tbb::parallel_reduce(
-				points.range(),
-				std::optional<PointMap::const_iterator>{},
-				[&](
-					const PointMap::range_type& r,
-					std::optional<PointMap::const_iterator> local_max
-				) -> std::optional<PointMap::const_iterator>
-				{
-					for (auto it = r.begin(); it != r.end(); ++it) {
-						if (!local_max || comp(*local_max.value(), *it)) {
-							local_max = it;
-						}
-					}
-					return local_max;
-				},
-				[&](
-					std::optional<PointMap::const_iterator> a,
-					std::optional<PointMap::const_iterator> b
-				) -> std::optional<PointMap::const_iterator>
-				{
-					if (!a) return b;
-					if (!b) return a;
-					return comp(*a.value(), *b.value()) ? b : a;
-				}
-			);
-			Point point = next_centroid_pos.value()->second;
-			centroids.push_back(point);
-			points.erase(point);
+			using valtype = decltype(points)::value_type;
+			auto comp = [](const valtype& v0, const valtype& v1) {
+				return v0.second < v1.second;
+			};
+			auto const next_centroid_pos = std::ranges::max_element(points, comp);
+			centroids.push_back(next_centroid_pos->first);
+			points.erase(next_centroid_pos->first);
 		}
 
 		SDL_LOG("Simplify - Partition batches - Start iterations");
