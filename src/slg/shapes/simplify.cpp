@@ -547,16 +547,18 @@ public:
 
 			// TODO parallelize
 			// Compute distance from the points to the cloud of centroids
-			for (auto& point: points) {
-				point.second = std::accumulate(
-					centroids.begin(),
-					centroids.end(),
-					std::numeric_limits<float>::max(),
-					[&point](const float& d, const Point& c) {
-						return std::min(d, DistanceSquared(point.first, c));
-					}
-				);
-			}
+			tbb::parallel_for(points.range(), [&](PointMap::range_type& r) {
+				for (auto it = r.begin(); it != r.end(); ++it) {
+					it->second = std::accumulate(
+						centroids.begin(),
+						centroids.end(),
+						std::numeric_limits<float>::max(),
+						[&](const float& d, const Point& c) {
+							return std::min(d, DistanceSquared(it->first, c));
+						}
+					);
+				}
+			});
 
 			// Find the farthest candidate to the current cloud of centroids
 			// and make it the next centroid
