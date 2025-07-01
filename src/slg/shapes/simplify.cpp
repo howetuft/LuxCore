@@ -621,22 +621,18 @@ public:
 				}
 			);
 
-float delta = tbb::parallel_reduce(
-    tbb::blocked_range<u_int>(0, centroids.size()),
-    0.f,
-    [&](const tbb::blocked_range<u_int>& r, float local_sum) -> float {
-        for (u_int i = r.begin(); i != r.end(); ++i) {
-            local_sum += DistanceSquared(newCentroids[i], centroids[i]);
-        }
-        return local_sum;
-    },
-    std::plus<float>()
-);
-			//// Evaluate error
-			//float delta = 0.f;
-			//for (u_int i = 0; i < centroids.size(); ++i) {
-				//delta += DistanceSquared(newCentroids[i], centroids[i]);
-			//}
+			// Evaluate error
+			float delta = tbb::parallel_reduce(
+				tbb::blocked_range<u_int>(0, centroids.size()),
+				0.f,
+				[&](const tbb::blocked_range<u_int>& r, float local_sum) -> float {
+					for (u_int i = r.begin(); i != r.end(); ++i) {
+						local_sum += DistanceSquared(newCentroids[i], centroids[i]);
+					}
+					return local_sum;
+				},
+				std::plus<float>()
+			);
 
 			// Halt condition
 			//SDL_LOG("Delta: " << delta);
@@ -647,9 +643,14 @@ float delta = tbb::parallel_reduce(
 
 			// Reset centroids and batches
 			centroids = newCentroids;
-			for (auto& batch: batches) {
-				batch.clear();
-			}
+			tbb::parallel_for(
+				tbb::blocked_range<size_t>(0, batches.size()),
+				[&](const tbb::blocked_range<size_t>& r) {
+					for (size_t i = r.begin(); i != r.end(); ++i) {
+						batches[i].clear();
+					}
+				}
+			);
 
 			++iteration;
 		}  // ~while
