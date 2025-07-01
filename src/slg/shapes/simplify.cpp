@@ -475,16 +475,15 @@ public:
 
 	struct lockException : std::exception {};
 
-	// Partition candidate list into N components ("batches")
-	// We use k-means++
+	// Partition candidate list into N components (aka "batches")
+	//
+	// We use k-means algorithm, with k-means++ initialization
 	// https://www.geeksforgeeks.org/machine-learning/ml-k-means-algorithm/
 	std::vector<RefVector>
 	PartitionIndependentEdgeBatches(const RefVector& candidateList) {
 
 
 		const u_int NUMCD = candidateList.size();  // Number of candidates
-		std::vector<bool> used(NUMCD, false);
-		std::vector<NeighborSet> neighborhoods(NUMCD);
 
 		SDL_LOG("Simplify - Partionning " << NUMCD << " candidates");
 
@@ -495,12 +494,8 @@ public:
 		}
 
 		// Init batches
-		u_int K = 50;  // Number of clusters (a priori)
-
-		assert(NUMCD > K);
-
-		// Minimal number of cluster members
-		u_int N = NUMCD / K;
+		u_int K = 200;  // Number of clusters (the 'k' of k-means))
+		if (NUMCD < K) K = NUMCD;
 
 		// Centroids
 		std::vector<Point> centroids;
@@ -509,25 +504,24 @@ public:
 		// We associate a distance for further use
 		using PointMap = tbb::concurrent_hash_map<Point, float>;
 		PointMap points;
-
 		tbb::parallel_for(
 			size_t(0), candidates.size(),
 			[&](size_t i) {
 				PointMap::accessor a;
-				//points[getPoint(candidates[i])] = 0.f;
 				points.insert(a, getPoint(candidates[i]));
 			}
 		);
+
+		// Redefine K if points are less numerous than expected
 		if (points.size() < K) {
 			K = points.size();
 		}
 		const float MINERROR = 3 * K * std::numeric_limits<float>::epsilon();
 		const u_int MAXITERATIONS = 4;
 
-		// Init batches
+		// Init batches (output)
 		std::vector<RefVector> batches(K);
 		SDL_LOG("Simplify - Number of distinct points: " << points.size());
-
 
 		// Initialize the first centroid with a random point
 		// As we use a hash table, random order is already obtained
