@@ -34,6 +34,7 @@
 #include <tbb/parallel_reduce.h>
 #include <tbb/task_group.h>
 #include <tbb/enumerable_thread_specific.h>
+#include <tbb/concurrent_hash_map.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -506,14 +507,22 @@ public:
 
 		// Collect unique points (candidates can share the same point...)
 		// We associate a distance for further use
-		std::unordered_map<Point, float> points;
-		for (const auto& c: candidates) {
-			points[getPoint(c)] = 0.f;
-		}
+		using PointMap = tbb::concurrent_hash_map<Point, float>;
+		PointMap points;
+
+		tbb::parallel_for(
+			size_t(0), candidates.size(),
+			[&](size_t i) {
+				PointMap::accessor a;
+				//points[getPoint(candidates[i])] = 0.f;
+				points.insert(a, getPoint(candidates[i]));
+			}
+		);
 		if (points.size() < K) {
 			K = points.size();
 		}
 		const float MINERROR = 3 * K * std::numeric_limits<float>::epsilon();
+		const u_int MAXITERATIONS = 4;
 
 		// Init batches
 		std::vector<RefVector> batches(K);
@@ -526,7 +535,7 @@ public:
 		{
 			auto pos = points.begin();
 			centroids.push_back(pos->first);
-			points.erase(pos);
+			points.erase(pos->first);
 		}
 
 		// Init remaining centroids in k-mean++ fashion
@@ -555,9 +564,9 @@ public:
 			auto comp = [](const valtype& v0, const valtype& v1) {
 				return v0.second < v1.second;
 			};
-			auto next_centroid_pos = std::ranges::max_element(points, comp);
+			auto const next_centroid_pos = std::ranges::max_element(points, comp);
 			centroids.push_back(next_centroid_pos->first);
-			points.erase(next_centroid_pos);
+			points.erase(next_centroid_pos->first);
 		}
 
 		SDL_LOG("Simplify - Partition batches - Start iterations");
@@ -635,8 +644,7 @@ public:
 			);
 
 			// Halt condition
-			//SDL_LOG("Delta: " << delta);
-			if (delta < MINERROR) {
+			if (delta < MINERROR or iteration > MAXITERATIONS) {
 				// Exit loop
 				break;
 			}
