@@ -32,6 +32,7 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/task_group.h>
+#include <tbb/enumerable_thread_specific.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -561,23 +562,40 @@ public:
 		u_int iteration = 0;
 		while (true) {
 			// Assign available candidates to nearest cluster (min distance to centroid)
-			for (auto [i, candidate]: enumerate(candidates)) {
-				const auto& point = getPoint(candidate);
+			// Per-thread local batches:
+			tbb::enumerable_thread_specific<std::vector<RefVector>> local_batches(
+				[centroids_size=centroids.size()]
+				{ return std::vector<RefVector>(centroids_size); }
+			);
 
-				// Distances to centroids
-				u_int iMin = 0;
-				float distMin = std::numeric_limits<float>::infinity();
-				for (u_int i = 0; i < centroids.size(); ++i) {
-					auto& centroid = centroids[i];
-					float distance = DistanceSquared(point, centroid);
-					if (distance < distMin) {
-						distMin = distance;
-						iMin = i;
+			tbb::parallel_for(
+				tbb::blocked_range<size_t>(0, candidates.size()),
+				[&](const tbb::blocked_range<size_t>& r) {
+					auto& local = local_batches.local();
+					for (size_t idx = r.begin(); idx != r.end(); ++idx) {
+						const auto& candidate = candidates[idx];
+						const auto& point = getPoint(candidate);
+
+						// Find nearest centroid
+						u_int iMin = 0;
+						float distMin = std::numeric_limits<float>::infinity();
+						for (u_int i = 0; i < centroids.size(); ++i) {
+							float distance = DistanceSquared(point, centroids[i]);
+							if (distance < distMin) {
+								distMin = distance;
+								iMin = i;
+							}
+						}
+						local[iMin].push_back(candidate);
 					}
 				}
+			);
 
-				// Push candidate into batch
-				batches[iMin].push_back(candidate);
+			// Merge local batches into global batches
+			for (auto& local : local_batches) {
+				for (size_t i = 0; i < centroids.size(); ++i) {
+					batches[i].insert(batches[i].end(), local[i].begin(), local[i].end());
+				}
 			}
 
 			// Compute new centroids
