@@ -535,11 +535,12 @@ public:
 			// - nota2: the cloud of centroids expands at each loop
 
 			// TODO parallelize
+			// Compute distance from the points to the cloud of centroids
 			for (auto& point: points) {
 				point.second = std::accumulate(
 					centroids.begin(),
 					centroids.end(),
-					0.f,
+					std::numeric_limits<float>::max(),
 					[&point](const float& d, const Point& c) {
 						return std::min(d, DistanceSquared(point.first, c));
 					}
