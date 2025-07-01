@@ -559,6 +559,7 @@ public:
 			points.erase(next_centroid_pos);
 		}
 
+		SDL_LOG("Simplify - Partition batches - Start iterations");
 		u_int iteration = 0;
 		while (true) {
 			// Assign available candidates to nearest cluster (min distance to centroid)
@@ -600,16 +601,24 @@ public:
 
 			// Compute new centroids
 			decltype(centroids) newCentroids(centroids.size());
-			for (u_int i = 0; i < K; ++i) {
-				auto& batch = batches[i];
-				newCentroids[i] = std::accumulate(
-					batch.begin(),
-					batch.end(),
-					Point(0.f, 0.f, 0.f),
-					[this](const Point& p, const RefPtr& r) { return p + getPoint(r); }
-				);
-				newCentroids[i] /= float(batch.size());
-			}
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, K),
+				[&](const tbb::blocked_range<u_int>& range) {
+					for (u_int i = range.begin(); i != range.end(); ++i) {
+						const auto& batch = batches[i];
+						Point sum = std::accumulate(
+							batch.begin(),
+							batch.end(),
+							Point(0.f, 0.f, 0.f),
+							[this](const Point& p, const RefPtr& r) { return p + getPoint(r); }
+						);
+						if (!batch.empty())
+							newCentroids[i] = sum / float(batch.size());
+						else
+							newCentroids[i] = Point(0.f, 0.f, 0.f); // or handle empty batch as needed
+					}
+				}
+			);
 
 			// Evaluate error
 			float delta = 0.f;
