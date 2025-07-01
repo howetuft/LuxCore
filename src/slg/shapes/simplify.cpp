@@ -31,6 +31,7 @@
 #include <tbb/parallel_for.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_invoke.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/task_group.h>
 #include <tbb/enumerable_thread_specific.h>
 
@@ -620,11 +621,22 @@ public:
 				}
 			);
 
-			// Evaluate error
-			float delta = 0.f;
-			for (u_int i = 0; i < centroids.size(); ++i) {
-				delta += DistanceSquared(newCentroids[i], centroids[i]);
-			}
+float delta = tbb::parallel_reduce(
+    tbb::blocked_range<u_int>(0, centroids.size()),
+    0.f,
+    [&](const tbb::blocked_range<u_int>& r, float local_sum) -> float {
+        for (u_int i = r.begin(); i != r.end(); ++i) {
+            local_sum += DistanceSquared(newCentroids[i], centroids[i]);
+        }
+        return local_sum;
+    },
+    std::plus<float>()
+);
+			//// Evaluate error
+			//float delta = 0.f;
+			//for (u_int i = 0; i < centroids.size(); ++i) {
+				//delta += DistanceSquared(newCentroids[i], centroids[i]);
+			//}
 
 			// Halt condition
 			//SDL_LOG("Delta: " << delta);
