@@ -195,12 +195,12 @@ struct SimplifyRef {
 	{}
 };
 using RefPtr = std::shared_ptr<SimplifyRef>;
-using RefVector = std::vector< RefPtr >;
+using RefPtrVector = std::vector< RefPtr >;
 
 struct SimplifyVertex {
 	// Core data
 	Point p;              // Position
-	RefVector refs;       // Incident edges in topology
+	RefPtrVector refs;       // Incident edges in topology
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
@@ -479,58 +479,51 @@ public:
 	//
 	// We use k-means algorithm, with k-means++ initialization
 	// https://www.geeksforgeeks.org/machine-learning/ml-k-means-algorithm/
-	std::vector<RefVector>
-	PartitionIndependentEdgeBatches(const RefVector& candidateList) {
+	std::vector<RefPtrVector>
+	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) {
 
+		// Settings
+		u_int K = 200;  // Number of clusters (the 'k' of k-means))
+		const u_int MAXITERATIONS = 4;
 
+		// Constants
 		const u_int NUMCD = candidateList.size();  // Number of candidates
+		if (NUMCD < K) K = NUMCD;
 
 		SDL_LOG("Simplify - Partionning " << NUMCD << " candidates");
 
-		// Make a copy with pointers
-		RefVector candidates;
+		// Make a copy of candidates with pointers
+		RefPtrVector candidates;
 		for (auto candidate: candidateList) {
 			candidates.push_back(candidate);
 		}
 
-		// Init batches
-		u_int K = 200;  // Number of clusters (the 'k' of k-means))
-		if (NUMCD < K) K = NUMCD;
-
 		// Centroids
 		std::vector<Point> centroids;
 
-		// TODO get rid of unique points (not a good idea)
-		// Collect unique points (candidates can share the same point...)
-		// We associate a distance for further use
-		using PointMap = tbb::concurrent_hash_map<Point, float>;
-		PointMap points;
+		// Init batches (output)
+		std::vector<RefPtrVector> batches(K);
+
+		// Prepare points for centroid initialization
+		using PointVec = std::vector<Point>;
+		PointVec points(candidates.size());
 		tbb::parallel_for(
-			size_t(0), candidates.size(),
-			[&](size_t i) {
-				PointMap::accessor a;
-				points.insert(a, getPoint(candidates[i]));
+			tbb::blocked_range<u_int>(0, candidates.size()),
+			[&](const tbb::blocked_range<u_int>& r) {
+				for (u_int i = r.begin(); i != r.end(); ++i) {
+					points[i] = getPoint(candidates[i]);
+				}
 			}
 		);
 
-		// Redefine K if points are less numerous than expected
-		if (points.size() < K) {
-			K = points.size();
-		}
-		const float MINERROR = 3 * K * std::numeric_limits<float>::epsilon();
-		const u_int MAXITERATIONS = 4;
-
-		// Init batches (output)
-		std::vector<RefVector> batches(K);
-		SDL_LOG("Simplify - Partionning - Number of distinct points: " << points.size());
+		SDL_LOG("Simplify - Partionning - Initializing");
 
 		// Initialize the first centroid with a random point
-		// As we use a hash table, random order is already obtained
-		// So we just have to take the first point, for instance
+		// For practical reasons, we will take the last
 		{
-			auto pos = points.begin();
-			centroids.push_back(pos->first);
-			points.erase(pos->first);
+			auto lastPoint = points.back();
+			centroids.push_back(lastPoint);
+			points.pop_back();
 		}
 
 		// Init remaining centroids in k-mean++ fashion
@@ -540,15 +533,19 @@ public:
 			//   of centroids
 			// - nota2: the cloud of centroids expands at each loop
 
-			// Compute distance from the points to the cloud of centroids
-			tbb::parallel_for(points.range(), [&](PointMap::range_type& r) {
-				for (auto it = r.begin(); it != r.end(); ++it) {
-					it->second = std::accumulate(
+			// Compute distances from the points to the cloud of centroids
+			// TODO make distances persistent and avoid all accumulation
+			std::vector<float> distances(points.size());
+			tbb::parallel_for(
+				tbb::blocked_range<u_int>(0, points.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					distances[i] = std::accumulate(
 						centroids.cbegin(),
 						centroids.cend(),
 						std::numeric_limits<float>::max(),
 						[&](const float& d, const Point& c) {
-							return std::min(d, DistanceSquared(it->first, c));
+							return std::min(d, DistanceSquared(points[i], c));
 						}
 					);
 				}
@@ -556,23 +553,22 @@ public:
 
 			// Find the farthest candidate to the current cloud of centroids
 			// and make it the next centroid
-			using valtype = decltype(points)::value_type;
-			auto comp = [](const valtype& v0, const valtype& v1) {
-				return v0.second < v1.second;
-			};
-			auto const next_centroid_pos = std::ranges::max_element(points, comp);
-			centroids.push_back(next_centroid_pos->first);
-			points.erase(next_centroid_pos->first);
+			auto const max_distance_pos = std::ranges::max_element(distances);
+			auto const next_centroid_pos =
+				points.begin() + (max_distance_pos - distances.begin());
+			centroids.push_back(*next_centroid_pos);
+			points.erase(next_centroid_pos);
 		}
 
 		SDL_LOG("Simplify - Partition batches - Start iterations");
+		const float MINERROR = 3 * K * std::numeric_limits<float>::epsilon();
 		u_int iteration = 0;
 		while (true) {
 			// Assign available candidates to nearest cluster (min distance to centroid)
 			// Per-thread local batches:
-			tbb::enumerable_thread_specific<std::vector<RefVector>> local_batches(
+			tbb::enumerable_thread_specific<std::vector<RefPtrVector>> local_batches(
 				[centroids_size=centroids.size()]
-				{ return std::vector<RefVector>(centroids_size); }
+				{ return std::vector<RefPtrVector>(centroids_size); }
 			);
 
 			tbb::parallel_for(
@@ -1035,7 +1031,7 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	// Returns: new incident edges list, number of deleted triangles
-	std::tuple<RefVector, u_int> UpdateTriangles(
+	std::tuple<RefPtrVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
 		const  vector<bool> &deleted,
@@ -1044,7 +1040,7 @@ private:
 		const bool preserveBorder
 	) {
 		u_int deletedTriangles = 0;
-		RefVector refs;
+		RefPtrVector refs;
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r->tid];
 
@@ -1204,7 +1200,7 @@ private:
 
 	// Build candidate list
 	//
-	RefVector BuildCandidateList(
+	RefPtrVector BuildCandidateList(
 		bool preserveBorder,
 		u_int maxCandidateQueueSize
 	) const {
@@ -1258,7 +1254,7 @@ private:
 			auto right_error = triangles[right->tid].err[right->tvertex];
 			return  left_error < right_error;
 		};
-		std::priority_queue<RefPtr, RefVector, decltype(refErrorCompare)>
+		std::priority_queue<RefPtr, RefPtrVector, decltype(refErrorCompare)>
 			candidateQueue{ refErrorCompare };
 
 		for (const auto& ref : candidateRefs) {
@@ -1274,7 +1270,7 @@ private:
 			}
 		}
 
-		RefVector candidateList;
+		RefPtrVector candidateList;
 		candidateList.reserve(candidateQueue.size());
 		while (!candidateQueue.empty()) {
 			candidateList.push_back(candidateQueue.top());
