@@ -235,6 +235,16 @@ struct SimplifyVertex {
 		alpha = other.alpha;
 	}
 
+	// Copy assignment constructor
+	SimplifyVertex& operator=(const SimplifyVertex& other) {
+		p = other.p;
+		norm = other.norm;
+		uv = other.uv;
+		col = other.col;
+		alpha = other.alpha;
+		return *this;
+	}
+
 };
 using VertexVector = std::vector<SimplifyVertex>;
 
@@ -730,7 +740,7 @@ public:
 				deletedTriangles - initialdeletedTriangles;
 
 			SDL_LOG(
-				"Simplify iteration " << iteration
+				"Simplify - Iteration " << iteration
 				<< " (" << candidateList.size()
 				<< " edge candidates, deleted "
 				<< iterationDeletedTriangles
@@ -745,6 +755,7 @@ public:
 
 		// Clean up mesh
 		CompactMesh();
+		SDL_LOG("Simplify - Mesh compacted");
 	}
 
 private:
@@ -869,10 +880,6 @@ private:
 
 		auto [lockStatus, locks] = lockEdgeNeighbors(i0, i1);
 		if (not lockStatus) {
-			//SDL_LOG("Simplify - Could not lock neighborhood");
-			//for (auto n: edgeNeighbors(i0, i1)) {
-				//SDL_LOG(n);
-			//};
 			unlockNeighbors(locks);
 			throw lockException();
 		}
@@ -1329,43 +1336,46 @@ private:
 	void CompactMesh() {
 		u_int dst = 0;
 
-		for (u_int i = 0; i < vertices.size(); ++i)
-			vertices[i].keep = false;
+		// We assume vertices 'keep' property is set to false (default value)
 
-		// Remove deleted triangles and mark vertices to keep
+		// Compress triangles and mark vertices to keep
 		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+		decltype(triangles) newTriangles;
+		newTriangles.reserve(triangles.size());
 		for (auto& t: triangles | std::views::filter(not_deleted)) {
-			triangles[dst++] = t;
+			newTriangles.push_back(t);
 
 			vertices[t.v[0]].keep = true;
 			vertices[t.v[1]].keep = true;
 			vertices[t.v[2]].keep = true;
 		}
-		triangles.resize(dst);
 
-		// Keep marked vertices
-		dst = 0;
+		// Compress vertices
 		decltype(vertices) newVertices;
 		auto keep_vertex = [](const SimplifyVertex& v){ return v.keep; };
-		for (auto& v: vertices | std::views::filter(keep_vertex)) {
-			v.newIndex = dst;
-			v.refs = vertices[dst].refs;
+		for (auto& v_old: vertices | std::views::filter(keep_vertex)) {
 
-			vertices[dst].p = v.p;
-			vertices[dst].norm = v.norm;
-			vertices[dst].uv = v.uv;
-			vertices[dst].col = v.col;
-			vertices[dst].alpha = v.alpha;
+			newVertices.push_back(v_old);
+			auto& v_new = newVertices.back();
+			v_old.newIndex = newVertices.size() - 1;
 
-			dst++;
+			v_new.p = v_old.p;
+			v_new.norm = v_old.norm;
+			v_new.uv = v_old.uv;
+			v_new.col = v_old.col;
+			v_new.alpha = v_old.alpha;
+
 		}
 
-		for (auto& t: triangles) {
+		// Update triangle vertices with new vertices
+		for (auto& t: newTriangles) {
 			t.v[0] = vertices[t.v[0]].newIndex;
 			t.v[1] = vertices[t.v[1]].newIndex;
 			t.v[2] = vertices[t.v[2]].newIndex;
 		}
-		vertices.resize(dst);
+
+		triangles = newTriangles;
+		vertices = newVertices;
 
 	}
 
