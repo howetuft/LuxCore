@@ -707,28 +707,22 @@ public:
 			AtomicCounter batchDeleted = 0;
 			AtomicCounter missedLocks = 0;
 
-			oneapi::tbb::task_group tg;
-			for (const auto& batch : batches) {
-				auto BatchProcessor = [&]() {
+			tbb::parallel_for(
+				size_t(0), batches.size(),
+				[&](size_t i) {
 					u_int localDeleted = 0;
 					u_int localMissedLocks = 0;
-					for (auto& ref: batch) {
+					for (auto& ref : batches[i]) {
 						try {
-							localDeleted += CollapseEdge(
-								*ref, edgeScreenSize, camera, preserveBorder
-							);
-						}
-						catch (lockException) {
+							localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
+						} catch (lockException&) {
 							++localMissedLocks;
 						}
 					}
-					// Atomically add localDeleted to batchDeleted
-					batchDeleted += localDeleted;
-					missedLocks += localMissedLocks;
-				};
-				tg.run(BatchProcessor);
-			}
-			tg.wait();
+					batchDeleted.fetch_add(localDeleted, std::memory_order_relaxed);
+					missedLocks.fetch_add(localMissedLocks, std::memory_order_relaxed);
+				}
+			);
 			deletedTriangles += batchDeleted;
 
 			const u_int iterationDeletedTriangles =
