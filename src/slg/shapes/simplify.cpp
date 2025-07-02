@@ -500,6 +500,7 @@ public:
 		// Centroids
 		std::vector<Point> centroids;
 
+		// TODO get rid of unique points (not a good idea)
 		// Collect unique points (candidates can share the same point...)
 		// We associate a distance for further use
 		using PointMap = tbb::concurrent_hash_map<Point, float>;
@@ -521,7 +522,7 @@ public:
 
 		// Init batches (output)
 		std::vector<RefVector> batches(K);
-		SDL_LOG("Simplify - Number of distinct points: " << points.size());
+		SDL_LOG("Simplify - Partionning - Number of distinct points: " << points.size());
 
 		// Initialize the first centroid with a random point
 		// As we use a hash table, random order is already obtained
@@ -539,13 +540,12 @@ public:
 			//   of centroids
 			// - nota2: the cloud of centroids expands at each loop
 
-			// TODO parallelize
 			// Compute distance from the points to the cloud of centroids
 			tbb::parallel_for(points.range(), [&](PointMap::range_type& r) {
 				for (auto it = r.begin(); it != r.end(); ++it) {
 					it->second = std::accumulate(
-						centroids.begin(),
-						centroids.end(),
+						centroids.cbegin(),
+						centroids.cend(),
 						std::numeric_limits<float>::max(),
 						[&](const float& d, const Point& c) {
 							return std::min(d, DistanceSquared(it->first, c));
