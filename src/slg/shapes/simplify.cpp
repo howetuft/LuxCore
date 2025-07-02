@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <format>
 #include <random>
+#include <execution>
 
 #include <tbb/parallel_for.h>
 #include <tbb/concurrent_vector.h>
@@ -65,6 +66,8 @@ using namespace slg;
 // https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
+
+float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 // Enumerate helper (like Python enumerate)
 template <typename T,
@@ -500,12 +503,19 @@ public:
 
 		// Centroids
 		std::vector<Point> centroids;
+		centroids.reserve(K);
 
 		// Init batches (output)
 		std::vector<RefPtrVector> batches(K);
 
 		// Prepare points for centroid initialization
-		using PointVec = std::vector<Point>;
+		struct ExtPoint: Point {
+			float distance = FLOAT_INFINITY;
+			ExtPoint(const Point& p): Point(p) {}
+			ExtPoint(): Point() {}
+		};
+
+		using PointVec = std::vector<ExtPoint>;
 		PointVec points(candidates.size());
 		tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, candidates.size()),
@@ -527,37 +537,38 @@ public:
 		}
 
 		// Init remaining centroids in k-mean++ fashion
+		auto comp = [](const ExtPoint& p0, const ExtPoint& p1) {
+			return p0.distance < p1.distance;
+		};
 		for (u_int i = 0; i < K - 1 ; ++i) {  // for each remaining centroid
 			// Compute points distances to the current set of centroids
-			// - nota1: distance is the min distance from point to the cloud
+			// - Nota1: distance is the min distance from point to the cloud
 			//   of centroids
-			// - nota2: the cloud of centroids expands at each loop
-
-			// Compute distances from the points to the cloud of centroids
-			// TODO make distances persistent and avoid all accumulation
-			std::vector<float> distances(points.size());
+			// - Nota2: the cloud of centroids expands at each loop
+			// - Nota3: We've already got distances from the points to the cloud
+			//	 minus the last added centroid, so we'll use that information
+			//   for this iteration
+			const auto& lastCentroid = centroids.back();
 			tbb::parallel_for(
 				tbb::blocked_range<u_int>(0, points.size()),
-				[&](const tbb::blocked_range<u_int>& r) {
-				for (auto i = r.begin(); i != r.end(); ++i) {
-					distances[i] = std::accumulate(
-						centroids.cbegin(),
-						centroids.cend(),
-						std::numeric_limits<float>::max(),
-						[&](const float& d, const Point& c) {
-							return std::min(d, DistanceSquared(points[i], c));
-						}
+				[&points, &lastCentroid](const tbb::blocked_range<u_int>& r) {
+				for (auto j = r.begin(); j != r.end(); ++j) {
+					auto& point = points[j];
+					point.distance = std::min(
+						point.distance,
+						DistanceSquared(point, lastCentroid)
 					);
 				}
 			});
 
 			// Find the farthest candidate to the current cloud of centroids
 			// and make it the next centroid
-			auto const max_distance_pos = std::ranges::max_element(distances);
-			auto const next_centroid_pos =
-				points.begin() + (max_distance_pos - distances.begin());
+			auto next_centroid_pos = std::max_element(
+					std::execution::parallel_policy(), points.begin(), points.end(), comp
+			);
 			centroids.push_back(*next_centroid_pos);
-			points.erase(next_centroid_pos);
+			std::swap(*next_centroid_pos, points.back());
+			points.pop_back();
 		}
 
 		SDL_LOG("Simplify - Partition batches - Start iterations");
@@ -581,7 +592,7 @@ public:
 
 						// Find nearest centroid
 						u_int iMin = 0;
-						float distMin = std::numeric_limits<float>::infinity();
+						float distMin = FLOAT_INFINITY;
 						for (u_int i = 0; i < centroids.size(); ++i) {
 							float distance = DistanceSquared(point, centroids[i]);
 							if (distance < distMin) {
@@ -1215,7 +1226,7 @@ private:
 					const SimplifyTriangle &t = triangles[i];
 
 					u_int minErrorIndex = NULL_INDEX;
-					float minError = std::numeric_limits<float>::infinity();
+					float minError = FLOAT_INFINITY;
 					for (u_int j = 0; j < 3; ++j) {
 						const u_int i0 = t.v[j];
 						const SimplifyVertex &v0 = vertices[i0];
