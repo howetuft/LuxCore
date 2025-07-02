@@ -497,6 +497,7 @@ public:
 
 		// Make a copy of candidates with pointers
 		RefPtrVector candidates;
+		candidates.reserve(candidateList.size());
 		for (auto candidate: candidateList) {
 			candidates.push_back(candidate);
 		}
@@ -1046,6 +1047,7 @@ private:
 	) {
 		u_int deletedTriangles = 0;
 		RefPtrVector refs;
+		refs.reserve(v.refs.size());
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r->tid];
 
