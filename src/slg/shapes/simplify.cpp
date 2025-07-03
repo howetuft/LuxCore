@@ -912,13 +912,8 @@ private:
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		std::invoke_result_t<decltype(&Simplify::Flipped), Simplify, Point, u_int, u_int> res0, res1;
-		tbb::parallel_invoke(
-			[&]{res0 = Flipped(p, i0, i1);},
-			[&]{res1 = Flipped(p, i1, i0);}
-		);
-		auto [will_flip0, deleted0] = res0;
-		auto [will_flip1, deleted1] = res1;
+		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
+		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
 		if (will_flip0 || will_flip1) {
 			unlockNeighbors(locks);
 			return 0;
