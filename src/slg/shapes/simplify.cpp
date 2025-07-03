@@ -1009,7 +1009,12 @@ private:
 	Flipped(const Point &p, const u_int i0, const u_int i1) const {
 
 		const SimplifyVertex &v0 = vertices[i0];
-		std::vector<bool> deleted(v0.refs.size());
+
+		// Result variable
+		auto res = std::make_tuple<bool, std::vector<bool>>
+			(false, std::vector<bool>(v0.refs.size()));
+		bool& status = std::get<0>(res);
+		std::vector<bool>& deleted(std::get<1>(res));
 
 		for (const auto& [k, ref]: enumerate(v0.refs)) {
 			const SimplifyTriangle &t = triangles[ref->tid];
@@ -1030,19 +1035,22 @@ private:
 			const Vector d1 = Normalize(vertices[id1].p - p);
 			const Vector d2 = Normalize(vertices[id2].p - p);
 			if (AbsDot(d1, d2) > .999f) {
-				return std::tuple(true, deleted);
+				status = true;
+				return res;
 			}
 
 			// Check if the Normal is changing side
 			const Normal geometryN(Normalize(Cross(d1, d2)));
 			if (Dot(geometryN, t.geometryN) < .2f) {
-				return std::tuple(true, deleted);
+				status = true;
+				return res;
 			}
 
 			deleted[k] = false;
 		}
 
-		return std::tuple(false, deleted);
+		status = false;
+		return res;
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
