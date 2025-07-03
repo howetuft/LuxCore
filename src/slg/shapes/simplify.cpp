@@ -695,6 +695,9 @@ public:
 		const u_int startTriangleCount = triangles.size();
 		u_int deletedTriangles = 0;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
+
+			SDL_LOG("Simplify - Start iteration (init) #" << iteration);
+
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
 				break;
 
@@ -704,12 +707,14 @@ public:
 			InitIteration(iteration, edgeScreenSize, camera, preserveBorder);
 
 			// Build candidate list
+			SDL_LOG("Simplify - Build candidate list #" << iteration);
 			auto candidateList = BuildCandidateList(
 				preserveBorder, maxCandidateQueueSize
 			);
 
 
 			// Partition candidates into independent batches
+			SDL_LOG("Simplify - Partition candidate list #" << iteration);
 			auto batches = PartitionIndependentEdgeBatches(candidateList);
 
 			SDL_LOG("Simplify - Number of batches: " << batches.size());
@@ -718,6 +723,7 @@ public:
 			AtomicCounter batchDeleted = 0;
 			AtomicCounter missedLocks = 0;
 
+			SDL_LOG("Simplify - Main treatment #" << iteration);
 			tbb::parallel_for(
 				size_t(0), batches.size(),
 				[&](size_t i) {
