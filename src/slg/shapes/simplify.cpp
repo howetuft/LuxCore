@@ -496,7 +496,7 @@ public:
 	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) {
 
 		// Settings
-		u_int K = 200;  // Number of clusters (the 'k' of k-means))
+		u_int K = tbb::this_task_arena::max_concurrency() * 5;  // Number of clusters (the 'k' of k-means))
 		const u_int MAXITERATIONS = 4;
 
 		// Constants
