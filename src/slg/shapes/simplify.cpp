@@ -790,6 +790,8 @@ private:
 	using NeighborSet = std::unordered_set<u_int>;
 
 
+	// Find edge neighbors, ie vertices that could be affected
+	// by collapsing the given edge
 	NeighborSet edgeNeighbors(const u_int i0, const u_int i1) {
 		NeighborSet neighbors;
 
@@ -923,7 +925,7 @@ private:
 		}
 
 
-		// At this stage, no flip is to fear,
+		// At this stage, no triangle flip is to fear anymore,
 		// so we can collapse edge
 
 
@@ -1094,7 +1096,7 @@ private:
 		for (u_int i = 0; i < vertices.size(); ++i)
 			vertices[i].q = SymetricMatrix(0.0);
 
-		// Phase 1: Parallel computation of per-triangle quadric contributions
+		// Parallel computation of per-triangle quadric contributions
 		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
 		tbb::parallel_for(
@@ -1120,7 +1122,7 @@ private:
 			}
 		);
 
-		// Phase 2: Serial accumulation into vertex quadrics
+		// Serial accumulation into vertex quadrics
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			const auto &t = triangles[i];
 			vertices[t.v[0]].q += triangleQuadrics[i][0];
@@ -1128,6 +1130,7 @@ private:
 			vertices[t.v[2]].q += triangleQuadrics[i][2];
 		}
 
+		// Triangle error update
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			// Calc Edge Error
 			SimplifyTriangle &t = triangles[i];
@@ -1290,6 +1293,7 @@ private:
 			}
 		}
 
+		// 4. Serial step: Move priority queue to output structure
 		RefPtrVector candidateList;
 		candidateList.reserve(candidateQueue.size());
 		while (!candidateQueue.empty()) {
@@ -1317,7 +1321,7 @@ private:
 
 			triangles.resize(dst);
 		}
-		// Clear triangles dirty flags TODO Parallelize
+		// Clear triangles dirty flags
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
 
