@@ -1459,6 +1459,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 
 	const auto endTime = WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
+	//std::exit();  // DEBUG - Stop here
 }
 
 SimplifyShape::~SimplifyShape() {
