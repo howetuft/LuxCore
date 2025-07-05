@@ -171,6 +171,56 @@ public:
 	float m[10];
 };
 
+struct UnionFind {
+
+	std::vector<u_int> parents;
+	std::vector<u_int> sizes;
+
+	UnionFind(size_t p_size) : parents(p_size), sizes(p_size) {
+		for (u_int i = 0; i < p_size; ++i) {
+			parents[i] = i;
+			sizes[i] = 1;
+		}
+	}
+
+	// Find root of the tree containing x
+	// and compress path (link all intermediary elements to root)
+	u_int Find(u_int x) {
+		u_int root = x;
+
+		// Find root
+		while (parents[root] != root) {
+			root = parents[root];
+		}
+
+		// Compress path (to root)
+		while (parents[x] != root) {
+			u_int parent = parents[x];
+			parents[x] = root;
+			x = parent;
+		}
+
+		return root;
+	}
+
+	// Union optimized by size
+	void Union(u_int x, u_int y) {
+		x = Find(x);
+		y = Find(y);
+
+		if (x == y) {
+			return;
+		}
+
+		if (sizes[x] < sizes[y]) {
+			std::swap(x, y);
+		}
+
+		parents[y] = x;
+		sizes[x] += sizes[y];
+	}
+};
+
 // TODO move to point.h
 inline void hash_combine(std::size_t& seed) { }
 
@@ -216,12 +266,6 @@ struct SimplifyVertex {
 	UV uv;
 	Spectrum col;
 	float alpha;
-
-	// Thread sync
-	std::mutex mtx;
-	void lock() { mtx.lock(); }
-	void unlock() { mtx.unlock(); }
-	bool tryLock() { return mtx.try_lock(); }
 
 	// Simple constructor
 	SimplifyVertex() {}
@@ -486,199 +530,56 @@ public:
 		return vertices[vertex].p;
 	}
 
-	struct lockException : std::exception {};
 
-	// Partition candidate list into N components (aka "batches")
+	// Partition candidate list into components (aka "batches")
 	//
-	// We use k-means algorithm, with k-means++ initialization
-	// https://www.geeksforgeeks.org/machine-learning/ml-k-means-algorithm/
-	std::vector<RefPtrVector>
-	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) {
+	// We use connected components algo
+	//
+	//
+	std::vector<std::list<RefPtr>>
+	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) const {
+		// Step 1: Build closure set (candidate vertices + their neighborhoods)
+		std::unordered_set<u_int> closure;
 
-		// Settings
-		u_int K = tbb::this_task_arena::max_concurrency() * 5;  // Number of clusters (the 'k' of k-means))
-		const u_int MAXITERATIONS = 4;
-
-		// Constants
-		const u_int NUMCD = candidateList.size();  // Number of candidates
-		if (NUMCD < K) K = NUMCD;
-
-		SDL_LOG("Simplify - Partionning " << NUMCD << " candidates");
-
-		// Make a copy of candidates with pointers
-		RefPtrVector candidates;
-		candidates.reserve(candidateList.size());
-		for (auto candidate: candidateList) {
-			candidates.push_back(candidate);
+		for (auto& c: candidateList) {
+			const auto& t = triangles[c->tid];
+			const u_int i0 = t.v[c->tvertex];
+			const u_int i1 = t.v[(c->tvertex + 1) % 3];
+			auto neighbors = edgeNeighbors(i0, i1);
+			closure.insert(neighbors.begin(), neighbors.end());
 		}
 
-		// Centroids
-		std::vector<Point> centroids;
-		centroids.reserve(K);
+		// Step 2: Build connected components (union-find)
 
-		// Init batches (output)
-		std::vector<RefPtrVector> batches(K);
-
-		// Prepare points for centroid initialization
-		struct ExtPoint: Point {
-			float distance = FLOAT_INFINITY;
-			ExtPoint(const Point& p): Point(p) {}
-			ExtPoint(): Point() {}
-		};
-
-		using PointVec = std::vector<ExtPoint>;
-		PointVec points(candidates.size());
-		tbb::parallel_for(
-			tbb::blocked_range<u_int>(0, candidates.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i) {
-					points[i] = getPoint(candidates[i]);
+		UnionFind unionFind(vertices.size());
+		using edge_t = std::tuple<u_int, u_int>;
+		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
+		// TODO make edges unique
+		for (const auto& t: triangles) {
+			for (const auto e: edges) {
+				u_int i0 = t.v[std::get<0>(e)];
+				u_int i1 = t.v[std::get<1>(e)];
+				if (closure.contains(i0) and closure.contains(i1)) {
+					unionFind.Union(i0, i1);
 				}
 			}
-		);
-
-		SDL_LOG("Simplify - Partionning - Initializing");
-
-		// Initialize the first centroid with a random point
-		// For practical reasons, we will take the last
-		{
-			auto lastPoint = points.back();
-			centroids.push_back(lastPoint);
-			points.pop_back();
 		}
 
-		// Init remaining centroids in k-mean++ fashion
-		auto comp = [](const ExtPoint& p0, const ExtPoint& p1) {
-			return p0.distance < p1.distance;
-		};
-		for (u_int i = 0; i < K - 1 ; ++i) {  // for each remaining centroid
-			// Compute points distances to the current set of centroids
-			// - Nota1: distance is the min distance from point to the cloud
-			//   of centroids
-			// - Nota2: the cloud of centroids expands at each loop
-			// - Nota3: We've already got distances from the points to the cloud
-			//	 minus the last added centroid, so we'll use that information
-			//   for this iteration
-			const auto& lastCentroid = centroids.back();
-			tbb::parallel_for(
-				tbb::blocked_range<u_int>(0, points.size()),
-				[&points, &lastCentroid](const tbb::blocked_range<u_int>& r) {
-				for (auto j = r.begin(); j != r.end(); ++j) {
-					auto& point = points[j];
-					point.distance = std::min(
-						point.distance,
-						DistanceSquared(point, lastCentroid)
-					);
-				}
-			});
-
-			// Find the farthest candidate to the current cloud of centroids
-			// and make it the next centroid
-			auto next_centroid_pos = std::max_element(
-					std::execution::parallel_policy(), points.begin(), points.end(), comp
-			);
-			centroids.push_back(*next_centroid_pos);
-			std::swap(*next_centroid_pos, points.back());
-			points.pop_back();
+		std::unordered_map<u_int, std::list<RefPtr>> _batches;
+		for (const auto& c: candidateList) {
+			u_int batchIndex = unionFind.Find(triangles[c->tid].v[c->tvertex]);
+			_batches[batchIndex].push_back(c);
 		}
 
-		SDL_LOG("Simplify - Partition batches - Start iterations");
-		const float MINERROR = 3 * K * std::numeric_limits<float>::epsilon();
-		u_int iteration = 0;
-		while (true) {
-			// Assign available candidates to nearest cluster (min distance to centroid)
-			// Per-thread local batches:
-			tbb::enumerable_thread_specific<std::vector<RefPtrVector>> local_batches(
-				[centroids_size=centroids.size()]
-				{ return std::vector<RefPtrVector>(centroids_size); }
-			);
+		// Build output structure
+		// TODO Avoid this step
+		std::vector<std::list<RefPtr>> res;
+		for (auto& b: _batches) {
+			res.push_back(b.second);
+		}
+		return res;
 
-			tbb::parallel_for(
-				tbb::blocked_range<size_t>(0, candidates.size()),
-				[&](const tbb::blocked_range<size_t>& r) {
-					auto& local = local_batches.local();
-					for (size_t idx = r.begin(); idx != r.end(); ++idx) {
-						const auto& candidate = candidates[idx];
-						const auto& point = getPoint(candidate);
 
-						// Find nearest centroid
-						u_int iMin = 0;
-						float distMin = FLOAT_INFINITY;
-						for (u_int i = 0; i < centroids.size(); ++i) {
-							float distance = DistanceSquared(point, centroids[i]);
-							if (distance < distMin) {
-								distMin = distance;
-								iMin = i;
-							}
-						}
-						local[iMin].push_back(candidate);
-					}
-				}
-			);
-
-			// Merge local batches into global batches
-			for (auto& local : local_batches) {
-				for (size_t i = 0; i < centroids.size(); ++i) {
-					batches[i].insert(batches[i].end(), local[i].begin(), local[i].end());
-				}
-			}
-
-			// Compute new centroids
-			decltype(centroids) newCentroids(centroids.size());
-			tbb::parallel_for(
-				tbb::blocked_range<u_int>(0, K),
-				[&](const tbb::blocked_range<u_int>& range) {
-					for (u_int i = range.begin(); i != range.end(); ++i) {
-						const auto& batch = batches[i];
-						Point sum = std::accumulate(
-							batch.begin(),
-							batch.end(),
-							Point(0.f, 0.f, 0.f),
-							[this](const Point& p, const RefPtr& r) { return p + getPoint(r); }
-						);
-						if (!batch.empty())
-							newCentroids[i] = sum / float(batch.size());
-						else
-							newCentroids[i] = Point(0.f, 0.f, 0.f); // or handle empty batch as needed
-					}
-				}
-			);
-
-			// Evaluate error
-			float delta = tbb::parallel_reduce(
-				tbb::blocked_range<u_int>(0, centroids.size()),
-				0.f,
-				[&](const tbb::blocked_range<u_int>& r, float local_sum) -> float {
-					for (u_int i = r.begin(); i != r.end(); ++i) {
-						local_sum += DistanceSquared(newCentroids[i], centroids[i]);
-					}
-					return local_sum;
-				},
-				std::plus<float>()
-			);
-
-			// Halt condition
-			if (delta < MINERROR or iteration > MAXITERATIONS) {
-				// Exit loop
-				break;
-			}
-
-			// Reset centroids and batches
-			centroids = newCentroids;
-			tbb::parallel_for(
-				tbb::blocked_range<size_t>(0, batches.size()),
-				[&](const tbb::blocked_range<size_t>& r) {
-					for (size_t i = r.begin(); i != r.end(); ++i) {
-						batches[i].clear();
-					}
-				}
-			);
-
-			++iteration;
-		}  // ~while
-
-		SDL_LOG("Simplify - Partition batches - end");  // TODO
-		return batches;
 	}
 
 	void Decimate(
@@ -721,23 +622,16 @@ public:
 
 			using AtomicCounter = std::atomic<u_int>;
 			AtomicCounter batchDeleted = 0;
-			AtomicCounter missedLocks = 0;
 
 			SDL_LOG("Simplify - Main treatment #" << iteration);
 			tbb::parallel_for(
 				size_t(0), batches.size(),
 				[&](size_t i) {
 					u_int localDeleted = 0;
-					u_int localMissedLocks = 0;
 					for (auto& ref : batches[i]) {
-						try {
-							localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
-						} catch (lockException&) {
-							++localMissedLocks;
-						}
+						localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
 					}
 					batchDeleted.fetch_add(localDeleted, std::memory_order_relaxed);
-					missedLocks.fetch_add(localMissedLocks, std::memory_order_relaxed);
 				}
 			);
 			deletedTriangles += batchDeleted;
@@ -751,8 +645,7 @@ public:
 				<< " edge candidates, deleted "
 				<< iterationDeletedTriangles
 				<< "/" << deletedTriangles
-				<< " of " << startTriangleCount << " triangles, "
-				<< "missed " << missedLocks << " locks"
+				<< " of " << startTriangleCount << " triangles"
 				<< ")"
 			);
 			if (!iterationDeletedTriangles)
@@ -784,15 +677,13 @@ private:
 
 	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
-	// Lock & Neighbor features
-	using LockResult = std::tuple<bool, std::mutex&>;
-	using LockResults = std::vector<LockResult>;
+	// Neighbor features
 	using NeighborSet = std::unordered_set<u_int>;
 
 
 	// Find edge neighbors, ie vertices that could be affected
 	// by collapsing the given edge
-	NeighborSet edgeNeighbors(const u_int i0, const u_int i1) {
+	NeighborSet edgeNeighbors(const u_int i0, const u_int i1) const {
 		NeighborSet neighbors;
 
 		neighbors.insert(i0);
@@ -808,42 +699,6 @@ private:
 			}
 		}
 		return neighbors;
-	}
-
-
-	// Lock neighborhood of an edge (including the edge itself)
-	// Nota: This is a try-lock
-	// Returns: summarized status (ok or not), detailed locks
-	std::tuple<bool, LockResults>
-	lockEdgeNeighbors(const u_int i0, const u_int i1) {
-
-		// Get edge neighborhood
-		auto neighbors = edgeNeighbors(i0, i1);
-
-		// Try to lock
-		LockResults tryLockResults;
-		for (auto i: neighbors) {
-			std::mutex& mtx = vertices[i].mtx;
-			//mtx.lock(); bool res = true;
-			bool res = mtx.try_lock();
-			tryLockResults.emplace_back(res, mtx);
-		}
-
-		// Summarize status
-		bool status = std::all_of(
-			tryLockResults.begin(),
-			tryLockResults.end(),
-			[](auto& i){ return std::get<bool>(i); }
-		);
-
-		return std::tuple(status, tryLockResults);
-	}
-
-	// Unlock previously locked neighborhood
-	void unlockNeighbors(LockResults& locks) {
-		for (auto& [locked, mtx]: locks) {
-			if (locked) mtx.unlock();
-		}
 	}
 
 	// Set intersection
@@ -881,16 +736,10 @@ private:
 		if (t.dirty)
 			return 0;
 
-		// Get explicit edge to collapse and lock it
+		// Get explicit edge to collapse
 		const u_int startVertexIndex = vertex.tvertex;
 		const u_int i0 = t.v[startVertexIndex];
 		const u_int i1 = t.v[(startVertexIndex + 1) % 3];
-
-		auto [lockStatus, locks] = lockEdgeNeighbors(i0, i1);
-		if (not lockStatus) {
-			unlockNeighbors(locks);
-			throw lockException();
-		}
 
 		// Prepare shortcuts
 		SimplifyVertex &v0 = vertices[i0];
@@ -901,7 +750,6 @@ private:
 		// Border check
 		if (v0.border != v1.border) {
 			SDL_LOG("Simplify - border");  // TODO
-			unlockNeighbors(locks);
 			return 0;
 		}
 
@@ -915,7 +763,6 @@ private:
 		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
 		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
 		if (will_flip0 || will_flip1) {
-			unlockNeighbors(locks);
 			return 0;
 		}
 
@@ -999,7 +846,6 @@ private:
 		refs.insert(refs.end(), newRefs1.begin(), newRefs1.end());
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
-		unlockNeighbors(locks);
 		return deletedTriangles;
 	}
 
