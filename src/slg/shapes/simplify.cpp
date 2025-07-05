@@ -249,7 +249,7 @@ struct SimplifyRef {
 	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 	{}
 };
-using RefPtr = std::shared_ptr<SimplifyRef>;
+using RefPtr = std::unique_ptr<SimplifyRef>;
 using RefPtrVector = std::vector< RefPtr >;
 
 using BatchVector = std::vector<std::list<RefPtr>>;
@@ -573,7 +573,7 @@ public:
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c->tid].v[c->tvertex];  // Vertex index
 			u_int batchIndex = unionFind.Find(i);
-			batches[batchIndex].push_back(c);
+			batches[batchIndex].push_back(std::make_unique<SimplifyRef>(*c));
 		}
 
 		BatchVector res(batches.size());
@@ -623,15 +623,14 @@ public:
 
 			SDL_LOG("Simplify - Number of batches: " << batches.size());
 
-			using AtomicCounter = std::atomic<u_int>;
-			AtomicCounter batchDeleted = 0;
+			std::atomic<u_int> batchDeleted = 0;
 
 			SDL_LOG("Simplify - Main treatment #" << iteration);
 			tbb::parallel_for(
 				size_t(0), batches.size(),
 				[&](size_t i) {
 					u_int localDeleted = 0;
-					auto batch = *(batches.begin() + i);
+					const auto& batch = *(batches.begin() + i);
 					for (auto& ref : batch) {
 						localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
 					}
@@ -846,8 +845,16 @@ private:
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
 		refs.clear();
-		refs.insert(refs.end(), newRefs0.begin(), newRefs0.end());
-		refs.insert(refs.end(), newRefs1.begin(), newRefs1.end());
+		refs.insert(
+			refs.end(),
+			std::make_move_iterator(newRefs0.begin()),
+			std::make_move_iterator(newRefs0.end())
+		);
+		refs.insert(
+			refs.end(),
+			std::make_move_iterator(newRefs1.begin()),
+			std::make_move_iterator(newRefs1.end())
+		);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -908,7 +915,7 @@ private:
 	std::tuple<RefPtrVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
-		const  vector<bool> &deleted,
+		const vector<bool> &deleted,
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
@@ -932,9 +939,9 @@ private:
 			t.dirty = true;
 			t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
 
-			refs.push_back(r);
+			refs.push_back(std::make_unique<SimplifyRef>(*r));
 		}
-		return std::tuple(refs, deletedTriangles);
+		return std::tuple(std::move(refs), deletedTriangles);
 	}
 
 	// Initialize quadrics on vertices
@@ -1018,7 +1025,7 @@ private:
 					for (size_t j = 0; j < 3; ++j) {
 						size_t vertexIndex = t.v[j];
 						tmp_refs[vertexIndex].push_back(
-							std::make_shared<SimplifyRef>(i, j)
+							std::make_unique<SimplifyRef>(i, j)
 						);
 					}
 				}
@@ -1027,7 +1034,10 @@ private:
 
 		// 3. Serially move concurrent_vectors to real refs
 		for (size_t i = 0; i < vertices.size(); ++i) {
-			vertices[i].refs.assign(tmp_refs[i].begin(), tmp_refs[i].end());
+			vertices[i].refs.assign(
+				std::make_move_iterator(tmp_refs[i].begin()),
+				std::make_move_iterator(tmp_refs[i].end())
+			);
 		}
 	}
 
@@ -1120,7 +1130,7 @@ private:
 						}
 					}
 					if (minErrorIndex != NULL_INDEX) {
-						candidateRefs.push_back(std::make_shared<SimplifyRef>(i, minErrorIndex));
+						candidateRefs.push_back(std::make_unique<SimplifyRef>(i, minErrorIndex));
 					}
 				}
 			}
@@ -1128,7 +1138,10 @@ private:
 
 		RefPtrVector candidateList;
 		candidateList.reserve(vertices.size());
-		candidateList.assign(candidateRefs.begin(), candidateRefs.end());
+		candidateList.assign(
+			std::make_move_iterator(candidateRefs.begin()),
+			std::make_move_iterator(candidateRefs.end())
+		);
 
 		auto refErrorCompare = [&](const RefPtr& left, const RefPtr& right) {
 			auto left_error = triangles[left->tid].err[left->tvertex];
