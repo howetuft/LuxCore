@@ -36,6 +36,7 @@
 #include <tbb/task_group.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/concurrent_hash_map.h>
+#include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -1082,6 +1083,7 @@ private:
 
 		// 1. Thread-safe candidate buffer
 		tbb::concurrent_vector<RefPtr> candidateRefs;
+		candidateRefs.reserve(vertices.size());
 
 		// 2. Parallel candidate search
 		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
@@ -1117,41 +1119,55 @@ private:
 							minError = t.err[j];
 						}
 					}
-					if (minErrorIndex != NULL_INDEX)
+					if (minErrorIndex != NULL_INDEX) {
 						candidateRefs.push_back(std::make_shared<SimplifyRef>(i, minErrorIndex));
+					}
 				}
 			}
 		);
 
-		// 3. Serial step: Build the priority queue with a size cap
-		auto refErrorCompare = [&](const RefPtr left, const RefPtr right) {
+		RefPtrVector candidateList;
+		candidateList.reserve(vertices.size());
+		candidateList.assign(candidateRefs.begin(), candidateRefs.end());
+
+		auto refErrorCompare = [&](const RefPtr& left, const RefPtr& right) {
 			auto left_error = triangles[left->tid].err[left->tvertex];
 			auto right_error = triangles[right->tid].err[right->tvertex];
 			return  left_error < right_error;
 		};
-		std::priority_queue<RefPtr, RefPtrVector, decltype(refErrorCompare)>
-			candidateQueue{ refErrorCompare };
+		tbb::parallel_sort(candidateList, refErrorCompare);
 
-		for (const auto& ref : candidateRefs) {
-			if (candidateQueue.size() < maxCandidateQueueSize) {
-				candidateQueue.push(ref);
-				continue;
-			}
-			// Compare error for cap logic
-			auto top = candidateQueue.top();
-			if (refErrorCompare(ref, top)) {
-				candidateQueue.pop();
-				candidateQueue.push(ref);
-			}
-		}
+		size_t numCandidates = std::min(candidateRefs.size(), size_t(maxCandidateQueueSize));
+		candidateList.resize(numCandidates);
 
-		// 4. Serial step: Move priority queue to output structure
-		RefPtrVector candidateList;
-		candidateList.reserve(candidateQueue.size());
-		while (!candidateQueue.empty()) {
-			candidateList.push_back(candidateQueue.top());
-			candidateQueue.pop();
-		}
+		//RefPtrVector candidateList;
+		//size_t numCandidates = std::min(candidateRefs.size(), size_t(maxCandidateQueueSize));
+		//candidateList.reserve(numCandidates);
+		//candidateList.insert(candidateList.begin(), candidateRefs.begin(), candidateRefs.begin() + numCandidates);
+
+		//std::priority_queue<RefPtr, RefPtrVector, decltype(refErrorCompare)>
+			//candidateQueue{ refErrorCompare };
+
+		//for (const auto& ref : candidateRefs) {
+			//if (candidateQueue.size() < maxCandidateQueueSize) {
+				//candidateQueue.push(ref);
+				//continue;
+			//}
+			//// Compare error for cap logic
+			//auto top = candidateQueue.top();
+			//if (refErrorCompare(ref, top)) {
+				//candidateQueue.pop();
+				//candidateQueue.push(ref);
+			//}
+		//}
+
+		//// 4. Serial step: Move priority queue to output structure
+		//RefPtrVector candidateList;
+		//candidateList.reserve(candidateQueue.size());
+		//while (!candidateQueue.empty()) {
+			//candidateList.push_back(candidateQueue.top());
+			//candidateQueue.pop();
+		//}
 
 		return candidateList;
 	}
