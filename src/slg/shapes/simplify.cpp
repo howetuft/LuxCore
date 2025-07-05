@@ -221,6 +221,7 @@ struct UnionFind {
 	}
 };
 
+
 // TODO move to point.h
 inline void hash_combine(std::size_t& seed) { }
 
@@ -249,6 +250,8 @@ struct SimplifyRef {
 };
 using RefPtr = std::shared_ptr<SimplifyRef>;
 using RefPtrVector = std::vector< RefPtr >;
+
+using BatchVector = std::vector<std::list<RefPtr>>;
 
 struct SimplifyVertex {
 	// Core data
@@ -536,11 +539,10 @@ public:
 	// We use connected components algo
 	//
 	//
-	std::vector<std::list<RefPtr>>
+	BatchVector
 	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) const {
-		// Step 1: Build closure set (candidate vertices + their neighborhoods)
+		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
 		std::unordered_set<u_int> closure;
-
 		for (auto& c: candidateList) {
 			const auto& t = triangles[c->tid];
 			const u_int i0 = t.v[c->tvertex];
@@ -565,20 +567,20 @@ public:
 			}
 		}
 
-		std::unordered_map<u_int, std::list<RefPtr>> _batches;
+		// Build batches
+		std::unordered_map<u_int, std::list<RefPtr>> batches;
 		for (const auto& c: candidateList) {
-			u_int batchIndex = unionFind.Find(triangles[c->tid].v[c->tvertex]);
-			_batches[batchIndex].push_back(c);
+			u_int i = triangles[c->tid].v[c->tvertex];  // Vertex index
+			u_int batchIndex = unionFind.Find(i);
+			batches[batchIndex].push_back(c);
 		}
 
-		// Build output structure
-		// TODO Avoid this step
-		std::vector<std::list<RefPtr>> res;
-		for (auto& b: _batches) {
-			res.push_back(b.second);
+		BatchVector res(batches.size());
+		for (const auto& [i, batch]: enumerate(batches)) {
+			res[i] = std::move(batch.second);
 		}
+
 		return res;
-
 
 	}
 
@@ -628,7 +630,8 @@ public:
 				size_t(0), batches.size(),
 				[&](size_t i) {
 					u_int localDeleted = 0;
-					for (auto& ref : batches[i]) {
+					auto batch = *(batches.begin() + i);
+					for (auto& ref : batch) {
 						localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
 					}
 					batchDeleted.fetch_add(localDeleted, std::memory_order_relaxed);
