@@ -302,7 +302,7 @@ using BatchVector = std::vector<RefVector>;
 struct alignas(64) SimplifyVertex {
 	// Core data
 	spf::Point p;              // Position
-	RefPtrVector refs;       // Incident edges in topology
+	RefVector refs;       // Incident edges in topology
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
@@ -347,6 +347,9 @@ struct alignas(64) SimplifyTriangle {
 	std::array<float, 3> err;
 	bool deleted = false;
 	bool dirty = false;
+
+	// Cached values to limit false sharing
+	std::array<spf::Point, 3> cachedVerts;
 
 	// Update error of the triangle
 	void UpdateTriangleError(
@@ -729,8 +732,8 @@ private:
 	void assert_data(size_t line) {
 		for (auto& v: vertices) {
 			for (auto& r: v.refs) {
-				if(r->tid >= triangles.size()) {
-					SDL_LOG("Data error: " << r->tid << " " << triangles.size()
+				if(r.tid >= triangles.size()) {
+					SDL_LOG("Data error: " << r.tid << " " << triangles.size()
 							<< " #" << to_string(line));
 					return;
 				}
@@ -753,12 +756,12 @@ private:
 		neighbors.insert(i0);
 		neighbors.insert(i1);
 		for (const auto& ref: vertices[i0].refs) {
-			for (u_int vertexIndex: triangles[ref->tid].v) {
+			for (u_int vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
 		}
 		for (const auto& ref: vertices[i1].refs) {
-			for (u_int vertexIndex: triangles[ref->tid].v) {
+			for (u_int vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
 		}
@@ -932,12 +935,13 @@ private:
 		// Result variable
 		std::vector<bool> deleted(v0.refs.size());
 
-		for (const auto& [k, ref]: enumerate(v0.refs)) {
-			const SimplifyTriangle &t = triangles[ref->tid];
+		for (size_t k = 0; k < v0.refs.size(); ++k) {
+			auto& ref = v0.refs[k];
+			const SimplifyTriangle &t = triangles[ref.tid];
 
 			if (t.deleted) continue;
 
-			const u_int s = ref->tvertex;
+			const u_int s = ref.tvertex;
 			const u_int id1 = t.v[(s + 1) % 3];
 			const u_int id2 = t.v[(s + 2) % 3];
 
@@ -948,15 +952,42 @@ private:
 			}
 
 			// Check if the triangle is too narrow
-			const spf::Vector d1 = Normalize(vertices[id1].p - p);
-			const spf::Vector d2 = Normalize(vertices[id2].p - p);
-			if (AbsDot(d1, d2) > .999f) {
+			// (avoiding sqrt function)
+
+			//Original code:
+			//const spf::Vector d1 = Normalize(vertices[id1].p - p);
+			//const spf::Vector d2 = Normalize(vertices[id2].p - p);
+			//if (AbsDot(d1, d2) > .999f) {
+				//return make_return(true, std::move(deleted));
+			//}
+
+			const spf::Vector d1 = vertices[id1].p - p;
+			const spf::Vector d2 = vertices[id2].p - p;
+			const float sqrlen1 = d1.LengthSquared();
+			const float sqrlen2 = d2.LengthSquared();
+
+			const float dot = Dot(d1, d2);
+			const float sqrdot = dot * dot;
+			constexpr float sqrthreshold = .999f * .999f;
+			if (sqrdot > sqrthreshold * sqrlen1 * sqrlen2) {
 				return make_return(true, std::move(deleted));
 			}
 
 			// Check if the Normal is changing side
-			const spf::Normal geometryN(Normalize(Cross(d1, d2)));
-			if (Dot(geometryN, t.geometryN) < .2f) {
+			// (avoiding sqrt function)
+
+			//Original code:
+			//const spf::Normal geometryN(Normalize(Cross(d1, d2)));
+			//if (Dot(geometryN, t.geometryN) < .2f) {
+				//return make_return(true, std::move(deleted));
+			//}
+
+			spf::Vector rawnormal = Cross(d1, d2);
+			const float sqrlen_rawnormal = rawnormal.LengthSquared();
+			const float normdot = Dot(rawnormal, t.geometryN);
+			const float sqrnormdot = normdot * normdot;
+			constexpr float sqrthreshold2 = .2f * .2f;
+			if  (std::signbit(normdot)  or sqrnormdot < sqrthreshold2 * sqrlen_rawnormal) {
 				return make_return(true, std::move(deleted));
 			}
 
@@ -968,7 +999,7 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	// Returns: new incident edges list, number of deleted triangles
-	std::tuple<RefPtrVector, u_int> UpdateTriangles(
+	std::tuple<RefVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
 		const vector<bool> &deleted,
@@ -977,10 +1008,10 @@ private:
 		const bool preserveBorder
 	) {
 		u_int deletedTriangles = 0;
-		RefPtrVector refs;
+		RefVector refs;
 		refs.reserve(v.refs.size());
 		for (const auto& [k, r]: enumerate(v.refs)) {
-			SimplifyTriangle &t = triangles[r->tid];
+			SimplifyTriangle &t = triangles[r.tid];
 
 			if (t.deleted)
 				continue;
@@ -991,11 +1022,11 @@ private:
 				continue;
 			}
 
-			t.v[r->tvertex] = i0;
+			t.v[r.tvertex] = i0;
 			t.dirty = true;
 			t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
 
-			refs.push_back(std::make_unique<SimplifyRef>(*r));
+			refs.push_back(r);
 		}
 		return std::tuple(std::move(refs), deletedTriangles);
 	}
@@ -1071,7 +1102,7 @@ private:
 		);
 
 		// 2. Temporary thread-safe concurrent_vectors for each vertex
-		std::vector<tbb::concurrent_vector<RefPtr>> tmp_refs(vertices.size());
+		std::vector<tbb::concurrent_vector<Ref>> tmp_refs(vertices.size());
 
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, triangles.size()),
@@ -1080,9 +1111,7 @@ private:
 					const auto& t = triangles[i];
 					for (size_t j = 0; j < 3; ++j) {
 						size_t vertexIndex = t.v[j];
-						tmp_refs[vertexIndex].push_back(
-							std::make_unique<SimplifyRef>(i, j)
-						);
+						tmp_refs[vertexIndex].emplace_back(i, j);
 					}
 				}
 			}
@@ -1091,8 +1120,8 @@ private:
 		// 3. Serially move concurrent_vectors to real refs
 		for (size_t i = 0; i < vertices.size(); ++i) {
 			vertices[i].refs.assign(
-				std::make_move_iterator(tmp_refs[i].begin()),
-				std::make_move_iterator(tmp_refs[i].end())
+				tmp_refs[i].begin(),
+				tmp_refs[i].end()
 			);
 		}
 	}
@@ -1111,7 +1140,7 @@ private:
 			vids.clear();
 
 			for (const auto& ref: v.refs) {
-				auto k = ref->tid;
+				auto k = ref.tid;
 				SimplifyTriangle &t = triangles[k];
 
 				for (u_int k = 0; k < 3; ++k) {
@@ -1147,6 +1176,7 @@ private:
 		u_int maxCandidateQueueSize
 	) const {
 
+
 		tbb::enumerable_thread_specific<RefVector> localCandidates;
 
 		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
@@ -1164,11 +1194,8 @@ private:
 					u_int minErrorIndex = NULL_INDEX;
 					float minError = FLOAT_INFINITY;
 					for (u_int j = 0; j < 3; ++j) {
-						//const u_int i0 = t.v[j];
 						const auto [i0, i1] = edges[j];
 						const SimplifyVertex &v0 = vertices[i0];
-						//const u_int i1 = t.v[(j + 1) % 3];
-						//const u_int i1 = triverts[(j + 1) % 3];
 						const SimplifyVertex &v1 = vertices[i1];
 
 						// Border check
