@@ -70,6 +70,47 @@ using namespace slg;
 
 float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
+// Aligned classes
+namespace spf {
+class alignas(64) Point: public luxrays::Point {
+public:
+	Point() {}
+	Point(const luxrays::Point&& p): luxrays::Point(p) {}
+
+	Point& operator=(const luxrays::Point& p) {
+		x = p.x;
+		y = p.y;
+		z = p.z;
+		return (*this);
+	}
+
+
+private:
+	float pad = 0.f;
+};
+class alignas(64) Normal: public luxrays::Normal {
+public:
+	Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
+	Normal& operator=(const luxrays::Normal& other) {
+		x = other.x;
+		y = other.y;
+		z = other.z;
+		return (*this);
+	}
+	Normal() : luxrays::Normal() {}
+private:
+	float pad = 0.f;
+};
+
+class alignas(64) Vector: public luxrays::Vector {
+public:
+	Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
+private:
+	float pad = 0.f;
+};
+}
+
+
 // Enumerate helper (like Python enumerate)
 template <typename T,
           typename TIter = decltype(std::begin(std::declval<T>())),
@@ -234,8 +275,8 @@ inline void hash_combine(std::size_t& seed, const T& v, Rest... rest) {
 }
 
 template<>
-struct std::hash<Point> {
-    std::size_t operator()(const Point& p) const noexcept
+struct std::hash<spf::Point> {
+    std::size_t operator()(const spf::Point& p) const noexcept
     {
 		std::size_t h=0;
 		hash_combine(h, p.x, p.y, p.z);
@@ -243,20 +284,24 @@ struct std::hash<Point> {
     }
 };
 
-struct SimplifyRef {
-	u_int tid, tvertex;
+struct alignas(32) SimplifyRef {
+	u_int tid = 0;
+	u_int tvertex = std::numeric_limits<u_int>::infinity();
 
 	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 	{}
+	SimplifyRef() {};
 };
 using RefPtr = std::unique_ptr<SimplifyRef>;
 using RefPtrVector = std::vector< RefPtr >;
+using RefVector = std::vector< SimplifyRef >;
+using Ref = SimplifyRef;
 
-using BatchVector = std::vector<std::list<RefPtr>>;
+using BatchVector = std::vector<RefVector>;
 
-struct SimplifyVertex {
+struct alignas(64) SimplifyVertex {
 	// Core data
-	Point p;              // Position
+	spf::Point p;              // Position
 	RefPtrVector refs;       // Incident edges in topology
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
@@ -296,9 +341,9 @@ struct SimplifyVertex {
 };
 using VertexVector = std::vector<SimplifyVertex>;
 
-struct SimplifyTriangle {
+struct alignas(64) SimplifyTriangle {
 	std::array<u_int, 3> v;
-	Normal geometryN;
+	spf::Normal geometryN;
 	std::array<float, 3> err;
 	bool deleted = false;
 	bool dirty = false;
@@ -335,7 +380,7 @@ float VertexError(
 
 // Error for one edge
 // Returns: error, interpolated point
-std::tuple<float, Point> CalculateCollapseError(
+std::tuple<float, spf::Point> CalculateCollapseError(
 	const SimplifyVertex& v0,
 	const SimplifyVertex& v1,
 	const bool preserveBorder
@@ -343,12 +388,12 @@ std::tuple<float, Point> CalculateCollapseError(
 
 	const SymetricMatrix q = v0.q + v1.q;
 
-	Point pResult;
+	spf::Point pResult;
 
 	// Compute interpolated vertex
-	const Point &p1 = v0.p;
-	const Point &p2 = v1.p;
-	const Point p3 = (p1 + p2) / 2;
+	const spf::Point &p1 = v0.p;
+	const spf::Point &p2 = v1.p;
+	const spf::Point p3 = (p1 + p2) / 2;
 
 	// Error can be negative, I add 1 to have screenErrorScale can than
 	// work as expected
@@ -376,7 +421,7 @@ std::tuple<float, Point> CalculateCollapseError(
 
 	// Adding 1.0 because error have negative values
 	error = std::max(error + 1.f, 0.f);
-	return std::tuple(error , pResult);
+	return std::tuple(error , std::move(pResult));
 }
 
 float CalculateCollapseScreenErrorScale(
@@ -385,8 +430,8 @@ float CalculateCollapseScreenErrorScale(
 	float edgeScreenSize,
 	const Camera& camera
 ) {
-	const Point& p0 = v0.p;
-	const Point& p1 = v1.p;
+	const spf::Point& p0 = v0.p;
+	const spf::Point& p1 = v1.p;
 	if (edgeScreenSize > 0.f) {
 		const float notVisibleScale = .5f;
 
@@ -529,7 +574,7 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-	Point& getPoint(const RefPtr& ref) {
+	spf::Point& getPoint(const RefPtr& ref) {
 		auto vertex = triangles[ref->tid].v[ref->tvertex];
 		return vertices[vertex].p;
 	}
@@ -541,13 +586,13 @@ public:
 	//
 	//
 	BatchVector
-	PartitionIndependentEdgeBatches(const RefPtrVector& candidateList) const {
+	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
 		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
 		std::unordered_set<u_int> closure;
 		for (auto& c: candidateList) {
-			const auto& t = triangles[c->tid];
-			const u_int i0 = t.v[c->tvertex];
-			const u_int i1 = t.v[(c->tvertex + 1) % 3];
+			const auto& t = triangles[c.tid];
+			const u_int i0 = t.v[c.tvertex];
+			const u_int i1 = t.v[(c.tvertex + 1) % 3];
 			auto neighbors = edgeNeighbors(i0, i1);
 			closure.insert(neighbors.begin(), neighbors.end());
 		}
@@ -569,16 +614,17 @@ public:
 		}
 
 		// Build batches
-		std::unordered_map<u_int, std::list<RefPtr>> batches;
+		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
-			u_int i = triangles[c->tid].v[c->tvertex];  // Vertex index
+			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
 			u_int batchIndex = unionFind.Find(i);
-			batches[batchIndex].push_back(std::make_unique<SimplifyRef>(*c));
+			batches[batchIndex].push_back(c);
 		}
 
-		BatchVector res(batches.size());
+		BatchVector res;
+		res.reserve(batches.size());
 		for (const auto& [i, batch]: enumerate(batches)) {
-			res[i] = std::move(batch.second);
+			res.push_back(batch.second);
 		}
 
 		return res;
@@ -623,22 +669,33 @@ public:
 
 			SDL_LOG("Simplify - Number of batches: " << batches.size());
 
-			std::atomic<u_int> batchDeleted = 0;
+			tbb::enumerable_thread_specific<u_int> batchDeleted;
 
 			SDL_LOG("Simplify - Main treatment #" << iteration);
 			tbb::parallel_for(
-				size_t(0), batches.size(),
-				[&](size_t i) {
-					u_int localDeleted = 0;
-					const auto& batch = *(batches.begin() + i);
-					for (auto& ref : batch) {
-						localDeleted += CollapseEdge(*ref, edgeScreenSize, camera, preserveBorder);
+				tbb::blocked_range<u_int>(0, batches.size()),
+				[&](const tbb::blocked_range<u_int>& r) {
+					for (u_int i = r.begin(); i != r.end(); ++i) {
+						u_int localDeleted = 0;
+						const auto& batch = *(batches.begin() + i);
+						for (auto& ref : batch) {
+							batchDeleted.local() += CollapseEdge(
+								ref,
+								edgeScreenSize,
+								camera,
+								preserveBorder
+							);
+						}
 					}
-					batchDeleted.fetch_add(localDeleted, std::memory_order_relaxed);
 				}
 			);
-			deletedTriangles += batchDeleted;
 
+			deletedTriangles += std::accumulate(
+				batchDeleted.begin(),
+				batchDeleted.end(),
+				0,
+				std::plus<u_int>()
+			);
 			const u_int iterationDeletedTriangles =
 				deletedTriangles - initialdeletedTriangles;
 
@@ -653,17 +710,21 @@ public:
 			);
 			if (!iterationDeletedTriangles)
 				break;
+
+			//std::exit(0);  // DEBUG - Stop here
 		}
 
 		// Clean up mesh
 		CompactMesh();
 		SDL_LOG("Simplify - Mesh compacted");
+
+	//std::exit(0);  // DEBUG - Stop here
 	}
 
 private:
 
-	VertexVector vertices;
-	TriangleVector triangles;
+	alignas(64) VertexVector vertices;
+	alignas(64) TriangleVector triangles;
 
 	void assert_data(size_t line) {
 		for (auto& v: vertices) {
@@ -782,9 +843,9 @@ private:
 		const auto& tv0 = vertices[t.v[0]];
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
-		const Point triPoint0 = tv0.p;
-		const Point triPoint1 = tv1.p;
-		const Point triPoint2 = tv2.p;
+		const spf::Point triPoint0 = tv0.p;
+		const spf::Point triPoint1 = tv1.p;
+		const spf::Point triPoint2 = tv2.p;
 		float b1, b2;
 		if (Triangle::GetBaryCoords(
 				triPoint0,
@@ -863,15 +924,13 @@ private:
 	// Check if a triangle flips when this edge is removed
 	// Returns: check status, deleted status of each ref (vector)
 	std::tuple<bool, std::vector<bool> >
-	Flipped(const Point &p, const u_int i0, const u_int i1) const {
+	Flipped(const spf::Point &p, const u_int i0, const u_int i1) const {
 
+		auto make_return = std::make_tuple<bool, std::vector<bool>>;
 		const SimplifyVertex &v0 = vertices[i0];
 
 		// Result variable
-		auto res = std::make_tuple<bool, std::vector<bool>>
-			(false, std::vector<bool>(v0.refs.size()));
-		bool& status = std::get<0>(res);
-		std::vector<bool>& deleted(std::get<1>(res));
+		std::vector<bool> deleted(v0.refs.size());
 
 		for (const auto& [k, ref]: enumerate(v0.refs)) {
 			const SimplifyTriangle &t = triangles[ref->tid];
@@ -889,25 +948,22 @@ private:
 			}
 
 			// Check if the triangle is too narrow
-			const Vector d1 = Normalize(vertices[id1].p - p);
-			const Vector d2 = Normalize(vertices[id2].p - p);
+			const spf::Vector d1 = Normalize(vertices[id1].p - p);
+			const spf::Vector d2 = Normalize(vertices[id2].p - p);
 			if (AbsDot(d1, d2) > .999f) {
-				status = true;
-				return res;
+				return make_return(true, std::move(deleted));
 			}
 
 			// Check if the Normal is changing side
-			const Normal geometryN(Normalize(Cross(d1, d2)));
+			const spf::Normal geometryN(Normalize(Cross(d1, d2)));
 			if (Dot(geometryN, t.geometryN) < .2f) {
-				status = true;
-				return res;
+				return make_return(true, std::move(deleted));
 			}
 
 			deleted[k] = false;
 		}
 
-		status = false;
-		return res;
+		return make_return(false, std::move(deleted));
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
@@ -959,7 +1015,7 @@ private:
 		// Parallel computation of per-triangle quadric contributions
 		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
-		tbb::parallel_for(
+	tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, triangles.size()),
 			[&](const tbb::blocked_range<u_int>& r) {
 				for (u_int i = r.begin(); i != r.end(); ++i) {
@@ -1086,27 +1142,33 @@ private:
 
 	// Build candidate list
 	//
-	RefPtrVector BuildCandidateList(
+	RefVector BuildCandidateList(
 		bool preserveBorder,
 		u_int maxCandidateQueueSize
 	) const {
 
-		// 1. Thread-safe candidate buffer
-		tbb::concurrent_vector<RefPtr> candidateRefs;
-		candidateRefs.reserve(vertices.size());
+		tbb::enumerable_thread_specific<RefVector> localCandidates;
 
-		// 2. Parallel candidate search
 		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
 			[&](const tbb::blocked_range<u_int>& r) {
 				for (u_int i = r.begin(); i != r.end(); ++i) {
 					const SimplifyTriangle &t = triangles[i];
+					const std::array<std::tuple<u_int, u_int>, 3> edges(
+						{
+							{t.v[0], t.v[1]},
+							{t.v[1], t.v[2]},
+							{t.v[2], t.v[0]},
+						}
+					);
 
 					u_int minErrorIndex = NULL_INDEX;
 					float minError = FLOAT_INFINITY;
 					for (u_int j = 0; j < 3; ++j) {
-						const u_int i0 = t.v[j];
+						//const u_int i0 = t.v[j];
+						const auto [i0, i1] = edges[j];
 						const SimplifyVertex &v0 = vertices[i0];
-						const u_int i1 = t.v[(j + 1) % 3];
+						//const u_int i1 = t.v[(j + 1) % 3];
+						//const u_int i1 = triverts[(j + 1) % 3];
 						const SimplifyVertex &v1 = vertices[i1];
 
 						// Border check
@@ -1130,27 +1192,35 @@ private:
 						}
 					}
 					if (minErrorIndex != NULL_INDEX) {
-						candidateRefs.push_back(std::make_unique<SimplifyRef>(i, minErrorIndex));
+						localCandidates.local().emplace_back(i, minErrorIndex);
 					}
 				}
 			}
 		);
 
-		RefPtrVector candidateList;
-		candidateList.reserve(vertices.size());
-		candidateList.assign(
-			std::make_move_iterator(candidateRefs.begin()),
-			std::make_move_iterator(candidateRefs.end())
-		);
 
-		auto refErrorCompare = [&](const RefPtr& left, const RefPtr& right) {
-			auto left_error = triangles[left->tid].err[left->tvertex];
-			auto right_error = triangles[right->tid].err[right->tvertex];
+		// Assemble local candidates
+		RefVector candidateList;
+		candidateList.reserve(vertices.size());
+		for (const auto& local: localCandidates) {
+			candidateList.insert(
+				candidateList.end(),
+				local.begin(),
+				local.end()
+			);
+		}
+		SDL_LOG("Before sort");
+		auto refErrorCompare = [&](const Ref& left, const Ref& right) {
+			auto left_error = triangles[left.tid].err[left.tvertex];
+			auto right_error = triangles[right.tid].err[right.tvertex];
 			return  left_error < right_error;
 		};
 		tbb::parallel_sort(candidateList, refErrorCompare);
 
-		size_t numCandidates = std::min(candidateRefs.size(), size_t(maxCandidateQueueSize));
+		size_t numCandidates = std::min(
+			candidateList.size(),
+			size_t(maxCandidateQueueSize)
+		);
 		candidateList.resize(numCandidates);
 
 		//RefPtrVector candidateList;
@@ -1337,7 +1407,6 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 
 	const auto endTime = WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
-	//std::exit();  // DEBUG - Stop here
 }
 
 SimplifyShape::~SimplifyShape() {
