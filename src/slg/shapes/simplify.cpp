@@ -42,6 +42,7 @@
 #include "slg/shapes/simplify.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
+#include "dset.h"
 
 using namespace std;
 using namespace luxrays;
@@ -610,16 +611,18 @@ public:
 
 		// Step 2: Build connected components (union-find)
 
-		UnionFind unionFind(vertices.size());
+		DisjointSets unionFind(vertices.size());
 		using edge_t = std::tuple<u_int, u_int>;
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 		// TODO make edges unique
+		// TODO replace omp
+#pragma omp parallel for
 		for (const auto& t: triangles) {
 			for (const auto e: edges) {
 				u_int i0 = t.v[std::get<0>(e)];
 				u_int i1 = t.v[std::get<1>(e)];
 				if (closure.contains(i0) and closure.contains(i1)) {
-					unionFind.Union(i0, i1);
+					unionFind.unite(i0, i1);
 				}
 			}
 		}
@@ -628,7 +631,7 @@ public:
 		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
-			u_int batchIndex = unionFind.Find(i);
+			u_int batchIndex = unionFind.find(i);
 			batches[batchIndex].push_back(c);
 		}
 
@@ -729,7 +732,7 @@ public:
 		CompactMesh();
 		SDL_LOG("Simplify - Mesh compacted");
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 	}
 
 private:
@@ -824,7 +827,6 @@ private:
 
 		// Border check
 		if (v0.border != v1.border) {
-			SDL_LOG("Simplify - border");  // TODO
 			return 0;
 		}
 
