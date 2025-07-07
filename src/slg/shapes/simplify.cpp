@@ -73,7 +73,7 @@ float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 // Aligned classes
 namespace spf {
 
-class alignas(64) Vector: public luxrays::Vector {
+class  Vector: public luxrays::Vector {
 public:
 	Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
 	Vector(float p_x, float p_y, float p_z) : luxrays::Vector(p_x, p_y, p_z) {}
@@ -81,7 +81,7 @@ private:
 	float pad = 0.f;
 };
 
-class alignas(64) Point: public luxrays::Point {
+class  Point: public luxrays::Point {
 public:
 	Point() {}
 	Point(const luxrays::Point&& p): luxrays::Point(p) {}
@@ -102,7 +102,7 @@ private:
 	float pad = 0.f;
 };
 
-class alignas(64) Normal: public luxrays::Normal {
+class  Normal: public luxrays::Normal {
 public:
 	Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
 	Normal& operator=(const luxrays::Normal& other) {
@@ -292,7 +292,7 @@ struct std::hash<spf::Point> {
     }
 };
 
-struct alignas(32) SimplifyRef {
+struct SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
 
@@ -307,7 +307,7 @@ using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
 
-struct alignas(64) SimplifyVertex {
+struct  SimplifyVertex {
 	// Core data
 	spf::Point p;              // Position
 	RefVector refs;       // Incident edges in topology
@@ -349,7 +349,7 @@ struct alignas(64) SimplifyVertex {
 };
 using VertexVector = std::vector<SimplifyVertex>;
 
-struct alignas(64) SimplifyTriangle {
+struct  SimplifyTriangle {
 	std::array<u_int, 3> v;
 	spf::Normal geometryN;
 	std::array<float, 3> err;
@@ -734,8 +734,8 @@ public:
 
 private:
 
-	alignas(64) VertexVector vertices;
-	alignas(64) TriangleVector triangles;
+	 VertexVector vertices;
+	 TriangleVector triangles;
 
 	void assert_data(size_t line) {
 		for (auto& v: vertices) {
