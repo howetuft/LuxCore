@@ -72,6 +72,15 @@ float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 // Aligned classes
 namespace spf {
+
+class alignas(64) Vector: public luxrays::Vector {
+public:
+	Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
+	Vector(float p_x, float p_y, float p_z) : luxrays::Vector(p_x, p_y, p_z) {}
+private:
+	float pad = 0.f;
+};
+
 class alignas(64) Point: public luxrays::Point {
 public:
 	Point() {}
@@ -84,10 +93,15 @@ public:
 		return (*this);
 	}
 
+	spf::Vector operator-(const spf::Point& other) const {
+		return spf::Vector(x - other.x, y - other.y, z - other.z);
+	}
+
 
 private:
 	float pad = 0.f;
 };
+
 class alignas(64) Normal: public luxrays::Normal {
 public:
 	Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
@@ -102,12 +116,6 @@ private:
 	float pad = 0.f;
 };
 
-class alignas(64) Vector: public luxrays::Vector {
-public:
-	Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
-private:
-	float pad = 0.f;
-};
 }
 
 
@@ -721,7 +729,7 @@ public:
 		CompactMesh();
 		SDL_LOG("Simplify - Mesh compacted");
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 	}
 
 private:
@@ -827,8 +835,8 @@ private:
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		auto [will_flip0, deleted0] = Flipped(p, i0, i1);
-		auto [will_flip1, deleted1] = Flipped(p, i1, i0);
+		auto [will_flip0, deleted0] = Flipped<true>(p, i0, i1);
+		auto [will_flip1, deleted1] = Flipped<true>(p, i1, i0);
 		if (will_flip0 || will_flip1) {
 			return 0;
 		}
@@ -926,14 +934,18 @@ private:
 
 	// Check if a triangle flips when this edge is removed
 	// Returns: check status, deleted status of each ref (vector)
-	std::tuple<bool, std::vector<bool> >
-	Flipped(const spf::Point &p, const u_int i0, const u_int i1) const {
+	using FlippedFullReturn = std::tuple<bool, std::vector<bool>>;
 
-		auto make_return = std::make_tuple<bool, std::vector<bool>>;
+	template<bool F=true>
+	constexpr std::conditional<F, FlippedFullReturn, bool>::type
+	Flipped(const spf::Point p, const u_int i0, const u_int i1) const {
+
 		const SimplifyVertex &v0 = vertices[i0];
+		std::vector<bool> deleted;
 
-		// Result variable
-		std::vector<bool> deleted(v0.refs.size());
+		if constexpr(F) {
+			deleted.resize(v0.refs.size());
+		}
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
@@ -947,7 +959,9 @@ private:
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
-				deleted[k] = true;
+				if constexpr(F) {
+					deleted[k] = true;
+				}
 				continue;
 			}
 
@@ -970,7 +984,11 @@ private:
 			const float sqrdot = dot * dot;
 			constexpr float sqrthreshold = .999f * .999f;
 			if (sqrdot > sqrthreshold * sqrlen1 * sqrlen2) {
-				return make_return(true, std::move(deleted));
+				if constexpr (F) {
+					return FlippedFullReturn(true, deleted);
+				} else {
+					return true;
+				}
 			}
 
 			// Check if the Normal is changing side
@@ -988,13 +1006,23 @@ private:
 			const float sqrnormdot = normdot * normdot;
 			constexpr float sqrthreshold2 = .2f * .2f;
 			if  (std::signbit(normdot)  or sqrnormdot < sqrthreshold2 * sqrlen_rawnormal) {
-				return make_return(true, std::move(deleted));
+				if constexpr(F) {
+					return FlippedFullReturn(true, deleted);
+				} else {
+					return true;
+				}
 			}
 
-			deleted[k] = false;
+			if constexpr(F) {
+				deleted[k] = false;
+			}
 		}
 
-		return make_return(false, std::move(deleted));
+		if constexpr(F) {
+			return FlippedFullReturn(false, deleted);
+		} else {
+			return false;
+		}
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
@@ -1208,9 +1236,9 @@ private:
 						}
 
 						auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
-						if (std::get<bool>(Flipped(p, i0, i1)))
+						if (Flipped<false>(p, i0, i1))
 							continue;
-						if (std::get<bool>(Flipped(p, i1, i0)))
+						if (Flipped<false>(p, i1, i0))
 							continue;
 
 						if (t.err[j] < minError) {
