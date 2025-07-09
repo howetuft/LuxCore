@@ -1137,14 +1137,17 @@ private:
 		// Align to 64 to avoid false sharing
 		struct alignas(64) RefConVec : tbb::concurrent_vector<Ref> {};
 		std::vector<RefConVec> tmp_refs(vertices.size());
+		for (auto& vec: tmp_refs) {
+			vec.reserve(8);  // Reasonable value?
+		}
 
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, triangles.size()),
 			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
+				for (auto i = r.begin(); i != r.end(); ++i) {
 					const auto& t = triangles[i];
 					for (size_t j = 0; j < 3; ++j) {
-						size_t vertexIndex = t.v[j];
+						auto vertexIndex = t.v[j];
 						tmp_refs[vertexIndex].emplace_back(i, j);
 					}
 				}
@@ -1295,6 +1298,7 @@ private:
 		const bool preserveBorder
 	) {
 		if (iteration > 0) {
+			SDL_LOG("Simplify - Compact triangles");
 			// Compact triangles
 			TriangleVector newTris;
 			newTris.reserve(triangles.size());
@@ -1305,11 +1309,13 @@ private:
 			std::swap(triangles, newTris);
 		}
 		// Clear triangles dirty flags
+		SDL_LOG("Simplify - Clear dirty flags");
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
 
 		// Build per-vertex incident edge tables
 		//
+		SDL_LOG("Simplify - Init incident edges");
 		InitIncidentEdges();
 
 		// Init Quadrics by Plane & Edge Errors
@@ -1319,9 +1325,12 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
+			SDL_LOG("Simplify - Init quadrics");
 			InitQuadrics(edgeScreenSize, camera, preserveBorder);
+			SDL_LOG("Simplify - Init borders");
 			InitBorders();
 		}
+		SDL_LOG("Simplify - End initialization");
 
 	}
 
