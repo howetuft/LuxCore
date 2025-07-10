@@ -36,6 +36,7 @@
 #include <tbb/task_group.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_map.h>
 #include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -301,9 +302,8 @@ struct SimplifyRef {
 	{}
 	SimplifyRef() {};
 };
-using RefPtr = std::unique_ptr<SimplifyRef>;
-using RefPtrVector = std::vector< RefPtr >;
 using RefVector = std::vector< SimplifyRef >;
+using RefMap = tbb::concurrent_multimap<u_int, SimplifyRef>;
 using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
@@ -586,10 +586,6 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-	luxrays::Point& getPoint(const RefPtr& ref) {
-		auto vertex = triangles[ref->tid].v[ref->tvertex];
-		return vertices[vertex].p;
-	}
 
 
 	// Partition candidate list into components (aka "batches")
@@ -739,8 +735,8 @@ public:
 
 private:
 
-	 VertexVector vertices;
-	 TriangleVector triangles;
+	 alignas(64) VertexVector vertices;
+	 alignas(64) TriangleVector triangles;
 
 	void assert_data(size_t line) {
 		for (auto& v: vertices) {
@@ -1122,6 +1118,46 @@ private:
 	//
 	// Modify: vertices
 	void InitIncidentEdges() {
+
+		// Parallel clear (optional but clean)
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, vertices.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					vertices[i].refs.clear();
+				}
+			}
+		);
+
+
+
+
+		RefMap refmap;
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, triangles.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					const auto& t = triangles[i];
+					for (size_t j = 0; j < 3; ++j) {
+						auto vertexIndex = t.v[j];
+						refmap.insert(std::make_pair(vertexIndex, Ref(i, j)));
+					}
+				}
+			}
+		);
+
+
+#pragma omp parallel for
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			auto range = refmap.equal_range(i);
+			for (auto node = range.first; node != range.second; ++node) {
+				vertices[i].refs.push_back(node->second);
+			}
+		}
+
+	}
+
+	void InitIncidentEdges2() {
 
 		// 1. Parallel clear (optional but clean)
 		tbb::parallel_for(
