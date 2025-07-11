@@ -297,6 +297,7 @@ struct std::hash<luxrays::Point> {
 struct SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
+	u_int invalidated = false;
 
 	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 	{}
@@ -306,12 +307,52 @@ using RefVector = std::vector< SimplifyRef >;
 using RefMap = tbb::concurrent_multimap<u_int, SimplifyRef>;
 using Ref = SimplifyRef;
 
+
+class RefMapView: public std::ranges::view_interface<RefMapView> {
+public:
+	using range_type = decltype(std::declval<RefMap>().equal_range(0));
+	using begin_type = RefMap::iterator;
+	using end_type = RefMap::iterator;
+
+	RefMapView(begin_type p_begin, end_type p_end) :
+		m_begin(p_begin), m_end(p_end) {}
+
+	begin_type begin() { return m_begin; }
+	end_type end() { return m_end; }
+
+private:
+	begin_type m_begin;
+	end_type m_end;
+};
+
+static_assert(std::assignable_from<RefMapView&, RefMapView>);
+static_assert(std::movable<RefMapView>);
+static_assert(std::ranges::view<RefMapView>);
+static_assert(std::ranges::viewable_range<RefMapView>);
+
+class ConstRefMapView: public std::ranges::view_interface<ConstRefMapView> {
+public:
+	using range_type = decltype(std::declval<const RefMap>().equal_range(0));
+	using begin_type = RefMap::const_iterator;
+	using end_type = RefMap::const_iterator;
+
+	ConstRefMapView(begin_type p_begin, end_type p_end) :
+		m_begin(p_begin), m_end(p_end) {}
+
+	begin_type begin() { return m_begin; }
+	end_type end() { return m_end; }
+
+private:
+	begin_type m_begin;
+	end_type m_end;
+};
+static_assert(std::ranges::view<ConstRefMapView>);
+
 using BatchVector = std::vector<RefVector>;
 
 struct  SimplifyVertex {
 	// Core data
 	luxrays::Point p;              // Position
-	RefVector refs;       // Incident edges in topology
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
@@ -735,27 +776,58 @@ public:
 
 private:
 
-	 alignas(64) VertexVector vertices;
-	 alignas(64) TriangleVector triangles;
+	VertexVector vertices;
+	TriangleVector triangles;
+	RefMap refmap;
 
-	void assert_data(size_t line) {
-		for (auto& v: vertices) {
-			for (auto& r: v.refs) {
-				if(r.tid >= triangles.size()) {
-					SDL_LOG("Data error: " << r.tid << " " << triangles.size()
-							<< " #" << to_string(line));
-					return;
-				}
-			}
-		}
-		SDL_LOG("No data error " + to_string(line));
-	}
 
 	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
 	// Neighbor features
 	using NeighborSet = std::unordered_set<u_int>;
 
+
+	// Get refs for a given vertex index
+	auto refmap_range(u_int vertexIndex) {
+		// TODO
+		auto range = refmap.equal_range(vertexIndex);
+		auto begin = range.first;
+		auto end = range.second;
+		auto view = RefMapView(begin, end);
+		//auto range = std::ranges::view_interface<RefMap::range_type>();
+		auto all_values = std::views::values(view);
+		//auto valid_values = std::views::filter(
+			//all_values,
+			//[](const RefMap::value_type r) { return not r.second.invalidated; }
+		//);
+		return all_values;
+	}
+	auto const_refmap_range(u_int vertexIndex) const {
+		// TODO
+		auto const range = refmap.equal_range(vertexIndex);
+		auto const begin = range.first;
+		auto const end = range.second;
+		auto view = ConstRefMapView(begin, end);
+		//auto range = std::ranges::view_interface<RefMap::range_type>();
+		auto all_values = std::views::values(view);
+		//auto valid_values = std::views::filter(
+			//all_values,
+			//[](const RefMap::value_type r) { return not r.second.invalidated; }
+		//);
+		return all_values;
+	}
+
+	//auto refmap_range_const(u_int vertexIndex) const {
+		//// TODO
+		//const auto range = RefMapView(refmap.equal_range(vertexIndex));
+		////auto range = std::ranges::view_interface<RefMap::range_type>();
+		//const auto all_values = std::views::values(range);
+		////auto valid_values = std::views::filter(
+			////all_values,
+			////[](const RefMap::value_type r) { return not r.second.invalidated; }
+		////);
+		//return all_values;
+	//}
 
 	// Find edge neighbors, ie vertices that could be affected
 	// by collapsing the given edge
@@ -764,12 +836,13 @@ private:
 
 		neighbors.insert(i0);
 		neighbors.insert(i1);
-		for (const auto& ref: vertices[i0].refs) {
+		//for (const auto& ref: vertices[i0].refs) {
+		for (const auto& ref: const_refmap_range(i0)) {
 			for (u_int vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
 		}
-		for (const auto& ref: vertices[i1].refs) {
+		for (const auto& ref: const_refmap_range(i1)) {
 			for (u_int vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
@@ -915,18 +988,37 @@ private:
 			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera, preserveBorder);
 
 		// Update incident edges of vertex
-		auto& refs = v0.refs;
-		refs.clear();
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs0.begin()),
-			std::make_move_iterator(newRefs0.end())
-		);
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs1.begin()),
-			std::make_move_iterator(newRefs1.end())
-		);
+		// TODO
+		//auto& refs = v0.refs;
+		//refs.clear();
+		//refs.insert(
+			//refs.end(),
+			//std::make_move_iterator(newRefs0.begin()),
+			//std::make_move_iterator(newRefs0.end())
+		//);
+		//refs.insert(
+			//refs.end(),
+			//std::make_move_iterator(newRefs1.begin()),
+			//std::make_move_iterator(newRefs1.end())
+		//);
+		//deletedTriangles = deletedTriangles0 + deletedTriangles1;
+
+		// Invalidate previous incident edges
+		for (auto& r: refmap_range(i0)) {
+			r.invalidated = true;
+		}
+		for (auto& r: refmap_range(i1)) {
+			r.invalidated = true;
+		}
+
+		// Add new incident edges
+		for (auto& r: newRefs0) {
+			refmap.insert(std::make_pair(i0, r));
+		}
+		for (auto& r: newRefs1) {
+			refmap.insert(std::make_pair(i1, r));
+		}
+
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -944,11 +1036,14 @@ private:
 		std::vector<bool> deleted;
 
 		if constexpr(F) {
-			deleted.resize(v0.refs.size());
+			//deleted.resize(v0.refs.size()); TODO
+			deleted.resize(std::ranges::count(const_refmap_range(i0)));
 		}
 
-		for (size_t k = 0; k < v0.refs.size(); ++k) {
-			auto& ref = v0.refs[k];
+		for (size_t k = 0; k < refmap_range(i0).size(); ++k) {
+		//for (size_t k = 0; k < v0.refs.size(); ++k) {  //TODO
+			//auto& ref = v0.refs[k];
+			auto& ref = refmap_range(i0)[k];
 			const SimplifyTriangle &t = triangles[ref.tid];
 
 			if (t.deleted) continue;
@@ -1037,8 +1132,9 @@ private:
 	) {
 		u_int deletedTriangles = 0;
 		RefVector refs;
-		refs.reserve(v.refs.size());
-		for (const auto& [k, r]: enumerate(v.refs)) {
+		refs.reserve(refmap_range(i0).size());
+		//for (const auto& [k, r]: enumerate(v.refs)) {  TODO
+		for (const auto& [k, r]: enumerate(refmap_range(i0))) {
 			SimplifyTriangle &t = triangles[r.tid];
 
 			if (t.deleted)
@@ -1119,20 +1215,8 @@ private:
 	// Modify: vertices
 	void InitIncidentEdges() {
 
-		// Parallel clear (optional but clean)
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, vertices.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					vertices[i].refs.clear();
-				}
-			}
-		);
+		refmap.clear();
 
-
-
-
-		RefMap refmap;
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, triangles.size()),
 			[&](const tbb::blocked_range<size_t>& r) {
@@ -1147,57 +1231,51 @@ private:
 		);
 
 
-#pragma omp parallel for
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			auto range = refmap.equal_range(i);
-			for (auto node = range.first; node != range.second; ++node) {
-				vertices[i].refs.push_back(node->second);
-			}
-		}
 
 	}
 
-	void InitIncidentEdges2() {
+	//TODO
+	//void InitIncidentEdges2() {
 
-		// 1. Parallel clear (optional but clean)
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, vertices.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					vertices[i].refs.clear();
-				}
-			}
-		);
+		//// 1. Parallel clear (optional but clean)
+		//tbb::parallel_for(
+			//tbb::blocked_range<size_t>(0, vertices.size()),
+			//[&](const tbb::blocked_range<size_t>& r) {
+				//for (size_t i = r.begin(); i != r.end(); ++i) {
+					//vertices[i].refs.clear();
+				//}
+			//}
+		//);
 
-		// 2. Temporary thread-safe concurrent_vectors for each vertex
-		// Align to 64 to avoid false sharing
-		struct alignas(64) RefConVec : tbb::concurrent_vector<Ref> {};
-		std::vector<RefConVec> tmp_refs(vertices.size());
-		for (auto& vec: tmp_refs) {
-			vec.reserve(8);  // Reasonable value?
-		}
+		//// 2. Temporary thread-safe concurrent_vectors for each vertex
+		//// Align to 64 to avoid false sharing
+		//struct alignas(64) RefConVec : tbb::concurrent_vector<Ref> {};
+		//std::vector<RefConVec> tmp_refs(vertices.size());
+		//for (auto& vec: tmp_refs) {
+			//vec.reserve(8);  // Reasonable value?
+		//}
 
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, triangles.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (auto i = r.begin(); i != r.end(); ++i) {
-					const auto& t = triangles[i];
-					for (size_t j = 0; j < 3; ++j) {
-						auto vertexIndex = t.v[j];
-						tmp_refs[vertexIndex].emplace_back(i, j);
-					}
-				}
-			}
-		);
+		//tbb::parallel_for(
+			//tbb::blocked_range<size_t>(0, triangles.size()),
+			//[&](const tbb::blocked_range<size_t>& r) {
+				//for (auto i = r.begin(); i != r.end(); ++i) {
+					//const auto& t = triangles[i];
+					//for (size_t j = 0; j < 3; ++j) {
+						//auto vertexIndex = t.v[j];
+						//tmp_refs[vertexIndex].emplace_back(i, j);
+					//}
+				//}
+			//}
+		//);
 
-		// 3. Serially move concurrent_vectors to real refs
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			vertices[i].refs.assign(
-				tmp_refs[i].begin(),
-				tmp_refs[i].end()
-			);
-		}
-	}
+		//// 3. Serially move concurrent_vectors to real refs
+		//for (size_t i = 0; i < vertices.size(); ++i) {
+			//vertices[i].refs.assign(
+				//tmp_refs[i].begin(),
+				//tmp_refs[i].end()
+			//);
+		//}
+	//}
 
 	// Init border indicators on vertices
 	//
@@ -1208,11 +1286,12 @@ private:
 			v.border = false;
 
 		vector<u_int> vcount, vids;
-		for (const auto& v: vertices) {
+		for (const auto& [i, v]: enumerate(vertices)) {
 			vcount.clear();
 			vids.clear();
 
-			for (const auto& ref: v.refs) {
+			//for (const auto& ref: v.refs) { TODO
+			for (const auto& ref: refmap_range(i)) {
 				auto k = ref.tid;
 				SimplifyTriangle &t = triangles[k];
 
