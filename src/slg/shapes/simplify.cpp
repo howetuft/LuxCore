@@ -37,6 +37,7 @@
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_map.h>
+#include <tbb/concurrent_unordered_map.h>
 #include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -294,16 +295,17 @@ struct std::hash<luxrays::Point> {
     }
 };
 
-struct SimplifyRef {
+struct alignas(64) SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
+	u_int pad[2];
 
 	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 	{}
 	SimplifyRef() {};
 };
 using RefVector = std::vector< SimplifyRef >;
-using RefMap = tbb::concurrent_multimap<u_int, SimplifyRef>;
+using RefMap = tbb::concurrent_unordered_multimap<u_int, SimplifyRef>;
 using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
@@ -650,7 +652,6 @@ public:
 		const float edgeScreenSize,
 		const bool preserveBorder
 	) {
-
 		// Work on 10% of all triangles for each iteration
 		u_int maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
 
@@ -1118,7 +1119,7 @@ private:
 	//
 	// Modify: vertices
 	void InitIncidentEdges() {
-
+		SDL_LOG("Simplify - Clear previous data");
 		// Parallel clear (optional but clean)
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, vertices.size()),
@@ -1131,11 +1132,19 @@ private:
 
 
 
-
+		SDL_LOG("Simplify - Build incident map - " << sizeof(SimplifyRef));
+		// Build incident map
 		RefMap refmap;
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, triangles.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
+		struct IncidentTask {
+			const TriangleVector& triangles;
+			RefMap& refmaps;
+
+			IncidentTask(const TriangleVector &p_triangles, RefMap& p_refmap) :
+				triangles(p_triangles),
+				refmap(p_refmap)
+			{}
+			IncidentTask(const IncidentTask&) = default;
+			void operator()(const tbb::blocked_range<size_t>& r) const {
 				for (auto i = r.begin(); i != r.end(); ++i) {
 					const auto& t = triangles[i];
 					for (size_t j = 0; j < 3; ++j) {
@@ -1144,8 +1153,27 @@ private:
 					}
 				}
 			}
+		};
+		//tbb::parallel_for(
+			//tbb::blocked_range<size_t>(0, triangles.size()),
+			//[&](const tbb::blocked_range<size_t>& r) {
+				//for (auto i = r.begin(); i != r.end(); ++i) {
+					//const auto& t = triangles[i];
+					//for (size_t j = 0; j < 3; ++j) {
+						//auto vertexIndex = t.v[j];
+						//refmap.insert(std::make_pair(vertexIndex, Ref(i, j)));
+					//}
+				//}
+			//}
+		//);
+		IncidentTask task(triangles, refmap);
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, triangles.size()),
+			task
 		);
 
+		SDL_LOG("Simplify - Pivot");
+		// Pivot to final format
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, vertices.size()),
 			[&](const tbb::blocked_range<size_t>& r) {
