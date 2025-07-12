@@ -1146,14 +1146,17 @@ private:
 			}
 		);
 
-
-#pragma omp parallel for
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			auto range = refmap.equal_range(i);
-			for (auto node = range.first; node != range.second; ++node) {
-				vertices[i].refs.push_back(node->second);
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, vertices.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					auto range = refmap.equal_range(i);
+					for (auto node = range.first; node != range.second; ++node) {
+						vertices[i].refs.push_back(node->second);
+					}
+				}
 			}
-		}
+		);
 
 	}
 
