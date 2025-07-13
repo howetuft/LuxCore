@@ -1316,18 +1316,17 @@ private:
 		if (iteration > 0) {
 			SDL_LOG("Simplify - Compact triangles");
 			// Compact triangles
-			TriangleVector newTris;
+			decltype(triangles) newTris;
 			newTris.reserve(triangles.size());
 			auto not_deleted = [](const SimplifyTriangle& t){return !t.deleted;};
-			for (auto& t: triangles | std::views::filter(not_deleted)) {
-				newTris.push_back(t);
-			}
+			std::copy_if(
+				triangles.begin(),
+				triangles.end(),
+				std::back_inserter(newTris),
+				not_deleted
+			);
 			std::swap(triangles, newTris);
 		}
-		// Clear triangles dirty flags
-		//SDL_LOG("Simplify - Clear dirty flags");
-		//for (u_int i = 0; i < triangles.size(); ++i)
-			//triangles[i].dirty = false;
 
 		// Build per-vertex incident edge tables
 		//
