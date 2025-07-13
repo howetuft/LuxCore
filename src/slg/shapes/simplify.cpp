@@ -611,7 +611,6 @@ public:
 	BatchVector
 	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
 		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
-		SDL_LOG("Enter");
 		tbb::enumerable_thread_specific<unordered_set<u_int>> closures;
 		tbb::blocked_range<u_int> candidate_range(0, candidateList.size());
 		auto closure_task = [&](const decltype(candidate_range)& r) {
@@ -632,7 +631,6 @@ public:
 
 		// Step 2: Build connected components (union-find)
 
-		SDL_LOG("Union find");
 		DisjointSets unionFind(vertices.size());
 		using edge_t = std::tuple<u_int, u_int>;
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
@@ -653,7 +651,6 @@ public:
 		);
 
 		// Build batches
-		SDL_LOG("Build");
 		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
@@ -668,6 +665,38 @@ public:
 
 		return res;
 
+	}
+
+	u_int DeleteTriangles(
+		const BatchVector& batches,
+		const float edgeScreenSize,
+		const Camera& camera,
+		const bool preserveBorder
+	) {
+		tbb::enumerable_thread_specific<u_int> batchDeleted;
+		tbb::blocked_range<u_int> batch_range(0, batches.size());
+		auto delete_task = [&](const tbb::blocked_range<u_int>& r) {
+			for (u_int i = r.begin(); i != r.end(); ++i) {
+				const auto& batch = *(batches.begin() + i);
+				for (auto& ref : batch) {
+					batchDeleted.local() += CollapseEdge(
+						ref,
+						edgeScreenSize,
+						camera,
+						preserveBorder
+					);
+				}
+			}
+		};
+		tbb::parallel_for(batch_range, delete_task);
+
+		u_int deletedTriangles = std::accumulate(
+			batchDeleted.begin(),
+			batchDeleted.end(),
+			0,
+			std::plus<u_int>()
+		);
+		return deletedTriangles;
 	}
 
 	void Decimate(
@@ -705,45 +734,22 @@ public:
 			SDL_LOG("Simplify - Partition candidate list #" << iteration);
 			auto batches = PartitionIndependentEdgeBatches(candidateList);
 
-			SDL_LOG("Simplify - Number of batches: " << batches.size());
-
-			tbb::enumerable_thread_specific<u_int> batchDeleted;
-
-			SDL_LOG("Simplify - Main treatment #" << iteration);
-			tbb::parallel_for(
-				tbb::blocked_range<u_int>(0, batches.size()),
-				[&](const tbb::blocked_range<u_int>& r) {
-					for (u_int i = r.begin(); i != r.end(); ++i) {
-						const auto& batch = *(batches.begin() + i);
-						for (auto& ref : batch) {
-							batchDeleted.local() += CollapseEdge(
-								ref,
-								edgeScreenSize,
-								camera,
-								preserveBorder
-							);
-						}
-					}
-				}
+			SDL_LOG("Simplify - Delete triangles (" << batches.size() << " batches)");
+			const u_int iterationDeletedTriangles = DeleteTriangles(
+				batches, edgeScreenSize, camera, preserveBorder
 			);
 
-			deletedTriangles += std::accumulate(
-				batchDeleted.begin(),
-				batchDeleted.end(),
-				0,
-				std::plus<u_int>()
-			);
-			const u_int iterationDeletedTriangles =
-				deletedTriangles - initialdeletedTriangles;
+			deletedTriangles += iterationDeletedTriangles;
 
 			SDL_LOG(
 				"Simplify - End iteration #" << iteration
 				<< " (" << candidateList.size()
 				<< " edge candidates, deleted "
 				<< iterationDeletedTriangles
-				<< "/" << deletedTriangles
+				<< " triangles in current iteration, "
+				<< deletedTriangles
 				<< " of " << startTriangleCount << " triangles"
-				<< ")"
+				<< " in all iterations)"
 			);
 			if (!iterationDeletedTriangles)
 				break;
