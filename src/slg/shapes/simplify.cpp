@@ -671,7 +671,7 @@ public:
 		u_int deletedTriangles = 0;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
 
-			SDL_LOG("Simplify - Start iteration (init) #" << iteration);
+			SDL_LOG("Simplify - Start iteration #" << iteration);
 
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
 				break;
@@ -724,7 +724,7 @@ public:
 				deletedTriangles - initialdeletedTriangles;
 
 			SDL_LOG(
-				"Simplify - Iteration " << iteration
+				"Simplify - End iteration #" << iteration
 				<< " (" << candidateList.size()
 				<< " edge candidates, deleted "
 				<< iterationDeletedTriangles
@@ -1148,11 +1148,11 @@ private:
 
 		// Build incident map
 		struct IncidentTask {
-			const TriangleVector& triangles;
+			TriangleVector& triangles;
 			VertexVector& vertices;
 
 			IncidentTask(
-				const TriangleVector& p_triangles,
+				TriangleVector& p_triangles,
 				VertexVector& p_vertices
 			) :
 				triangles(p_triangles),
@@ -1163,6 +1163,7 @@ private:
 
 			void operator()(const tbb::blocked_range<size_t>& r) const {
 				for (auto i = r.begin(); i != r.end(); ++i) {
+					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
 					const auto& v = triangles[i].v;
 					vertices[v[0]].refs.push_back(Ref(i, 0));
 					vertices[v[1]].refs.push_back(Ref(i, 1));
@@ -1324,9 +1325,9 @@ private:
 			std::swap(triangles, newTris);
 		}
 		// Clear triangles dirty flags
-		SDL_LOG("Simplify - Clear dirty flags");
-		for (u_int i = 0; i < triangles.size(); ++i)
-			triangles[i].dirty = false;
+		//SDL_LOG("Simplify - Clear dirty flags");
+		//for (u_int i = 0; i < triangles.size(); ++i)
+			//triangles[i].dirty = false;
 
 		// Build per-vertex incident edge tables
 		//
