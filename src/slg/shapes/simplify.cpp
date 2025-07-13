@@ -43,6 +43,7 @@
 #include <tbb/concurrent_hash_map.h>
 #include <tbb/concurrent_map.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_unordered_set.h>
 #include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -610,17 +611,28 @@ public:
 	BatchVector
 	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
 		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
+		SDL_LOG("Enter");
+		tbb::enumerable_thread_specific<unordered_set<u_int>> closures;
+		tbb::blocked_range<u_int> candidate_range(0, candidateList.size());
+		auto closure_task = [&](const decltype(candidate_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				auto& c = candidateList[i];
+				const auto& t = triangles[c.tid];
+				const u_int i0 = t.v[c.tvertex];
+				const u_int i1 = t.v[(c.tvertex + 1) % 3];
+				auto neighbors = edgeNeighbors(i0, i1);
+				closures.local().insert(neighbors.begin(), neighbors.end());
+			}
+		};
+		tbb::parallel_for(candidate_range, closure_task);
 		std::unordered_set<u_int> closure;
-		for (auto& c: candidateList) {
-			const auto& t = triangles[c.tid];
-			const u_int i0 = t.v[c.tvertex];
-			const u_int i1 = t.v[(c.tvertex + 1) % 3];
-			auto neighbors = edgeNeighbors(i0, i1);
-			closure.insert(neighbors.begin(), neighbors.end());
+		for (auto& local: closures) {
+			closure.merge(local);
 		}
 
 		// Step 2: Build connected components (union-find)
 
+		SDL_LOG("Union find");
 		DisjointSets unionFind(vertices.size());
 		using edge_t = std::tuple<u_int, u_int>;
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
@@ -641,13 +653,13 @@ public:
 		);
 
 		// Build batches
+		SDL_LOG("Build");
 		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
 			u_int batchIndex = unionFind.find(i);
 			batches[batchIndex].push_back(c);
 		}
-
 		BatchVector res;
 		res.reserve(batches.size());
 		for (const auto& [i, batch]: enumerate(batches)) {
@@ -1232,8 +1244,8 @@ private:
 
 		// Ref comparison predicate
 		auto refErrorCompare = [&](const Ref& left, const Ref& right) {
-			const auto& left_error = triangles[left.tid].err[left.tvertex];
-			const auto& right_error = triangles[right.tid].err[right.tvertex];
+			const auto left_error = triangles[left.tid].err[left.tvertex];
+			const auto right_error = triangles[right.tid].err[right.tvertex];
 			return  left_error > right_error;
 		};
 
