@@ -30,6 +30,7 @@
 #include <execution>
 
 #include <tbb/mutex.h>
+#include <tbb/concurrent_priority_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/scalable_allocator.h>
 #include <tbb/parallel_for.h>
@@ -1229,78 +1230,77 @@ private:
 		u_int maxCandidateQueueSize
 	) const {
 
-
-		tbb::enumerable_thread_specific<RefVector> localCandidates;
-
-		tbb::parallel_for(tbb::blocked_range<u_int>(0, triangles.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i) {
-					const SimplifyTriangle &t = triangles[i];
-					const std::array<std::tuple<u_int, u_int>, 3> edges(
-						{
-							{t.v[0], t.v[1]},
-							{t.v[1], t.v[2]},
-							{t.v[2], t.v[0]},
-						}
-					);
-
-					u_int minErrorIndex = NULL_INDEX;
-					float minError = FLOAT_INFINITY;
-					for (u_int j = 0; j < 3; ++j) {
-						const auto [i0, i1] = edges[j];
-						const SimplifyVertex &v0 = vertices[i0];
-						const SimplifyVertex &v1 = vertices[i1];
-
-						// Border check
-						if (preserveBorder) {
-							if (v0.border && v1.border)
-								continue;
-						} else {
-							if (v0.border != v1.border)
-								continue;
-						}
-
-						auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
-						if (Flipped<false>(p, i0, i1))
-							continue;
-						if (Flipped<false>(p, i1, i0))
-							continue;
-
-						if (t.err[j] < minError) {
-							minErrorIndex = j;
-							minError = t.err[j];
-						}
-					}
-					if (minErrorIndex != NULL_INDEX) {
-						localCandidates.local().emplace_back(i, minErrorIndex);
-					}
-				}
-			}
-		);
-
-
-		// Assemble local candidates
-		RefVector candidateList;
-		candidateList.reserve(vertices.size());
-		for (const auto& local: localCandidates) {
-			candidateList.insert(
-				candidateList.end(),
-				local.begin(),
-				local.end()
-			);
-		}
+		// Ref comparison predicate
 		auto refErrorCompare = [&](const Ref& left, const Ref& right) {
 			const auto& left_error = triangles[left.tid].err[left.tvertex];
 			const auto& right_error = triangles[right.tid].err[right.tvertex];
-			return  left_error < right_error;
+			return  left_error > right_error;
 		};
-		tbb::parallel_sort(candidateList, refErrorCompare);
 
+		tbb::concurrent_priority_queue<SimplifyRef, decltype(refErrorCompare) >
+			candidateQueue(vertices.size(), refErrorCompare);
+		tbb::blocked_range<u_int> tri_range(0, triangles.size());
+		tbb::auto_partitioner partitioner;
+
+		auto build_task = [&](const decltype(tri_range)& r) {
+			// Main loop
+			for (u_int i = r.begin(); i != r.end(); ++i) {
+				const SimplifyTriangle &t = triangles[i];
+				auto tv0 = t.v[0];
+				auto tv1 = t.v[1];
+				auto tv2 = t.v[2];
+				const std::array<std::tuple<u_int, u_int>, 3> edges(
+					{
+						{tv0, tv1},
+						{tv1, tv2},
+						{tv2, tv0},
+					}
+				);
+
+				u_int minErrorIndex = NULL_INDEX;
+				float minError = FLOAT_INFINITY;
+				for (u_int j = 0; j < 3; ++j) {
+					const auto [i0, i1] = edges[j];
+					const SimplifyVertex &v0 = vertices[i0];
+					const SimplifyVertex &v1 = vertices[i1];
+
+					// Border check
+					if (preserveBorder) {
+						if (v0.border && v1.border)
+							continue;
+					} else {
+						if (v0.border != v1.border)
+							continue;
+					}
+
+					auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+					if (Flipped<false>(p, i0, i1))
+						continue;
+					if (Flipped<false>(p, i1, i0))
+						continue;
+
+					if (t.err[j] < minError) {
+						minErrorIndex = j;
+						minError = t.err[j];
+					}
+				}
+				if (minErrorIndex != NULL_INDEX) {
+					candidateQueue.emplace(i, minErrorIndex);
+				}
+			}
+
+		};
+		tbb::parallel_for(tri_range, build_task, partitioner);
+
+		// Assemble result
 		size_t numCandidates = std::min(
-			candidateList.size(),
+			candidateQueue.size(),
 			size_t(maxCandidateQueueSize)
 		);
-		candidateList.resize(numCandidates);
+		RefVector candidateList(numCandidates);
+		for (size_t i = 0; i < numCandidates; ++i) {
+			candidateQueue.try_pop(candidateList[i]);
+		}
 
 		return candidateList;
 	}
