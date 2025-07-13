@@ -29,6 +29,7 @@
 #include <random>
 #include <execution>
 
+#include <tbb/mutex.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/scalable_allocator.h>
 #include <tbb/parallel_for.h>
@@ -1110,21 +1111,29 @@ private:
 			}
 		);
 
-		// Serial accumulation into vertex quadrics
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			const auto &t = triangles[i];
-			vertices[t.v[0]].q += triangleQuadrics[i][0];
-			vertices[t.v[1]].q += triangleQuadrics[i][1];
-			vertices[t.v[2]].q += triangleQuadrics[i][2];
-		}
+		// Accumulation into vertex quadrics
+		std::vector<tbb::mutex> v_mtx(vertices.size());
+		tbb::blocked_range<u_int> tri_range(0, triangles.size());
+		auto acc_task = [&](decltype(tri_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				const auto &t = triangles[i];
+				for (u_int j = 0; j < 3; ++j) {
+					auto vertex_index = t.v[j];
+					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
+					vertices[vertex_index].q += triangleQuadrics[i][j];
+				}
+			}
+		};
+		tbb::parallel_for(tri_range, acc_task);
 
 		// Triangle error update
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			// Calc Edge Error
-			SimplifyTriangle &t = triangles[i];
-
-			t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
-		}
+		auto update_task = [&](decltype(tri_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				auto &t = triangles[i];
+				t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
+			}
+		};
+		tbb::parallel_for(tri_range, update_task);
 	}
 
 	// Build incident edge tables on vertices
