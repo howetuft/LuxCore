@@ -29,7 +29,10 @@
 #include <random>
 #include <execution>
 
+#include <tbb/cache_aligned_allocator.h>
+#include <tbb/scalable_allocator.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/parallel_reduce.h>
@@ -298,14 +301,13 @@ struct std::hash<luxrays::Point> {
 struct alignas(64) SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
-	u_int pad[2];
 
 	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
 	{}
 	SimplifyRef() {};
 };
-using RefVector = std::vector< SimplifyRef >;
-using RefMap = tbb::concurrent_unordered_multimap<u_int, SimplifyRef>;
+using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
+using RefMap = std::multimap<u_int, SimplifyRef>;
 using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
@@ -313,7 +315,7 @@ using BatchVector = std::vector<RefVector>;
 struct  SimplifyVertex {
 	// Core data
 	luxrays::Point p;              // Position
-	RefVector refs;       // Incident edges in topology
+	tbb::concurrent_vector<SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef>> refs;       // Incident edges in topology
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
@@ -350,7 +352,10 @@ struct  SimplifyVertex {
 	}
 
 };
-using VertexVector = std::vector<SimplifyVertex>;
+using VertexVector = std::vector<
+	SimplifyVertex,
+	tbb::cache_aligned_allocator<SimplifyVertex>
+>;
 
 struct  SimplifyTriangle {
 	std::array<u_int, 3> v;
@@ -370,7 +375,10 @@ struct  SimplifyTriangle {
 		const bool preserveBorder
 	);
 };
-using TriangleVector = std::vector<SimplifyTriangle>;
+using TriangleVector = std::vector<
+	SimplifyTriangle,
+	tbb::cache_aligned_allocator<SimplifyTriangle>
+>;
 
 // Error between vertex and Quadric
 float VertexError(
@@ -487,8 +495,10 @@ public:
 
 		vertices.resize(srcMesh.GetTotalVertexCount());
 
-		for (u_int i = 0; i < vertCount; ++i)
+		for (u_int i = 0; i < vertCount; ++i) {
 			vertices[i].p = verts[i];
+			vertices[i].refs.reserve(9);  // Seems reasonable
+		}
 
 		if (srcMesh.HasNormals()) {
 			const Normal *norms = srcMesh.GetNormals();
@@ -918,16 +928,18 @@ private:
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
 		refs.clear();
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs0.begin()),
-			std::make_move_iterator(newRefs0.end())
-		);
-		refs.insert(
-			refs.end(),
-			std::make_move_iterator(newRefs1.begin()),
-			std::make_move_iterator(newRefs1.end())
-		);
+		refs.grow_by(newRefs0.begin(), newRefs0.end());
+		refs.grow_by(newRefs1.begin(), newRefs1.end());
+		//refs.insert(
+			//refs.end(),
+			//std::make_move_iterator(newRefs0.begin()),
+			//std::make_move_iterator(newRefs0.end())
+		//);
+		//refs.insert(
+			//refs.end(),
+			//std::make_move_iterator(newRefs1.begin()),
+			//std::make_move_iterator(newRefs1.end())
+		//);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -1119,116 +1131,43 @@ private:
 	//
 	// Modify: vertices
 	void InitIncidentEdges() {
-		SDL_LOG("Simplify - Clear previous data");
-		// Parallel clear (optional but clean)
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, vertices.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					vertices[i].refs.clear();
-				}
-			}
-		);
 
+		// Clear previous data
+		for (auto& v: vertices) {
+			v.refs.clear();
+		}
 
-
-		SDL_LOG("Simplify - Build incident map - " << sizeof(SimplifyRef));
 		// Build incident map
-		RefMap refmap;
 		struct IncidentTask {
 			const TriangleVector& triangles;
-			RefMap& refmaps;
+			VertexVector& vertices;
 
-			IncidentTask(const TriangleVector &p_triangles, RefMap& p_refmap) :
+			IncidentTask(
+				const TriangleVector& p_triangles,
+				VertexVector& p_vertices
+			) :
 				triangles(p_triangles),
-				refmap(p_refmap)
+				vertices(p_vertices)
 			{}
+
 			IncidentTask(const IncidentTask&) = default;
+
 			void operator()(const tbb::blocked_range<size_t>& r) const {
 				for (auto i = r.begin(); i != r.end(); ++i) {
-					const auto& t = triangles[i];
-					for (size_t j = 0; j < 3; ++j) {
-						auto vertexIndex = t.v[j];
-						refmap.insert(std::make_pair(vertexIndex, Ref(i, j)));
-					}
+					const auto& v = triangles[i].v;
+					vertices[v[0]].refs.push_back(Ref(i, 0));
+					vertices[v[1]].refs.push_back(Ref(i, 1));
+					vertices[v[2]].refs.push_back(Ref(i, 2));
 				}
 			}
 		};
-		//tbb::parallel_for(
-			//tbb::blocked_range<size_t>(0, triangles.size()),
-			//[&](const tbb::blocked_range<size_t>& r) {
-				//for (auto i = r.begin(); i != r.end(); ++i) {
-					//const auto& t = triangles[i];
-					//for (size_t j = 0; j < 3; ++j) {
-						//auto vertexIndex = t.v[j];
-						//refmap.insert(std::make_pair(vertexIndex, Ref(i, j)));
-					//}
-				//}
-			//}
-		//);
-		IncidentTask task(triangles, refmap);
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, triangles.size()),
-			task
-		);
 
-		SDL_LOG("Simplify - Pivot");
-		// Pivot to final format
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, vertices.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					auto range = refmap.equal_range(i);
-					for (auto node = range.first; node != range.second; ++node) {
-						vertices[i].refs.push_back(node->second);
-					}
-				}
-			}
-		);
+		IncidentTask task(triangles, vertices);
+		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 
+		tbb::parallel_for(range, task);
 	}
 
-	void InitIncidentEdges2() {
-
-		// 1. Parallel clear (optional but clean)
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, vertices.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					vertices[i].refs.clear();
-				}
-			}
-		);
-
-		// 2. Temporary thread-safe concurrent_vectors for each vertex
-		// Align to 64 to avoid false sharing
-		struct alignas(64) RefConVec : tbb::concurrent_vector<Ref> {};
-		std::vector<RefConVec> tmp_refs(vertices.size());
-		for (auto& vec: tmp_refs) {
-			vec.reserve(8);  // Reasonable value?
-		}
-
-		tbb::parallel_for(
-			tbb::blocked_range<size_t>(0, triangles.size()),
-			[&](const tbb::blocked_range<size_t>& r) {
-				for (auto i = r.begin(); i != r.end(); ++i) {
-					const auto& t = triangles[i];
-					for (size_t j = 0; j < 3; ++j) {
-						auto vertexIndex = t.v[j];
-						tmp_refs[vertexIndex].emplace_back(i, j);
-					}
-				}
-			}
-		);
-
-		// 3. Serially move concurrent_vectors to real refs
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			vertices[i].refs.assign(
-				tmp_refs[i].begin(),
-				tmp_refs[i].end()
-			);
-		}
-	}
 
 	// Init border indicators on vertices
 	//
