@@ -1039,43 +1039,34 @@ private:
 	// Init border indicators on vertices
 	//
 	// Modify: vertices
-	// TODO Parallelize
 	void InitBorders() {
-		// Set borders to false
-		for (auto& v: vertices)
+		// Initialize borders to false
+		for (auto& v: vertices) {
 			v.border = false;
+		}
 
-		std::vector<u_int> vcount, vids;
+		// For each vertex
 		for (const auto& v: vertices) {
-			vcount.clear();
-			vids.clear();
+			std::map<u_int, u_int> vorders;  // Vertex orders
 
+			// For each triangle incident to the current vertex
 			for (const auto& ref: v.refs) {
-				auto k = ref.tid;
-				SimplifyTriangle &t = triangles[k];
 
-				for (u_int k = 0; k < 3; ++k) {
-					u_int ofs = 0;
-					u_int id = t.v[k];
-
-					while (ofs < vcount.size()) {
-						if (vids[ofs] == id)
-							break;
-
-						ofs++;
-					}
-
-					if (ofs == vcount.size()) {
-						vcount.push_back(1);
-						vids.push_back(id);
-					} else
-						vcount[ofs]++;
+				// For each vertex of the incident triangle
+				for (u_int vid: triangles[ref.tid].v) {
+					// Increment incident vertex order
+					// If id doesn't exist yet, it will be created (with order=1)
+					vorders[vid]++;
 				}
 			}
 
-			for (u_int j = 0; j < vcount.size(); ++j) {
-				if (vcount[j] == 1)
-					vertices[vids[j]].border = true;
+			for (auto& p: vorders) {
+				if (p.second == 1) {
+					// If p.first order is 1, it means that the edge (v, p.first)
+					// is referenced by only one triangle, thus it is a border.
+					// So we mark p.first to belong to a border
+					vertices[p.first].border = true;
+				}
 			}
 		}
 	}
