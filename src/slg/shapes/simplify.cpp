@@ -629,8 +629,8 @@ public:
 		}
 
 		// Clean up mesh
+		SDL_LOG("Simplify - Compact mesh");
 		CompactMesh();
-		SDL_LOG("Simplify - Mesh compacted");
 
 	//std::exit(0);  // DEBUG - Stop here
 	}
@@ -1189,7 +1189,6 @@ private:
 			InitQuadrics(edgeScreenSize, camera, preserveBorder);
 			InitBorders();
 		}
-		SDL_LOG("Simplify - End initialization");
 
 	}
 
