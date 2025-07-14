@@ -934,40 +934,43 @@ private:
 		const bool preserveBorder
 	) {
 		// Starting values
-		for (u_int i = 0; i < vertices.size(); ++i)
-			vertices[i].q = SymetricMatrix(0.0);
+		tbb::blocked_range<u_int> vertex_range(0, vertices.size());
+		auto initv_task = [&](const tbb::blocked_range<u_int>& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				vertices[i].q = SymetricMatrix(0.0);
+			}
+		};
+		tbb::parallel_for(vertex_range, initv_task);
 
 		// Parallel computation of per-triangle quadric contributions
 		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
-		// TODO
-		tbb::parallel_for(
-			tbb::blocked_range<u_int>(0, triangles.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i) {
-					SimplifyTriangle &t = triangles[i];
+		tbb::blocked_range<u_int> triangle_range(0, triangles.size());
 
-					SimplifyVertex &v0 = vertices[t.v[0]];
-					SimplifyVertex &v1 = vertices[t.v[1]];
-					SimplifyVertex &v2 = vertices[t.v[2]];
+		auto quadric_task = [&](const tbb::blocked_range<u_int>& r) {
+			for (u_int i = r.begin(); i != r.end(); ++i) {
+				SimplifyTriangle &t = triangles[i];
 
-					const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
-					t.geometryN = geometryN;
+				SimplifyVertex &v0 = vertices[t.v[0]];
+				SimplifyVertex &v1 = vertices[t.v[1]];
+				SimplifyVertex &v2 = vertices[t.v[2]];
 
-					const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-										   -Dot(Vector(geometryN), Vector(v0.p)));
+				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+				t.geometryN = geometryN;
 
-					triangleQuadrics[i][0] = sm;
-					triangleQuadrics[i][1] = sm;
-					triangleQuadrics[i][2] = sm;
-				}
+				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+									   -Dot(Vector(geometryN), Vector(v0.p)));
+
+				triangleQuadrics[i][0] = sm;
+				triangleQuadrics[i][1] = sm;
+				triangleQuadrics[i][2] = sm;
 			}
-		);
+		};
+		tbb::parallel_for(triangle_range, quadric_task);
 
 		// Accumulation into vertex quadrics
 		std::vector<tbb::mutex> v_mtx(vertices.size());
-		tbb::blocked_range<u_int> tri_range(0, triangles.size());
-		auto acc_task = [&](decltype(tri_range)& r) {
+		auto accumulate_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				const auto &t = triangles[i];
 				for (u_int j = 0; j < 3; ++j) {
@@ -977,16 +980,17 @@ private:
 				}
 			}
 		};
-		tbb::parallel_for(tri_range, acc_task);
+		tbb::parallel_for(triangle_range, accumulate_task);
 
 		// Triangle error update
-		auto update_task = [&](decltype(tri_range)& r) {
+		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto &t = triangles[i];
-				t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
+				triangles[i].UpdateTriangleError(
+					vertices, edgeScreenSize, camera, preserveBorder
+				);
 			}
 		};
-		tbb::parallel_for(tri_range, update_task);
+		tbb::parallel_for(triangle_range, update_task);
 	}
 
 	// Build incident edge tables on vertices
