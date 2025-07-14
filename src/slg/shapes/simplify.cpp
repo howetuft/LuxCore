@@ -32,19 +32,10 @@
 #include <tbb/mutex.h>
 #include <tbb/concurrent_priority_queue.h>
 #include <tbb/cache_aligned_allocator.h>
-#include <tbb/scalable_allocator.h>
 #include <tbb/parallel_for.h>
-#include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_vector.h>
-#include <tbb/parallel_invoke.h>
-#include <tbb/parallel_reduce.h>
-#include <tbb/task_group.h>
 #include <tbb/enumerable_thread_specific.h>
-#include <tbb/concurrent_hash_map.h>
-#include <tbb/concurrent_map.h>
-#include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
-#include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -52,7 +43,7 @@
 #include "slg/utils/harlequincolors.h"
 #include "dset.h"
 
-using namespace std;
+//using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -77,73 +68,70 @@ using namespace slg;
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
-float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
+constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 // Aligned classes
-namespace spf {
+//namespace spf {
 
-class  Vector: public luxrays::Vector {
-public:
-	Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
-	Vector(float p_x, float p_y, float p_z) : luxrays::Vector(p_x, p_y, p_z) {}
-private:
-	float pad = 0.f;
-};
+//class  Vector: public luxrays::Vector {
+//public:
+	//Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
+	//Vector(float p_x, float p_y, float p_z) : luxrays::Vector(p_x, p_y, p_z) {}
+//private:
+	//float pad = 0.f;
+//};
 
-class  Point: public luxrays::Point {
-public:
-	Point() {}
-	Point(const luxrays::Point&& p): luxrays::Point(p) {}
+//class  Point: public luxrays::Point {
+//public:
+	//Point() {}
+	//Point(const luxrays::Point&& p): luxrays::Point(p) {}
 
-	Point& operator=(const luxrays::Point& p) {
-		x = p.x;
-		y = p.y;
-		z = p.z;
-		return (*this);
-	}
+	//Point& operator=(const luxrays::Point& p) {
+		//x = p.x;
+		//y = p.y;
+		//z = p.z;
+		//return (*this);
+	//}
 
-	spf::Vector operator-(const spf::Point& other) const {
-		return spf::Vector(x - other.x, y - other.y, z - other.z);
-	}
+	//spf::Vector operator-(const spf::Point& other) const {
+		//return spf::Vector(x - other.x, y - other.y, z - other.z);
+	//}
 
 
-private:
-	float pad = 0.f;
-};
+//private:
+	//float pad = 0.f;
+//};
 
-class  Normal: public luxrays::Normal {
-public:
-	Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
-	Normal& operator=(const luxrays::Normal& other) {
-		x = other.x;
-		y = other.y;
-		z = other.z;
-		return (*this);
-	}
-	Normal() : luxrays::Normal() {}
-private:
-	float pad = 0.f;
-};
+//class  Normal: public luxrays::Normal {
+//public:
+	//Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
+	//Normal& operator=(const luxrays::Normal& other) {
+		//x = other.x;
+		//y = other.y;
+		//z = other.z;
+		//return (*this);
+	//}
+	//Normal() : luxrays::Normal() {}
+//private:
+	//float pad = 0.f;
+//};
 
-}
+//}
 
 
 // Enumerate helper (like Python enumerate)
 template <typename T,
           typename TIter = decltype(std::begin(std::declval<T>())),
           typename = decltype(std::end(std::declval<T>()))>
-constexpr auto enumerate(T && iterable)
-{
-    struct iterator
-    {
+constexpr auto enumerate(T && iterable) {
+    struct iterator {
         size_t i;
         TIter iter;
         bool operator != (const iterator & other) const { return iter != other.iter; }
         void operator ++ () { ++i; ++iter; }
         auto operator * () const { return std::tie(i, *iter); }
     };
-    struct iterable_wrapper
-    {
+    struct iterable_wrapper {
         T iterable;
         auto begin() { return iterator{ 0, std::begin(iterable) }; }
         auto end() { return iterator{ 0, std::end(iterable) }; }
@@ -230,55 +218,55 @@ public:
 	float m[10];
 };
 
-struct UnionFind {
+//struct UnionFind {
 
-	std::vector<u_int> parents;
-	std::vector<u_int> sizes;
+	//std::vector<u_int> parents;
+	//std::vector<u_int> sizes;
 
-	UnionFind(size_t p_size) : parents(p_size), sizes(p_size) {
-		for (u_int i = 0; i < p_size; ++i) {
-			parents[i] = i;
-			sizes[i] = 1;
-		}
-	}
+	//UnionFind(size_t p_size) : parents(p_size), sizes(p_size) {
+		//for (u_int i = 0; i < p_size; ++i) {
+			//parents[i] = i;
+			//sizes[i] = 1;
+		//}
+	//}
 
-	// Find root of the tree containing x
-	// and compress path (link all intermediary elements to root)
-	u_int Find(u_int x) {
-		u_int root = x;
+	//// Find root of the tree containing x
+	//// and compress path (link all intermediary elements to root)
+	//u_int Find(u_int x) {
+		//u_int root = x;
 
-		// Find root
-		while (parents[root] != root) {
-			root = parents[root];
-		}
+		//// Find root
+		//while (parents[root] != root) {
+			//root = parents[root];
+		//}
 
-		// Compress path (to root)
-		while (parents[x] != root) {
-			u_int parent = parents[x];
-			parents[x] = root;
-			x = parent;
-		}
+		//// Compress path (to root)
+		//while (parents[x] != root) {
+			//u_int parent = parents[x];
+			//parents[x] = root;
+			//x = parent;
+		//}
 
-		return root;
-	}
+		//return root;
+	//}
 
-	// Union optimized by size
-	void Union(u_int x, u_int y) {
-		x = Find(x);
-		y = Find(y);
+	//// Union optimized by size
+	//void Union(u_int x, u_int y) {
+		//x = Find(x);
+		//y = Find(y);
 
-		if (x == y) {
-			return;
-		}
+		//if (x == y) {
+			//return;
+		//}
 
-		if (sizes[x] < sizes[y]) {
-			std::swap(x, y);
-		}
+		//if (sizes[x] < sizes[y]) {
+			//std::swap(x, y);
+		//}
 
-		parents[y] = x;
-		sizes[x] += sizes[y];
-	}
-};
+		//parents[y] = x;
+		//sizes[x] += sizes[y];
+	//}
+//};
 
 
 // TODO move to point.h
@@ -301,7 +289,7 @@ struct std::hash<luxrays::Point> {
     }
 };
 
-struct alignas(64) SimplifyRef {
+struct SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
 
@@ -309,6 +297,7 @@ struct alignas(64) SimplifyRef {
 	{}
 	SimplifyRef() {};
 };
+
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 using RefMap = std::multimap<u_int, SimplifyRef>;
 using Ref = SimplifyRef;
@@ -355,12 +344,13 @@ struct  SimplifyVertex {
 	}
 
 };
+
 using VertexVector = std::vector<
 	SimplifyVertex,
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
-struct  SimplifyTriangle {
+struct SimplifyTriangle {
 	std::array<u_int, 3> v;
 	luxrays::Normal geometryN;
 	std::array<float, 3> err;
@@ -378,6 +368,7 @@ struct  SimplifyTriangle {
 		const bool preserveBorder
 	);
 };
+
 using TriangleVector = std::vector<
 	SimplifyTriangle,
 	tbb::cache_aligned_allocator<SimplifyTriangle>
@@ -455,15 +446,16 @@ float CalculateCollapseScreenErrorScale(
 	float edgeScreenSize,
 	const Camera& camera
 ) {
-	const luxrays::Point& p0 = v0.p;
-	const luxrays::Point& p1 = v1.p;
 	if (edgeScreenSize > 0.f) {
+		const Point& p0 = v0.p;
+		const Point& p1 = v1.p;
 		const float notVisibleScale = .5f;
 
 		float p0x, p0y;
 		if (!camera.GetSamplePosition(p0, &p0x, &p0y) ||
-				!IsValid(p0x) || !IsValid(p0y))
+				!IsValid(p0x) || !IsValid(p0y)) {
 			return notVisibleScale;
+		}
 
 		// Normalize
 		p0x /= camera.filmWidth;
@@ -471,25 +463,29 @@ float CalculateCollapseScreenErrorScale(
 
 		float p1x, p1y;
 		if (!camera.GetSamplePosition(p1, &p1x, &p1y) ||
-				!IsValid(p1x) || !IsValid(p1y))
+				!IsValid(p1x) || !IsValid(p1y)) {
 			return notVisibleScale;
+		}
 
 		// Normalize
 		p1x /= camera.filmWidth;
 		p1y /= camera.filmHeight;
 
 		const float edge = sqrtf(Sqr(p0x - p1x) + Sqr(p0y - p1y));
-		if (edge == 0.f)
+		if (edge == 0.f) {
 			return notVisibleScale;
+		}
 
 		return Max(edge / edgeScreenSize, notVisibleScale);
-	} else
+	} else {
 		return 1.f;
+	}
 }
 
 
 class Simplify {
 public:
+	// TODO Parallelize constructor
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const u_int vertCount = srcMesh.GetTotalVertexCount();
 		const u_int triCount = srcMesh.GetTotalTriangleCount();
@@ -601,8 +597,6 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-
-
 	// Partition candidate list into components (aka "batches")
 	//
 	// We use connected components algo
@@ -611,7 +605,7 @@ public:
 	BatchVector
 	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
 		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
-		tbb::enumerable_thread_specific<unordered_set<u_int>> closures;
+		tbb::enumerable_thread_specific<std::unordered_set<u_int>> closures;
 		tbb::blocked_range<u_int> candidate_range(0, candidateList.size());
 		auto closure_task = [&](const decltype(candidate_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
@@ -630,10 +624,11 @@ public:
 		}
 
 		// Step 2: Build connected components (union-find)
-
 		DisjointSets unionFind(vertices.size());
 		using edge_t = std::tuple<u_int, u_int>;
+		// TODO Unify edges computing
 		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
+		// TODO
 		tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, triangles.size()),
 			[&](const tbb::blocked_range<u_int>& r) {
@@ -650,7 +645,7 @@ public:
 			}
 		);
 
-		// Build batches
+		// Build batches (sequential)
 		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
@@ -664,7 +659,6 @@ public:
 		}
 
 		return res;
-
 	}
 
 	u_int DeleteTriangles(
@@ -677,13 +671,10 @@ public:
 		tbb::blocked_range<u_int> batch_range(0, batches.size());
 		auto delete_task = [&](const tbb::blocked_range<u_int>& r) {
 			for (u_int i = r.begin(); i != r.end(); ++i) {
-				const auto& batch = *(batches.begin() + i);
+				const auto& batch = batches[i];
 				for (auto& ref : batch) {
 					batchDeleted.local() += CollapseEdge(
-						ref,
-						edgeScreenSize,
-						camera,
-						preserveBorder
+						ref, edgeScreenSize, camera, preserveBorder
 					);
 				}
 			}
@@ -713,14 +704,13 @@ public:
 		u_int deletedTriangles = 0;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
 
+			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
+
 			SDL_LOG("Simplify - Start iteration #" << iteration);
 
-			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
-				break;
 
-			const u_int initialdeletedTriangles = deletedTriangles;
-
-			// Update mesh constantly
+			// Compute iteration data (including mesh topology)
+			SDL_LOG("Simplify - Initialize data #" << iteration);
 			InitIteration(iteration, edgeScreenSize, camera, preserveBorder);
 
 			// Build candidate list
@@ -729,12 +719,16 @@ public:
 				preserveBorder, maxCandidateQueueSize
 			);
 
-
 			// Partition candidates into independent batches
 			SDL_LOG("Simplify - Partition candidate list #" << iteration);
 			auto batches = PartitionIndependentEdgeBatches(candidateList);
 
-			SDL_LOG("Simplify - Delete triangles (" << batches.size() << " batches)");
+			// Delete triangles (run batches)
+			SDL_LOG(
+				"Simplify - Delete triangles ("
+				<< batches.size() << " batches)"
+				<< " #" << iteration
+				);
 			const u_int iterationDeletedTriangles = DeleteTriangles(
 				batches, edgeScreenSize, camera, preserveBorder
 			);
@@ -751,8 +745,9 @@ public:
 				<< " of " << startTriangleCount << " triangles"
 				<< " in all iterations)"
 			);
-			if (!iterationDeletedTriangles)
-				break;
+
+			// No more work?
+			if (!iterationDeletedTriangles) break;
 
 			//std::exit(0);  // DEBUG - Stop here
 		}
@@ -766,21 +761,8 @@ public:
 
 private:
 
-	 alignas(64) VertexVector vertices;
-	 alignas(64) TriangleVector triangles;
-
-	void assert_data(size_t line) {
-		for (auto& v: vertices) {
-			for (auto& r: v.refs) {
-				if(r.tid >= triangles.size()) {
-					SDL_LOG("Data error: " << r.tid << " " << triangles.size()
-							<< " #" << to_string(line));
-					return;
-				}
-			}
-		}
-		SDL_LOG("No data error " + to_string(line));
-	}
+	VertexVector vertices;
+	TriangleVector triangles;
 
 	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
@@ -1063,7 +1045,7 @@ private:
 	std::tuple<RefVector, u_int> UpdateTriangles(
 		const u_int i0,
 		const SimplifyVertex &v,  // Collapsed vertex
-		const vector<bool> &deleted,
+		const std::vector<bool> &deleted,
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
@@ -1201,12 +1183,13 @@ private:
 	// Init border indicators on vertices
 	//
 	// Modify: vertices
+	// TODO
 	void InitBorders() {
 		// Set borders to false
 		for (auto& v: vertices)
 			v.border = false;
 
-		vector<u_int> vcount, vids;
+		std::vector<u_int> vcount, vids;
 		for (const auto& v: vertices) {
 			vcount.clear();
 			vids.clear();
@@ -1332,7 +1315,6 @@ private:
 		const bool preserveBorder
 	) {
 		if (iteration > 0) {
-			SDL_LOG("Simplify - Compact triangles");
 			// Compact triangles
 			decltype(triangles) newTris;
 			newTris.reserve(triangles.size());
@@ -1348,7 +1330,6 @@ private:
 
 		// Build per-vertex incident edge tables
 		//
-		SDL_LOG("Simplify - Init incident edges");
 		InitIncidentEdges();
 
 		// Init Quadrics by Plane & Edge Errors
@@ -1358,9 +1339,7 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			SDL_LOG("Simplify - Init quadrics");
 			InitQuadrics(edgeScreenSize, camera, preserveBorder);
-			SDL_LOG("Simplify - Init borders");
 			InitBorders();
 		}
 		SDL_LOG("Simplify - End initialization");
@@ -1414,8 +1393,7 @@ private:
 
 	}
 
-
-};
+};  // ~class Simplify
 
 void SimplifyTriangle::UpdateTriangleError(
 	const VertexVector& vertices,
@@ -1423,6 +1401,7 @@ void SimplifyTriangle::UpdateTriangleError(
 	const Camera& camera,
 	const bool preserveBorder
 ) {
+	// TODO Unify edge computation
 	using edge_t = std::pair<u_int, u_int>;
 	constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 
@@ -1447,8 +1426,12 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 		const float target, const float edgeScreenSize, const bool preserveBorder) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
-	if ((edgeScreenSize > 0.f) && !camera)
-		throw runtime_error("The scene camera must be defined in order to enable simplify edgescreensize option");
+	if ((edgeScreenSize > 0.f) && !camera) {
+		throw std::runtime_error(
+			"The scene camera must be defined in order to enable simplify "
+			"edgescreensize option"
+		);
+	}
 
 	const auto startTime = WallClockTime();
 
