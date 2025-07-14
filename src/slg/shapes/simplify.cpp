@@ -70,6 +70,8 @@ using namespace slg;
 
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
+constexpr std::array<std::tuple<u_int, u_int>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
+
 // Aligned classes
 //namespace spf {
 
@@ -293,9 +295,8 @@ struct SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
 
-	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex)
-	{}
-	SimplifyRef() {};
+	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex) {}
+	SimplifyRef() {}
 };
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
@@ -304,7 +305,7 @@ using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
 
-struct  SimplifyVertex {
+struct SimplifyVertex {
 	// Core data
 	luxrays::Point p;              // Position
 	tbb::concurrent_vector<SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef>> refs;       // Incident edges in topology
@@ -625,16 +626,13 @@ public:
 
 		// Step 2: Build connected components (union-find)
 		DisjointSets unionFind(vertices.size());
-		using edge_t = std::tuple<u_int, u_int>;
-		// TODO Unify edges computing
-		constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 		// TODO
 		tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, triangles.size()),
 			[&](const tbb::blocked_range<u_int>& r) {
 				for (u_int i = r.begin(); i != r.end(); ++i) {
 					const auto& t = triangles[i];
-					for (const auto e: edges) {
+					for (const auto e: EDGES) {
 						u_int i0 = t.v[std::get<0>(e)];
 						u_int i1 = t.v[std::get<1>(e)];
 						if (closure.contains(i0) and closure.contains(i1)) {
@@ -826,9 +824,9 @@ private:
 			return 0;
 
 		// Get explicit edge to collapse
-		const u_int startVertexIndex = vertex.tvertex;
-		const u_int i0 = t.v[startVertexIndex];
-		const u_int i1 = t.v[(startVertexIndex + 1) % 3];
+		auto [e1, e2] = EDGES[vertex.tvertex];
+		const u_int i0 = t.v[e1];
+		const u_int i1 = t.v[e2];
 
 		// Prepare shortcuts
 		SimplifyVertex &v0 = vertices[i0];
@@ -1401,13 +1399,11 @@ void SimplifyTriangle::UpdateTriangleError(
 	const Camera& camera,
 	const bool preserveBorder
 ) {
-	// TODO Unify edge computation
-	using edge_t = std::pair<u_int, u_int>;
-	constexpr std::array<edge_t, 3> edges({ {0, 1}, {1, 2}, {2, 0}, });
 
-	for (auto [i, edge]: enumerate(edges)) {
-		const auto& v0 = vertices[this->v[edge.first]];
-		const auto& v1 = vertices[this->v[edge.second]];
+	for (auto [i, edge]: enumerate(EDGES)) {
+		const auto [e1, e2] = edge;
+		const auto& v0 = vertices[this->v[e1]];
+		const auto& v1 = vertices[this->v[e2]];
 		float collapseError = std::get<float>(
 			CalculateCollapseError(v0, v1, preserveBorder)
 		);
