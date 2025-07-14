@@ -72,56 +72,7 @@ constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 constexpr std::array<std::tuple<u_int, u_int>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
 
-// Aligned classes
-//namespace spf {
-
-//class  Vector: public luxrays::Vector {
-//public:
-	//Vector(const luxrays::Vector& v) : luxrays::Vector(v) {}
-	//Vector(float p_x, float p_y, float p_z) : luxrays::Vector(p_x, p_y, p_z) {}
-//private:
-	//float pad = 0.f;
-//};
-
-//class  Point: public luxrays::Point {
-//public:
-	//Point() {}
-	//Point(const luxrays::Point&& p): luxrays::Point(p) {}
-
-	//Point& operator=(const luxrays::Point& p) {
-		//x = p.x;
-		//y = p.y;
-		//z = p.z;
-		//return (*this);
-	//}
-
-	//spf::Vector operator-(const spf::Point& other) const {
-		//return spf::Vector(x - other.x, y - other.y, z - other.z);
-	//}
-
-
-//private:
-	//float pad = 0.f;
-//};
-
-//class  Normal: public luxrays::Normal {
-//public:
-	//Normal(const luxrays::Vector& v) : luxrays::Normal(v) {}
-	//Normal& operator=(const luxrays::Normal& other) {
-		//x = other.x;
-		//y = other.y;
-		//z = other.z;
-		//return (*this);
-	//}
-	//Normal() : luxrays::Normal() {}
-//private:
-	//float pad = 0.f;
-//};
-
-//}
-
-
-// Enumerate helper (like Python enumerate)
+// Enumerate helper (à la 'Python enumerate')
 template <typename T,
           typename TIter = decltype(std::begin(std::declval<T>())),
           typename = decltype(std::end(std::declval<T>()))>
@@ -141,6 +92,7 @@ constexpr auto enumerate(T && iterable) {
     return iterable_wrapper{ std::forward<T>(iterable) };
 }
 
+// TODO use SIMD
 class SymetricMatrix {
 public:
 	// Constructor
@@ -220,58 +172,8 @@ public:
 	float m[10];
 };
 
-//struct UnionFind {
 
-	//std::vector<u_int> parents;
-	//std::vector<u_int> sizes;
-
-	//UnionFind(size_t p_size) : parents(p_size), sizes(p_size) {
-		//for (u_int i = 0; i < p_size; ++i) {
-			//parents[i] = i;
-			//sizes[i] = 1;
-		//}
-	//}
-
-	//// Find root of the tree containing x
-	//// and compress path (link all intermediary elements to root)
-	//u_int Find(u_int x) {
-		//u_int root = x;
-
-		//// Find root
-		//while (parents[root] != root) {
-			//root = parents[root];
-		//}
-
-		//// Compress path (to root)
-		//while (parents[x] != root) {
-			//u_int parent = parents[x];
-			//parents[x] = root;
-			//x = parent;
-		//}
-
-		//return root;
-	//}
-
-	//// Union optimized by size
-	//void Union(u_int x, u_int y) {
-		//x = Find(x);
-		//y = Find(y);
-
-		//if (x == y) {
-			//return;
-		//}
-
-		//if (sizes[x] < sizes[y]) {
-			//std::swap(x, y);
-		//}
-
-		//parents[y] = x;
-		//sizes[x] += sizes[y];
-	//}
-//};
-
-
-// TODO move to point.h
+// Hash function for Point
 inline void hash_combine(std::size_t& seed) { }
 
 template <typename T, typename... Rest>
@@ -300,8 +202,6 @@ struct SimplifyRef {
 };
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
-using RefMap = std::multimap<u_int, SimplifyRef>;
-using Ref = SimplifyRef;
 
 using BatchVector = std::vector<RefVector>;
 
@@ -313,6 +213,7 @@ struct SimplifyVertex {
 	bool border;          // Border status
 
 	// Compacting data
+	// TODO used only in CompactMesh -> Move there
 	bool keep = false;
 	size_t newIndex = 0;
 
@@ -322,28 +223,6 @@ struct SimplifyVertex {
 	Spectrum col;
 	float alpha;
 
-	// Simple constructor
-	SimplifyVertex() {}
-
-	// Copy constructor
-	SimplifyVertex(const SimplifyVertex& other) {
-		p = other.p;
-		norm = other.norm;
-		uv = other.uv;
-		col = other.col;
-		alpha = other.alpha;
-	}
-
-	// Copy assignment constructor
-	SimplifyVertex& operator=(const SimplifyVertex& other) {
-		p = other.p;
-		norm = other.norm;
-		uv = other.uv;
-		col = other.col;
-		alpha = other.alpha;
-		return *this;
-	}
-
 };
 
 using VertexVector = std::vector<
@@ -352,7 +231,7 @@ using VertexVector = std::vector<
 >;
 
 struct SimplifyTriangle {
-	std::array<u_int, 3> v;
+	std::array<u_int, 3> v;  // Vertex indices
 	luxrays::Normal geometryN;
 	std::array<float, 3> err;
 	bool deleted = false;
@@ -600,7 +479,7 @@ public:
 
 	// Partition candidate list into components (aka "batches")
 	//
-	// We use connected components algo
+	// We use parallelized connected components algorithm
 	//
 	//
 	BatchVector
@@ -669,8 +548,7 @@ public:
 		tbb::blocked_range<u_int> batch_range(0, batches.size());
 		auto delete_task = [&](const tbb::blocked_range<u_int>& r) {
 			for (u_int i = r.begin(); i != r.end(); ++i) {
-				const auto& batch = batches[i];
-				for (auto& ref : batch) {
+				for (auto& ref : batches[i]) {
 					batchDeleted.local() += CollapseEdge(
 						ref, edgeScreenSize, camera, preserveBorder
 					);
@@ -805,7 +683,7 @@ private:
 		return not disjoint(p_s0, p_s1);
 	}
 
-
+	// Collapse an edge
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
 	u_int CollapseEdge(
@@ -930,16 +808,6 @@ private:
 		refs.clear();
 		refs.grow_by(newRefs0.begin(), newRefs0.end());
 		refs.grow_by(newRefs1.begin(), newRefs1.end());
-		//refs.insert(
-			//refs.end(),
-			//std::make_move_iterator(newRefs0.begin()),
-			//std::make_move_iterator(newRefs0.end())
-		//);
-		//refs.insert(
-			//refs.end(),
-			//std::make_move_iterator(newRefs1.begin()),
-			//std::make_move_iterator(newRefs1.end())
-		//);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -980,14 +848,6 @@ private:
 
 			// Check if the triangle is too narrow
 			// (avoiding sqrt function)
-
-			//Original code:
-			//const luxrays::Vector d1 = Normalize(vertices[id1].p - p);
-			//const luxrays::Vector d2 = Normalize(vertices[id2].p - p);
-			//if (AbsDot(d1, d2) > .999f) {
-				//return make_return(true, std::move(deleted));
-			//}
-
 			const luxrays::Vector d1 = vertices[id1].p - p;
 			const luxrays::Vector d2 = vertices[id2].p - p;
 			const float sqrlen1 = d1.LengthSquared();
@@ -1006,13 +866,6 @@ private:
 
 			// Check if the Normal is changing side
 			// (avoiding sqrt function)
-
-			//Original code:
-			//const luxrays::Normal geometryN(Normalize(Cross(d1, d2)));
-			//if (Dot(geometryN, t.geometryN) < .2f) {
-				//return make_return(true, std::move(deleted));
-			//}
-
 			luxrays::Vector rawnormal = Cross(d1, d2);
 			const float sqrlen_rawnormal = rawnormal.LengthSquared();
 			const float normdot = Dot(rawnormal, t.geometryN);
@@ -1087,6 +940,7 @@ private:
 		// Parallel computation of per-triangle quadric contributions
 		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
+		// TODO
 		tbb::parallel_for(
 			tbb::blocked_range<u_int>(0, triangles.size()),
 			[&](const tbb::blocked_range<u_int>& r) {
@@ -1164,9 +1018,9 @@ private:
 				for (auto i = r.begin(); i != r.end(); ++i) {
 					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
 					const auto& v = triangles[i].v;
-					vertices[v[0]].refs.push_back(Ref(i, 0));
-					vertices[v[1]].refs.push_back(Ref(i, 1));
-					vertices[v[2]].refs.push_back(Ref(i, 2));
+					vertices[v[0]].refs.push_back(SimplifyRef(i, 0));
+					vertices[v[1]].refs.push_back(SimplifyRef(i, 1));
+					vertices[v[2]].refs.push_back(SimplifyRef(i, 2));
 				}
 			}
 		};
@@ -1181,7 +1035,7 @@ private:
 	// Init border indicators on vertices
 	//
 	// Modify: vertices
-	// TODO
+	// TODO Parallelize
 	void InitBorders() {
 		// Set borders to false
 		for (auto& v: vertices)
@@ -1230,7 +1084,7 @@ private:
 	) const {
 
 		// Ref comparison predicate
-		auto refErrorCompare = [&](const Ref& left, const Ref& right) {
+		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
 			const auto left_error = triangles[left.tid].err[left.tvertex];
 			const auto right_error = triangles[right.tid].err[right.tvertex];
 			return  left_error > right_error;
@@ -1317,12 +1171,7 @@ private:
 			decltype(triangles) newTris;
 			newTris.reserve(triangles.size());
 			auto not_deleted = [](const SimplifyTriangle& t){return !t.deleted;};
-			std::copy_if(
-				triangles.begin(),
-				triangles.end(),
-				std::back_inserter(newTris),
-				not_deleted
-			);
+			std::ranges::copy_if(triangles, std::back_inserter(newTris), not_deleted);
 			std::swap(triangles, newTris);
 		}
 
