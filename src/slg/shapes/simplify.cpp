@@ -212,11 +212,6 @@ struct SimplifyVertex {
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
-	// Compacting data
-	// TODO used only in CompactMesh -> Move there
-	bool keep = false;
-	size_t newIndex = 0;
-
 	// LuxCore specific data
 	Normal norm;
 	UV uv;
@@ -1198,6 +1193,9 @@ private:
 	void CompactMesh() {
 		u_int dst = 0;
 
+		std::vector<bool> keep(vertices.size(), false);
+		std::vector<size_t> newIndex(vertices.size(), -1);
+
 		// We assume vertices 'keep' property is set to false (default value)
 
 		// Compress triangles and mark vertices to keep
@@ -1207,19 +1205,23 @@ private:
 		for (auto& t: triangles | std::views::filter(not_deleted)) {
 			newTriangles.push_back(t);
 
-			vertices[t.v[0]].keep = true;
-			vertices[t.v[1]].keep = true;
-			vertices[t.v[2]].keep = true;
+			keep[t.v[0]] = true;
+			keep[t.v[1]] = true;
+			keep[t.v[2]] = true;
 		}
 
 		// Compress vertices
 		decltype(vertices) newVertices;
-		auto keep_vertex = [](const SimplifyVertex& v){ return v.keep; };
-		for (auto& v_old: vertices | std::views::filter(keep_vertex)) {
+		for (u_int i = 0; i < vertices.size(); ++i) {
+
+			if (not keep[i]) {
+				continue;
+			}
+			auto v_old = vertices[i];
 
 			newVertices.push_back(v_old);
 			auto& v_new = newVertices.back();
-			v_old.newIndex = newVertices.size() - 1;
+			newIndex[i] = newVertices.size() - 1;
 
 			v_new.p = v_old.p;
 			v_new.norm = v_old.norm;
@@ -1231,14 +1233,13 @@ private:
 
 		// Update triangle vertices with new vertices
 		for (auto& t: newTriangles) {
-			t.v[0] = vertices[t.v[0]].newIndex;
-			t.v[1] = vertices[t.v[1]].newIndex;
-			t.v[2] = vertices[t.v[2]].newIndex;
+			t.v[0] = newIndex[t.v[0]];
+			t.v[1] = newIndex[t.v[1]];
+			t.v[2] = newIndex[t.v[2]];
 		}
 
 		triangles = newTriangles;
 		vertices = newVertices;
-
 	}
 
 };  // ~class Simplify
