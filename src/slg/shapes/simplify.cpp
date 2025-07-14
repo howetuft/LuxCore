@@ -1044,31 +1044,38 @@ private:
 		for (auto& v: vertices) {
 			v.border = false;
 		}
+		std::vector<std::mutex> mutexes(vertices.size());
 
 		// For each vertex
-		for (const auto& v: vertices) {
-			std::map<u_int, u_int> vorders;  // Vertex orders
+		tbb::blocked_range<u_int> vertex_range(0, vertices.size());
+		auto border_task = [&](const tbb::blocked_range<u_int>& r){
+			for (auto i = r.begin() ; i != r.end(); ++i) {
+				const auto v = vertices[i];
+				std::map<u_int, u_int> vorders;  // Vertex orders
 
-			// For each triangle incident to the current vertex
-			for (const auto& ref: v.refs) {
+				// For each triangle incident to the current vertex
+				for (const auto& ref: v.refs) {
 
-				// For each vertex of the incident triangle
-				for (u_int vid: triangles[ref.tid].v) {
-					// Increment incident vertex order
-					// If id doesn't exist yet, it will be created (with order=1)
-					vorders[vid]++;
+					// For each vertex of the incident triangle
+					for (u_int vid: triangles[ref.tid].v) {
+						// Increment incident vertex order
+						// If id doesn't exist yet, it will be created (with order=1)
+						vorders[vid]++;
+					}
+				}
+
+				for (auto& p: vorders) {
+					if (p.second == 1) {
+						// If p.first order is 1, it means that the edge (v, p.first)
+						// is referenced by only one triangle, thus it is a border.
+						// So we mark p.first to belong to a border
+						std::lock_guard lock(mutexes[p.first]);
+						vertices[p.first].border = true;
+					}
 				}
 			}
-
-			for (auto& p: vorders) {
-				if (p.second == 1) {
-					// If p.first order is 1, it means that the edge (v, p.first)
-					// is referenced by only one triangle, thus it is a border.
-					// So we mark p.first to belong to a border
-					vertices[p.first].border = true;
-				}
-			}
-		}
+		};
+		tbb::parallel_for(vertex_range, border_task);
 	}
 
 	// Build candidate list
