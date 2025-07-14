@@ -357,67 +357,76 @@ float CalculateCollapseScreenErrorScale(
 	}
 }
 
+// Helper to populate triangles and vertices with input data
+template <typename D, typename S, typename T> struct ForEach {
+	ForEach(D& p_dest, const S& p_src, T p_treatment) :
+		dest(p_dest), src(p_src), treatment(p_treatment) {}
+	ForEach(const ForEach&) = default;
+
+	void operator()(const tbb::blocked_range<u_int>& tbbrange) const {
+		for (auto i = tbbrange.begin(); i != tbbrange.end(); ++i) {
+			treatment(dest[i], src[i]);
+		}
+	}
+	void run() {
+		tbb::blocked_range<u_int> range(0, dest.size());
+		tbb::parallel_for(range, *this);
+	}
+	T& treatment;
+	D& dest;
+	const S& src;
+};
+
 
 class Simplify {
 public:
-	// TODO Parallelize constructor
+	// TODO Relocate
 	Simplify(const ExtTriangleMesh &srcMesh) {
-		const u_int vertCount = srcMesh.GetTotalVertexCount();
-		const u_int triCount = srcMesh.GetTotalTriangleCount();
-		const Point *verts = srcMesh.GetVertices();
-		const Triangle *tris = srcMesh.GetTriangles();
+		using SV = SimplifyVertex;
 
+		// Size vertices and triangles containers in accordance to inputs
 		vertices.resize(srcMesh.GetTotalVertexCount());
+		triangles.resize(srcMesh.GetTotalTriangleCount());
 
-		for (u_int i = 0; i < vertCount; ++i) {
-			vertices[i].p = verts[i];
-			vertices[i].refs.reserve(9);  // Seems reasonable
-		}
+		auto init_vertex = [](SV& vd, const Point& vs){
+			vd.p = vs;
+			vd.refs.reserve(9);  // Seems reasonable
+		};
+		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run();
 
 		if (srcMesh.HasNormals()) {
-			const Normal *norms = srcMesh.GetNormals();
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].norm = norms[i];
+			auto init_normal = [](SV& v, const Normal& n){ v.norm = n; };
+			ForEach(vertices, srcMesh.GetNormals(), init_normal);
 
 			hasNormals = true;
-		} else {
-			hasNormals = false;
 		}
 
 		if (srcMesh.HasUVs(0)) {
-			const UV *uvs = srcMesh.GetUVs(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].uv = uvs[i];
+			auto init_uv = [](SV& v, const UV& u){ v.uv = u; };
+			ForEach(vertices, srcMesh.GetUVs(0), init_uv);
 
 			hasUVs = true;
-		} else {
-			hasUVs = false;
 		}
 
 		if (srcMesh.HasColors(0)) {
-			const Spectrum *cols = srcMesh.GetColors(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].col = cols[i];
+			auto init_col = [](SV& v, const Spectrum& col){ v.col = col; };
+			ForEach(vertices, srcMesh.GetColors(0), init_col);
 
 			hasColors = true;
-		} else
-			hasColors = false;
+		}
 
 		if (srcMesh.HasAlphas(0)) {
-			const float *alphas = srcMesh.GetAlphas(0);
-			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].alpha = alphas[i];
+			auto init_alpha = [](SV& v, const float& alpha){ v.alpha = alpha; };
+			ForEach(vertices, srcMesh.HasAlphas(0), init_alpha);
 
 			hasAlphas = true;
-		} else
-			hasAlphas = false;
-
-		triangles.resize(triCount);
-		for (u_int i = 0; i < triCount; ++i) {
-			triangles[i].v[0] = tris[i].v[0];
-			triangles[i].v[1] = tris[i].v[1];
-			triangles[i].v[2] = tris[i].v[2];
 		}
+
+		// Init triangles
+		auto init_triangle = [](SimplifyTriangle& td, const Triangle& ts){
+			td.v = std::to_array(ts.v);
+		};
+		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run();
 	}
 
 	ExtTriangleMesh *GetExtMesh() const {
@@ -635,7 +644,11 @@ private:
 	VertexVector vertices;
 	TriangleVector triangles;
 
-	bool hasNormals, hasUVs, hasColors, hasAlphas;
+	// LuxCore specific
+	bool hasNormals = false;
+	bool hasUVs = false;
+	bool hasColors = false;
+	bool hasAlphas = false;
 
 	// Neighbor features
 	using NeighborSet = std::unordered_set<u_int>;
@@ -1244,6 +1257,7 @@ private:
 
 };  // ~class Simplify
 
+
 void SimplifyTriangle::UpdateTriangleError(
 	const VertexVector& vertices,
 	const float edgeScreenSize,
@@ -1290,6 +1304,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	delete debugMeshStart;*/
 
 	Simplify simplify(*srcMesh);
+	SDL_LOG("Before decimate");
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
