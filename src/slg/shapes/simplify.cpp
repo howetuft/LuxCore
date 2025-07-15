@@ -228,19 +228,17 @@ using TriangleVector = std::vector<
 // Error between vertex and Quadric
 float VertexError(
 	const SymetricMatrix &q,
-	const float x,
-	const float y,
-	const float z
+	const Point& p
 ) {
-	return  q[0] * x * x
-			+ 2.f * q[1] * x * y
-			+ 2.f * q[2] * x * z
-			+ 2.f * q[3] * x
-			+ q[4] * y * y
-			+ 2.f * q[5] * y * z
-			+ 2.f * q[6] * y
-			+ q[7] * z * z
-			+ 2.f * q[8] * z
+	return  q[0] * p.x * p.x
+			+ 2.f * q[1] * p.x * p.y
+			+ 2.f * q[2] * p.x * p.z
+			+ 2.f * q[3] * p.x
+			+ q[4] * p.y * p.y
+			+ 2.f * q[5] * p.y * p.z
+			+ 2.f * q[6] * p.y
+			+ q[7] * p.z * p.z
+			+ 2.f * q[8] * p.z
 			+ q[9];
 }
 
@@ -264,9 +262,9 @@ std::tuple<float, luxrays::Point> CalculateCollapseError(
 
 	// Error can be negative, I add 1 to have screenErrorScale can than
 	// work as expected
-	const float error1 = VertexError(q, p1.x, p1.y, p1.z) + 1.f;
-	const float error2 = VertexError(q, p2.x, p2.y, p2.z) + 1.f;
-	const float error3 = VertexError(q, p3.x, p3.y, p3.z) + 1.f;
+	const float error1 = VertexError(q, p1) + 1.f;
+	const float error2 = VertexError(q, p2) + 1.f;
+	const float error3 = VertexError(q, p3) + 1.f;
 
 	float error;
 	if (preserveBorder && v0.border) {
@@ -300,7 +298,7 @@ float CalculateCollapseScreenErrorScale(
 	if (edgeScreenSize > 0.f) {
 		const Point& p0 = v0.p;
 		const Point& p1 = v1.p;
-		const float notVisibleScale = .5f;
+		constexpr float notVisibleScale = .5f;
 
 		float p0x, p0y;
 		if (!camera.GetSamplePosition(p0, &p0x, &p0y) ||
@@ -411,6 +409,7 @@ public:
 		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run();
 	}
 
+	// TODO Parallelize
 	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
@@ -477,13 +476,20 @@ public:
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				auto& c = candidateList[i];
 				const auto& t = triangles[c.tid];
-				const u_int i0 = t.v[c.tvertex];
-				const u_int i1 = t.v[(c.tvertex + 1) % 3];
+
+				// Get explicit edge to collapse
+				auto [e1, e2] = EDGES[c.tvertex];
+				const u_int i0 = t.v[e1];
+				const u_int i1 = t.v[e2];
+
+				// Get neghbors and insert
 				auto neighbors = edgeNeighbors(i0, i1);
 				closures.local().insert(neighbors.begin(), neighbors.end());
 			}
 		};
 		tbb::parallel_for(candidate_range, closure_task);
+
+		// Reduce
 		std::unordered_set<u_int> closure;
 		for (auto& local: closures) {
 			closure.merge(local);
@@ -491,24 +497,24 @@ public:
 
 		// Step 2: Build connected components (union-find)
 		DisjointSets unionFind(vertices.size());
-		// TODO
-		tbb::parallel_for(
-			tbb::blocked_range<u_int>(0, triangles.size()),
-			[&](const tbb::blocked_range<u_int>& r) {
-				for (u_int i = r.begin(); i != r.end(); ++i) {
-					const auto& t = triangles[i];
-					for (const auto e: EDGES) {
-						u_int i0 = t.v[std::get<0>(e)];
-						u_int i1 = t.v[std::get<1>(e)];
-						if (closure.contains(i0) and closure.contains(i1)) {
-							unionFind.unite(i0, i1);
-						}
+		tbb::blocked_range<u_int> triangle_range(0, triangles.size());
+		auto build_connected = [&](const tbb::blocked_range<u_int>& r) {
+			for (u_int i = r.begin(); i != r.end(); ++i) {
+				const auto& t = triangles[i];
+				for (const auto e: EDGES) {
+					auto [e0, e1] = e;
+					u_int i0 = t.v[e0];
+					u_int i1 = t.v[e1];
+					if (closure.contains(i0) and closure.contains(i1)) {
+						unionFind.unite(i0, i1);
 					}
 				}
 			}
-		);
+		};
+		tbb::parallel_for(triangle_range, build_connected);
 
 		// Build batches (sequential)
+		// TODO Replace by multimap
 		std::unordered_map<u_int, RefVector> batches;
 		for (const auto& c: candidateList) {
 			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
@@ -517,7 +523,7 @@ public:
 		}
 		BatchVector res;
 		res.reserve(batches.size());
-		for (const auto& [i, batch]: enumerate(batches)) {
+		for (const auto& batch: batches) {
 			res.push_back(batch.second);
 		}
 
@@ -569,7 +575,6 @@ public:
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
 
 			DBG_SDL_LOG("Simplify - Start iteration #" << iteration);
-
 
 			// Compute iteration data (including mesh topology)
 			DBG_SDL_LOG("Simplify - Initialize data #" << iteration);
@@ -652,23 +657,6 @@ private:
 			}
 		}
 		return neighbors;
-	}
-
-	// Set intersection
-	static bool disjoint(const NeighborSet& p_s0, const NeighborSet& p_s1) {
-		bool order = (p_s0.size() <= p_s1.size());
-		const NeighborSet& s0 = order ? p_s0 : p_s1;
-		const NeighborSet& s1 = order ? p_s1 : p_s0;
-		for (auto i: s0) {
-			if (s1.count(i)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	static bool connected(const NeighborSet& p_s0, const NeighborSet& p_s1) {
-		return not disjoint(p_s0, p_s1);
 	}
 
 	// Collapse an edge
@@ -806,7 +794,7 @@ private:
 	using FlippedFullReturn = std::tuple<bool, std::vector<bool>>;
 
 	template<bool F=true>
-	constexpr std::conditional<F, FlippedFullReturn, bool>::type
+	std::conditional<F, FlippedFullReturn, bool>::type
 	Flipped(const luxrays::Point p, const u_int i0, const u_int i1) const {
 
 		const SimplifyVertex &v0 = vertices[i0];
@@ -822,9 +810,10 @@ private:
 
 			if (t.deleted) continue;
 
-			const u_int s = ref.tvertex;
-			const u_int id1 = t.v[(s + 1) % 3];
-			const u_int id2 = t.v[(s + 2) % 3];
+			const u_int e0 = ref.tvertex;
+			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
+			const u_int id1 = t.v[e1];
+			const u_int id2 = t.v[e2];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -1010,9 +999,9 @@ private:
 				for (auto i = r.begin(); i != r.end(); ++i) {
 					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
 					const auto& v = triangles[i].v;
-					vertices[v[0]].refs.push_back(SimplifyRef(i, 0));
-					vertices[v[1]].refs.push_back(SimplifyRef(i, 1));
-					vertices[v[2]].refs.push_back(SimplifyRef(i, 2));
+					vertices[v[0]].refs.emplace_back(i, 0);
+					vertices[v[1]].refs.emplace_back(i, 1);
+					vertices[v[2]].refs.emplace_back(i, 2);
 				}
 			}
 		};
@@ -1028,10 +1017,9 @@ private:
 	//
 	// Modify: vertices
 	void InitBorders() {
-		// Initialize borders to false
-		for (auto& v: vertices) {
-			v.border = false;
-		}
+		// vertex border flags are assumed to be initialized to false
+		// when vertex is created
+
 		std::vector<std::mutex> mutexes(vertices.size());
 
 		// For each vertex
@@ -1083,7 +1071,6 @@ private:
 		tbb::concurrent_priority_queue<SimplifyRef, decltype(refErrorCompare) >
 			candidateQueue(vertices.size(), refErrorCompare);
 		tbb::blocked_range<u_int> tri_range(0, triangles.size());
-		tbb::auto_partitioner partitioner;
 
 		auto build_task = [&](const decltype(tri_range)& r) {
 			// Main loop
@@ -1133,7 +1120,7 @@ private:
 			}
 
 		};
-		tbb::parallel_for(tri_range, build_task, partitioner);
+		tbb::parallel_for(tri_range, build_task);
 
 		// Assemble result
 		size_t numCandidates = std::min(
