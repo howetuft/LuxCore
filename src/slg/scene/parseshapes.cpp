@@ -329,6 +329,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const float target = props.Get(Property(propName + ".target")(.25f)).Get<double>();
 		const float edgeScreenSize = Clamp(props.Get(Property(propName + ".edgescreensize")(0.0)).Get<double>(), 0.0, 1.0);
 		const bool preserveBorder = props.Get(Property(propName + ".preserveborder")(false)).Get<bool>();
+		const bool simplifyEnhanced = props.Get(Property(propName + ".enhanced")(false)).Get<bool>();
 		
 		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				target, edgeScreenSize, preserveBorder);
