@@ -68,6 +68,12 @@ using namespace slg;
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
+namespace {
+// Everything inside this namespace is kept local to this translation
+// unit (behaves like static and avoid linker namespace pollution)
+
+// Namespace containing the rewriting of the algo
+namespace enhanced {
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 constexpr std::array<std::tuple<size_t, size_t>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
@@ -1276,6 +1282,10 @@ void SimplifyTriangle::UpdateTriangleError(
 
 }
 
+
+}  // ~namespace enhanced
+}  // ~namespace (local)
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1300,7 +1310,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	debugMeshStart->Save("debug-start-proj.ply");
 	delete debugMeshStart;*/
 
-	Simplify simplify(*srcMesh);
+	enhanced::Simplify simplify(*srcMesh);
 	SDL_LOG("Before decimate");
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
