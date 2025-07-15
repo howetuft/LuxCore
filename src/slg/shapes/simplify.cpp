@@ -377,6 +377,12 @@ template <typename D, typename S, typename T> struct ForEach {
 	const S& src;
 };
 
+#ifndef NDEBUG
+#define DBG_SDL_LOG(X) SDL_LOG(X)
+#else
+#define DBG_SDL_LOG(X) {}
+#endif
+
 
 class Simplify {
 public:
@@ -586,25 +592,25 @@ public:
 
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
 
-			SDL_LOG("Simplify - Start iteration #" << iteration);
+			DBG_SDL_LOG("Simplify - Start iteration #" << iteration);
 
 
 			// Compute iteration data (including mesh topology)
-			SDL_LOG("Simplify - Initialize data #" << iteration);
+			DBG_SDL_LOG("Simplify - Initialize data #" << iteration);
 			InitIteration(iteration, edgeScreenSize, camera, preserveBorder);
 
 			// Build candidate list
-			SDL_LOG("Simplify - Build candidate list #" << iteration);
+			DBG_SDL_LOG("Simplify - Build candidate list #" << iteration);
 			auto candidateList = BuildCandidateList(
 				preserveBorder, maxCandidateQueueSize
 			);
 
 			// Partition candidates into independent batches
-			SDL_LOG("Simplify - Partition candidate list #" << iteration);
+			DBG_SDL_LOG("Simplify - Partition candidate list #" << iteration);
 			auto batches = PartitionIndependentEdgeBatches(candidateList);
 
 			// Delete triangles (run batches)
-			SDL_LOG(
+			DBG_SDL_LOG(
 				"Simplify - Delete triangles ("
 				<< batches.size() << " batches)"
 				<< " #" << iteration
@@ -617,13 +623,11 @@ public:
 
 			SDL_LOG(
 				"Simplify - End iteration #" << iteration
-				<< " (" << candidateList.size()
-				<< " edge candidates, deleted "
-				<< iterationDeletedTriangles
-				<< " triangles in current iteration, "
-				<< deletedTriangles
-				<< " of " << startTriangleCount << " triangles"
-				<< " in all iterations)"
+				<< " - Edge candidates: " << candidateList.size() << " - "
+				<< " Deleted triangles (current/cumulative/initial): "
+				<< iterationDeletedTriangles << "/"
+				<< deletedTriangles << "/"
+				<< startTriangleCount
 			);
 
 			// No more work?
