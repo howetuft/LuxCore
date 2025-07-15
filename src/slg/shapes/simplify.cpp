@@ -92,7 +92,6 @@ constexpr auto enumerate(T && iterable) {
     return iterable_wrapper{ std::forward<T>(iterable) };
 }
 
-// TODO use SIMD
 class SymetricMatrix {
 public:
 	// Constructor
@@ -173,26 +172,6 @@ public:
 };
 
 
-// Hash function for Point
-inline void hash_combine(std::size_t& seed) { }
-
-template <typename T, typename... Rest>
-inline void hash_combine(std::size_t& seed, const T& v, Rest... rest) {
-    std::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-    hash_combine(seed, rest...);
-}
-
-template<>
-struct std::hash<luxrays::Point> {
-    std::size_t operator()(const luxrays::Point& p) const noexcept
-    {
-		std::size_t h=0;
-		hash_combine(h, p.x, p.y, p.z);
-        return h;
-    }
-};
-
 struct SimplifyRef {
 	u_int tid = 0;
 	u_int tvertex = std::numeric_limits<u_int>::infinity();
@@ -231,9 +210,6 @@ struct SimplifyTriangle {
 	std::array<float, 3> err;
 	bool deleted = false;
 	bool dirty = false;
-
-	// Cached values to limit false sharing
-	std::array<luxrays::Point, 3> cachedVerts;
 
 	// Update error of the triangle
 	void UpdateTriangleError(
