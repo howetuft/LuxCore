@@ -70,7 +70,7 @@ using namespace slg;
 
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
-constexpr std::array<std::tuple<u_int, u_int>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
+constexpr std::array<std::tuple<size_t, size_t>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
 
 // Enumerate helper (à la 'Python enumerate')
 template <typename T,
@@ -96,7 +96,7 @@ class SymetricMatrix {
 public:
 	// Constructor
 	SymetricMatrix(const float c = 0.f) {
-		for (u_int i = 0; i < 10; ++i)
+		for (size_t i = 0; i < 10; ++i)
 			m[i] = c;
 	}
 
@@ -137,9 +137,9 @@ public:
 
 	// Determinant
 	float det(
-			const u_int a11, const u_int a12, const u_int a13,
-			const u_int a21, const u_int a22, const u_int a23,
-			const u_int a31, const u_int a32, const u_int a33) const {
+			const size_t a11, const size_t a12, const size_t a13,
+			const size_t a21, const size_t a22, const size_t a23,
+			const size_t a31, const size_t a32, const size_t a33) const {
 		const float det = m[a11] * m[a22] * m[a33] + m[a13] * m[a21] * m[a32] + m[a12] * m[a23] * m[a31]
 				- m[a13] * m[a22] * m[a31] - m[a11] * m[a23] * m[a32] - m[a12] * m[a21] * m[a33];
 		return det;
@@ -173,10 +173,10 @@ public:
 
 
 struct SimplifyRef {
-	u_int tid = 0;
-	u_int tvertex = std::numeric_limits<u_int>::infinity();
+	size_t tid = 0;
+	size_t tvertex = std::numeric_limits<size_t>::infinity();
 
-	SimplifyRef(u_int p_tid, u_int p_tvertex): tid(p_tid), tvertex(p_tvertex) {}
+	SimplifyRef(size_t p_tid, size_t p_tvertex): tid(p_tid), tvertex(p_tvertex) {}
 	SimplifyRef() {}
 };
 
@@ -205,7 +205,7 @@ using VertexVector = std::vector<
 >;
 
 struct SimplifyTriangle {
-	std::array<u_int, 3> v;  // Vertex indices
+	std::array<size_t, 3> v;  // Vertex indices
 	luxrays::Normal geometryN;
 	std::array<float, 3> err;
 	bool deleted = false;
@@ -337,13 +337,13 @@ template <typename D, typename S, typename T> struct ForEach {
 		dest(p_dest), src(p_src), treatment(p_treatment) {}
 	ForEach(const ForEach&) = default;
 
-	void operator()(const tbb::blocked_range<u_int>& tbbrange) const {
+	void operator()(const tbb::blocked_range<size_t>& tbbrange) const {
 		for (auto i = tbbrange.begin(); i != tbbrange.end(); ++i) {
 			treatment(dest[i], src[i]);
 		}
 	}
-	void run() {
-		tbb::blocked_range<u_int> range(0, dest.size());
+	void run(const size_t size) {
+		tbb::blocked_range<size_t> range(0, size);
 		tbb::parallel_for(range, *this);
 	}
 	T& treatment;
@@ -365,101 +365,117 @@ public:
 		using SV = SimplifyVertex;
 
 		// Size vertices and triangles containers in accordance to inputs
-		vertices.resize(srcMesh.GetTotalVertexCount());
-		triangles.resize(srcMesh.GetTotalTriangleCount());
+		size_t vertCount = srcMesh.GetTotalVertexCount();
+		size_t triCount = srcMesh.GetTotalTriangleCount();
+		vertices.resize(vertCount);
+		triangles.resize(triCount);
 
 		auto init_vertex = [](SV& vd, const Point& vs){
 			vd.p = vs;
 			vd.refs.reserve(9);  // Seems reasonable
 		};
-		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run();
+		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run(vertCount);
 
 		if (srcMesh.HasNormals()) {
 			auto init_normal = [](SV& v, const Normal& n){ v.norm = n; };
-			ForEach(vertices, srcMesh.GetNormals(), init_normal);
+			ForEach(vertices, srcMesh.GetNormals(), init_normal).run(vertCount);
 
 			hasNormals = true;
 		}
 
 		if (srcMesh.HasUVs(0)) {
 			auto init_uv = [](SV& v, const UV& u){ v.uv = u; };
-			ForEach(vertices, srcMesh.GetUVs(0), init_uv);
+			ForEach(vertices, srcMesh.GetUVs(0), init_uv).run(vertCount);
 
 			hasUVs = true;
 		}
 
 		if (srcMesh.HasColors(0)) {
 			auto init_col = [](SV& v, const Spectrum& col){ v.col = col; };
-			ForEach(vertices, srcMesh.GetColors(0), init_col);
+			ForEach(vertices, srcMesh.GetColors(0), init_col).run(vertCount);
 
 			hasColors = true;
 		}
 
 		if (srcMesh.HasAlphas(0)) {
-			auto init_alpha = [](SV& v, const float& alpha){ v.alpha = alpha; };
-			ForEach(vertices, srcMesh.HasAlphas(0), init_alpha);
+			auto init_alpha = [](SV& v, const float alpha){ v.alpha = alpha; };
+			ForEach(vertices, srcMesh.GetAlphas(0), init_alpha).run(vertCount);
 
 			hasAlphas = true;
 		}
 
 		// Init triangles
 		auto init_triangle = [](SimplifyTriangle& td, const Triangle& ts){
-			td.v = std::to_array(ts.v);
+			td.v[0] = ts.v[0];
+			td.v[1] = ts.v[1];
+			td.v[2] = ts.v[2];
 		};
-		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run();
+		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run(triCount);
 	}
 
-	// TODO Parallelize
 	ExtTriangleMesh *GetExtMesh() const {
-		const u_int vertCount = vertices.size();
-		const u_int triCount = triangles.size();
+		const size_t vertCount = vertices.size();
+		const size_t triCount = triangles.size();
+		using SV = SimplifyVertex;
 
 		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-		for (u_int i = 0; i < vertCount; ++i)
-			newVertices[i] = vertices[i].p;
+		auto vert_assign = [](Point& vd, const SV& vs) {
+			vd = vs.p;
+		};
+		ForEach(newVertices, vertices, vert_assign).run(vertCount);
 
 		Normal *newNorms = nullptr;
 		if (hasNormals) {
 			newNorms = new Normal[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
-				newNorms[i] = vertices[i].norm;
+
+			auto norm_assign = [](Normal& vd, const SV& vs) {
+				vd = vs.norm;
+			};
+			ForEach(newNorms, vertices, norm_assign).run(vertCount);
 		}
 
 		UV *newUVs = nullptr;
 		if (hasUVs) {
 			newUVs = new UV[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
-				newUVs[i] = vertices[i].uv;
+			auto uv_assign = [](UV& vd, const SV& vs) {
+				vd = vs.uv;
+			};
+			ForEach(newUVs, vertices, uv_assign).run(vertCount);
 		}
 
 		Spectrum *newCols = nullptr;
 		if (hasColors) {
 			newCols = new Spectrum[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
-				newCols[i] = vertices[i].col;
+			auto col_assign = [](Spectrum& vd, const SV& vs) {
+				vd = vs.col;
+			};
+			ForEach(newCols, vertices, col_assign).run(vertCount);
 		}
 
 		float *newAlphas = nullptr;
 		if (hasAlphas) {
 			newAlphas = new float[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
-				newAlphas[i] = vertices[i].alpha;
+			auto alpha_assign = [](float& vd, const SV& vs) {
+				vd = vs.alpha;
+			};
+			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
 		}
 
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-		for (u_int i = 0; i < triCount; ++i) {
-			assert (triangles[i].v[0] < vertCount);
-			newTris[i].v[0] = triangles[i].v[0];
+		auto triangle_assign = [vertCount](Triangle& td, const SimplifyTriangle& ts) {
+			assert (ts.v[0] < vertCount);
+			assert (ts.v[1] < vertCount);
+			assert (ts.v[2] < vertCount);
+			td.v[0] = ts.v[0];
+			td.v[1] = ts.v[1];
+			td.v[2] = ts.v[2];
+		};
+		ForEach(newTris, triangles, triangle_assign).run(triCount);
 
-			assert (triangles[i].v[1] < vertCount);
-			newTris[i].v[1] = triangles[i].v[1];
-
-			assert (triangles[i].v[2] < vertCount);
-			newTris[i].v[2] = triangles[i].v[2];
-		}
-
-		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
-				newUVs, newCols, newAlphas);
+		return new ExtTriangleMesh(
+				vertCount, triCount, newVertices, newTris,
+				newNorms, newUVs, newCols, newAlphas
+		);
 	}
 
 	// Partition candidate list into components (aka "batches")
@@ -470,8 +486,8 @@ public:
 	BatchVector
 	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
 		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
-		tbb::enumerable_thread_specific<std::unordered_set<u_int>> closures;
-		tbb::blocked_range<u_int> candidate_range(0, candidateList.size());
+		tbb::enumerable_thread_specific<std::unordered_set<size_t>> closures;
+		tbb::blocked_range<size_t> candidate_range(0, candidateList.size());
 		auto closure_task = [&](const decltype(candidate_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				auto& c = candidateList[i];
@@ -479,8 +495,8 @@ public:
 
 				// Get explicit edge to collapse
 				auto [e1, e2] = EDGES[c.tvertex];
-				const u_int i0 = t.v[e1];
-				const u_int i1 = t.v[e2];
+				const size_t i0 = t.v[e1];
+				const size_t i1 = t.v[e2];
 
 				// Get neghbors and insert
 				auto neighbors = edgeNeighbors(i0, i1);
@@ -490,21 +506,21 @@ public:
 		tbb::parallel_for(candidate_range, closure_task);
 
 		// Reduce
-		std::unordered_set<u_int> closure;
+		std::unordered_set<size_t> closure;
 		for (auto& local: closures) {
 			closure.merge(local);
 		}
 
 		// Step 2: Build connected components (union-find)
 		DisjointSets unionFind(vertices.size());
-		tbb::blocked_range<u_int> triangle_range(0, triangles.size());
-		auto build_connected = [&](const tbb::blocked_range<u_int>& r) {
-			for (u_int i = r.begin(); i != r.end(); ++i) {
+		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
+		auto build_connected = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const auto& t = triangles[i];
 				for (const auto e: EDGES) {
 					auto [e0, e1] = e;
-					u_int i0 = t.v[e0];
-					u_int i1 = t.v[e1];
+					size_t i0 = t.v[e0];
+					size_t i1 = t.v[e1];
 					if (closure.contains(i0) and closure.contains(i1)) {
 						unionFind.unite(i0, i1);
 					}
@@ -515,10 +531,10 @@ public:
 
 		// Build batches (sequential)
 		// TODO Replace by multimap
-		std::unordered_map<u_int, RefVector> batches;
+		std::unordered_map<size_t, RefVector> batches;
 		for (const auto& c: candidateList) {
-			u_int i = triangles[c.tid].v[c.tvertex];  // Vertex index
-			u_int batchIndex = unionFind.find(i);
+			size_t i = triangles[c.tid].v[c.tvertex];  // Vertex index
+			size_t batchIndex = unionFind.find(i);
 			batches[batchIndex].push_back(c);
 		}
 		BatchVector res;
@@ -530,16 +546,16 @@ public:
 		return res;
 	}
 
-	u_int DeleteTriangles(
+	size_t DeleteTriangles(
 		const BatchVector& batches,
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
 	) {
-		tbb::enumerable_thread_specific<u_int> batchDeleted;
-		tbb::blocked_range<u_int> batch_range(0, batches.size());
-		auto delete_task = [&](const tbb::blocked_range<u_int>& r) {
-			for (u_int i = r.begin(); i != r.end(); ++i) {
+		tbb::enumerable_thread_specific<size_t> batchDeleted;
+		tbb::blocked_range<size_t> batch_range(0, batches.size());
+		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
 				for (auto& ref : batches[i]) {
 					batchDeleted.local() += CollapseEdge(
 						ref, edgeScreenSize, camera, preserveBorder
@@ -549,28 +565,28 @@ public:
 		};
 		tbb::parallel_for(batch_range, delete_task);
 
-		u_int deletedTriangles = std::accumulate(
+		auto deletedTriangles = std::accumulate(
 			batchDeleted.begin(),
 			batchDeleted.end(),
-			0,
-			std::plus<u_int>()
+			size_t(0),
+			std::plus<size_t>()
 		);
 		return deletedTriangles;
 	}
 
 	void Decimate(
-		const u_int targetTriangleCount,
+		const size_t targetTriangleCount,
 		const Camera& camera,
 		const float edgeScreenSize,
 		const bool preserveBorder
 	) {
 		// Work on 10% of all triangles for each iteration
-		u_int maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
+		size_t maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
 
 		// Main iteration loop
-		const u_int startTriangleCount = triangles.size();
-		u_int deletedTriangles = 0;
-		for (u_int iteration = 0; iteration < 64; ++iteration) {
+		const size_t startTriangleCount = triangles.size();
+		size_t deletedTriangles = 0;
+		for (size_t iteration = 0; iteration < 64; ++iteration) {
 
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
 
@@ -596,7 +612,7 @@ public:
 				<< batches.size() << " batches)"
 				<< " #" << iteration
 				);
-			const u_int iterationDeletedTriangles = DeleteTriangles(
+			const size_t iterationDeletedTriangles = DeleteTriangles(
 				batches, edgeScreenSize, camera, preserveBorder
 			);
 
@@ -636,23 +652,23 @@ private:
 	bool hasAlphas = false;
 
 	// Neighbor features
-	using NeighborSet = std::unordered_set<u_int>;
+	using NeighborSet = std::unordered_set<size_t>;
 
 
 	// Find edge neighbors, ie vertices that could be affected
 	// by collapsing the given edge
-	NeighborSet edgeNeighbors(const u_int i0, const u_int i1) const {
+	NeighborSet edgeNeighbors(const size_t i0, const size_t i1) const {
 		NeighborSet neighbors;
 
 		neighbors.insert(i0);
 		neighbors.insert(i1);
 		for (const auto& ref: vertices[i0].refs) {
-			for (u_int vertexIndex: triangles[ref.tid].v) {
+			for (size_t vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
 		}
 		for (const auto& ref: vertices[i1].refs) {
-			for (u_int vertexIndex: triangles[ref.tid].v) {
+			for (size_t vertexIndex: triangles[ref.tid].v) {
 				neighbors.insert(vertexIndex);
 			}
 		}
@@ -662,14 +678,14 @@ private:
 	// Collapse an edge
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
-	u_int CollapseEdge(
+	size_t CollapseEdge(
 		const SimplifyRef& vertex,  /* Candidate vertex to collapse */
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
 	) {
 		// Check triangle
-		const u_int triangleIndex = vertex.tid;
+		const size_t triangleIndex = vertex.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (t.deleted)
@@ -679,14 +695,14 @@ private:
 
 		// Get explicit edge to collapse
 		auto [e1, e2] = EDGES[vertex.tvertex];
-		const u_int i0 = t.v[e1];
-		const u_int i1 = t.v[e2];
+		const size_t i0 = t.v[e1];
+		const size_t i1 = t.v[e2];
 
 		// Prepare shortcuts
 		SimplifyVertex &v0 = vertices[i0];
 		SimplifyVertex &v1 = vertices[i1];
 
-		u_int deletedTriangles = 0;
+		size_t deletedTriangles = 0;
 
 		// Border check
 		if (v0.border != v1.border) {
@@ -795,7 +811,7 @@ private:
 
 	template<bool F=true>
 	std::conditional<F, FlippedFullReturn, bool>::type
-	Flipped(const luxrays::Point p, const u_int i0, const u_int i1) const {
+	Flipped(const luxrays::Point p, const size_t i0, const size_t i1) const {
 
 		const SimplifyVertex &v0 = vertices[i0];
 		std::vector<bool> deleted;
@@ -810,10 +826,10 @@ private:
 
 			if (t.deleted) continue;
 
-			const u_int e0 = ref.tvertex;
+			const size_t e0 = ref.tvertex;
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-			const u_int id1 = t.v[e1];
-			const u_int id2 = t.v[e2];
+			const size_t id1 = t.v[e1];
+			const size_t id2 = t.v[e2];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -870,15 +886,15 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	// Returns: new incident edges list, number of deleted triangles
-	std::tuple<RefVector, u_int> UpdateTriangles(
-		const u_int i0,
+	std::tuple<RefVector, size_t> UpdateTriangles(
+		const size_t i0,
 		const SimplifyVertex &v,  // Collapsed vertex
 		const std::vector<bool> &deleted,
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
 	) {
-		u_int deletedTriangles = 0;
+		size_t deletedTriangles = 0;
 		RefVector refs;
 		refs.reserve(v.refs.size());
 		for (const auto& [k, r]: enumerate(v.refs)) {
@@ -911,8 +927,8 @@ private:
 		const bool preserveBorder
 	) {
 		// Starting values
-		tbb::blocked_range<u_int> vertex_range(0, vertices.size());
-		auto initv_task = [&](const tbb::blocked_range<u_int>& r) {
+		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
+		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				vertices[i].q = SymetricMatrix(0.0);
 			}
@@ -922,10 +938,10 @@ private:
 		// Parallel computation of per-triangle quadric contributions
 		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
 
-		tbb::blocked_range<u_int> triangle_range(0, triangles.size());
+		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
 
-		auto quadric_task = [&](const tbb::blocked_range<u_int>& r) {
-			for (u_int i = r.begin(); i != r.end(); ++i) {
+		auto quadric_task = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
 				SimplifyTriangle &t = triangles[i];
 
 				SimplifyVertex &v0 = vertices[t.v[0]];
@@ -950,7 +966,7 @@ private:
 		auto accumulate_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				const auto &t = triangles[i];
-				for (u_int j = 0; j < 3; ++j) {
+				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
 					vertices[vertex_index].q += triangleQuadrics[i][j];
@@ -1023,17 +1039,17 @@ private:
 		std::vector<std::mutex> mutexes(vertices.size());
 
 		// For each vertex
-		tbb::blocked_range<u_int> vertex_range(0, vertices.size());
-		auto border_task = [&](const tbb::blocked_range<u_int>& r){
+		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
+		auto border_task = [&](const tbb::blocked_range<size_t>& r){
 			for (auto i = r.begin() ; i != r.end(); ++i) {
 				const auto v = vertices[i];
-				std::map<u_int, u_int> vorders;  // Vertex orders
+				std::map<size_t, size_t> vorders;  // Vertex orders
 
 				// For each triangle incident to the current vertex
 				for (const auto& ref: v.refs) {
 
 					// For each vertex of the incident triangle
-					for (u_int vid: triangles[ref.tid].v) {
+					for (size_t vid: triangles[ref.tid].v) {
 						// Increment incident vertex order
 						// If id doesn't exist yet, it will be created (with order=1)
 						vorders[vid]++;
@@ -1058,7 +1074,7 @@ private:
 	//
 	RefVector BuildCandidateList(
 		bool preserveBorder,
-		u_int maxCandidateQueueSize
+		size_t maxCandidateQueueSize
 	) const {
 
 		// Ref comparison predicate
@@ -1070,16 +1086,16 @@ private:
 
 		tbb::concurrent_priority_queue<SimplifyRef, decltype(refErrorCompare) >
 			candidateQueue(vertices.size(), refErrorCompare);
-		tbb::blocked_range<u_int> tri_range(0, triangles.size());
+		tbb::blocked_range<size_t> tri_range(0, triangles.size());
 
 		auto build_task = [&](const decltype(tri_range)& r) {
 			// Main loop
-			for (u_int i = r.begin(); i != r.end(); ++i) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
 				auto tv0 = t.v[0];
 				auto tv1 = t.v[1];
 				auto tv2 = t.v[2];
-				const std::array<std::tuple<u_int, u_int>, 3> edges(
+				const std::array<std::tuple<size_t, size_t>, 3> edges(
 					{
 						{tv0, tv1},
 						{tv1, tv2},
@@ -1087,9 +1103,9 @@ private:
 					}
 				);
 
-				u_int minErrorIndex = NULL_INDEX;
+				size_t minErrorIndex = NULL_INDEX;
 				float minError = FLOAT_INFINITY;
-				for (u_int j = 0; j < 3; ++j) {
+				for (size_t j = 0; j < 3; ++j) {
 					const auto [i0, i1] = edges[j];
 					const SimplifyVertex &v0 = vertices[i0];
 					const SimplifyVertex &v1 = vertices[i1];
@@ -1138,7 +1154,7 @@ private:
 	// Compact triangles, compute quadrics, incident, boundary, edge error
 	// Returns: candidate list
 	void InitIteration(
-		const u_int iteration,
+		const size_t iteration,
 		const float edgeScreenSize,
 		const Camera& camera,
 		const bool preserveBorder
@@ -1171,7 +1187,7 @@ private:
 
 	// Finally compact mesh before exiting
 	void CompactMesh() {
-		u_int dst = 0;
+		size_t dst = 0;
 
 		std::vector<bool> keep(vertices.size(), false);
 		std::vector<size_t> newIndex(vertices.size(), -1);
@@ -1192,7 +1208,7 @@ private:
 
 		// Compress vertices
 		decltype(vertices) newVertices;
-		for (u_int i = 0; i < vertices.size(); ++i) {
+		for (size_t i = 0; i < vertices.size(); ++i) {
 
 			if (not keep[i]) {
 				continue;
@@ -1263,7 +1279,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 
 	const auto startTime = WallClockTime();
 
-	const u_int targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
+	const size_t targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
 
 	/*srcMesh->Save("debug-start.ply");
 	ExtTriangleMesh *debugMeshStart = ScreenProjection(*camera, *srcMesh);
