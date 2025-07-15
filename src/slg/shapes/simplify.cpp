@@ -360,7 +360,6 @@ template <typename D, typename S, typename T> struct ForEach {
 
 class Simplify {
 public:
-	// TODO Relocate
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		using SV = SimplifyVertex;
 
@@ -413,167 +412,8 @@ public:
 		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run(triCount);
 	}
 
-	ExtTriangleMesh *GetExtMesh() const {
-		const size_t vertCount = vertices.size();
-		const size_t triCount = triangles.size();
-		using SV = SimplifyVertex;
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-		auto vert_assign = [](Point& vd, const SV& vs) {
-			vd = vs.p;
-		};
-		ForEach(newVertices, vertices, vert_assign).run(vertCount);
-
-		Normal *newNorms = nullptr;
-		if (hasNormals) {
-			newNorms = new Normal[vertCount];
-
-			auto norm_assign = [](Normal& vd, const SV& vs) {
-				vd = vs.norm;
-			};
-			ForEach(newNorms, vertices, norm_assign).run(vertCount);
-		}
-
-		UV *newUVs = nullptr;
-		if (hasUVs) {
-			newUVs = new UV[vertCount];
-			auto uv_assign = [](UV& vd, const SV& vs) {
-				vd = vs.uv;
-			};
-			ForEach(newUVs, vertices, uv_assign).run(vertCount);
-		}
-
-		Spectrum *newCols = nullptr;
-		if (hasColors) {
-			newCols = new Spectrum[vertCount];
-			auto col_assign = [](Spectrum& vd, const SV& vs) {
-				vd = vs.col;
-			};
-			ForEach(newCols, vertices, col_assign).run(vertCount);
-		}
-
-		float *newAlphas = nullptr;
-		if (hasAlphas) {
-			newAlphas = new float[vertCount];
-			auto alpha_assign = [](float& vd, const SV& vs) {
-				vd = vs.alpha;
-			};
-			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
-		}
-
-		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-		auto triangle_assign = [vertCount](Triangle& td, const SimplifyTriangle& ts) {
-			assert (ts.v[0] < vertCount);
-			assert (ts.v[1] < vertCount);
-			assert (ts.v[2] < vertCount);
-			td.v[0] = ts.v[0];
-			td.v[1] = ts.v[1];
-			td.v[2] = ts.v[2];
-		};
-		ForEach(newTris, triangles, triangle_assign).run(triCount);
-
-		return new ExtTriangleMesh(
-				vertCount, triCount, newVertices, newTris,
-				newNorms, newUVs, newCols, newAlphas
-		);
-	}
-
-	// Partition candidate list into components (aka "batches")
-	//
-	// We use parallelized connected components algorithm
-	//
-	//
-	BatchVector
-	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
-		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
-		tbb::enumerable_thread_specific<std::unordered_set<size_t>> closures;
-		tbb::blocked_range<size_t> candidate_range(0, candidateList.size());
-		auto closure_task = [&](const decltype(candidate_range)& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& c = candidateList[i];
-				const auto& t = triangles[c.tid];
-
-				// Get explicit edge to collapse
-				auto [e1, e2] = EDGES[c.tvertex];
-				const size_t i0 = t.v[e1];
-				const size_t i1 = t.v[e2];
-
-				// Get neghbors and insert
-				auto neighbors = edgeNeighbors(i0, i1);
-				closures.local().insert(neighbors.begin(), neighbors.end());
-			}
-		};
-		tbb::parallel_for(candidate_range, closure_task);
-
-		// Reduce
-		std::unordered_set<size_t> closure;
-		for (auto& local: closures) {
-			closure.merge(local);
-		}
-
-		// Step 2: Build connected components (union-find)
-		DisjointSets unionFind(vertices.size());
-		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
-		auto build_connected = [&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				const auto& t = triangles[i];
-				for (const auto e: EDGES) {
-					auto [e0, e1] = e;
-					size_t i0 = t.v[e0];
-					size_t i1 = t.v[e1];
-					if (closure.contains(i0) and closure.contains(i1)) {
-						unionFind.unite(i0, i1);
-					}
-				}
-			}
-		};
-		tbb::parallel_for(triangle_range, build_connected);
-
-		// Build batches (sequential)
-		// TODO Replace by multimap
-		std::unordered_map<size_t, RefVector> batches;
-		for (const auto& c: candidateList) {
-			size_t i = triangles[c.tid].v[c.tvertex];  // Vertex index
-			size_t batchIndex = unionFind.find(i);
-			batches[batchIndex].push_back(c);
-		}
-		BatchVector res;
-		res.reserve(batches.size());
-		for (const auto& batch: batches) {
-			res.push_back(batch.second);
-		}
-
-		return res;
-	}
-
-	size_t DeleteTriangles(
-		const BatchVector& batches,
-		const float edgeScreenSize,
-		const Camera& camera,
-		const bool preserveBorder
-	) {
-		tbb::enumerable_thread_specific<size_t> batchDeleted;
-		tbb::blocked_range<size_t> batch_range(0, batches.size());
-		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				for (auto& ref : batches[i]) {
-					batchDeleted.local() += CollapseEdge(
-						ref, edgeScreenSize, camera, preserveBorder
-					);
-				}
-			}
-		};
-		tbb::parallel_for(batch_range, delete_task);
-
-		auto deletedTriangles = std::accumulate(
-			batchDeleted.begin(),
-			batchDeleted.end(),
-			size_t(0),
-			std::plus<size_t>()
-		);
-		return deletedTriangles;
-	}
-
+	// Effectively simplify mesh (reduce triangles)
 	void Decimate(
 		const size_t targetTriangleCount,
 		const Camera& camera,
@@ -640,8 +480,77 @@ public:
 	//std::exit(0);  // DEBUG - Stop here
 	}
 
-private:
 
+	// Rebuild an output mesh after simplification
+	ExtTriangleMesh *GetExtMesh() const {
+		const size_t vertCount = vertices.size();
+		const size_t triCount = triangles.size();
+		using SV = SimplifyVertex;
+
+		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		auto vert_assign = [](Point& vd, const SV& vs) {
+			vd = vs.p;
+		};
+		ForEach(newVertices, vertices, vert_assign).run(vertCount);
+
+		Normal *newNorms = nullptr;
+		if (hasNormals) {
+			newNorms = new Normal[vertCount];
+
+			auto norm_assign = [](Normal& vd, const SV& vs) {
+				vd = vs.norm;
+			};
+			ForEach(newNorms, vertices, norm_assign).run(vertCount);
+		}
+
+		UV *newUVs = nullptr;
+		if (hasUVs) {
+			newUVs = new UV[vertCount];
+			auto uv_assign = [](UV& vd, const SV& vs) {
+				vd = vs.uv;
+			};
+			ForEach(newUVs, vertices, uv_assign).run(vertCount);
+		}
+
+		Spectrum *newCols = nullptr;
+		if (hasColors) {
+			newCols = new Spectrum[vertCount];
+			auto col_assign = [](Spectrum& vd, const SV& vs) {
+				vd = vs.col;
+			};
+			ForEach(newCols, vertices, col_assign).run(vertCount);
+		}
+
+		float *newAlphas = nullptr;
+		if (hasAlphas) {
+			newAlphas = new float[vertCount];
+			auto alpha_assign = [](float& vd, const SV& vs) {
+				vd = vs.alpha;
+			};
+			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
+		}
+
+		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+		auto triangle_assign = [vertCount](Triangle& td, const SimplifyTriangle& ts) {
+			assert (ts.v[0] < vertCount);
+			assert (ts.v[1] < vertCount);
+			assert (ts.v[2] < vertCount);
+			td.v[0] = ts.v[0];
+			td.v[1] = ts.v[1];
+			td.v[2] = ts.v[2];
+		};
+		ForEach(newTris, triangles, triangle_assign).run(triCount);
+
+		return new ExtTriangleMesh(
+				vertCount, triCount, newVertices, newTris,
+				newNorms, newUVs, newCols, newAlphas
+		);
+	}
+
+
+
+private:
+	// Main properties (verticies and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
 
@@ -650,6 +559,374 @@ private:
 	bool hasUVs = false;
 	bool hasColors = false;
 	bool hasAlphas = false;
+
+	// Iteration initialization
+	//
+	// Compact triangles, compute quadrics, incidents, borders
+	void InitIteration(
+		const size_t iteration,
+		const float edgeScreenSize,
+		const Camera& camera,
+		const bool preserveBorder
+	) {
+		if (iteration > 0) {
+			// Compact triangles
+			decltype(triangles) newTris;
+			newTris.reserve(triangles.size());
+			auto not_deleted = [](const SimplifyTriangle& t){return !t.deleted;};
+			std::ranges::copy_if(triangles, std::back_inserter(newTris), not_deleted);
+			std::swap(triangles, newTris);
+		}
+
+		// Build per-vertex incident edge tables
+		//
+		InitIncidentEdges();
+
+		// Init Quadrics by Plane & Edge Errors
+		//
+		// Identify boundary : vertices[].border=0,1
+		//
+		// Required at the beginning (iteration == 0)
+		//
+		if (iteration == 0) {
+			InitQuadrics(edgeScreenSize, camera, preserveBorder);
+			InitBorders();
+		}
+
+	}
+
+	// Initialize incident edge tables of vertices
+	//
+	// Modify: vertices
+	void InitIncidentEdges() {
+
+		// Clear previous data
+		for (auto& v: vertices) {
+			v.refs.clear();
+		}
+
+		// Build incident map
+		struct IncidentTask {
+			TriangleVector& triangles;
+			VertexVector& vertices;
+
+			IncidentTask(
+				TriangleVector& p_triangles,
+				VertexVector& p_vertices
+			) :
+				triangles(p_triangles),
+				vertices(p_vertices)
+			{}
+
+			IncidentTask(const IncidentTask&) = default;
+
+			void operator()(const tbb::blocked_range<size_t>& r) const {
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
+					const auto& v = triangles[i].v;
+					vertices[v[0]].refs.emplace_back(i, 0);
+					vertices[v[1]].refs.emplace_back(i, 1);
+					vertices[v[2]].refs.emplace_back(i, 2);
+				}
+			}
+		};
+
+		IncidentTask task(triangles, vertices);
+		auto range = tbb::blocked_range<size_t>(0, triangles.size());
+
+		tbb::parallel_for(range, task);
+	}
+
+	// Initialize quadrics on vertices
+	//
+	// Modify triangles and vertices (q values)
+	void InitQuadrics(
+		const float edgeScreenSize,
+		const Camera& camera,
+		const bool preserveBorder
+	) {
+		// Starting values
+		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
+		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				vertices[i].q = SymetricMatrix(0.0);
+			}
+		};
+		tbb::parallel_for(vertex_range, initv_task);
+
+		// Parallel computation of per-triangle quadric contributions
+		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
+
+		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
+
+		auto quadric_task = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
+				SimplifyTriangle &t = triangles[i];
+
+				SimplifyVertex &v0 = vertices[t.v[0]];
+				SimplifyVertex &v1 = vertices[t.v[1]];
+				SimplifyVertex &v2 = vertices[t.v[2]];
+
+				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+				t.geometryN = geometryN;
+
+				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+									   -Dot(Vector(geometryN), Vector(v0.p)));
+
+				triangleQuadrics[i][0] = sm;
+				triangleQuadrics[i][1] = sm;
+				triangleQuadrics[i][2] = sm;
+			}
+		};
+		tbb::parallel_for(triangle_range, quadric_task);
+
+		// Accumulation into vertex quadrics
+		std::vector<tbb::mutex> v_mtx(vertices.size());
+		auto accumulate_task = [&](decltype(triangle_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				const auto &t = triangles[i];
+				for (size_t j = 0; j < 3; ++j) {
+					auto vertex_index = t.v[j];
+					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
+					vertices[vertex_index].q += triangleQuadrics[i][j];
+				}
+			}
+		};
+		tbb::parallel_for(triangle_range, accumulate_task);
+
+		// Triangle error update
+		auto update_task = [&](decltype(triangle_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				triangles[i].UpdateTriangleError(
+					vertices, edgeScreenSize, camera, preserveBorder
+				);
+			}
+		};
+		tbb::parallel_for(triangle_range, update_task);
+	}  // ~InitQuadrics
+
+
+	// Init border flags on vertices
+	//
+	// Modify: vertices
+	void InitBorders() {
+		// vertex border flags are assumed to be initialized to false
+		// when vertex is created
+
+		std::vector<std::mutex> mutexes(vertices.size());
+
+		// For each vertex
+		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
+		auto border_task = [&](const tbb::blocked_range<size_t>& r){
+			for (auto i = r.begin() ; i != r.end(); ++i) {
+				const auto v = vertices[i];
+				std::map<size_t, size_t> vorders;  // Vertex orders
+
+				// For each triangle incident to the current vertex
+				for (const auto& ref: v.refs) {
+
+					// For each vertex of the incident triangle
+					for (size_t vid: triangles[ref.tid].v) {
+						// Increment incident vertex order
+						// If id doesn't exist yet, it will be created (with order=1)
+						vorders[vid]++;
+					}
+				}
+
+				for (auto& p: vorders) {
+					if (p.second == 1) {
+						// If p.first order is 1, it means that the edge (v, p.first)
+						// is referenced by only one triangle, thus it is a border.
+						// So we mark p.first to belong to a border
+						std::lock_guard lock(mutexes[p.first]);
+						vertices[p.first].border = true;
+					}
+				}
+			}
+		};
+		tbb::parallel_for(vertex_range, border_task);
+	}  // ~InitBorders
+
+	// Build candidate list
+	//
+	RefVector BuildCandidateList(
+		bool preserveBorder,
+		size_t maxCandidateQueueSize
+	) const {
+
+		// Ref comparison predicate
+		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
+			const auto left_error = triangles[left.tid].err[left.tvertex];
+			const auto right_error = triangles[right.tid].err[right.tvertex];
+			return  left_error > right_error;
+		};
+
+		tbb::concurrent_priority_queue<SimplifyRef, decltype(refErrorCompare) >
+			candidateQueue(vertices.size(), refErrorCompare);
+		tbb::blocked_range<size_t> tri_range(0, triangles.size());
+
+		auto build_task = [&](const decltype(tri_range)& r) {
+			// Main loop
+			for (size_t i = r.begin(); i != r.end(); ++i) {
+				const SimplifyTriangle &t = triangles[i];
+				auto tv0 = t.v[0];
+				auto tv1 = t.v[1];
+				auto tv2 = t.v[2];
+				const std::array<std::tuple<size_t, size_t>, 3> edges(
+					{
+						{tv0, tv1},
+						{tv1, tv2},
+						{tv2, tv0},
+					}
+				);
+
+				size_t minErrorIndex = NULL_INDEX;
+				float minError = FLOAT_INFINITY;
+				for (size_t j = 0; j < 3; ++j) {
+					const auto [i0, i1] = edges[j];
+					const SimplifyVertex &v0 = vertices[i0];
+					const SimplifyVertex &v1 = vertices[i1];
+
+					// Border check
+					if (preserveBorder) {
+						if (v0.border && v1.border)
+							continue;
+					} else {
+						if (v0.border != v1.border)
+							continue;
+					}
+
+					auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+					if (Flipped<false>(p, i0, i1))
+						continue;
+					if (Flipped<false>(p, i1, i0))
+						continue;
+
+					if (t.err[j] < minError) {
+						minErrorIndex = j;
+						minError = t.err[j];
+					}
+				}
+				if (minErrorIndex != NULL_INDEX) {
+					candidateQueue.emplace(i, minErrorIndex);
+				}
+			}
+
+		};
+		tbb::parallel_for(tri_range, build_task);
+
+		// Assemble result
+		size_t numCandidates = std::min(
+			candidateQueue.size(),
+			size_t(maxCandidateQueueSize)
+		);
+		RefVector candidateList(numCandidates);
+		for (size_t i = 0; i < numCandidates; ++i) {
+			candidateQueue.try_pop(candidateList[i]);
+		}
+
+		return candidateList;
+
+	}  // ~BuildCandidateList
+
+
+	// Partition candidate list into components (aka "batches")
+	//
+	// We use parallelized connected components algorithm
+	//
+	//
+	BatchVector
+	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
+		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
+		tbb::enumerable_thread_specific<std::unordered_set<size_t>> closures;
+		tbb::blocked_range<size_t> candidate_range(0, candidateList.size());
+		auto closure_task = [&](const decltype(candidate_range)& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				auto& c = candidateList[i];
+				const auto& t = triangles[c.tid];
+
+				// Get explicit edge to collapse
+				auto [e1, e2] = EDGES[c.tvertex];
+				const size_t i0 = t.v[e1];
+				const size_t i1 = t.v[e2];
+
+				// Get neghbors and insert
+				auto neighbors = edgeNeighbors(i0, i1);
+				closures.local().insert(neighbors.begin(), neighbors.end());
+			}
+		};
+		tbb::parallel_for(candidate_range, closure_task);
+
+		// Reduce
+		std::unordered_set<size_t> closure;
+		for (auto& local: closures) {
+			closure.merge(local);
+		}
+
+		// Step 2: Build connected components (union-find)
+		DisjointSets unionFind(vertices.size());
+		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
+		auto build_connected = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
+				const auto& t = triangles[i];
+				for (const auto e: EDGES) {
+					auto [e0, e1] = e;
+					size_t i0 = t.v[e0];
+					size_t i1 = t.v[e1];
+					if (closure.contains(i0) and closure.contains(i1)) {
+						unionFind.unite(i0, i1);
+					}
+				}
+			}
+		};
+		tbb::parallel_for(triangle_range, build_connected);
+
+		// Build batches (sequential)
+		std::unordered_map<size_t, RefVector> batches;
+		for (const auto& c: candidateList) {
+			size_t i = triangles[c.tid].v[c.tvertex];  // Vertex index
+			size_t batchIndex = unionFind.find(i);
+			batches[batchIndex].push_back(c);
+		}
+		BatchVector res;
+		res.reserve(batches.size());
+		for (const auto& batch: batches) {
+			res.push_back(batch.second);
+		}
+
+		return res;
+	}
+
+	// Delete triangles, running batches
+	//
+	//
+	size_t DeleteTriangles(
+		const BatchVector& batches,
+		const float edgeScreenSize,
+		const Camera& camera,
+		const bool preserveBorder
+	) {
+		tbb::enumerable_thread_specific<size_t> batchDeleted;
+		tbb::blocked_range<size_t> batch_range(0, batches.size());
+		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
+				for (auto& ref : batches[i]) {
+					batchDeleted.local() += CollapseEdge(
+						ref, edgeScreenSize, camera, preserveBorder
+					);
+				}
+			}
+		};
+		tbb::parallel_for(batch_range, delete_task);
+
+		auto deletedTriangles = std::accumulate(
+			batchDeleted.begin(),
+			batchDeleted.end(),
+			size_t(0),
+			std::plus<size_t>()
+		);
+		return deletedTriangles;
+	}
 
 	// Neighbor features
 	using NeighborSet = std::unordered_set<size_t>;
@@ -807,6 +1084,10 @@ private:
 
 	// Check if a triangle flips when this edge is removed
 	// Returns: check status, deleted status of each ref (vector)
+	// This template contains 2 versions (modelled on the original
+	// code...): one will only compute flip status, the second will
+	// also compute deleted.
+	// (templatization has been used to avoid code duplication)
 	using FlippedFullReturn = std::tuple<bool, std::vector<bool>>;
 
 	template<bool F=true>
@@ -916,273 +1197,6 @@ private:
 			refs.push_back(r);
 		}
 		return std::tuple(refs, deletedTriangles);
-	}
-
-	// Initialize quadrics on vertices
-	//
-	// Modify triangles and vertices (q values)
-	void InitQuadrics(
-		const float edgeScreenSize,
-		const Camera& camera,
-		const bool preserveBorder
-	) {
-		// Starting values
-		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
-		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				vertices[i].q = SymetricMatrix(0.0);
-			}
-		};
-		tbb::parallel_for(vertex_range, initv_task);
-
-		// Parallel computation of per-triangle quadric contributions
-		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
-
-		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
-
-		auto quadric_task = [&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				SimplifyTriangle &t = triangles[i];
-
-				SimplifyVertex &v0 = vertices[t.v[0]];
-				SimplifyVertex &v1 = vertices[t.v[1]];
-				SimplifyVertex &v2 = vertices[t.v[2]];
-
-				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
-				t.geometryN = geometryN;
-
-				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-									   -Dot(Vector(geometryN), Vector(v0.p)));
-
-				triangleQuadrics[i][0] = sm;
-				triangleQuadrics[i][1] = sm;
-				triangleQuadrics[i][2] = sm;
-			}
-		};
-		tbb::parallel_for(triangle_range, quadric_task);
-
-		// Accumulation into vertex quadrics
-		std::vector<tbb::mutex> v_mtx(vertices.size());
-		auto accumulate_task = [&](decltype(triangle_range)& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				const auto &t = triangles[i];
-				for (size_t j = 0; j < 3; ++j) {
-					auto vertex_index = t.v[j];
-					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].q += triangleQuadrics[i][j];
-				}
-			}
-		};
-		tbb::parallel_for(triangle_range, accumulate_task);
-
-		// Triangle error update
-		auto update_task = [&](decltype(triangle_range)& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].UpdateTriangleError(
-					vertices, edgeScreenSize, camera, preserveBorder
-				);
-			}
-		};
-		tbb::parallel_for(triangle_range, update_task);
-	}
-
-	// Build incident edge tables on vertices
-	//
-	// Modify: vertices
-	void InitIncidentEdges() {
-
-		// Clear previous data
-		for (auto& v: vertices) {
-			v.refs.clear();
-		}
-
-		// Build incident map
-		struct IncidentTask {
-			TriangleVector& triangles;
-			VertexVector& vertices;
-
-			IncidentTask(
-				TriangleVector& p_triangles,
-				VertexVector& p_vertices
-			) :
-				triangles(p_triangles),
-				vertices(p_vertices)
-			{}
-
-			IncidentTask(const IncidentTask&) = default;
-
-			void operator()(const tbb::blocked_range<size_t>& r) const {
-				for (auto i = r.begin(); i != r.end(); ++i) {
-					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
-					const auto& v = triangles[i].v;
-					vertices[v[0]].refs.emplace_back(i, 0);
-					vertices[v[1]].refs.emplace_back(i, 1);
-					vertices[v[2]].refs.emplace_back(i, 2);
-				}
-			}
-		};
-
-		IncidentTask task(triangles, vertices);
-		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-
-		tbb::parallel_for(range, task);
-	}
-
-
-	// Init border indicators on vertices
-	//
-	// Modify: vertices
-	void InitBorders() {
-		// vertex border flags are assumed to be initialized to false
-		// when vertex is created
-
-		std::vector<std::mutex> mutexes(vertices.size());
-
-		// For each vertex
-		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
-		auto border_task = [&](const tbb::blocked_range<size_t>& r){
-			for (auto i = r.begin() ; i != r.end(); ++i) {
-				const auto v = vertices[i];
-				std::map<size_t, size_t> vorders;  // Vertex orders
-
-				// For each triangle incident to the current vertex
-				for (const auto& ref: v.refs) {
-
-					// For each vertex of the incident triangle
-					for (size_t vid: triangles[ref.tid].v) {
-						// Increment incident vertex order
-						// If id doesn't exist yet, it will be created (with order=1)
-						vorders[vid]++;
-					}
-				}
-
-				for (auto& p: vorders) {
-					if (p.second == 1) {
-						// If p.first order is 1, it means that the edge (v, p.first)
-						// is referenced by only one triangle, thus it is a border.
-						// So we mark p.first to belong to a border
-						std::lock_guard lock(mutexes[p.first]);
-						vertices[p.first].border = true;
-					}
-				}
-			}
-		};
-		tbb::parallel_for(vertex_range, border_task);
-	}
-
-	// Build candidate list
-	//
-	RefVector BuildCandidateList(
-		bool preserveBorder,
-		size_t maxCandidateQueueSize
-	) const {
-
-		// Ref comparison predicate
-		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
-			const auto left_error = triangles[left.tid].err[left.tvertex];
-			const auto right_error = triangles[right.tid].err[right.tvertex];
-			return  left_error > right_error;
-		};
-
-		tbb::concurrent_priority_queue<SimplifyRef, decltype(refErrorCompare) >
-			candidateQueue(vertices.size(), refErrorCompare);
-		tbb::blocked_range<size_t> tri_range(0, triangles.size());
-
-		auto build_task = [&](const decltype(tri_range)& r) {
-			// Main loop
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				const SimplifyTriangle &t = triangles[i];
-				auto tv0 = t.v[0];
-				auto tv1 = t.v[1];
-				auto tv2 = t.v[2];
-				const std::array<std::tuple<size_t, size_t>, 3> edges(
-					{
-						{tv0, tv1},
-						{tv1, tv2},
-						{tv2, tv0},
-					}
-				);
-
-				size_t minErrorIndex = NULL_INDEX;
-				float minError = FLOAT_INFINITY;
-				for (size_t j = 0; j < 3; ++j) {
-					const auto [i0, i1] = edges[j];
-					const SimplifyVertex &v0 = vertices[i0];
-					const SimplifyVertex &v1 = vertices[i1];
-
-					// Border check
-					if (preserveBorder) {
-						if (v0.border && v1.border)
-							continue;
-					} else {
-						if (v0.border != v1.border)
-							continue;
-					}
-
-					auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
-					if (Flipped<false>(p, i0, i1))
-						continue;
-					if (Flipped<false>(p, i1, i0))
-						continue;
-
-					if (t.err[j] < minError) {
-						minErrorIndex = j;
-						minError = t.err[j];
-					}
-				}
-				if (minErrorIndex != NULL_INDEX) {
-					candidateQueue.emplace(i, minErrorIndex);
-				}
-			}
-
-		};
-		tbb::parallel_for(tri_range, build_task);
-
-		// Assemble result
-		size_t numCandidates = std::min(
-			candidateQueue.size(),
-			size_t(maxCandidateQueueSize)
-		);
-		RefVector candidateList(numCandidates);
-		for (size_t i = 0; i < numCandidates; ++i) {
-			candidateQueue.try_pop(candidateList[i]);
-		}
-
-		return candidateList;
-	}
-
-	// Compact triangles, compute quadrics, incident, boundary, edge error
-	// Returns: candidate list
-	void InitIteration(
-		const size_t iteration,
-		const float edgeScreenSize,
-		const Camera& camera,
-		const bool preserveBorder
-	) {
-		if (iteration > 0) {
-			// Compact triangles
-			decltype(triangles) newTris;
-			newTris.reserve(triangles.size());
-			auto not_deleted = [](const SimplifyTriangle& t){return !t.deleted;};
-			std::ranges::copy_if(triangles, std::back_inserter(newTris), not_deleted);
-			std::swap(triangles, newTris);
-		}
-
-		// Build per-vertex incident edge tables
-		//
-		InitIncidentEdges();
-
-		// Init Quadrics by Plane & Edge Errors
-		//
-		// Identify boundary : vertices[].border=0,1
-		//
-		// Required at the beginning (iteration == 0)
-		//
-		if (iteration == 0) {
-			InitQuadrics(edgeScreenSize, camera, preserveBorder);
-			InitBorders();
-		}
-
 	}
 
 	// Finally compact mesh before exiting
