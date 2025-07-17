@@ -502,6 +502,7 @@ target_link_libraries(slg-core PRIVATE
   nlohmann_json::nlohmann_json
   robin_hood::robin_hood
   OpenMP::OpenMP_CXX
+  Eigen3::Eigen
 )
 
 #############################################################################

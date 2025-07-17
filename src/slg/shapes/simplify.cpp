@@ -41,9 +41,6 @@
 #include "slg/utils/harlequincolors.h"
 #include "dset.h"
 
-//using namespace std;
-using namespace luxrays;
-using namespace slg;
 
 //------------------------------------------------------------------------------
 //
@@ -74,6 +71,8 @@ namespace {
 namespace simple {
 
 using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 class SymetricMatrix {
 public:
@@ -901,6 +900,10 @@ private:
 
 // Namespace containing the rewriting of the algo
 namespace enhanced {
+
+using luxrays::Point;
+using luxrays::Normal;
+
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 constexpr std::array<std::tuple<size_t, size_t>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
@@ -1028,9 +1031,9 @@ struct SimplifyVertex {
 	bool border;          // Border status
 
 	// LuxCore specific data
-	Normal norm;
-	UV uv;
-	Spectrum col;
+	luxrays::Normal norm;
+	luxrays::UV uv;
+	luxrays::Spectrum col;
 	float alpha;
 
 };
@@ -1085,7 +1088,7 @@ private:
 
 struct SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
-	luxrays::Normal geometryN;
+	Normal geometryN;
 	std::array<float, 3> err;
 	bool deleted = false;
 	bool dirty = false;
@@ -1094,7 +1097,7 @@ struct SimplifyTriangle {
 	void UpdateTriangleError(
 		const VertexVector& vertices,
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	);
 };
@@ -1107,7 +1110,7 @@ using TriangleVector = std::vector<
 // Error between vertex and Quadric
 float VertexError(
 	const SymetricMatrix &q,
-	const Point& p
+	const luxrays::Point& p
 ) {
 	return  q[0] * p.x * p.x
 			+ 2.f * q[1] * p.x * p.y
@@ -1172,7 +1175,7 @@ float CalculateCollapseScreenErrorScale(
 	const SimplifyVertex& v0,
 	const SimplifyVertex& v1,
 	float edgeScreenSize,
-	const Camera& camera
+	const slg::Camera& camera
 ) {
 	if (edgeScreenSize > 0.f) {
 		const Point& p0 = v0.p;
@@ -1181,7 +1184,7 @@ float CalculateCollapseScreenErrorScale(
 
 		float p0x, p0y;
 		if (!camera.GetSamplePosition(p0, &p0x, &p0y) ||
-				!IsValid(p0x) || !IsValid(p0y)) {
+				!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
 			return notVisibleScale;
 		}
 
@@ -1191,7 +1194,7 @@ float CalculateCollapseScreenErrorScale(
 
 		float p1x, p1y;
 		if (!camera.GetSamplePosition(p1, &p1x, &p1y) ||
-				!IsValid(p1x) || !IsValid(p1y)) {
+				!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
 			return notVisibleScale;
 		}
 
@@ -1199,12 +1202,12 @@ float CalculateCollapseScreenErrorScale(
 		p1x /= camera.filmWidth;
 		p1y /= camera.filmHeight;
 
-		const float edge = sqrtf(Sqr(p0x - p1x) + Sqr(p0y - p1y));
+		const float edge = sqrtf(luxrays::Sqr(p0x - p1x) + luxrays::Sqr(p0y - p1y));
 		if (edge == 0.f) {
 			return notVisibleScale;
 		}
 
-		return Max(edge / edgeScreenSize, notVisibleScale);
+		return std::max(edge / edgeScreenSize, notVisibleScale);
 	} else {
 		return 1.f;
 	}
@@ -1239,7 +1242,7 @@ template <typename D, typename S, typename T> struct ForEach {
 
 class Simplify {
 public:
-	Simplify(const ExtTriangleMesh &srcMesh) {
+	Simplify(const luxrays::ExtTriangleMesh &srcMesh) {
 		using SV = SimplifyVertex;
 
 		// Size vertices and triangles containers in accordance to inputs
@@ -1262,14 +1265,14 @@ public:
 		}
 
 		if (srcMesh.HasUVs(0)) {
-			auto init_uv = [](SV& v, const UV& u){ v.uv = u; };
+			auto init_uv = [](SV& v, const luxrays::UV& u){ v.uv = u; };
 			ForEach(vertices, srcMesh.GetUVs(0), init_uv).run(vertCount);
 
 			hasUVs = true;
 		}
 
 		if (srcMesh.HasColors(0)) {
-			auto init_col = [](SV& v, const Spectrum& col){ v.col = col; };
+			auto init_col = [](SV& v, const luxrays::Spectrum& col){ v.col = col; };
 			ForEach(vertices, srcMesh.GetColors(0), init_col).run(vertCount);
 
 			hasColors = true;
@@ -1283,7 +1286,7 @@ public:
 		}
 
 		// Init triangles
-		auto init_triangle = [](SimplifyTriangle& td, const Triangle& ts){
+		auto init_triangle = [](SimplifyTriangle& td, const luxrays::Triangle& ts){
 			td.v[0] = ts.v[0];
 			td.v[1] = ts.v[1];
 			td.v[2] = ts.v[2];
@@ -1295,12 +1298,14 @@ public:
 	// Effectively simplify mesh (reduce triangles)
 	void Decimate(
 		const size_t targetTriangleCount,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const float edgeScreenSize,
 		const bool preserveBorder
 	) {
 		// Work on 10% of all triangles for each iteration
-		size_t maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
+		size_t maxCandidateQueueSize = std::max(
+			64u, luxrays::Floor2UInt(triangles.size() * .1f)
+		);
 
 		// Main iteration loop
 		const size_t startTriangleCount = triangles.size();
@@ -1361,12 +1366,12 @@ public:
 
 
 	// Rebuild an output mesh after simplification
-	ExtTriangleMesh *GetExtMesh() const {
+	luxrays::ExtTriangleMesh *GetExtMesh() const {
 		const size_t vertCount = vertices.size();
 		const size_t triCount = triangles.size();
 		using SV = SimplifyVertex;
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		Point *newVertices = luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		auto vert_assign = [](Point& vd, const SV& vs) {
 			vd = vs.p;
 		};
@@ -1382,19 +1387,19 @@ public:
 			ForEach(newNorms, vertices, norm_assign).run(vertCount);
 		}
 
-		UV *newUVs = nullptr;
+		luxrays::UV *newUVs = nullptr;
 		if (hasUVs) {
-			newUVs = new UV[vertCount];
-			auto uv_assign = [](UV& vd, const SV& vs) {
+			newUVs = new luxrays::UV[vertCount];
+			auto uv_assign = [](luxrays::UV& vd, const SV& vs) {
 				vd = vs.uv;
 			};
 			ForEach(newUVs, vertices, uv_assign).run(vertCount);
 		}
 
-		Spectrum *newCols = nullptr;
+		luxrays::Spectrum *newCols = nullptr;
 		if (hasColors) {
-			newCols = new Spectrum[vertCount];
-			auto col_assign = [](Spectrum& vd, const SV& vs) {
+			newCols = new luxrays::Spectrum[vertCount];
+			auto col_assign = [](luxrays::Spectrum& vd, const SV& vs) {
 				vd = vs.col;
 			};
 			ForEach(newCols, vertices, col_assign).run(vertCount);
@@ -1409,8 +1414,9 @@ public:
 			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
 		}
 
-		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-		auto triangle_assign = [vertCount](Triangle& td, const SimplifyTriangle& ts) {
+		luxrays::Triangle *newTris =
+			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+		auto triangle_assign = [vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
 			assert (ts.v[0] < vertCount);
 			assert (ts.v[1] < vertCount);
 			assert (ts.v[2] < vertCount);
@@ -1420,7 +1426,7 @@ public:
 		};
 		ForEach(newTris, triangles, triangle_assign).run(triCount);
 
-		return new ExtTriangleMesh(
+		return new luxrays::ExtTriangleMesh(
 				vertCount, triCount, newVertices, newTris,
 				newNorms, newUVs, newCols, newAlphas
 		);
@@ -1445,7 +1451,7 @@ private:
 	void InitIteration(
 		const size_t iteration,
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		if (iteration > 0) {
@@ -1508,7 +1514,7 @@ private:
 	// Modify triangles and vertices (q values)
 	void InitQuadrics(
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Starting values
@@ -1773,7 +1779,7 @@ private:
 	size_t DeleteTriangles(
 		const BatchVector& batches,
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Batch design guarantees that each vertex is accessed by only one thread
@@ -1838,7 +1844,7 @@ private:
 	size_t CollapseEdge(
 		const SimplifyRef& vertex,  /* Candidate vertex to collapse */
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Check triangle
@@ -1896,7 +1902,7 @@ private:
 		const luxrays::Point& triPoint1 = tv1.p;
 		const luxrays::Point& triPoint2 = tv2.p;
 		float b1, b2;
-		if (Triangle::GetBaryCoords(
+		if (luxrays::Triangle::GetBaryCoords(
 				triPoint0,
 				triPoint1,
 				triPoint2,
@@ -1910,15 +1916,15 @@ private:
 				v0.norm = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
 			}
 			if (hasUVs) {
-				const UV triUV0 = tv0.uv;
-				const UV triUV1 = tv1.uv;
-				const UV triUV2 = tv2.uv;
+				const luxrays::UV triUV0 = tv0.uv;
+				const luxrays::UV triUV1 = tv1.uv;
+				const luxrays::UV triUV2 = tv2.uv;
 				v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
 			}
 			if (hasColors) {
-				const Spectrum triCol0 = tv0.col;
-				const Spectrum triCol1 = tv1.col;
-				const Spectrum triCol2 = tv2.col;
+				const luxrays::Spectrum triCol0 = tv0.col;
+				const luxrays::Spectrum triCol1 = tv1.col;
+				const luxrays::Spectrum triCol2 = tv2.col;
 				v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
 			}
 			if (hasAlphas) {
@@ -1934,11 +1940,11 @@ private:
 				v0.norm = triNorm0;
 			}
 			if (hasUVs) {
-				const UV triUV0 = tv0.uv;
+				const luxrays::UV triUV0 = tv0.uv;
 				v0.uv = triUV0;
 			}
 			if (hasColors) {
-				const Spectrum triCol0 = tv0.col;
+				const luxrays::Spectrum triCol0 = tv0.col;
 				v0.col = triCol0;
 			}
 			if (hasAlphas) {
@@ -2051,7 +2057,7 @@ private:
 		const SimplifyVertex &v,  // Collapsed vertex
 		const std::vector<bool> &deleted,
 		const float edgeScreenSize,
-		const Camera& camera,
+		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		size_t deletedTriangles = 0;
@@ -2137,7 +2143,7 @@ private:
 void SimplifyTriangle::UpdateTriangleError(
 	const VertexVector& vertices,
 	const float edgeScreenSize,
-	const Camera& camera,
+	const slg::Camera& camera,
 	const bool preserveBorder
 ) {
 
@@ -2163,8 +2169,13 @@ void SimplifyTriangle::UpdateTriangleError(
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
-		const float target, const float edgeScreenSize, const bool preserveBorder) {
+slg::SimplifyShape::SimplifyShape(
+	const slg::Camera *camera,
+	luxrays::ExtTriangleMesh *srcMesh,
+	const float target,
+	const float edgeScreenSize,
+	const bool preserveBorder
+) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
 	if ((edgeScreenSize > 0.f) && !camera) {
@@ -2174,9 +2185,11 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 		);
 	}
 
-	const auto startTime = WallClockTime();
+	const auto startTime = luxrays::WallClockTime();
 
-	const size_t targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
+	const size_t targetCount = std::max(
+		1u, luxrays::Floor2UInt(srcMesh->GetTotalTriangleCount() * target)
+	);
 
 	/*srcMesh->Save("debug-start.ply");
 	ExtTriangleMesh *debugMeshStart = ScreenProjection(*camera, *srcMesh);
@@ -2204,16 +2217,16 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	// For some debugging
 	//mesh->Save("debug.ply");
 
-	const auto endTime = WallClockTime();
+	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 }
 
-SimplifyShape::~SimplifyShape() {
+slg::SimplifyShape::~SimplifyShape() {
 	if (!refined)
 		delete mesh;
 }
 
-ExtTriangleMesh *SimplifyShape::RefineImpl(const Scene *scene) {
+luxrays::ExtTriangleMesh *slg::SimplifyShape::RefineImpl(const slg::Scene *scene) {
 	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
