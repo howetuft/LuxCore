@@ -30,12 +30,9 @@
 #include <execution>
 
 #include <tbb/mutex.h>
-#include <tbb/concurrent_priority_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_for.h>
-#include <tbb/concurrent_vector.h>
 #include <tbb/enumerable_thread_specific.h>
-#include <tbb/concurrent_unordered_set.h>
 #include <tbb/parallel_sort.h>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -1024,8 +1021,9 @@ using BatchVector = std::vector<RefVector>;
 
 struct SimplifyVertex {
 	// Core data
-	luxrays::Point p;              // Position
-	tbb::concurrent_vector<SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef>> refs;       // Incident edges in topology
+	luxrays::Point p;			  // Position
+	RefVector refs;				  // Incident edges in topology
+
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
@@ -1037,10 +1035,53 @@ struct SimplifyVertex {
 
 };
 
-using VertexVector = std::vector<
+using PlainVertexVector = std::vector<
 	SimplifyVertex,
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
+
+// Batch design is supposed to guarantee that, in main treatment, each
+// vertex is accessed by only one thread at most. However, we can check it enabling
+// CHECK_VERTEX_RACE
+#ifndef CHECK_VERTEX_RACE
+// Normal form
+using VertexVector = PlainVertexVector;
+#else
+// Overloaded form for checking
+class VertexVector: public PlainVertexVector {
+// Call `clear` to initiate recording and `check` just after
+public:
+	reference operator[]( size_type pos ) {
+		_threads.emplace(pos, std::this_thread::get_id());
+		return PlainVertexVector::operator[](pos);
+	}
+	const_reference operator[]( size_type pos ) const {
+		_threads.emplace(pos, std::this_thread::get_id());
+		return PlainVertexVector::operator[](pos);
+	}
+	void clear() {
+		_threads.clear();
+	}
+	void check() const {
+		for (size_t i = 0; i < size(); ++i) {
+			auto [b, e] = _threads.equal_range(i);
+			std::vector<std::thread::id> values;
+			for (auto i = b; i != e; ++i) values.push_back(i->second);
+			auto last = std::unique(values.begin(), values.end());
+			values.erase(last, values.end());
+			auto count = values.size();
+			//auto count = std::ranges::count(r);
+			if (count > 1) {
+				SDL_LOG("Simplify - Warning: vertex " << i << " handled by " << count << " threads.");
+				for (auto t: values) SDL_LOG("Thread " << t);
+			}
+		}
+	}
+private:
+	mutable tbb::concurrent_multimap<size_t, std::thread::id> _threads;
+
+};
+#endif
 
 struct SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
@@ -1443,34 +1484,21 @@ private:
 			v.refs.clear();
 		}
 
-		// Build incident map
-		struct IncidentTask {
-			TriangleVector& triangles;
-			VertexVector& vertices;
-
-			IncidentTask(
-				TriangleVector& p_triangles,
-				VertexVector& p_vertices
-			) :
-				triangles(p_triangles),
-				vertices(p_vertices)
-			{}
-
-			IncidentTask(const IncidentTask&) = default;
-
-			void operator()(const tbb::blocked_range<size_t>& r) const {
-				for (auto i = r.begin(); i != r.end(); ++i) {
-					triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
-					const auto& v = triangles[i].v;
-					vertices[v[0]].refs.emplace_back(i, 0);
-					vertices[v[1]].refs.emplace_back(i, 1);
-					vertices[v[2]].refs.emplace_back(i, 2);
+		// Build refs
+		// Race condition: we need mutexes (at vertex grain-scale)
+		auto range = tbb::blocked_range<size_t>(0, triangles.size());
+		std::vector<std::mutex> vertex_mutexes(vertices.size());
+		auto task = [&](tbb::blocked_range<size_t>& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
+				const auto& v = triangles[i].v;
+				for (size_t j = 0; j < 3; ++j) {
+					auto vid = v[j];
+					std::lock_guard lock(vertex_mutexes[vid]);
+					vertices[vid].refs.emplace_back(i, j);
 				}
 			}
 		};
-
-		IncidentTask task(triangles, vertices);
-		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 
 		tbb::parallel_for(range, task);
 	}
@@ -1748,6 +1776,13 @@ private:
 		const Camera& camera,
 		const bool preserveBorder
 	) {
+		// Batch design guarantees that each vertex is accessed by only one thread
+		// in the following treatment.
+		// One can check it by enabling CHECK_VERTEX_RACE
+#ifdef CHECK_VERTEX_RACE
+		vertices.clear();
+#endif
+
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
 		tbb::blocked_range<size_t> batch_range(0, batches.size());
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
@@ -1761,6 +1796,9 @@ private:
 		};
 		tbb::parallel_for(batch_range, delete_task);
 
+#ifdef CHECK_VERTEX_RACE
+		vertices.check();
+#endif
 		auto deletedTriangles = std::accumulate(
 			batchDeleted.begin(),
 			batchDeleted.end(),
@@ -1916,9 +1954,8 @@ private:
 
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
-		refs.clear();
-		refs.grow_by(newRefs0.begin(), newRefs0.end());
-		refs.grow_by(newRefs1.begin(), newRefs1.end());
+		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
+		refs.swap(newRefs0);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
