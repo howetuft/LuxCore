@@ -332,7 +332,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const bool simplifyEnhanced = props.Get(Property(propName + ".enhanced")(false)).Get<bool>();
 		
 		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
-				target, edgeScreenSize, preserveBorder, simplifyEnhanced);
+				target, edgeScreenSize, preserveBorder);
 	} else if (shapeType == "islandaov") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))

@@ -65,20 +65,7 @@
 
 namespace {
 // Everything inside this namespace is kept local to this translation
-// unit (behaves like static and avoids linker namespace pollution)
-
-class Simplify {
-public:
-	virtual void Decimate(
-		const size_t targetTriangleCount,
-		const slg::Camera& camera,
-		const float edgeScreenSize,
-		const bool preserveBorder
-	) = 0;
-	virtual luxrays::ExtTriangleMesh *GetExtMesh() const = 0;
-};
-
-using SimplifyPtr = std::unique_ptr<Simplify>;
+// unit (behaves like static and avoid linker namespace pollution)
 
 // Namespace containing the original code
 namespace simple {
@@ -167,7 +154,7 @@ public:
 };
 
 
-class Simplify : virtual public ::Simplify {
+class Simplify {
 public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const u_int vertCount = srcMesh.GetTotalVertexCount();
@@ -226,7 +213,7 @@ public:
 	~Simplify() {
 	}
 	
-	virtual ExtTriangleMesh *GetExtMesh() const override {
+	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
@@ -278,12 +265,8 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-	virtual void Decimate(
-		const size_t targetTriangleCount,
-		const Camera& scnCamera,
-		const float screenSize,
-		const bool border
-	) override {
+	void Decimate(const float targetTriangleCount, const Camera& scnCamera,
+			const float screenSize, const bool border) {
 		preserveBorder = border;
 		camera = &scnCamera;
 		edgeScreenSize = screenSize;
@@ -1257,7 +1240,7 @@ template <typename D, typename S, typename T> struct ForEach {
 #endif
 
 
-class Simplify : virtual public ::Simplify {
+class Simplify {
 public:
 	Simplify(const luxrays::ExtTriangleMesh &srcMesh) {
 		using SV = SimplifyVertex;
@@ -1318,7 +1301,7 @@ public:
 		const slg::Camera& camera,
 		const float edgeScreenSize,
 		const bool preserveBorder
-	) override {
+	) {
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
 			64u, luxrays::Floor2UInt(triangles.size() * .1f)
@@ -1383,7 +1366,7 @@ public:
 
 
 	// Rebuild an output mesh after simplification
-	virtual luxrays::ExtTriangleMesh *GetExtMesh() const override {
+	luxrays::ExtTriangleMesh *GetExtMesh() const {
 		const size_t vertCount = vertices.size();
 		const size_t triCount = triangles.size();
 		using SV = SimplifyVertex;
@@ -2191,8 +2174,7 @@ slg::SimplifyShape::SimplifyShape(
 	luxrays::ExtTriangleMesh *srcMesh,
 	const float target,
 	const float edgeScreenSize,
-	const bool preserveBorder,
-	const bool simplifyEnhanced
+	const bool preserveBorder
 ) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
@@ -2214,15 +2196,10 @@ slg::SimplifyShape::SimplifyShape(
 	debugMeshStart->Save("debug-start-proj.ply");
 	delete debugMeshStart;*/
 
-	SimplifyPtr simplify;
-	if (simplifyEnhanced) {
-		simplify.reset(new enhanced::Simplify(*srcMesh));
-	} else {
-		simplify.reset(new simple::Simplify(*srcMesh));
-	}
-
-	simplify->Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
-	mesh.reset(simplify->GetExtMesh());
+	enhanced::Simplify simplify(*srcMesh);
+	SDL_LOG("Before decimate");
+	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
+	mesh = simplify.GetExtMesh();
 
 	/*srcMesh->Save("debug-end.ply");
 	ExtTriangleMesh *debugMeshEnd = ScreenProjection(*camera, *mesh);
@@ -2246,10 +2223,10 @@ slg::SimplifyShape::SimplifyShape(
 
 slg::SimplifyShape::~SimplifyShape() {
 	if (!refined)
-		mesh.reset();
+		delete mesh;
 }
 
 luxrays::ExtTriangleMesh *slg::SimplifyShape::RefineImpl(const slg::Scene *scene) {
-	return mesh.release();
+	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
