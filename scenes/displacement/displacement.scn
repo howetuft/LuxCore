@@ -53,6 +53,7 @@ scene.shapes.spheredisp.uvindex = 0
 scene.shapes.spheresimp.type = simplify
 scene.shapes.spheresimp.source = spheredisp
 scene.shapes.spheresimp.errorscale = 20
+scene.shapes.spheresimp.enhanced = 1
 ##
 scene.shapes.sphere1.type = harlequin
 scene.shapes.sphere1.source = spheredisp

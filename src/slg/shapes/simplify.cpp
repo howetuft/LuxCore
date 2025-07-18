@@ -2174,7 +2174,8 @@ slg::SimplifyShape::SimplifyShape(
 	luxrays::ExtTriangleMesh *srcMesh,
 	const float target,
 	const float edgeScreenSize,
-	const bool preserveBorder
+	const bool preserveBorder,
+	const bool simplifyEnhanced
 ) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
@@ -2196,10 +2197,16 @@ slg::SimplifyShape::SimplifyShape(
 	debugMeshStart->Save("debug-start-proj.ply");
 	delete debugMeshStart;*/
 
-	enhanced::Simplify simplify(*srcMesh);
-	SDL_LOG("Before decimate");
-	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
-	mesh = simplify.GetExtMesh();
+
+	if (simplifyEnhanced) {
+		enhanced::Simplify simplify(*srcMesh);
+		simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
+		mesh = simplify.GetExtMesh();
+	} else {
+		simple::Simplify simplify(*srcMesh);
+		simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
+		mesh = simplify.GetExtMesh();
+	}
 
 	/*srcMesh->Save("debug-end.ply");
 	ExtTriangleMesh *debugMeshEnd = ScreenProjection(*camera, *mesh);
