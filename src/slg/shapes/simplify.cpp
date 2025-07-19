@@ -1534,6 +1534,7 @@ private:
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
+
 	}  // ~InitQuadrics
 
 
@@ -1968,26 +1969,36 @@ private:
 				continue;
 			}
 
-			// Check if the triangle is too narrow
-			const auto d1 = Point2Vector(vertices[id1].p - p).normalized();
-			const auto d2 = Point2Vector(vertices[id2].p - p).normalized();
+			const auto d1 = Point2Vector(vertices[id1].p - p);
+			const auto d2 = Point2Vector(vertices[id2].p - p);
 
-			const float absdot = fabs(d1.dot(d2));
-			if (absdot > .999f) {
-				if constexpr (F) {
-					return FlippedFullReturn(true, std::move(deleted));
-				} else {
-					return true;
+			// Check if the triangle is too narrow
+			// (avoiding normalization)
+			{
+				const float dot = d1.dot(d2);
+				const float sqrdot = dot * dot / (d1.squaredNorm() * d2.squaredNorm()) ;
+				constexpr float threshold = .999f * .999f;
+				if (sqrdot > threshold) {
+					if constexpr (F) {
+						return FlippedFullReturn(true, std::move(deleted));
+					} else {
+						return true;
+					}
 				}
 			}
 
 			// Check if the Normal is changing side
-			const Normal geometryN(d1.cross(d2).normalized());
-			if (geometryN.dot(t.geometryN) < .2f) {
-				if constexpr(F) {
-					return FlippedFullReturn(true, std::move(deleted));
-				} else {
-					return true;
+			// (avoiding normalization)
+			{
+				const Normal geometryN(d1.cross(d2));
+				const float dot = geometryN.dot(t.geometryN);
+				constexpr float threshold = .2f * .2f;
+				if (dot <= 0 or dot * dot / geometryN.squaredNorm() < threshold) {
+					if constexpr(F) {
+						return FlippedFullReturn(true, std::move(deleted));
+					} else {
+						return true;
+					}
 				}
 			}
 
@@ -2001,7 +2012,7 @@ private:
 		} else {
 			return false;
 		}
-	}
+	}  // ~Flipped
 
 	// Update triangle connections and edge error after a edge is collapsed
 	// Returns: new incident edges list, number of deleted triangles
