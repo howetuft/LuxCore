@@ -1269,6 +1269,8 @@ public:
 		const float edgeScreenSize,
 		const bool preserveBorder
 	) {
+		Eigen::initParallel();
+
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
 			64u, luxrays::Floor2UInt(triangles.size() * .1f)
@@ -1328,7 +1330,6 @@ public:
 		SDL_LOG("Simplify - Compact mesh");
 		CompactMesh();
 
-	//std::exit(0);  // DEBUG - Stop here
 	}
 
 
@@ -1744,6 +1745,11 @@ private:
 			res.push_back(batch.second);
 		}
 
+		// Sort by descending size
+		auto BatchCompare = [](const RefVector& b0, const RefVector& b1)
+			{ return b0.size()> b1.size(); };
+		std::ranges::sort(res, BatchCompare);
+
 		return res;
 	}
 
@@ -1762,19 +1768,20 @@ private:
 #ifdef CHECK_VERTEX_RACE
 		vertices.clear();
 #endif
-
+		tbb::auto_partitioner partitioner;
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
 		tbb::blocked_range<size_t> batch_range(0, batches.size());
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				for (auto& ref : batches[i]) {
+				auto& batch = batches[i];
+				for (auto& ref : batch) {
 					batchDeleted.local() += CollapseEdge(
 						ref, edgeScreenSize, camera, preserveBorder
 					);
 				}
 			}
 		};
-		tbb::parallel_for(batch_range, delete_task);
+		tbb::parallel_for(batch_range, delete_task, partitioner);
 
 #ifdef CHECK_VERTEX_RACE
 		vertices.check();
@@ -1848,13 +1855,13 @@ private:
 
 		// Compute vertex to collapse to
 		// Doesn't modify state (neither vertices nor triangles)
-		const auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+		const auto&& [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
 
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		auto [will_flip0, deleted0] = Flipped<true>(p, i0, i1);
-		auto [will_flip1, deleted1] = Flipped<true>(p, i1, i0);
+		auto&& [will_flip0, deleted0] = Flipped<true>(p, i0, i1);
+		auto&& [will_flip1, deleted1] = Flipped<true>(p, i1, i0);
 		if (will_flip0 || will_flip1) {
 			return 0;
 		}
@@ -1876,7 +1883,7 @@ private:
 		const auto& triPoint1 = tv1.p;
 		const auto& triPoint2 = tv2.p;
 		float b1, b2;
-		if (GetBaryCoords( triPoint0, triPoint1, triPoint2, p, &b1, &b2)) {
+		if (GetBaryCoords(triPoint0, triPoint1, triPoint2, p, &b1, &b2)) {
 			const float b0 = 1.f - b1 - b2;
 
 			if (hasNormals) {
@@ -1923,15 +1930,16 @@ private:
 			}
 		}
 
-		auto [newRefs0, deletedTriangles0] =
+		auto&& [newRefs0, deletedTriangles0] =
 			UpdateTriangles(i0, v0, deleted0, edgeScreenSize, camera, preserveBorder);
-		auto [newRefs1, deletedTriangles1] =
+		auto&& [newRefs1, deletedTriangles1] =
 			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera, preserveBorder);
 
 		// Update incident edges of vertex
 		auto& refs = v0.refs;
+		v0.refs.reserve(v0.refs.size() + v1.refs.size());
 		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
-		refs.swap(newRefs0);
+		refs = std::move(newRefs0);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
@@ -1998,22 +2006,6 @@ private:
 					return true;
 				}
 			}
-
-			//// Check if the Normal is changing side
-			//// (avoiding sqrt function)  TODO
-			////auto rawnormal = Vector(d1).cross(Vector(d2)); TODO
-			//auto rawnormal = TriNormal(p, vertices[id1].p, vertices[id2].p);
-			//const float sqrlen_rawnormal = rawnormal.dot(rawnormal);
-			//const float normdot = rawnormal.dot(t.geometryN);
-			//const float sqrnormdot = normdot * normdot;
-			//constexpr float sqrthreshold2 = .2f * .2f;
-			//if  (std::signbit(normdot)  or sqrnormdot < sqrthreshold2 * sqrlen_rawnormal) {
-				//if constexpr(F) {
-					//return FlippedFullReturn(true, deleted);
-				//} else {
-					//return true;
-				//}
-			//}
 
 			if constexpr(F) {
 				deleted[k] = false;
@@ -2203,6 +2195,8 @@ slg::SimplifyShape::SimplifyShape(
 
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
+
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
