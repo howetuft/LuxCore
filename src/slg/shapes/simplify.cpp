@@ -922,9 +922,7 @@ inline Vector Point2Vector(const Point& p) {
 	return Vector(p.head<3>());
 }
 inline Normal TriNormal(const Point& p0, const Point& p1, const Point& p2) {
-	auto v0 = (p1 - p0).head<3>();
-	auto v1 = (p2 - p0).head<3>();
-	return v0.cross(v1);
+	return Normal((p1 - p0).head<3>().cross((p2 - p0).head<3>()));
 }
 inline bool GetBaryCoords(
 	const Point &p0,
@@ -1069,7 +1067,7 @@ struct SimplifyTriangle {
 	bool dirty = false;
 
 	// Update error of the triangle
-	void UpdateTriangleError(
+	inline void UpdateTriangleError(
 		const VertexVector& vertices,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
@@ -1489,14 +1487,14 @@ private:
 		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
 		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				//vertices[i].q = SymetricMatrix(0.0);
-				vertices[i].q = Eigen::Matrix4f::Zero();
+				vertices[i].q.Zero();
 			}
 		};
 		tbb::parallel_for(vertex_range, initv_task);
 
-		// Parallel computation of per-triangle quadric contributions
-		std::vector<std::array<SymetricMatrix, 3>> triangleQuadrics(triangles.size());
+		// Parallel computation of per-triangle quadric contribution
+		// And accumulation into vertex quadrics
+		std::vector<tbb::mutex> v_mtx(vertices.size());
 
 		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
 
@@ -1508,38 +1506,24 @@ private:
 				SimplifyVertex &v1 = vertices[t.v[1]];
 				SimplifyVertex &v2 = vertices[t.v[2]];
 
-				const Normal geometryN = TriNormal(v0.p, v1.p, v2.p).normalized();
-
-				t.geometryN = geometryN;
+				t.geometryN = TriNormal(v0.p, v1.p, v2.p).normalized();
 
 				const Eigen::Vector4f p(
-					geometryN[0],
-					geometryN[1],
-					geometryN[2],
-					-geometryN.dot(Point2Vector(v0.p))
+					t.geometryN[0],
+					t.geometryN[1],
+					t.geometryN[2],
+					-t.geometryN.dot(Point2Vector(v0.p))
 				);
-				const SymetricMatrix sm = p * p.transpose();
+				const SymetricMatrix sm(p * p.transpose());
 
-				triangleQuadrics[i][0] = sm;
-				triangleQuadrics[i][1] = sm;
-				triangleQuadrics[i][2] = sm;
-			}
-		};
-		tbb::parallel_for(triangle_range, quadric_task);
-
-		// Accumulation into vertex quadrics
-		std::vector<tbb::mutex> v_mtx(vertices.size());
-		auto accumulate_task = [&](decltype(triangle_range)& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				const auto &t = triangles[i];
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].q.noalias() += triangleQuadrics[i][j];
+					vertices[vertex_index].q.noalias() += sm;
 				}
 			}
 		};
-		tbb::parallel_for(triangle_range, accumulate_task);
+		tbb::parallel_for(triangle_range, quadric_task);
 
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
@@ -1991,7 +1975,7 @@ private:
 			const float absdot = fabs(d1.dot(d2));
 			if (absdot > .999f) {
 				if constexpr (F) {
-					return FlippedFullReturn(true, deleted);
+					return FlippedFullReturn(true, std::move(deleted));
 				} else {
 					return true;
 				}
@@ -2001,7 +1985,7 @@ private:
 			const Normal geometryN(d1.cross(d2).normalized());
 			if (geometryN.dot(t.geometryN) < .2f) {
 				if constexpr(F) {
-					return FlippedFullReturn(true, deleted);
+					return FlippedFullReturn(true, std::move(deleted));
 				} else {
 					return true;
 				}
@@ -2013,7 +1997,7 @@ private:
 		}
 
 		if constexpr(F) {
-			return FlippedFullReturn(false, deleted);
+			return FlippedFullReturn(false, std::move(deleted));
 		} else {
 			return false;
 		}
@@ -2109,7 +2093,7 @@ private:
 };  // ~class Simplify
 
 
-void SimplifyTriangle::UpdateTriangleError(
+inline void SimplifyTriangle::UpdateTriangleError(
 	const VertexVector& vertices,
 	const float edgeScreenSize,
 	const slg::Camera& camera,
