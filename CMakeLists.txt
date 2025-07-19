@@ -230,6 +230,7 @@ INCLUDE(KernelPreprocess)
 
 if(LINUX)
   set(OpenGL_GL_PREFERENCE "LEGACY")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og -ftree-vectorize -msse2")
 endif(LINUX)
 
 if(MSVC)
@@ -242,7 +243,7 @@ if(MSVC)
   # Enable Unicode
   ADD_DEFINITIONS(-D_UNICODE)
   # Enable SSE2/SSE/MMX
-  ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+  ADD_DEFINITIONS(-D__AVX__ -D__SSE2__ -D__SSE__ -D__MMX__)
   # Add compile and link options
   add_compile_options("/arch:AVX" "/DWIN32" "/D_WINDOWS" "/EHsc")
   add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
