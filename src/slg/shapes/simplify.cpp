@@ -1062,16 +1062,16 @@ private:
 struct SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
-	std::array<float, 3> err;
 	bool deleted = false;
 	bool dirty = false;
 
 	// Update error of the triangle
-	inline void UpdateTriangleError(
+	inline void UpdateTriangleError (
 		const VertexVector& vertices,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
-		const bool preserveBorder
+		const bool preserveBorder,
+		std::array<float, 3>& err
 	);
 };
 
@@ -1214,6 +1214,7 @@ public:
 		size_t triCount = srcMesh.GetTotalTriangleCount();
 		vertices.resize(vertCount);
 		triangles.resize(triCount);
+		trierrors.resize(triCount, {.0f, .0f, .0f});
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.p = Lux2EigenP(vs);
@@ -1404,6 +1405,10 @@ private:
 	// Main properties (verticies and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
+	std::vector<
+		std::array<float, 3>,
+		tbb::cache_aligned_allocator<std::array<float, 3>>
+	> trierrors;
 
 	// LuxCore specific
 	bool hasNormals = false;
@@ -1421,12 +1426,22 @@ private:
 		const bool preserveBorder
 	) {
 		if (iteration > 0) {
-			// Compact triangles
-			decltype(triangles) newTris;
-			newTris.reserve(triangles.size());
-			auto not_deleted = [](const SimplifyTriangle& t){return !t.deleted;};
-			std::ranges::copy_if(triangles, std::back_inserter(newTris), not_deleted);
-			std::swap(triangles, newTris);
+			// Compress triangles and mark vertices to keep
+			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+			decltype(triangles) newTriangles;
+			decltype(trierrors) newTriErrors;
+			newTriangles.reserve(triangles.size());
+			newTriErrors.reserve(triangles.size());
+			//for (auto& t: triangles | std::views::filter(not_deleted)) {
+			for (size_t i = 0; i < triangles.size(); ++i) {
+				auto& t = triangles[i];
+				if (t.deleted) continue;
+				auto& e = trierrors[i];
+				newTriangles.push_back(t);
+				newTriErrors.push_back(e);
+			}
+			triangles = std::move(newTriangles);
+			trierrors = std::move(newTriErrors);
 		}
 
 		// Build per-vertex incident edge tables
@@ -1529,7 +1544,7 @@ private:
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				triangles[i].UpdateTriangleError(
-					vertices, edgeScreenSize, camera, preserveBorder
+					vertices, edgeScreenSize, camera, preserveBorder, trierrors[i]
 				);
 			}
 		};
@@ -1626,9 +1641,9 @@ private:
 					if (Flipped<false>(p, i1, i0))
 						continue;
 
-					if (t.err[j] < minError) {
+					if (trierrors[i][j] < minError) {
 						minErrorIndex = j;
-						minError = t.err[j];
+						minError = trierrors[i][j];
 					}
 				}
 				if (minErrorIndex != NULL_INDEX) {
@@ -1643,8 +1658,8 @@ private:
 		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
 			if (not left.initialized) return false;  // Unitialized is always greater
 			if (not right.initialized) return true;  // than anything else
-			const auto left_error = triangles[left.tid].err[left.tvertex];
-			const auto right_error = triangles[right.tid].err[right.tvertex];
+			const auto left_error = trierrors[left.tid][left.tvertex];
+			const auto right_error = trierrors[right.tid][right.tvertex];
 			return left_error < right_error;
 		};
 		tbb::parallel_sort(candidates, refErrorCompare);
@@ -2041,7 +2056,9 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			t.UpdateTriangleError(vertices, edgeScreenSize, camera, preserveBorder);
+			t.UpdateTriangleError(
+				vertices, edgeScreenSize, camera, preserveBorder, trierrors[r.tid]
+			);
 
 			refs.push_back(r);
 		}
@@ -2060,9 +2077,16 @@ private:
 		// Compress triangles and mark vertices to keep
 		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
 		decltype(triangles) newTriangles;
+		decltype(trierrors) newTriErrors;
 		newTriangles.reserve(triangles.size());
-		for (auto& t: triangles | std::views::filter(not_deleted)) {
+		newTriErrors.reserve(triangles.size());
+		//for (auto& t: triangles | std::views::filter(not_deleted)) {
+		for (size_t i = 0; i < triangles.size(); ++i) {
+			auto& t = triangles[i];
+			if (t.deleted) continue;
+			auto& e = trierrors[i];
 			newTriangles.push_back(t);
+			newTriErrors.push_back(e);
 
 			keep[t.v[0]] = true;
 			keep[t.v[1]] = true;
@@ -2097,8 +2121,9 @@ private:
 			t.v[2] = newIndex[t.v[2]];
 		}
 
-		triangles = newTriangles;
-		vertices = newVertices;
+		triangles = std::move(newTriangles);
+		trierrors = std::move(newTriErrors);
+		vertices = std::move(newVertices);
 	}
 
 };  // ~class Simplify
@@ -2108,7 +2133,8 @@ inline void SimplifyTriangle::UpdateTriangleError(
 	const VertexVector& vertices,
 	const float edgeScreenSize,
 	const slg::Camera& camera,
-	const bool preserveBorder
+	const bool preserveBorder,
+	std::array<float, 3>& err
 ) {
 
 	for (auto [i, edge]: enumerate(EDGES)) {
@@ -2120,7 +2146,7 @@ inline void SimplifyTriangle::UpdateTriangleError(
 		);
 		float screenErrorScale =
 			CalculateCollapseScreenErrorScale(v0, v1, edgeScreenSize, camera);
-		this->err[i] = collapseError * screenErrorScale;
+		err[i] = collapseError * screenErrorScale;
 	}
 
 }
@@ -2191,7 +2217,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
