@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,12 +35,13 @@
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_sort.h>
 
+#include <Eigen/Dense>
+
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
 #include "dset.h"
-
 
 //------------------------------------------------------------------------------
 //
@@ -901,8 +902,59 @@ private:
 // Namespace containing the rewriting of the algo
 namespace enhanced {
 
-using luxrays::Point;
-using luxrays::Normal;
+using Vector = Eigen::Vector3f;
+using Normal = Vector;
+using Point = Eigen::Vector4f;
+
+inline luxrays::Normal Eigen2LuxN(const Vector& v) {
+	return luxrays::Normal(v[0], v[1], v[2]);
+}
+inline luxrays::Vector Eigen2LuxV(const Vector& v) {
+	return luxrays::Vector(v[0], v[1], v[2]);
+}
+inline Point Lux2EigenP(const luxrays::Point& p) {
+	return Point(p.x, p.y, p.z, 1.f);
+}
+inline luxrays::Point Eigen2LuxP(const Point& p) {
+	return luxrays::Point(p[0], p[1], p[2]);
+}
+inline Vector Point2Vector(const Point& p) {
+	return Vector(p.head<3>());
+}
+inline Normal TriNormal(const Point& p0, const Point& p1, const Point& p2) {
+	auto v0 = (p1 - p0).head<3>();
+	auto v1 = (p2 - p0).head<3>();
+	return v0.cross(v1);
+}
+inline bool GetBaryCoords(
+	const Point &p0,
+	const Point &p1,
+	const Point &p2,
+	const Point &hitPoint,
+	float *b1,
+	float *b2
+) {
+	const Normal vCrossW = TriNormal(p0, p2, hitPoint);
+	const Normal vCrossU = TriNormal(p0, p2, p1);
+
+	if (vCrossW.dot(vCrossU) < 0.f)
+		return false;
+
+	const Vector uCrossW = TriNormal(p0, p1, hitPoint);
+	const Vector uCrossV = TriNormal(p0, p1, p2);
+
+	if (uCrossW.dot(uCrossV) < 0.f)
+		return false;
+
+	const float denom = uCrossV.norm();
+	const float r = vCrossW.norm() / denom;
+	const float t = uCrossW.norm() / denom;
+
+	*b1 = r;
+	*b2 = t;
+
+	return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
+}
 
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
@@ -928,84 +980,7 @@ constexpr auto enumerate(T && iterable) {
     return iterable_wrapper{ std::forward<T>(iterable) };
 }
 
-class SymetricMatrix {
-public:
-	// Constructor
-	SymetricMatrix(const float c = 0.f) {
-		for (size_t i = 0; i < 10; ++i)
-			m[i] = c;
-	}
-
-	SymetricMatrix(
-			const float m11, const float m12, const float m13, const float m14,
-			const float m22, const float m23, const float m24,
-			const float m33, const float m34,
-			const float m44) {
-		m[0] = m11;
-		m[1] = m12;
-		m[2] = m13;
-		m[3] = m14;
-		m[4] = m22;
-		m[5] = m23;
-		m[6] = m24;
-		m[7] = m33;
-		m[8] = m34;
-		m[9] = m44;
-	}
-
-	// Make plane
-	SymetricMatrix(const float a, const float b, const float c, const float d) {
-		m[0] = a * a;
-		m[1] = a * b;
-		m[2] = a * c;
-		m[3] = a * d;
-		m[4] = b * b;
-		m[5] = b * c;
-		m[6] = b * d;
-		m[7] = c * c;
-		m[8] = c * d;
-		m[9] = d * d;
-	}
-
-	float operator[](size_t c) const {
-		return m[c];
-	}
-
-	// Determinant
-	float det(
-			const size_t a11, const size_t a12, const size_t a13,
-			const size_t a21, const size_t a22, const size_t a23,
-			const size_t a31, const size_t a32, const size_t a33) const {
-		const float det = m[a11] * m[a22] * m[a33] + m[a13] * m[a21] * m[a32] + m[a12] * m[a23] * m[a31]
-				- m[a13] * m[a22] * m[a31] - m[a11] * m[a23] * m[a32] - m[a12] * m[a21] * m[a33];
-		return det;
-	}
-
-	const SymetricMatrix operator+(const SymetricMatrix &n) const {
-		return SymetricMatrix(
-				m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],
-				m[4] + n[4], m[5] + n[5], m[6] + n[6],
-				m[7] + n[7], m[8] + n[8],
-				m[9] + n[9]);
-	}
-
-	SymetricMatrix& operator+=(const SymetricMatrix& n) {
-		m[0] += n[0];
-		m[1] += n[1];
-		m[2] += n[2];
-		m[3] += n[3];
-		m[4] += n[4];
-		m[5] += n[5];
-		m[6] += n[6];
-		m[7] += n[7];
-		m[8] += n[8];
-		m[9] += n[9];
-
-		return *this;
-	}
-
-	float m[10];
-};
+using SymetricMatrix = Eigen::Matrix4f;
 
 
 struct SimplifyRef {
@@ -1024,14 +999,14 @@ using BatchVector = std::vector<RefVector>;
 
 struct SimplifyVertex {
 	// Core data
-	luxrays::Point p;			  // Position
+	Point p;			  // Position
 	RefVector refs;				  // Incident edges in topology
 
 	SymetricMatrix q;     // Quadric
 	bool border;          // Border status
 
 	// LuxCore specific data
-	luxrays::Normal norm;
+	Normal norm;
 	luxrays::UV uv;
 	luxrays::Spectrum col;
 	float alpha;
@@ -1108,26 +1083,17 @@ using TriangleVector = std::vector<
 >;
 
 // Error between vertex and Quadric
-float VertexError(
+inline float VertexError(
 	const SymetricMatrix &q,
-	const luxrays::Point& p
+	const Point& p
 ) {
-	return  q[0] * p.x * p.x
-			+ 2.f * q[1] * p.x * p.y
-			+ 2.f * q[2] * p.x * p.z
-			+ 2.f * q[3] * p.x
-			+ q[4] * p.y * p.y
-			+ 2.f * q[5] * p.y * p.z
-			+ 2.f * q[6] * p.y
-			+ q[7] * p.z * p.z
-			+ 2.f * q[8] * p.z
-			+ q[9];
+	return p.transpose() * q * p;
 }
 
 
 // Error for one edge
 // Returns: error, interpolated point
-std::tuple<float, luxrays::Point> CalculateCollapseError(
+inline std::tuple<float, Point> CalculateCollapseError(
 	const SimplifyVertex& v0,
 	const SimplifyVertex& v1,
 	const bool preserveBorder
@@ -1135,12 +1101,12 @@ std::tuple<float, luxrays::Point> CalculateCollapseError(
 
 	const SymetricMatrix q = v0.q + v1.q;
 
-	luxrays::Point pResult;
+	Point pResult;
 
 	// Compute interpolated vertex
-	const luxrays::Point &p1 = v0.p;
-	const luxrays::Point &p2 = v1.p;
-	const luxrays::Point p3 = (p1 + p2) / 2;
+	const Point &p1 = v0.p;
+	const Point &p2 = v1.p;
+	const Point p3 = (v0.p + v1.p) / 2.f;
 
 	// Error can be negative, I add 1 to have screenErrorScale can than
 	// work as expected
@@ -1171,7 +1137,7 @@ std::tuple<float, luxrays::Point> CalculateCollapseError(
 	return std::tuple(error , std::move(pResult));
 }
 
-float CalculateCollapseScreenErrorScale(
+inline float CalculateCollapseScreenErrorScale(
 	const SimplifyVertex& v0,
 	const SimplifyVertex& v1,
 	float edgeScreenSize,
@@ -1183,7 +1149,7 @@ float CalculateCollapseScreenErrorScale(
 		constexpr float notVisibleScale = .5f;
 
 		float p0x, p0y;
-		if (!camera.GetSamplePosition(p0, &p0x, &p0y) ||
+		if (!camera.GetSamplePosition(Eigen2LuxP(p0), &p0x, &p0y) ||
 				!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
 			return notVisibleScale;
 		}
@@ -1193,7 +1159,7 @@ float CalculateCollapseScreenErrorScale(
 		p0y /= camera.filmHeight;
 
 		float p1x, p1y;
-		if (!camera.GetSamplePosition(p1, &p1x, &p1y) ||
+		if (!camera.GetSamplePosition(Eigen2LuxP(p1), &p1x, &p1y) ||
 				!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
 			return notVisibleScale;
 		}
@@ -1251,14 +1217,15 @@ public:
 		vertices.resize(vertCount);
 		triangles.resize(triCount);
 
-		auto init_vertex = [](SV& vd, const Point& vs){
-			vd.p = vs;
+		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
+			vd.p = Lux2EigenP(vs);
 			vd.refs.reserve(9);  // Seems reasonable
 		};
 		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run(vertCount);
 
 		if (srcMesh.HasNormals()) {
-			auto init_normal = [](SV& v, const Normal& n){ v.norm = n; };
+			auto init_normal = [](SV& v, const luxrays::Normal& n)
+				{ v.norm = Normal(n.x, n.y, n.z); };
 			ForEach(vertices, srcMesh.GetNormals(), init_normal).run(vertCount);
 
 			hasNormals = true;
@@ -1371,18 +1338,18 @@ public:
 		const size_t triCount = triangles.size();
 		using SV = SimplifyVertex;
 
-		Point *newVertices = luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-		auto vert_assign = [](Point& vd, const SV& vs) {
-			vd = vs.p;
+		luxrays::Point *newVertices = luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		auto vert_assign = [](luxrays::Point& vd, const SV& vs) {
+			vd = Eigen2LuxP(vs.p);
 		};
 		ForEach(newVertices, vertices, vert_assign).run(vertCount);
 
-		Normal *newNorms = nullptr;
+		luxrays::Normal *newNorms = nullptr;
 		if (hasNormals) {
-			newNorms = new Normal[vertCount];
+			newNorms = new luxrays::Normal[vertCount];
 
-			auto norm_assign = [](Normal& vd, const SV& vs) {
-				vd = vs.norm;
+			auto norm_assign = [](luxrays::Normal& vd, const SV& vs) {
+				vd = Eigen2LuxN(vs.norm);
 			};
 			ForEach(newNorms, vertices, norm_assign).run(vertCount);
 		}
@@ -1521,7 +1488,8 @@ private:
 		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
 		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				vertices[i].q = SymetricMatrix(0.0);
+				//vertices[i].q = SymetricMatrix(0.0);
+				vertices[i].q = Eigen::Matrix4f::Zero();
 			}
 		};
 		tbb::parallel_for(vertex_range, initv_task);
@@ -1539,11 +1507,17 @@ private:
 				SimplifyVertex &v1 = vertices[t.v[1]];
 				SimplifyVertex &v2 = vertices[t.v[2]];
 
-				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+				const Normal geometryN = TriNormal(v0.p, v1.p, v2.p).normalized();
+
 				t.geometryN = geometryN;
 
-				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-									   -Dot(Vector(geometryN), Vector(v0.p)));
+				const Eigen::Vector4f p(
+					geometryN[0],
+					geometryN[1],
+					geometryN[2],
+					-geometryN.dot(Point2Vector(v0.p))
+				);
+				const SymetricMatrix sm = p * p.transpose();
 
 				triangleQuadrics[i][0] = sm;
 				triangleQuadrics[i][1] = sm;
@@ -1560,7 +1534,7 @@ private:
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].q += triangleQuadrics[i][j];
+					vertices[vertex_index].q.noalias() += triangleQuadrics[i][j];
 				}
 			}
 		};
@@ -1892,28 +1866,24 @@ private:
 
 		// Compute new position
 		v0.p = p;
-		v0.q = v1.q + v0.q;
+		v0.q.noalias() = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
-		const luxrays::Point& triPoint0 = tv0.p;
-		const luxrays::Point& triPoint1 = tv1.p;
-		const luxrays::Point& triPoint2 = tv2.p;
+		const auto& triPoint0 = tv0.p;
+		const auto& triPoint1 = tv1.p;
+		const auto& triPoint2 = tv2.p;
 		float b1, b2;
-		if (luxrays::Triangle::GetBaryCoords(
-				triPoint0,
-				triPoint1,
-				triPoint2,
-				p, &b1, &b2)) {
+		if (GetBaryCoords( triPoint0, triPoint1, triPoint2, p, &b1, &b2)) {
 			const float b0 = 1.f - b1 - b2;
 
 			if (hasNormals) {
-				const Normal triNorm0 = tv0.norm;
-				const Normal triNorm1 = tv1.norm;
-				const Normal triNorm2 = tv2.norm;
-				v0.norm = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
+				const auto triNorm0 = tv0.norm;
+				const auto triNorm1 = tv1.norm;
+				const auto triNorm2 = tv2.norm;
+				v0.norm = (b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2).normalized();
 			}
 			if (hasUVs) {
 				const luxrays::UV triUV0 = tv0.uv;
@@ -1976,8 +1946,9 @@ private:
 	using FlippedFullReturn = std::tuple<bool, std::vector<bool>>;
 
 	template<bool F=true>
+	inline
 	std::conditional<F, FlippedFullReturn, bool>::type
-	Flipped(const luxrays::Point p, const size_t i0, const size_t i1) const {
+	Flipped(const Point& p, const size_t i0, const size_t i1) const {
 
 		const SimplifyVertex &v0 = vertices[i0];
 		std::vector<bool> deleted;
@@ -2006,16 +1977,11 @@ private:
 			}
 
 			// Check if the triangle is too narrow
-			// (avoiding sqrt function)
-			const luxrays::Vector d1 = vertices[id1].p - p;
-			const luxrays::Vector d2 = vertices[id2].p - p;
-			const float sqrlen1 = d1.LengthSquared();
-			const float sqrlen2 = d2.LengthSquared();
+			const auto d1 = Point2Vector(vertices[id1].p - p).normalized();
+			const auto d2 = Point2Vector(vertices[id2].p - p).normalized();
 
-			const float dot = Dot(d1, d2);
-			const float sqrdot = dot * dot;
-			constexpr float sqrthreshold = .999f * .999f;
-			if (sqrdot > sqrthreshold * sqrlen1 * sqrlen2) {
+			const float absdot = fabs(d1.dot(d2));
+			if (absdot > .999f) {
 				if constexpr (F) {
 					return FlippedFullReturn(true, deleted);
 				} else {
@@ -2024,19 +1990,30 @@ private:
 			}
 
 			// Check if the Normal is changing side
-			// (avoiding sqrt function)
-			luxrays::Vector rawnormal = Cross(d1, d2);
-			const float sqrlen_rawnormal = rawnormal.LengthSquared();
-			const float normdot = Dot(rawnormal, t.geometryN);
-			const float sqrnormdot = normdot * normdot;
-			constexpr float sqrthreshold2 = .2f * .2f;
-			if  (std::signbit(normdot)  or sqrnormdot < sqrthreshold2 * sqrlen_rawnormal) {
+			const Normal geometryN(d1.cross(d2).normalized());
+			if (geometryN.dot(t.geometryN) < .2f) {
 				if constexpr(F) {
 					return FlippedFullReturn(true, deleted);
 				} else {
 					return true;
 				}
 			}
+
+			//// Check if the Normal is changing side
+			//// (avoiding sqrt function)  TODO
+			////auto rawnormal = Vector(d1).cross(Vector(d2)); TODO
+			//auto rawnormal = TriNormal(p, vertices[id1].p, vertices[id2].p);
+			//const float sqrlen_rawnormal = rawnormal.dot(rawnormal);
+			//const float normdot = rawnormal.dot(t.geometryN);
+			//const float sqrnormdot = normdot * normdot;
+			//constexpr float sqrthreshold2 = .2f * .2f;
+			//if  (std::signbit(normdot)  or sqrnormdot < sqrthreshold2 * sqrlen_rawnormal) {
+				//if constexpr(F) {
+					//return FlippedFullReturn(true, deleted);
+				//} else {
+					//return true;
+				//}
+			//}
 
 			if constexpr(F) {
 				deleted[k] = false;
