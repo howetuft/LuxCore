@@ -929,27 +929,28 @@ inline bool GetBaryCoords(
 	const Point &p1,
 	const Point &p2,
 	const Point &hitPoint,
-	float *b1,
-	float *b2
+	float& b0,
+	float& b1,
+	float& b2
 ) {
 	const Normal vCrossW = TriNormal(p0, p2, hitPoint);
 	const Normal vCrossU = TriNormal(p0, p2, p1);
 
-	if (vCrossW.dot(vCrossU) < 0.f)
-		return false;
+	if (vCrossW.dot(vCrossU) < 0.f) return false;
 
 	const Vector uCrossW = TriNormal(p0, p1, hitPoint);
-	const Vector uCrossV = TriNormal(p0, p1, p2);
+	//const Vector uCrossV = TriNormal(p0, p1, p2);
+	const Vector uCrossV = -vCrossU;
 
-	if (uCrossW.dot(uCrossV) < 0.f)
-		return false;
+	if (uCrossW.dot(uCrossV) < 0.f) return false;
 
 	const float denom = uCrossV.norm();
 	const float r = vCrossW.norm() / denom;
 	const float t = uCrossW.norm() / denom;
 
-	*b1 = r;
-	*b2 = t;
+	b1 = r;
+	b2 = t;
+	b0 = 1.f - r - t;
 
 	return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
 }
@@ -1628,11 +1629,9 @@ private:
 
 					// Border check
 					if (preserveBorder) {
-						if (v0.border && v1.border)
-							continue;
+						if (v0.border && v1.border) continue;
 					} else {
-						if (v0.border != v1.border)
-							continue;
+						if (v0.border != v1.border) continue;
 					}
 
 					auto&& [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
@@ -1871,7 +1870,7 @@ private:
 
 		// Compute new position
 		v0.p = p;
-		v0.q.noalias() = v1.q + v0.q;
+		v0.q += v1.q;
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
@@ -1880,9 +1879,8 @@ private:
 		const auto& triPoint0 = tv0.p;
 		const auto& triPoint1 = tv1.p;
 		const auto& triPoint2 = tv2.p;
-		float b1, b2;
-		if (GetBaryCoords(triPoint0, triPoint1, triPoint2, p, &b1, &b2)) {
-			const float b0 = 1.f - b1 - b2;
+		float b0, b1, b2;
+		if (GetBaryCoords(triPoint0, triPoint1, triPoint2, p, b0, b1, b2)) {
 
 			if (hasNormals) {
 				const auto triNorm0 = tv0.norm;
@@ -1934,10 +1932,9 @@ private:
 			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera, preserveBorder);
 
 		// Update incident edges of vertex
-		auto& refs = v0.refs;
-		v0.refs.reserve(v0.refs.size() + v1.refs.size());
+		newRefs0.reserve(newRefs0.size() + newRefs1.size());
 		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
-		refs = std::move(newRefs0);
+		v0.refs = std::move(newRefs0);
 		deletedTriangles = deletedTriangles0 + deletedTriangles1;
 
 		return deletedTriangles;
