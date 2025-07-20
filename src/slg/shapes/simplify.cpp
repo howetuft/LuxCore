@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-
+#undef NDEBUG
 #include <map>
 #include <vector>
 #include <string>
@@ -993,7 +993,7 @@ struct SimplifyRef {
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
-using BatchVector = std::vector<RefVector>;
+using BatchVector = std::vector<RefVector, tbb::cache_aligned_allocator<RefVector>>;
 
 struct SimplifyVertex {
 	// Core data
@@ -1608,9 +1608,9 @@ private:
 			// Main loop
 			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
-				auto tv0 = t.v[0];
-				auto tv1 = t.v[1];
-				auto tv2 = t.v[2];
+				auto& tv0 = t.v[0];
+				auto& tv1 = t.v[1];
+				auto& tv2 = t.v[2];
 				const std::array<std::tuple<size_t, size_t>, 3> edges(
 					{
 						{tv0, tv1},
@@ -1635,11 +1635,9 @@ private:
 							continue;
 					}
 
-					auto [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
-					if (Flipped<false>(p, i0, i1))
-						continue;
-					if (Flipped<false>(p, i1, i0))
-						continue;
+					auto&& [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+					if (Flipped<false>(p, i0, i1)) continue;
+					if (Flipped<false>(p, i1, i0)) continue;
 
 					if (trierrors[i][j] < minError) {
 						minErrorIndex = j;
@@ -1947,9 +1945,9 @@ private:
 
 	// Check if a triangle flips when this edge is removed
 	// Returns: check status, deleted status of each ref (vector)
-	// This template contains 2 versions (modelled on the original
+	// This template contains 2 versions (inherited from the original
 	// code...): one will only compute flip status, the second will
-	// also compute deleted.
+	// also compute deleted refs.
 	// (templatization has been used to avoid code duplication)
 	using FlippedFullReturn = std::tuple<bool, std::vector<bool>>;
 
@@ -1958,16 +1956,17 @@ private:
 	std::conditional<F, FlippedFullReturn, bool>::type
 	Flipped(const Point& p, const size_t i0, const size_t i1) const {
 
-		const SimplifyVertex &v0 = vertices[i0];
-		std::vector<bool> deleted;
+		const auto& v0 = vertices[i0];
+		std::vector<bool> deleted(0);
+		bool res = false;
 
 		if constexpr(F) {
-			deleted.resize(v0.refs.size());
+			deleted.resize(v0.refs.size(), false);
 		}
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
-			const SimplifyTriangle &t = triangles[ref.tid];
+			const auto& t = triangles[ref.tid];
 
 			if (t.deleted) continue;
 
@@ -1987,45 +1986,41 @@ private:
 			const auto d1 = Point2Vector(vertices[id1].p - p);
 			const auto d2 = Point2Vector(vertices[id2].p - p);
 
-			// Check if the triangle is too narrow
+			// Check if one of the resulting triangles is too narrow
 			// (avoiding normalization)
 			{
 				const float dot = d1.dot(d2);
-				const float sqrdot = dot * dot / (d1.squaredNorm() * d2.squaredNorm()) ;
+				const float sqrdot = dot * dot;
+				const float sqrnorms = d1.squaredNorm() * d2.squaredNorm();
 				constexpr float threshold = .999f * .999f;
-				if (sqrdot > threshold) {
-					if constexpr (F) {
-						return FlippedFullReturn(true, std::move(deleted));
-					} else {
-						return true;
-					}
+
+				if (sqrdot / sqrnorms > threshold) {
+					res = true;
+					break;
 				}
 			}
 
-			// Check if the Normal is changing side
+			// Check if one the Normals is changing side
 			// (avoiding normalization)
 			{
 				const Normal geometryN(d1.cross(d2));
 				const float dot = geometryN.dot(t.geometryN);
+				const float sqrdot = dot * dot;
+				const float sqrnorms = geometryN.squaredNorm();  // t.geometryN already normalized
 				constexpr float threshold = .2f * .2f;
-				if (dot <= 0 or dot * dot / geometryN.squaredNorm() < threshold) {
-					if constexpr(F) {
-						return FlippedFullReturn(true, std::move(deleted));
-					} else {
-						return true;
-					}
+
+				if (dot <= 0 or dot * dot / sqrnorms < threshold) {
+					res = true;
+					break;
 				}
 			}
 
-			if constexpr(F) {
-				deleted[k] = false;
-			}
 		}
 
 		if constexpr(F) {
-			return FlippedFullReturn(false, std::move(deleted));
+			return FlippedFullReturn(res, std::move(deleted));
 		} else {
-			return false;
+			return res;
 		}
 	}  // ~Flipped
 
@@ -2217,7 +2212,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
