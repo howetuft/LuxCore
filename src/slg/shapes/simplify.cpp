@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-#undef NDEBUG
 #include <map>
 #include <vector>
 #include <string>
@@ -325,12 +324,12 @@ private:
 		SymetricMatrix q;
 
 		bool border;
+
 	};
 
 	struct SimplifyRef {
 		u_int tid, tvertex;
 	};
-	
 	class SimplifyRefErrCompare {
 	public:
 		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
@@ -901,10 +900,16 @@ private:
 
 // Namespace containing the rewriting of the algo
 namespace enhanced {
+using namespace std::chrono_literals;
 
 using Vector = Eigen::Vector3f;
 using Normal = Vector;
 using Point = Eigen::Vector4f;
+using vmutex_t = std::timed_mutex;
+using vmutex_ptr = std::unique_ptr<vmutex_t>;
+using vlock_t = std::scoped_lock<vmutex_t>;
+using vlock3_t = std::scoped_lock<vmutex_t, vmutex_t, vmutex_t>;
+
 
 inline luxrays::Normal Eigen2LuxN(const Vector& v) {
 	return luxrays::Normal(v[0], v[1], v[2]);
@@ -958,6 +963,7 @@ inline bool GetBaryCoords(
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 constexpr std::array<std::tuple<size_t, size_t>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
+constexpr std::array<size_t, 3> OPPOSITE{ 2, 0, 1};
 
 // Enumerate helper (à la 'Python enumerate')
 template <typename T,
@@ -991,6 +997,15 @@ struct SimplifyRef {
 		tid(p_tid), tvertex(p_tvertex), initialized(true) {}
 	SimplifyRef() {}
 };
+
+bool operator<(const SimplifyRef& s0, const SimplifyRef& s1) {
+
+	if (s0.tid != s1.tid) return s0.tid < s1.tid;
+	return s0.tvertex < s1.tvertex;
+}
+bool operator==(const SimplifyRef& s0, const SimplifyRef& s1) {
+	return (s0.tid == s1.tid) and (s0.tvertex == s1.tvertex);
+}
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
@@ -1295,18 +1310,18 @@ public:
 				preserveBorder, maxCandidateQueueSize
 			);
 
-			// Partition candidates into independent batches
-			DBG_SDL_LOG("Simplify - Partition candidate list #" << iteration);
-			auto batches = PartitionIndependentEdgeBatches(candidateList);
+			///TODO
+			//// Partition candidates into independent batches
+			//DBG_SDL_LOG("Simplify - Partition candidate list #" << iteration);
+			//auto batches = PartitionIndependentEdgeBatches(candidateList);
 
 			// Delete triangles (run batches)
 			DBG_SDL_LOG(
-				"Simplify - Delete triangles ("
-				<< batches.size() << " batches)"
+				"Simplify - Delete triangles"
 				<< " #" << iteration
 				);
 			const size_t iterationDeletedTriangles = DeleteTriangles(
-				batches, edgeScreenSize, camera, preserveBorder
+				candidateList, edgeScreenSize, camera, preserveBorder
 			);
 
 			deletedTriangles += iterationDeletedTriangles;
@@ -1384,6 +1399,7 @@ public:
 
 		luxrays::Triangle *newTris =
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+
 		auto triangle_assign = [vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
 			assert (ts.v[0] < vertCount);
 			assert (ts.v[1] < vertCount);
@@ -1392,6 +1408,7 @@ public:
 			td.v[1] = ts.v[1];
 			td.v[2] = ts.v[2];
 		};
+
 		ForEach(newTris, triangles, triangle_assign).run(triCount);
 
 		return new luxrays::ExtTriangleMesh(
@@ -1567,7 +1584,7 @@ private:
 		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
 		auto border_task = [&](const tbb::blocked_range<size_t>& r){
 			for (auto i = r.begin() ; i != r.end(); ++i) {
-				const auto v = vertices[i];
+				const auto& v = vertices[i];
 				std::map<size_t, size_t> vorders;  // Vertex orders
 
 				// For each triangle incident to the current vertex
@@ -1678,111 +1695,102 @@ private:
 	}  // ~BuildCandidateList
 
 
-	// Partition candidate list into components (aka "batches")
-	//
-	// We use parallelized connected components algorithm
-	//
-	//
-	BatchVector
-	PartitionIndependentEdgeBatches(const RefVector& candidateList) const {
-		// Step 1: Build closure set (= candidate vertices + their neighborhoods)
-		tbb::enumerable_thread_specific<std::unordered_set<size_t>> closures;
-		tbb::blocked_range<size_t> candidate_range(0, candidateList.size());
-		auto closure_task = [&](const decltype(candidate_range)& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& c = candidateList[i];
-				const auto& t = triangles[c.tid];
+	// Lock neighbors and collapse candidate edge
+	// In order to benefit from RAII, this function is recursive
+	size_t lock_and_collapse (
+		const SimplifyRef& candidate,
+		std::vector<size_t>& neighbors,
+		std::vector<vmutex_ptr>& mutexes,
+		const float edgeScreenSize,
+		const slg::Camera& camera,
+		const bool preserveBorder
+	)
+	{
+		if (not neighbors.empty()) {
+			// Get neighbor in the list
+			size_t i0 = neighbors.back();
+			neighbors.pop_back();
 
-				// Get explicit edge to collapse
-				auto [e1, e2] = EDGES[c.tvertex];
-				const size_t i0 = t.v[e1];
-				const size_t i1 = t.v[e2];
+			// Lock current neighbor
+			vlock_t lock(*mutexes[i0]);
 
-				// Get neghbors and insert
-				auto neighbors = edgeNeighbors(i0, i1);
-				closures.local().insert(neighbors.begin(), neighbors.end());
-			}
-		};
-		tbb::parallel_for(candidate_range, closure_task);
-
-		// Reduce
-		std::unordered_set<size_t> closure;
-		for (auto& local: closures) {
-			closure.merge(local);
+			// And call recursively for the next
+			size_t res = lock_and_collapse(
+				candidate, neighbors, mutexes, edgeScreenSize, camera, preserveBorder
+			);
+			return res;
+		} else {
+			// Final treatment: collapse
+			return CollapseEdge(candidate, edgeScreenSize, camera, preserveBorder);
 		}
-
-		// Step 2: Build connected components (union-find)
-		DisjointSets unionFind(vertices.size());
-		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
-		auto build_connected = [&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				const auto& t = triangles[i];
-				for (const auto e: EDGES) {
-					auto [e0, e1] = e;
-					size_t i0 = t.v[e0];
-					size_t i1 = t.v[e1];
-					if (closure.contains(i0) and closure.contains(i1)) {
-						unionFind.unite(i0, i1);
-					}
-				}
-			}
-		};
-		tbb::parallel_for(triangle_range, build_connected);
-
-		// Build batches (sequential)
-		std::unordered_map<size_t, RefVector> batches;
-		for (const auto& c: candidateList) {
-			size_t i = triangles[c.tid].v[c.tvertex];  // Vertex index
-			size_t batchIndex = unionFind.find(i);
-			batches[batchIndex].push_back(c);
-		}
-		BatchVector res;
-		res.reserve(batches.size());
-		for (const auto& batch: batches) {
-			res.push_back(batch.second);
-		}
-
-		// Sort by descending size
-		auto BatchCompare = [](const RefVector& b0, const RefVector& b1)
-			{ return b0.size()> b1.size(); };
-		std::ranges::sort(res, BatchCompare);
-
-		return res;
 	}
-
 	// Delete triangles, running batches
 	//
 	//
 	size_t DeleteTriangles(
-		const BatchVector& batches,
+		const RefVector& candidateList,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
-		// Batch design guarantees that each vertex is accessed by only one thread
-		// in the following treatment.
-		// One can check it by enabling CHECK_VERTEX_RACE
-#ifdef CHECK_VERTEX_RACE
-		vertices.clear();
-#endif
 		tbb::auto_partitioner partitioner;
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
-		tbb::blocked_range<size_t> batch_range(0, batches.size());
+		tbb::blocked_range<size_t> batch_range(0, candidateList.size());
+
+		// Initialize vertex mutexes
+		std::vector<vmutex_ptr> vmutexes;
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			vmutexes.push_back(std::make_unique<vmutex_t>());
+		}
+
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				auto& batch = batches[i];
-				for (auto& ref : batch) {
-					batchDeleted.local() += CollapseEdge(
-						ref, edgeScreenSize, camera, preserveBorder
-					);
+				// Get candidate vertex
+				auto& candidate = candidateList[i];
+
+				// Get explicit edge to collapse
+				auto [e0, e1] = EDGES[candidate.tvertex];
+				auto e2 = OPPOSITE[candidate.tvertex];
+				const size_t i0 = triangles[candidate.tid].v[e0];
+				const size_t i1 = triangles[candidate.tid].v[e1];
+				const size_t i2 = triangles[candidate.tid].v[e2];
+
+				// Lock triangle vertices
+				vlock3_t lock(*vmutexes[i0], *vmutexes[i1], *vmutexes[i2]);
+
+				auto& v0 = vertices[i0];
+				auto& v1 = vertices[i1];
+
+				// Get neighbors (unique, and without edge vertices)
+				//
+				// Nota: Neighbors are all the vertices that can be affected
+				// by given edge collapsing
+				std::vector<SimplifyRef> refs;
+				refs.insert(refs.end(), v0.refs.begin(), v0.refs.end());
+				refs.insert(refs.end(), v1.refs.begin(), v1.refs.end());
+				std::vector<size_t> neighbors;
+				for (auto& ref : refs) {
+					auto vertex_index = triangles[ref.tid].v[ref.tvertex];
+					if (vertex_index != i0 and vertex_index != i1 and vertex_index != i2) {
+						neighbors.push_back(vertex_index);
+					}
 				}
+				std::sort(neighbors.begin(), neighbors.end());
+				auto neighbors_it = std::unique(neighbors.begin(), neighbors.end());
+				neighbors.resize(std::distance(neighbors.begin(), neighbors_it));
+
+				batchDeleted.local() += lock_and_collapse(
+					candidate,
+					neighbors,
+					vmutexes,
+					edgeScreenSize,
+					camera,
+					preserveBorder
+				);
 			}
 		};
 		tbb::parallel_for(batch_range, delete_task, partitioner);
 
-#ifdef CHECK_VERTEX_RACE
-		vertices.check();
-#endif
 		auto deletedTriangles = std::accumulate(
 			batchDeleted.begin(),
 			batchDeleted.end(),
@@ -1792,41 +1800,94 @@ private:
 		return deletedTriangles;
 	}
 
-	// Neighbor features
-	using NeighborSet = std::unordered_set<size_t>;
+	//// Delete triangles, running batches
+	////
+	////
+	//size_t DeleteTriangles2(
+		//const BatchVector& batches,
+		//const float edgeScreenSize,
+		//const slg::Camera& camera,
+		//const bool preserveBorder
+	//) {
+		//// Batch design guarantees that each vertex is accessed by only one thread
+		//// in the following treatment.
+		//// One can check it by enabling CHECK_VERTEX_RACE
+//#ifdef CHECK_VERTEX_RACE
+		//vertices.clear();
+//#endif
+		//tbb::auto_partitioner partitioner;
+		//tbb::enumerable_thread_specific<size_t> batchDeleted;
+		//tbb::blocked_range<size_t> batch_range(0, batches.size());
+		//auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
+			//for (size_t i = r.begin(); i != r.end(); ++i) {
+				//auto& batch = batches[i];
+				//for (auto& ref : batch) {
+					//batchDeleted.local() += CollapseEdge(
+						//ref, edgeScreenSize, camera, preserveBorder
+					//);
+				//}
+			//}
+		//};
+		//tbb::parallel_for(batch_range, delete_task, partitioner);
+
+//#ifdef CHECK_VERTEX_RACE
+		//vertices.check();
+//#endif
+		//auto deletedTriangles = std::accumulate(
+			//batchDeleted.begin(),
+			//batchDeleted.end(),
+			//size_t(0),
+			//std::plus<size_t>()
+		//);
+		//return deletedTriangles;
+	//}
+
+	//// Neighbor features
+	//using NeighborSet = std::unordered_set<size_t>;
 
 
-	// Find edge neighbors, ie vertices that could be affected
-	// by collapsing the given edge
-	NeighborSet edgeNeighbors(const size_t i0, const size_t i1) const {
-		NeighborSet neighbors;
+	//// Find edge neighbors, ie vertices that could be affected
+	//// by collapsing the given edge
+	//NeighborSet edgeNeighbors(const size_t i0, const size_t i1) const {
+		//NeighborSet neighbors;
 
-		neighbors.insert(i0);
-		neighbors.insert(i1);
-		for (const auto& ref: vertices[i0].refs) {
-			for (size_t vertexIndex: triangles[ref.tid].v) {
-				neighbors.insert(vertexIndex);
-			}
-		}
-		for (const auto& ref: vertices[i1].refs) {
-			for (size_t vertexIndex: triangles[ref.tid].v) {
-				neighbors.insert(vertexIndex);
-			}
-		}
-		return neighbors;
-	}
+		//neighbors.insert(i0);
+		//neighbors.insert(i1);
+		//for (const auto& ref: vertices[i0].refs) {
+			//for (size_t vertexIndex: triangles[ref.tid].v) {
+				//neighbors.insert(vertexIndex);
+			//}
+		//}
+		//for (const auto& ref: vertices[i1].refs) {
+			//for (size_t vertexIndex: triangles[ref.tid].v) {
+				//neighbors.insert(vertexIndex);
+			//}
+		//}
+		//return neighbors;
+	//}
+
+	//TODO
+	//bool LockNeighborhood(const SimplifyRef& ref) {
+		//auto i0 = triangles[ref.tid].v[ref.tvertex];
+		//auto& v0 = vertices[i0];
+		//bool ok = true;
+		//for (auto& ref: v0.refs) {
+			//try_lock
+
+
+	//}
 
 	// Collapse an edge
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
 	size_t CollapseEdge(
-		const SimplifyRef& vertex,  /* Candidate vertex to collapse */
+		const SimplifyRef& candidate,  /* Candidate edge to collapse */
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Check triangle
-		const size_t triangleIndex = vertex.tid;
+		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (t.deleted)
@@ -1835,7 +1896,7 @@ private:
 			return 0;
 
 		// Get explicit edge to collapse
-		auto [e1, e2] = EDGES[vertex.tvertex];
+		auto [e1, e2] = EDGES[candidate.tvertex];
 		const size_t i0 = t.v[e1];
 		const size_t i1 = t.v[e2];
 
@@ -2209,7 +2270,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
