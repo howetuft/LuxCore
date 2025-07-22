@@ -412,7 +412,7 @@ private:
 
 		// Not flipped, so remove edge
 		v0.p = p;		
-		v0.quad = v1.quad + v0.quad;
+		v0.q = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
 		float b1, b2;
