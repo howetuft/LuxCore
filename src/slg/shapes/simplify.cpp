@@ -986,7 +986,7 @@ constexpr auto enumerate(T && iterable) {
     return iterable_wrapper{ std::forward<T>(iterable) };
 }
 
-using SymetricMatrix = Eigen::Matrix4f;
+using Quadric = Eigen::Matrix4f;
 
 
 struct SimplifyRef {
@@ -1017,7 +1017,7 @@ struct SimplifyVertex {
 	Point p;			  // Position
 	RefVector refs;				  // Incident edges in topology
 
-	SymetricMatrix q = Eigen::Matrix<float, 4, 4>::Zero();     // Quadric
+	Quadric q = Quadric::Zero();     // Quadric
 	bool border;          // Border status
 
 	// LuxCore specific data
@@ -1099,7 +1099,7 @@ using TriangleVector = std::vector<
 
 // Error between vertex and Quadric
 inline float VertexError(
-	const SymetricMatrix &q,
+	const Quadric &q,
 	const Point& p
 ) {
 	return p.transpose() * q * p;
@@ -1114,7 +1114,7 @@ inline std::tuple<float, Point> CalculateCollapseError(
 	const bool preserveBorder
 ) {
 	// Compute resulting quadric
-	const SymetricMatrix q = v0.q + v1.q;
+	const Quadric q = v0.q + v1.q;
 
 	// Compute interpolated vertex
 	const Point &p0 = v0.p;
@@ -1515,14 +1515,6 @@ private:
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
-		// Starting values
-		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
-		auto initv_task = [&](const tbb::blocked_range<size_t>& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				vertices[i].q.Zero();
-			}
-		};
-		tbb::parallel_for(vertex_range, initv_task);
 
 		// Parallel computation of per-triangle quadric contribution
 		// And accumulation into vertex quadrics
@@ -1546,7 +1538,7 @@ private:
 					t.geometryN[2],
 					-t.geometryN.dot(Point2Vector(v0.p))
 				);
-				const SymetricMatrix sm(p * p.transpose());
+				const Quadric sm(p * p.transpose());
 
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
