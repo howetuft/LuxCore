@@ -35,6 +35,7 @@
 #include <tbb/parallel_sort.h>
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -1016,7 +1017,7 @@ struct SimplifyVertex {
 	Point p;			  // Position
 	RefVector refs;				  // Incident edges in topology
 
-	SymetricMatrix q;     // Quadric
+	SymetricMatrix q = Eigen::Matrix<float, 4, 4>::Zero();     // Quadric
 	bool border;          // Border status
 
 	// LuxCore specific data
@@ -1112,38 +1113,36 @@ inline std::tuple<float, Point> CalculateCollapseError(
 	const SimplifyVertex& v1,
 	const bool preserveBorder
 ) {
-
+	// Compute resulting quadric
 	const SymetricMatrix q = v0.q + v1.q;
 
-	Point pResult;
-
 	// Compute interpolated vertex
-	const Point &p1 = v0.p;
-	const Point &p2 = v1.p;
-	const Point p3 = (v0.p + v1.p) / 2.f;
+	const Point &p0 = v0.p;
+	const Point &p1 = v1.p;
+	const Point p2 = (v0.p + v1.p) / 2.f;
 
-	// Error can be negative, I add 1 to have screenErrorScale can than
-	// work as expected
-	const float error1 = VertexError(q, p1) + 1.f;
-	const float error2 = VertexError(q, p2) + 1.f;
-	const float error3 = VertexError(q, p3) + 1.f;
+	// Compute error and associated point
+	// Error can be negative, I add 1 to have screenErrorScale to work as
+	// expected
 
 	float error;
+	Point pResult;
 	if (preserveBorder && v0.border) {
-		error = error1;
-		pResult = p1;
+		error = VertexError(q, p0) + 1.f;
+		pResult = p0;
 	} else if (preserveBorder && v1.border) {
-		error = error2;
-		pResult = p2;
+		error = VertexError(q, p1) + 1.f;
+		pResult = p1;
 	} else {
-		error = std::min({error1, error2, error3});
-
-		if (error1 == error)
-			pResult = p1;
-		if (error2 == error)
-			pResult = p2;
-		if (error3 == error)
-			pResult = p3;
+		const Eigen::Vector3f errors = Eigen::Vector3f{
+			float(VertexError(q, p0)),
+			float(VertexError(q, p1)),
+			float(VertexError(q, p2))
+		} + Eigen::Vector3f::Ones();
+		std::vector<Point> points{p0, p1, p2};
+		int minIndex;
+		error = errors.array().minCoeff(&minIndex);
+		pResult = points[minIndex];
 	}
 
 	// Adding 1.0 because error have negative values
