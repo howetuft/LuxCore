@@ -412,7 +412,7 @@ private:
 
 		// Not flipped, so remove edge
 		v0.p = p;		
-		v0.q = v1.q + v0.q;
+		v0.quad = v1.quad + v0.quad;
 
 		// Interpolate other vertex attributes
 		float b1, b2;
@@ -1017,7 +1017,7 @@ struct SimplifyVertex {
 	Point p;			  // Position
 	RefVector refs;				  // Incident edges in topology
 
-	Quadric q = Quadric::Zero();     // Quadric
+	Quadric quad = Quadric::Zero();     // Quadric
 	bool border;          // Border status
 
 	// LuxCore specific data
@@ -1114,7 +1114,7 @@ inline std::tuple<float, Point> CalculateCollapseError(
 	const bool preserveBorder
 ) {
 	// Compute resulting quadric
-	const Quadric q = v0.q + v1.q;
+	const Quadric q = v0.quad + v1.quad;
 
 	// Compute interpolated vertex
 	const Point &p0 = v0.p;
@@ -1543,7 +1543,7 @@ private:
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].q.noalias() += sm;
+					vertices[vertex_index].quad.noalias() += sm;
 				}
 			}
 		};
@@ -1922,7 +1922,7 @@ private:
 
 		// Compute new position
 		v0.p = p;
-		v0.q += v1.q;
+		v0.quad += v1.quad;
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
