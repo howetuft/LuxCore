@@ -987,26 +987,41 @@ constexpr auto enumerate(T && iterable) {
 }
 
 using Quadric = Eigen::Matrix4f;
-
+const auto Upper = Eigen::UpLoType::Upper;
 
 struct SimplifyRef {
 	size_t tid = 0;
 	size_t tvertex = std::numeric_limits<size_t>::infinity();
 	bool initialized = false;
+	float error;  // To prioritize candidates
 
-	SimplifyRef(size_t p_tid, size_t p_tvertex):
-		tid(p_tid), tvertex(p_tvertex), initialized(true) {}
+	SimplifyRef(size_t p_tid, size_t p_tvertex, float p_error=0.f):
+		tid(p_tid), tvertex(p_tvertex), error(p_error), initialized(true) {}
 	SimplifyRef() {}
 };
 
-bool operator<(const SimplifyRef& s0, const SimplifyRef& s1) {
+using RefPtr = std::unique_ptr<SimplifyRef>;
 
-	if (s0.tid != s1.tid) return s0.tid < s1.tid;
-	return s0.tvertex < s1.tvertex;
+//TODO
+//bool operator<(const SimplifyRef& left, const SimplifyRef& right) {
+	//if (not left.initialized) return false;  // Unitialized is always greater
+	//if (not right.initialized) return true;  // than anything else
+	//return left.error <= right.error;
+//}
+bool operator<(const RefPtr& left, const RefPtr& right) {
+	return left->error < right->error;
 }
-bool operator==(const SimplifyRef& s0, const SimplifyRef& s1) {
-	return (s0.tid == s1.tid) and (s0.tvertex == s1.tvertex);
+bool RefPtrLess(const RefPtr& left, const RefPtr& right) {
+	return left->error < right->error;
 }
+//bool operator<(const SimplifyRef& s0, const SimplifyRef& s1) {
+
+	//if (s0.tid != s1.tid) return s0.tid < s1.tid;
+	//return s0.tvertex < s1.tvertex;
+//}
+//bool operator==(const SimplifyRef& s0, const SimplifyRef& s1) {
+	//return (s0.tid == s1.tid) and (s0.tvertex == s1.tvertex);
+//}
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
@@ -1102,7 +1117,8 @@ inline float VertexError(
 	const Quadric &q,
 	const Point& p
 ) {
-	return p.transpose() * q * p;
+	//return p.transpose() * q * p;
+	return (q.selfadjointView<Upper>() * p).adjoint() * p;
 }
 
 
@@ -1305,9 +1321,10 @@ public:
 
 			// Build candidate list
 			DBG_SDL_LOG("Simplify - Build candidate list #" << iteration);
-			auto candidateList = BuildCandidateList(
+			auto candidates = std::move(BuildCandidateList(
 				preserveBorder, maxCandidateQueueSize
-			);
+			));
+
 
 			///TODO
 			//// Partition candidates into independent batches
@@ -1320,14 +1337,14 @@ public:
 				<< " #" << iteration
 				);
 			const size_t iterationDeletedTriangles = DeleteTriangles(
-				candidateList, edgeScreenSize, camera, preserveBorder
+				candidates, edgeScreenSize, camera, preserveBorder
 			);
 
 			deletedTriangles += iterationDeletedTriangles;
 
 			SDL_LOG(
 				"Simplify - End iteration #" << iteration
-				<< " - Edge candidates: " << candidateList.size() << " - "
+				<< " - Edge candidates: " << candidates.size() << " - "
 				<< " Deleted triangles (current/cumulative/initial): "
 				<< iterationDeletedTriangles << "/"
 				<< deletedTriangles << "/"
@@ -1538,12 +1555,14 @@ private:
 					t.geometryN[2],
 					-t.geometryN.dot(Point2Vector(v0.p))
 				);
-				const Quadric sm(p * p.transpose());
+				//const Quadric sm(p * p.transpose());
 
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].quad.noalias() += sm;
+					//vertices[vertex_index].quad.noalias() += sm;
+					auto& q = vertices[vertex_index].quad;
+					q.selfadjointView<Upper>().rankUpdate(p, p, 0.5f);
 				}
 			}
 		};
@@ -1603,14 +1622,30 @@ private:
 		tbb::parallel_for(vertex_range, border_task);
 	}  // ~InitBorders
 
+	//std::function<bool(const SimplifyRef&, const SimplifyRef&)> refErrorCompare(
+		//[&](const SimplifyRef& left, const SimplifyRef& right) {
+			//if (not left.initialized) return false;  // Unitialized is always greater
+			//if (not right.initialized) return true;  // than anything else
+			//const auto left_error = trierrors[left.tid][left.tvertex];
+			//const auto right_error = trierrors[right.tid][right.tvertex];
+			//return left_error < right_error;
+		//}
+	//);
+
+	using CandidateContainer = std::vector<
+		RefPtr,
+		tbb::cache_aligned_allocator<RefPtr>
+	>;
+
 	// Build candidate list
 	//
-	RefVector BuildCandidateList(
+	CandidateContainer BuildCandidateList(
 		bool preserveBorder,
 		size_t maxCandidateQueueSize
 	) const {
 
-		RefVector candidates(triangles.size());
+
+		CandidateContainer candidates(triangles.size());
 		tbb::blocked_range<size_t> tri_range(0, triangles.size());
 
 		auto build_task = [&](const decltype(tri_range)& r) {
@@ -1652,32 +1687,32 @@ private:
 					}
 				}
 				if (minErrorIndex != NULL_INDEX) {
-					candidates[i] = SimplifyRef(i, minErrorIndex);
+					candidates[i] = std::make_unique<SimplifyRef>(i, minErrorIndex, minError);
 				}
 			}
 
 		};
 		tbb::parallel_for(tri_range, build_task);
+		SDL_LOG("after computation");
+		// Remove unitialized
+		{
+			decltype(candidates) candidates2;
+			candidates2.reserve(candidates.size());
+			for (auto& c: candidates) {
+				if (c) candidates2.push_back(std::move(c));
+			}
+			candidates = std::move(candidates2);
+		}
 
+		SDL_LOG("after removal");
 		// Sort
-		auto refErrorCompare = [&](const SimplifyRef& left, const SimplifyRef& right) {
-			if (not left.initialized) return false;  // Unitialized is always greater
-			if (not right.initialized) return true;  // than anything else
-			const auto left_error = trierrors[left.tid][left.tvertex];
-			const auto right_error = trierrors[right.tid][right.tvertex];
-			return left_error < right_error;
-		};
-		tbb::parallel_sort(candidates, refErrorCompare);
+		tbb::parallel_sort(candidates, RefPtrLess);
 
+		SDL_LOG("after sort");
 		// Take only the n first elements (resize)
-		SimplifyRef uninitializedRef;
-		auto firstUninitialized =
-			std::ranges::lower_bound(candidates, uninitializedRef, refErrorCompare)
-			- candidates.begin();
 		size_t numCandidates = std::min({
-			candidates.size(),
-			size_t(maxCandidateQueueSize),
-			size_t(firstUninitialized)
+				candidates.size(),
+				size_t(maxCandidateQueueSize)
 		});
 		candidates.resize(numCandidates);
 
@@ -1689,7 +1724,7 @@ private:
 	// Lock neighbors and collapse candidate edge
 	// In order to benefit from RAII, this function is recursive
 	size_t lock_and_collapse (
-		const SimplifyRef& candidate,
+		const RefPtr& candidate,
 		std::vector<size_t>& neighbors,
 		std::vector<vmutex_ptr>& mutexes,
 		const float edgeScreenSize,
@@ -1715,18 +1750,19 @@ private:
 			return CollapseEdge(candidate, edgeScreenSize, camera, preserveBorder);
 		}
 	}
-	// Delete triangles, running batches
+
+	// Delete triangles
 	//
 	//
 	size_t DeleteTriangles(
-		const RefVector& candidateList,
+		const CandidateContainer& candidates,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		tbb::auto_partitioner partitioner;
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
-		tbb::blocked_range<size_t> batch_range(0, candidateList.size());
+		tbb::blocked_range<size_t> batch_range(0, candidates.size());
 
 		// Initialize vertex mutexes
 		std::vector<vmutex_ptr> vmutexes;
@@ -1737,14 +1773,14 @@ private:
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
 				// Get candidate vertex
-				auto& candidate = candidateList[i];
+				auto& candidate = candidates[i];
 
 				// Get explicit edge to collapse
-				auto [e0, e1] = EDGES[candidate.tvertex];
-				auto e2 = OPPOSITE[candidate.tvertex];
-				const size_t i0 = triangles[candidate.tid].v[e0];
-				const size_t i1 = triangles[candidate.tid].v[e1];
-				const size_t i2 = triangles[candidate.tid].v[e2];
+				auto [e0, e1] = EDGES[candidate->tvertex];
+				auto e2 = OPPOSITE[candidate->tvertex];
+				const size_t i0 = triangles[candidate->tid].v[e0];
+				const size_t i1 = triangles[candidate->tid].v[e1];
+				const size_t i2 = triangles[candidate->tid].v[e2];
 
 				// Lock triangle vertices
 				vlock3_t lock(*vmutexes[i0], *vmutexes[i1], *vmutexes[i2]);
@@ -1872,13 +1908,13 @@ private:
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
 	size_t CollapseEdge(
-		const SimplifyRef& candidate,  /* Candidate edge to collapse */
+		const RefPtr& candidate,  /* Candidate edge to collapse */
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Check triangle
-		const size_t triangleIndex = candidate.tid;
+		const size_t triangleIndex = candidate->tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (t.deleted)
@@ -1887,7 +1923,7 @@ private:
 			return 0;
 
 		// Get explicit edge to collapse
-		auto [e1, e2] = EDGES[candidate.tvertex];
+		auto [e1, e2] = EDGES[candidate->tvertex];
 		const size_t i0 = t.v[e1];
 		const size_t i1 = t.v[e2];
 
