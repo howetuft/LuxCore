@@ -85,11 +85,11 @@ void* operator new[] (size_t size, const std::nothrow_t&) noexcept
 {
 	return operator new(size, std::nothrow);
 }
-void operator delete(void* ptr, const std::nothrow_t&)
+void operator delete(void* ptr, const std::nothrow_t&) noexcept
 {
 	if(ptr!= 0) scalable_free(ptr);
 }
-void operator delete[](void* ptr, const std::nothrow_t&)
+void operator delete[](void* ptr, const std::nothrow_t&) noexcept
 {
 	operator delete(ptr, std::nothrow);
 }
@@ -1021,7 +1021,8 @@ constexpr auto enumerate(T && iterable) {
 using Quadric = Eigen::Matrix4f;
 const auto Upper = Eigen::UpLoType::Upper;
 
-struct SimplifyRef {
+struct
+SimplifyRef {
 	size_t tid = 0;
 	size_t tvertex = std::numeric_limits<size_t>::infinity();
 	bool initialized = false;
@@ -1127,9 +1128,13 @@ private:
 };
 #endif
 
-struct SimplifyTriangle {
+struct
+SimplifyTriangle {
+	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
+
+	// Dynamic data
 	bool deleted = false;
 	bool dirty = false;
 
@@ -1499,20 +1504,20 @@ private:
 
 	using ErrorCacheEntry = std::tuple<size_t, float>;
 
-	//struct ErrorCacheHash{
-		//inline size_t operator()(const ErrorCacheKey& k) const noexcept {
-			//auto& [id0, id1] = k;
+	struct ErrorCacheHash{
+		inline size_t operator()(const ErrorCacheKey& k) const noexcept {
+			size_t seed = k[0];
+			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 
-			//size_t seed = id0;
-			//seed ^= id1 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
 
-			//return seed;
-		//}
-	//};
 	using ErrorCacheType = tbb::concurrent_unordered_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
-		boost::hash<ErrorCacheKey>,
+		ErrorCacheHash
 	>;
 	mutable ErrorCacheType ErrorCache;
 
