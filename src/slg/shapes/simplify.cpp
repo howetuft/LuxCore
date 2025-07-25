@@ -1117,8 +1117,8 @@ inline float VertexError(
 	const Quadric &q,
 	const Point& p
 ) {
-	//return p.transpose() * q * p;
-	return (q.selfadjointView<Upper>() * p).adjoint() * p;
+	return p.transpose() * q * p;
+	//return (q.selfadjointView<Upper>() * p).adjoint() * p;
 }
 
 
@@ -1577,14 +1577,14 @@ private:
 					t.geometryN[2],
 					-t.geometryN.dot(Point2Vector(v0.p))
 				);
-				//const Quadric sm(p * p.transpose());
+				const Quadric sm(p * p.transpose());
 
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
-					//vertices[vertex_index].quad.noalias() += sm;
-					auto& q = vertices[vertex_index].quad;
-					q.selfadjointView<Upper>().rankUpdate(p, p, 0.5f);
+					vertices[vertex_index].quad.noalias() += sm;
+					//auto& q = vertices[vertex_index].quad;
+					//q.selfadjointView<Upper>().rankUpdate(p, p, 0.5f);
 				}
 			}
 		};
