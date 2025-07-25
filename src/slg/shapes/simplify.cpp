@@ -34,6 +34,7 @@
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_sort.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/scalable_allocator.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -65,6 +66,33 @@
 // https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
+
+// non-member operator new or delete functions may not be declared static or in
+// a namespace other than the global namespace
+//
+// No retry loop because we assume that
+// scalable_malloc does all it takes to allocate
+// the memory, so calling it repeatedly
+// will not improve the situation at all
+void* operator new (size_t size, const std::nothrow_t&)
+{
+	if(size== 0) size= 1;
+	if(void* ptr= scalable_malloc(size))
+		return ptr;
+	return NULL;
+}
+void* operator new[] (size_t size, const std::nothrow_t&)
+{
+	return operator new(size, std::nothrow);
+}
+void operator delete(void* ptr, const std::nothrow_t&)
+{
+	if(ptr!= 0) scalable_free(ptr);
+}
+void operator delete[](void* ptr, const std::nothrow_t&)
+{
+	operator delete(ptr, std::nothrow);
+}
 
 namespace {
 // Everything inside this namespace is kept local to this translation
@@ -903,6 +931,8 @@ private:
 
 // Namespace containing the rewriting of the algo
 namespace enhanced {
+
+
 using namespace std::chrono_literals;
 
 using Vector = Eigen::Vector3f;
@@ -2335,7 +2365,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
