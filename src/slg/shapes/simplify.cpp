@@ -74,14 +74,14 @@
 // scalable_malloc does all it takes to allocate
 // the memory, so calling it repeatedly
 // will not improve the situation at all
-void* operator new (size_t size, const std::nothrow_t&)
+void* operator new (size_t size, const std::nothrow_t&) noexcept
 {
 	if(size== 0) size= 1;
 	if(void* ptr= scalable_malloc(size))
 		return ptr;
 	return NULL;
 }
-void* operator new[] (size_t size, const std::nothrow_t&)
+void* operator new[] (size_t size, const std::nothrow_t&) noexcept
 {
 	return operator new(size, std::nothrow);
 }
@@ -1059,11 +1059,15 @@ using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<Simplif
 
 struct SimplifyVertex {
 	// Core data
-	Point p;			  // Position
-	RefVector refs;				  // Incident edges in topology
+	Point p;			  // Position in geometry
+	RefVector refs;		  // Incident edges in topology
 
+	// Unique identifier
+	size_t uuid;
+
+	// Error computation inputs
 	Quadric quad = Quadric::Zero();     // Quadric
-	bool border;          // Border status
+	bool border;						// Border status
 
 	// LuxCore specific data
 	Normal norm;
@@ -1073,11 +1077,13 @@ struct SimplifyVertex {
 
 };
 
+// TODO Remove
 using PlainVertexVector = std::vector<
 	SimplifyVertex,
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
+// TODO Remove
 // Batch design is supposed to guarantee that, in main treatment, each
 // vertex is accessed by only one thread at most. However, we can check it enabling
 // CHECK_VERTEX_RACE
@@ -1270,6 +1276,8 @@ public:
 	Simplify(const luxrays::ExtTriangleMesh &srcMesh) {
 		using SV = SimplifyVertex;
 
+		vertex_counter = 0;
+
 		// Size vertices and triangles containers in accordance to inputs
 		size_t vertCount = srcMesh.GetTotalVertexCount();
 		size_t triCount = srcMesh.GetTotalTriangleCount();
@@ -1384,7 +1392,6 @@ public:
 			// No more work?
 			if (!iterationDeletedTriangles) break;
 
-			//std::exit(0);  // DEBUG - Stop here
 		}
 
 		// Clean up mesh
@@ -1466,7 +1473,7 @@ public:
 
 
 private:
-	// Main properties (verticies and triangles)
+	// Main properties (vertices and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
 	std::vector<
@@ -1481,6 +1488,15 @@ private:
 	bool hasAlphas = false;
 
 	using ErrorCacheKey = std::array<size_t, 3>;
+
+	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
+		return ErrorCacheKey{
+			vertices[t.v[0]].uuid,
+			vertices[t.v[1]].uuid,
+			vertices[t.v[2]].uuid
+		};
+	}
+
 	using ErrorCacheEntry = std::tuple<size_t, float>;
 
 	//struct ErrorCacheHash{
@@ -1496,10 +1512,11 @@ private:
 	using ErrorCacheType = tbb::concurrent_unordered_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
-		boost::hash<ErrorCacheKey>
+		boost::hash<ErrorCacheKey>,
 	>;
 	mutable ErrorCacheType ErrorCache;
 
+	std::atomic<size_t> vertex_counter{0};
 
 	// Iteration initialization
 	//
@@ -1543,6 +1560,7 @@ private:
 			ErrorCache.reserve(triangles.size() * 2);
 			InitQuadrics(edgeScreenSize, camera, preserveBorder);
 			InitBorders();
+			InitUuid();
 		}
 
 	}
@@ -1674,15 +1692,14 @@ private:
 		tbb::parallel_for(vertex_range, border_task);
 	}  // ~InitBorders
 
-	//std::function<bool(const SimplifyRef&, const SimplifyRef&)> refErrorCompare(
-		//[&](const SimplifyRef& left, const SimplifyRef& right) {
-			//if (not left.initialized) return false;  // Unitialized is always greater
-			//if (not right.initialized) return true;  // than anything else
-			//const auto left_error = trierrors[left.tid][left.tvertex];
-			//const auto right_error = trierrors[right.tid][right.tvertex];
-			//return left_error < right_error;
-		//}
-	//);
+	// Init border flags on vertices
+	//
+	// Modify: vertices
+	void InitUuid() {
+		for (auto& v: vertices) {
+			v.uuid = vertex_counter++;
+		}
+	}
 
 	using CandidateContainer = std::vector<
 		RefPtr,
@@ -1709,8 +1726,8 @@ private:
 				size_t minErrorIndex = NULL_INDEX;
 				float minError = FLOAT_INFINITY;
 
-				const ErrorCacheKey triangle = t.v;
-				auto it = ErrorCache.find(triangle);
+				const ErrorCacheKey cacheKey = makeErrorCacheKey(t);
+				auto it = ErrorCache.find(cacheKey);
 				if (it != ErrorCache.end()) {
 					auto [l_minErrorIndex, l_minError] = it->second;
 					minErrorIndex = l_minErrorIndex;
@@ -1750,7 +1767,7 @@ private:
 						}
 					}
 					ErrorCache.insert(
-						std::pair(triangle, std::tuple(minErrorIndex, minError))
+						std::pair(cacheKey, std::tuple(minErrorIndex, minError))
 					);
 				}
 
@@ -1771,6 +1788,7 @@ private:
 			}
 			candidates = std::move(candidates2);
 		}
+		SDL_LOG("Cache size: " << ErrorCache.size());
 
 		SDL_LOG("after removal");
 		// Sort
@@ -2023,10 +2041,12 @@ private:
 		// At this stage, no triangle flip is to fear anymore,
 		// so we can collapse edge
 
-
 		// Compute new position
 		v0.p = p;
 		v0.quad += v1.quad;
+
+		// Attribute new uid
+		v0.uuid = vertex_counter++;
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
