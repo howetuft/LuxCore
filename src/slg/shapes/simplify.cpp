@@ -1047,6 +1047,9 @@ bool operator<(const RefPtr& left, const RefPtr& right) {
 bool RefPtrLess(const RefPtr& left, const RefPtr& right) {
 	return left->error < right->error;
 }
+bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
+	return left.error < right.error;
+}
 //bool operator<(const SimplifyRef& s0, const SimplifyRef& s1) {
 
 	//if (s0.tid != s1.tid) return s0.tid < s1.tid;
@@ -1723,8 +1726,8 @@ private:
 	}
 
 	using CandidateContainer = std::vector<
-		RefPtr,
-		tbb::cache_aligned_allocator<RefPtr>
+		SimplifyRef,
+		tbb::scalable_allocator<SimplifyRef>
 	>;
 
 	// Build candidate list
@@ -1804,7 +1807,7 @@ private:
 				}
 
 				if (minErrorIndex != NULL_INDEX) {
-					candidates[i] = std::make_unique<SimplifyRef>(i, minErrorIndex, minError);
+					candidates[i] = SimplifyRef(i, minErrorIndex, minError);
 				}
 			}
 
@@ -1817,7 +1820,7 @@ private:
 			decltype(candidates) candidates2;
 			candidates2.reserve(candidates.size());
 			for (auto& c: candidates) {
-				if (c) candidates2.push_back(std::move(c));
+				if (c.initialized) candidates2.push_back(std::move(c));
 			}
 			candidates = std::move(candidates2);
 		}
@@ -1825,7 +1828,7 @@ private:
 
 		SDL_LOG("after removal");
 		// Sort
-		tbb::parallel_sort(candidates, RefPtrLess);
+		tbb::parallel_sort(candidates, RefLess);
 
 		SDL_LOG("after sort");
 		// Take only the n first elements (resize)
@@ -1843,7 +1846,7 @@ private:
 	// Lock neighbors and collapse candidate edge
 	// In order to benefit from RAII, this function is recursive
 	size_t lock_and_collapse (
-		const RefPtr& candidate,
+		const SimplifyRef& candidate,
 		std::vector<size_t, tbb::cache_aligned_allocator<size_t>>& neighbors,
 		std::vector<vmutex_ptr, tbb::cache_aligned_allocator<vmutex_ptr>>& mutexes,
 		const float edgeScreenSize,
@@ -1895,11 +1898,11 @@ private:
 				auto& candidate = candidates[i];
 
 				// Get explicit edge to collapse
-				auto [e0, e1] = EDGES[candidate->tvertex];
-				auto e2 = OPPOSITE[candidate->tvertex];
-				const size_t i0 = triangles[candidate->tid].v[e0];
-				const size_t i1 = triangles[candidate->tid].v[e1];
-				const size_t i2 = triangles[candidate->tid].v[e2];
+				auto [e0, e1] = EDGES[candidate.tvertex];
+				auto e2 = OPPOSITE[candidate.tvertex];
+				const size_t i0 = triangles[candidate.tid].v[e0];
+				const size_t i1 = triangles[candidate.tid].v[e1];
+				const size_t i2 = triangles[candidate.tid].v[e2];
 
 				// Lock triangle vertices
 				vlock3_t lock(*vmutexes[i0], *vmutexes[i1], *vmutexes[i2]);
@@ -2027,13 +2030,13 @@ private:
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
 	size_t CollapseEdge(
-		const RefPtr& candidate,  /* Candidate edge to collapse */
+		const SimplifyRef& candidate,  /* Candidate edge to collapse */
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
 	) {
 		// Check triangle
-		const size_t triangleIndex = candidate->tid;
+		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (t.deleted)
@@ -2042,7 +2045,7 @@ private:
 			return 0;
 
 		// Get explicit edge to collapse
-		auto [e1, e2] = EDGES[candidate->tvertex];
+		auto [e1, e2] = EDGES[candidate.tvertex];
 		const size_t i0 = t.v[e1];
 		const size_t i1 = t.v[e2];
 
