@@ -67,33 +67,6 @@
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
-// non-member operator new or delete functions may not be declared static or in
-// a namespace other than the global namespace
-//
-// No retry loop because we assume that
-// scalable_malloc does all it takes to allocate
-// the memory, so calling it repeatedly
-// will not improve the situation at all
-void* operator new (size_t size, const std::nothrow_t&) noexcept
-{
-	if(size== 0) size= 1;
-	if(void* ptr= scalable_malloc(size))
-		return ptr;
-	return NULL;
-}
-void* operator new[] (size_t size, const std::nothrow_t&) noexcept
-{
-	return operator new(size, std::nothrow);
-}
-void operator delete(void* ptr, const std::nothrow_t&) noexcept
-{
-	if(ptr!= 0) scalable_free(ptr);
-}
-void operator delete[](void* ptr, const std::nothrow_t&) noexcept
-{
-	operator delete(ptr, std::nothrow);
-}
-
 namespace {
 // Everything inside this namespace is kept local to this translation
 // unit (behaves like static and avoid linker namespace pollution)
@@ -933,16 +906,13 @@ private:
 namespace enhanced {
 
 
-using namespace std::chrono_literals;
+using BoolVector = std::vector<bool, tbb::cache_aligned_allocator<bool>>;
+using SizeTVector = std::vector<size_t, tbb::cache_aligned_allocator<size_t>>;
 
+// Geometry
 using Vector = Eigen::Vector3f;
 using Normal = Vector;
 using Point = Eigen::Vector4f;
-using vmutex_t = std::timed_mutex;
-using vmutex_ptr = std::unique_ptr<vmutex_t>;
-using vlock_t = std::scoped_lock<vmutex_t>;
-using vlock3_t = std::scoped_lock<vmutex_t, vmutex_t, vmutex_t>;
-
 
 inline luxrays::Normal Eigen2LuxN(const Vector& v) {
 	return luxrays::Normal(v[0], v[1], v[2]);
@@ -974,13 +944,12 @@ inline bool GetBaryCoords(
 	const Normal vCrossW = TriNormal(p0, p2, hitPoint);
 	const Normal vCrossU = TriNormal(p0, p2, p1);
 
-	if (vCrossW.dot(vCrossU) < 0.f) return false;
+	if (std::signbit(vCrossW.dot(vCrossU))) return false;
 
 	const Vector uCrossW = TriNormal(p0, p1, hitPoint);
-	//const Vector uCrossV = TriNormal(p0, p1, p2);
 	const Vector uCrossV = -vCrossU;
 
-	if (uCrossW.dot(uCrossV) < 0.f) return false;
+	if (std::signbit(uCrossW.dot(uCrossV))) return false;
 
 	const float denom = uCrossV.norm();
 	const float r = vCrossW.norm() / denom;
@@ -1018,6 +987,8 @@ constexpr auto enumerate(T && iterable) {
     return iterable_wrapper{ std::forward<T>(iterable) };
 }
 
+
+// Quadric and References
 using Quadric = Eigen::Matrix4f;
 const auto Upper = Eigen::UpLoType::Upper;
 
@@ -1033,34 +1004,13 @@ SimplifyRef {
 	SimplifyRef() {}
 };
 
-using RefPtr = std::unique_ptr<SimplifyRef>;
-
-//TODO
-//bool operator<(const SimplifyRef& left, const SimplifyRef& right) {
-	//if (not left.initialized) return false;  // Unitialized is always greater
-	//if (not right.initialized) return true;  // than anything else
-	//return left.error <= right.error;
-//}
-bool operator<(const RefPtr& left, const RefPtr& right) {
-	return left->error < right->error;
-}
-bool RefPtrLess(const RefPtr& left, const RefPtr& right) {
-	return left->error < right->error;
-}
 bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
 	return left.error < right.error;
 }
-//bool operator<(const SimplifyRef& s0, const SimplifyRef& s1) {
-
-	//if (s0.tid != s1.tid) return s0.tid < s1.tid;
-	//return s0.tvertex < s1.tvertex;
-//}
-//bool operator==(const SimplifyRef& s0, const SimplifyRef& s1) {
-	//return (s0.tid == s1.tid) and (s0.tvertex == s1.tvertex);
-//}
 
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
+// Vertex
 struct SimplifyVertex {
 	// Core data
 	Point p;			  // Position in geometry
@@ -1081,58 +1031,13 @@ struct SimplifyVertex {
 
 };
 
-// TODO Remove
-using PlainVertexVector = std::vector<
+using VertexVector = std::vector<
 	SimplifyVertex,
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
-// TODO Remove
-// Batch design is supposed to guarantee that, in main treatment, each
-// vertex is accessed by only one thread at most. However, we can check it enabling
-// CHECK_VERTEX_RACE
-#ifndef CHECK_VERTEX_RACE
-// Normal form
-using VertexVector = PlainVertexVector;
-#else
-// Overloaded form for checking
-class VertexVector: public PlainVertexVector {
-// Call `clear` to initiate recording and `check` just after
-public:
-	reference operator[]( size_type pos ) {
-		_threads.emplace(pos, std::this_thread::get_id());
-		return PlainVertexVector::operator[](pos);
-	}
-	const_reference operator[]( size_type pos ) const {
-		_threads.emplace(pos, std::this_thread::get_id());
-		return PlainVertexVector::operator[](pos);
-	}
-	void clear() {
-		_threads.clear();
-	}
-	void check() const {
-		for (size_t i = 0; i < size(); ++i) {
-			auto [b, e] = _threads.equal_range(i);
-			std::vector<std::thread::id> values;
-			for (auto i = b; i != e; ++i) values.push_back(i->second);
-			auto last = std::unique(values.begin(), values.end());
-			values.erase(last, values.end());
-			auto count = values.size();
-			//auto count = std::ranges::count(r);
-			if (count > 1) {
-				SDL_LOG("Simplify - Warning: vertex " << i << " handled by " << count << " threads.");
-				for (auto t: values) SDL_LOG("Thread " << t);
-			}
-		}
-	}
-private:
-	mutable tbb::concurrent_multimap<size_t, std::thread::id> _threads;
-
-};
-#endif
-
-struct
-SimplifyTriangle {
+// Triangle
+struct SimplifyTriangle {
 	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
@@ -1162,10 +1067,48 @@ inline float VertexError(
 	const Point& p
 ) {
 	return p.transpose() * q * p;
-	//return (q.selfadjointView<Upper>() * p).adjoint() * p;
 }
 
+// Error caching
+using ErrorCacheKey = std::array<size_t, 3>;
+using ErrorSubCacheKey = std::array<size_t, 2>;
+using ErrorCacheEntry = std::tuple<size_t, float>;
 
+struct ErrorSubCacheHash{
+	inline size_t operator()(const ErrorSubCacheKey& k) const noexcept {
+		size_t seed = k[0];
+		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+};
+
+using ErrorSubCacheType = tbb::concurrent_unordered_map<
+	ErrorSubCacheKey,
+	ErrorCacheEntry,
+	ErrorSubCacheHash
+>;
+
+struct ErrorCacheType : public std::vector<ErrorSubCacheType>  {
+	inline std::pair<ErrorSubCacheType::iterator, bool> find(const ErrorCacheKey& k) {
+		auto& subcache = (*this)[k[0]];
+		ErrorSubCacheKey sk{k[1], k[2]};
+		auto&& it = subcache.find(sk);
+		return std::pair(it, it != subcache.end());
+	}
+	inline void insert(std::pair<ErrorCacheKey, ErrorCacheEntry>&& v) {
+		auto& sc = (*this)[v.first[0]];
+		ErrorSubCacheKey sk{v.first[1], v.first[2]};
+		sc.insert(std::pair(sk, v.second));
+	}
+};
+
+// Synchronization
+using MutexVector = std::vector<
+	tbb::mutex,
+	tbb::cache_aligned_allocator<tbb::mutex>
+>;
+
+// TODO Rename -> CalculateCollapsePoint
 // Error for one edge
 // Returns: error, interpolated point
 inline std::tuple<float, Point> CalculateCollapseError(
@@ -1182,8 +1125,6 @@ inline std::tuple<float, Point> CalculateCollapseError(
 	const Point p2 = (v0.p + v1.p) / 2.f;
 
 	// Compute error and associated point
-	// Error can be negative, I add 1 to have screenErrorScale to work as
-	// expected
 
 	float error;
 	Point pResult;
@@ -1194,20 +1135,23 @@ inline std::tuple<float, Point> CalculateCollapseError(
 		error = VertexError(q, p1) + 1.f;
 		pResult = p1;
 	} else {
-		const Eigen::Vector3f errors = Eigen::Vector3f{
-			float(VertexError(q, p0)),
-			float(VertexError(q, p1)),
-			float(VertexError(q, p2))
-		} + Eigen::Vector3f::Ones();
-		std::vector<Point, tbb::cache_aligned_allocator<Point>> points{p0, p1, p2};
+		Eigen::Vector3f errors{
+			VertexError(q, p0),
+			VertexError(q, p1),
+			VertexError(q, p2)
+		};
+		// Error can be negative, I add 1 to have screenErrorScale to work as
+		// expected
+		errors += Eigen::Vector3f::Ones();
+		const std::array<const Point*, 3> points{&p0, &p1, &p2};
 		int minIndex;
 		error = errors.array().minCoeff(&minIndex);
-		pResult = points[minIndex];
+		pResult = *points[minIndex];
 	}
 
 	// Adding 1.0 because error have negative values
 	error = std::max(error + 1.f, 0.f);
-	return std::tuple(error , std::move(pResult));
+	return std::tuple(error, std::move(pResult));
 }
 
 inline float CalculateCollapseScreenErrorScale(
@@ -1216,7 +1160,7 @@ inline float CalculateCollapseScreenErrorScale(
 	float edgeScreenSize,
 	const slg::Camera& camera
 ) {
-	if (edgeScreenSize > 0.f) {
+	if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
 		const Point& p0 = v0.p;
 		const Point& p1 = v1.p;
 		constexpr float notVisibleScale = .5f;
@@ -1242,7 +1186,7 @@ inline float CalculateCollapseScreenErrorScale(
 		p1y /= camera.filmHeight;
 
 		const float edge = sqrtf(luxrays::Sqr(p0x - p1x) + luxrays::Sqr(p0y - p1y));
-		if (edge == 0.f) {
+		if (not edge) {
 			return notVisibleScale;
 		}
 
@@ -1371,12 +1315,6 @@ public:
 				preserveBorder, maxCandidateQueueSize
 			));
 
-
-			///TODO
-			//// Partition candidates into independent batches
-			//DBG_SDL_LOG("Simplify - Partition candidate list #" << iteration);
-			//auto batches = PartitionIndependentEdgeBatches(candidateList);
-
 			// Delete triangles (run batches)
 			DBG_SDL_LOG(
 				"Simplify - Delete triangles"
@@ -1415,7 +1353,8 @@ public:
 		const size_t triCount = triangles.size();
 		using SV = SimplifyVertex;
 
-		luxrays::Point *newVertices = luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		luxrays::Point *newVertices =
+			luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		auto vert_assign = [](luxrays::Point& vd, const SV& vs) {
 			vd = Eigen2LuxP(vs.p);
 		};
@@ -1461,7 +1400,8 @@ public:
 		luxrays::Triangle *newTris =
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 
-		auto triangle_assign = [vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
+		auto triangle_assign =
+			[vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
 			assert (ts.v[0] < vertCount);
 			assert (ts.v[1] < vertCount);
 			assert (ts.v[2] < vertCount);
@@ -1495,8 +1435,6 @@ private:
 	bool hasColors = false;
 	bool hasAlphas = false;
 
-	using ErrorCacheKey = std::array<size_t, 3>;
-	using ErrorSubCacheKey = std::array<size_t, 2>;
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
@@ -1505,38 +1443,6 @@ private:
 			vertices[t.v[2]].uuid
 		};
 	}
-
-
-	using ErrorCacheEntry = std::tuple<size_t, float>;
-
-	struct ErrorSubCacheHash{
-		inline size_t operator()(const ErrorSubCacheKey& k) const noexcept {
-			size_t seed = k[0];
-			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			return seed;
-		}
-	};
-
-	using ErrorSubCacheType = tbb::concurrent_unordered_map<
-		ErrorSubCacheKey,
-		ErrorCacheEntry,
-		ErrorSubCacheHash
-	>;
-
-
-	struct ErrorCacheType : public std::vector<ErrorSubCacheType>  {
-		inline std::pair<ErrorSubCacheType::iterator, bool> find(const ErrorCacheKey& k) {
-			auto& subcache = (*this)[k[0]];
-			ErrorSubCacheKey sk{k[1], k[2]};
-			auto&& it = subcache.find(sk);
-			return std::pair(it, it != subcache.end());
-		}
-		inline void insert(std::pair<ErrorCacheKey, ErrorCacheEntry>&& v) {
-			auto& sc = (*this)[v.first[0]];
-			ErrorSubCacheKey sk{v.first[1], v.first[2]};
-			sc.insert(std::pair(sk, v.second));
-		}
-	};
 
 	mutable ErrorCacheType ErrorCache;
 
@@ -1581,10 +1487,10 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			ErrorCache.resize(triangles.size() * 3);  // TODO
 			InitQuadrics(edgeScreenSize, camera, preserveBorder);
 			InitBorders();
 			InitUuid();
+			ErrorCache.resize(triangles.size() * 3);
 		}
 
 	}
@@ -1600,9 +1506,9 @@ private:
 		}
 
 		// Build refs
-		// Race condition: we need mutexes (at vertex grain-scale)
+		// Possible race condition: we need mutexes (at vertex grain-scale)
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		std::vector<std::mutex, tbb::cache_aligned_allocator<std::mutex>> vertex_mutexes(vertices.size());
+		MutexVector vertex_mutexes(vertices.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
@@ -1629,7 +1535,7 @@ private:
 
 		// Parallel computation of per-triangle quadric contribution
 		// And accumulation into vertex quadrics
-		std::vector<tbb::mutex, tbb::cache_aligned_allocator<tbb::mutex>> v_mtx(vertices.size());
+		MutexVector v_mtx(vertices.size());
 
 		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
 
@@ -1653,10 +1559,8 @@ private:
 
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
-					tbb::mutex::scoped_lock lock(v_mtx[vertex_index]);
+					std::scoped_lock lock(v_mtx[vertex_index]);
 					vertices[vertex_index].quad.noalias() += sm;
-					//auto& q = vertices[vertex_index].quad;
-					//q.selfadjointView<Upper>().rankUpdate(p, p, 0.5f);
 				}
 			}
 		};
@@ -1682,7 +1586,7 @@ private:
 		// vertex border flags are assumed to be initialized to false
 		// when vertex is created
 
-		std::vector<std::mutex, tbb::cache_aligned_allocator<std::mutex> > mutexes(vertices.size());
+		MutexVector mutexes(vertices.size());
 
 		// For each vertex
 		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
@@ -1737,6 +1641,7 @@ private:
 		size_t maxCandidateQueueSize
 	) const {
 
+		SDL_LOG("starting BuildCandidateList");
 #ifndef NDEBUG
 		std::atomic<size_t> cachecalls, cachehits;
 #endif
@@ -1819,23 +1724,32 @@ private:
 		{
 			decltype(candidates) candidates2;
 			candidates2.reserve(candidates.size());
-			for (auto& c: candidates) {
-				if (c.initialized) candidates2.push_back(std::move(c));
-			}
+			std::copy_if(
+				std::execution::par,
+				candidates.begin(),
+				candidates.end(),
+				std::back_inserter(candidates2),
+				[](const SimplifyRef& r){ return r.initialized; }
+			);
 			candidates = std::move(candidates2);
 		}
-		SDL_LOG("Cache size: " << ErrorCache.size());
 
 		SDL_LOG("after removal");
 		// Sort
-		tbb::parallel_sort(candidates, RefLess);
-
-		SDL_LOG("after sort");
-		// Take only the n first elements (resize)
 		size_t numCandidates = std::min({
 				candidates.size(),
 				size_t(maxCandidateQueueSize)
 		});
+		std::partial_sort(
+			std::execution::par,
+			candidates.begin(),
+			candidates.begin() + numCandidates,
+			candidates.end(),
+			RefLess
+		);
+
+		SDL_LOG("after sort");
+		// Take only the n first elements (resize)
 		candidates.resize(numCandidates);
 
 		return candidates;
@@ -1847,8 +1761,8 @@ private:
 	// In order to benefit from RAII, this function is recursive
 	size_t lock_and_collapse (
 		const SimplifyRef& candidate,
-		std::vector<size_t, tbb::cache_aligned_allocator<size_t>>& neighbors,
-		std::vector<vmutex_ptr, tbb::cache_aligned_allocator<vmutex_ptr>>& mutexes,
+		SizeTVector& neighbors,
+		MutexVector& mutexes,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
@@ -1860,7 +1774,7 @@ private:
 			neighbors.pop_back();
 
 			// Lock current neighbor
-			vlock_t lock(*mutexes[i0]);
+			std::scoped_lock lock(mutexes[i0]);
 
 			// And call recursively for the next
 			size_t res = lock_and_collapse(
@@ -1886,11 +1800,8 @@ private:
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
 		tbb::blocked_range<size_t> batch_range(0, candidates.size());
 
-		// Initialize vertex mutexes
-		std::vector<vmutex_ptr, tbb::cache_aligned_allocator<vmutex_ptr>> vmutexes;
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			vmutexes.push_back(std::make_unique<vmutex_t>());
-		}
+		// Vertex mutexes
+		MutexVector mutexes(vertices.size());
 
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
@@ -1905,7 +1816,7 @@ private:
 				const size_t i2 = triangles[candidate.tid].v[e2];
 
 				// Lock triangle vertices
-				vlock3_t lock(*vmutexes[i0], *vmutexes[i1], *vmutexes[i2]);
+				std::scoped_lock lock(mutexes[i0], mutexes[i1], mutexes[i2]);
 
 				auto& v0 = vertices[i0];
 				auto& v1 = vertices[i1];
@@ -1914,16 +1825,17 @@ private:
 				//
 				// Nota: Neighbors are all the vertices that can be affected
 				// by given edge collapsing
-				std::vector<SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef>> refs;
+				RefVector refs;
 				refs.insert(refs.end(), v0.refs.begin(), v0.refs.end());
 				refs.insert(refs.end(), v1.refs.begin(), v1.refs.end());
-				std::vector<size_t, tbb::cache_aligned_allocator<size_t>> neighbors;
+				SizeTVector neighbors;
 				for (auto& ref : refs) {
 					auto vertex_index = triangles[ref.tid].v[ref.tvertex];
 					if (vertex_index != i0 and vertex_index != i1 and vertex_index != i2) {
 						neighbors.push_back(vertex_index);
 					}
 				}
+				// Compute uniques
 				std::sort(neighbors.begin(), neighbors.end());
 				auto neighbors_it = std::unique(neighbors.begin(), neighbors.end());
 				neighbors.resize(std::distance(neighbors.begin(), neighbors_it));
@@ -1931,7 +1843,7 @@ private:
 				batchDeleted.local() += lock_and_collapse(
 					candidate,
 					neighbors,
-					vmutexes,
+					mutexes,
 					edgeScreenSize,
 					camera,
 					preserveBorder
@@ -1940,7 +1852,8 @@ private:
 		};
 		tbb::parallel_for(batch_range, delete_task, partitioner);
 
-		auto deletedTriangles = std::accumulate(
+		auto deletedTriangles = std::reduce(
+			std::execution::unseq,
 			batchDeleted.begin(),
 			batchDeleted.end(),
 			size_t(0),
@@ -1949,82 +1862,6 @@ private:
 		return deletedTriangles;
 	}
 
-	//// Delete triangles, running batches
-	////
-	////
-	//size_t DeleteTriangles2(
-		//const BatchVector& batches,
-		//const float edgeScreenSize,
-		//const slg::Camera& camera,
-		//const bool preserveBorder
-	//) {
-		//// Batch design guarantees that each vertex is accessed by only one thread
-		//// in the following treatment.
-		//// One can check it by enabling CHECK_VERTEX_RACE
-//#ifdef CHECK_VERTEX_RACE
-		//vertices.clear();
-//#endif
-		//tbb::auto_partitioner partitioner;
-		//tbb::enumerable_thread_specific<size_t> batchDeleted;
-		//tbb::blocked_range<size_t> batch_range(0, batches.size());
-		//auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
-			//for (size_t i = r.begin(); i != r.end(); ++i) {
-				//auto& batch = batches[i];
-				//for (auto& ref : batch) {
-					//batchDeleted.local() += CollapseEdge(
-						//ref, edgeScreenSize, camera, preserveBorder
-					//);
-				//}
-			//}
-		//};
-		//tbb::parallel_for(batch_range, delete_task, partitioner);
-
-//#ifdef CHECK_VERTEX_RACE
-		//vertices.check();
-//#endif
-		//auto deletedTriangles = std::accumulate(
-			//batchDeleted.begin(),
-			//batchDeleted.end(),
-			//size_t(0),
-			//std::plus<size_t>()
-		//);
-		//return deletedTriangles;
-	//}
-
-	//// Neighbor features
-	//using NeighborSet = std::unordered_set<size_t>;
-
-
-	//// Find edge neighbors, ie vertices that could be affected
-	//// by collapsing the given edge
-	//NeighborSet edgeNeighbors(const size_t i0, const size_t i1) const {
-		//NeighborSet neighbors;
-
-		//neighbors.insert(i0);
-		//neighbors.insert(i1);
-		//for (const auto& ref: vertices[i0].refs) {
-			//for (size_t vertexIndex: triangles[ref.tid].v) {
-				//neighbors.insert(vertexIndex);
-			//}
-		//}
-		//for (const auto& ref: vertices[i1].refs) {
-			//for (size_t vertexIndex: triangles[ref.tid].v) {
-				//neighbors.insert(vertexIndex);
-			//}
-		//}
-		//return neighbors;
-	//}
-
-	//TODO
-	//bool LockNeighborhood(const SimplifyRef& ref) {
-		//auto i0 = triangles[ref.tid].v[ref.tvertex];
-		//auto& v0 = vertices[i0];
-		//bool ok = true;
-		//for (auto& ref: v0.refs) {
-			//try_lock
-
-
-	//}
 
 	// Collapse an edge
 	// Returns: number of deleted triangles
@@ -2039,10 +1876,7 @@ private:
 		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
-		if (t.deleted)
-			return 0;
-		if (t.dirty)
-			return 0;
+		if (t.deleted or t.dirty) return 0;
 
 		// Get explicit edge to collapse
 		auto [e1, e2] = EDGES[candidate.tvertex];
@@ -2056,9 +1890,7 @@ private:
 		size_t deletedTriangles = 0;
 
 		// Border check
-		if (v0.border != v1.border) {
-			return 0;
-		}
+		if (v0.border != v1.border) return 0;
 
 		// Compute vertex to collapse to
 		// Doesn't modify state (neither vertices nor triangles)
@@ -2069,15 +1901,13 @@ private:
 		// vertex are deleted
 		auto&& [will_flip0, deleted0] = Flipped<true>(p, i0, i1);
 		auto&& [will_flip1, deleted1] = Flipped<true>(p, i1, i0);
-		if (will_flip0 || will_flip1) {
-			return 0;
-		}
+		if (will_flip0 || will_flip1) return 0;
 
 
 		// At this stage, no triangle flip is to fear anymore,
 		// so we can collapse edge
 
-		// Compute new position
+		// Compute new position and quadric
 		v0.p = p;
 		v0.quad += v1.quad;
 
@@ -2158,7 +1988,7 @@ private:
 	// code...): one will only compute flip status, the second will
 	// also compute deleted refs.
 	// (templatization has been used to avoid code duplication)
-	using FlippedFullReturn = std::tuple<bool, std::vector<bool, tbb::cache_aligned_allocator<bool>>>;
+	using FlippedFullReturn = std::tuple< bool, BoolVector >;
 
 	template<bool F=true>
 	inline
@@ -2166,7 +1996,7 @@ private:
 	Flipped(const Point& p, const size_t i0, const size_t i1) const {
 
 		const auto& v0 = vertices[i0];
-		std::vector<bool, tbb::cache_aligned_allocator<bool>> deleted(0);
+		BoolVector deleted(0);
 		bool res = false;
 
 		if constexpr(F) {
@@ -2238,7 +2068,7 @@ private:
 	std::tuple<RefVector, size_t> UpdateTriangles(
 		const size_t i0,
 		const SimplifyVertex &v,  // Collapsed vertex
-		const std::vector<bool, tbb::cache_aligned_allocator<bool>> &deleted,
+		const BoolVector &deleted,
 		const float edgeScreenSize,
 		const slg::Camera& camera,
 		const bool preserveBorder
@@ -2269,12 +2099,12 @@ private:
 		return std::tuple(refs, deletedTriangles);
 	}
 
-	// Finally compact mesh before exiting
+	// Compact mesh before exiting
 	void CompactMesh() {
 		size_t dst = 0;
 
-		std::vector<bool, tbb::cache_aligned_allocator<bool>> keep(vertices.size(), false);
-		std::vector<size_t, tbb::cache_aligned_allocator<size_t>> newIndex(vertices.size(), -1);
+		BoolVector keep(vertices.size(), false);
+		SizeTVector newIndex(vertices.size(), -1);
 
 		// We assume vertices 'keep' property is set to false (default value)
 
