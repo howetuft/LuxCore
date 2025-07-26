@@ -1045,15 +1045,6 @@ struct SimplifyTriangle {
 	// Dynamic data
 	bool deleted = false;
 	bool dirty = false;
-
-	// Update error of the triangle
-	inline void UpdateTriangleError (
-		const VertexVector& vertices,
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder,
-		std::array<float, 3>& err
-	);
 };
 
 using TriangleVector = std::vector<
@@ -1062,10 +1053,7 @@ using TriangleVector = std::vector<
 >;
 
 // Error between vertex and Quadric
-inline float VertexError(
-	const Quadric &q,
-	const Point& p
-) {
+inline float VertexError(const Quadric &q, const Point& p) {
 	return p.transpose() * q * p;
 }
 
@@ -1108,93 +1096,6 @@ using MutexVector = std::vector<
 	tbb::cache_aligned_allocator<tbb::mutex>
 >;
 
-// TODO Rename -> CalculateCollapsePoint
-// Error for one edge
-// Returns: error, interpolated point
-inline std::tuple<float, Point> CalculateCollapseError(
-	const SimplifyVertex& v0,
-	const SimplifyVertex& v1,
-	const bool preserveBorder
-) {
-	// Compute resulting quadric
-	const Quadric q = v0.quad + v1.quad;
-
-	// Compute interpolated vertex
-	const Point &p0 = v0.p;
-	const Point &p1 = v1.p;
-	const Point p2 = (v0.p + v1.p) / 2.f;
-
-	// Compute error and associated point
-
-	float error;
-	Point pResult;
-	if (preserveBorder && v0.border) {
-		error = VertexError(q, p0) + 1.f;
-		pResult = p0;
-	} else if (preserveBorder && v1.border) {
-		error = VertexError(q, p1) + 1.f;
-		pResult = p1;
-	} else {
-		Eigen::Vector3f errors{
-			VertexError(q, p0),
-			VertexError(q, p1),
-			VertexError(q, p2)
-		};
-		// Error can be negative, I add 1 to have screenErrorScale to work as
-		// expected
-		errors += Eigen::Vector3f::Ones();
-		const std::array<const Point*, 3> points{&p0, &p1, &p2};
-		int minIndex;
-		error = errors.array().minCoeff(&minIndex);
-		pResult = *points[minIndex];
-	}
-
-	// Adding 1.0 because error have negative values
-	error = std::max(error + 1.f, 0.f);
-	return std::tuple(error, std::move(pResult));
-}
-
-inline float CalculateCollapseScreenErrorScale(
-	const SimplifyVertex& v0,
-	const SimplifyVertex& v1,
-	float edgeScreenSize,
-	const slg::Camera& camera
-) {
-	if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
-		const Point& p0 = v0.p;
-		const Point& p1 = v1.p;
-		constexpr float notVisibleScale = .5f;
-
-		float p0x, p0y;
-		if (!camera.GetSamplePosition(Eigen2LuxP(p0), &p0x, &p0y) ||
-				!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
-			return notVisibleScale;
-		}
-
-		// Normalize
-		p0x /= camera.filmWidth;
-		p0y /= camera.filmHeight;
-
-		float p1x, p1y;
-		if (!camera.GetSamplePosition(Eigen2LuxP(p1), &p1x, &p1y) ||
-				!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
-			return notVisibleScale;
-		}
-
-		// Normalize
-		p1x /= camera.filmWidth;
-		p1y /= camera.filmHeight;
-
-		const float edge = sqrtf(luxrays::Sqr(p0x - p1x) + luxrays::Sqr(p0y - p1y));
-		if (not edge) {
-			return notVisibleScale;
-		}
-
-		return std::max(edge / edgeScreenSize, notVisibleScale);
-	} else {
-		return 1.f;
-	}
-}
 
 // Helper to populate triangles and vertices with input data
 template <typename D, typename S, typename T> struct ForEach {
@@ -1225,7 +1126,16 @@ template <typename D, typename S, typename T> struct ForEach {
 
 class Simplify {
 public:
-	Simplify(const luxrays::ExtTriangleMesh &srcMesh) {
+	Simplify(
+		const luxrays::ExtTriangleMesh &srcMesh,
+		const slg::Camera& p_camera,
+		const float p_edgeScreenSize,
+		const bool p_preserveBorder
+	) :
+		camera(p_camera),
+		edgeScreenSize(p_edgeScreenSize),
+		preserveBorder(p_preserveBorder)
+	{
 		using SV = SimplifyVertex;
 
 		vertex_counter = 0;
@@ -1283,12 +1193,7 @@ public:
 
 
 	// Effectively simplify mesh (reduce triangles)
-	void Decimate(
-		const size_t targetTriangleCount,
-		const slg::Camera& camera,
-		const float edgeScreenSize,
-		const bool preserveBorder
-	) {
+	void Decimate(const size_t targetTriangleCount) {
 		Eigen::initParallel();
 
 		// Work on 10% of all triangles for each iteration
@@ -1307,22 +1212,18 @@ public:
 
 			// Compute iteration data (including mesh topology)
 			DBG_SDL_LOG("Simplify - Initialize data #" << iteration);
-			InitIteration(iteration, edgeScreenSize, camera, preserveBorder);
+			InitIteration(iteration);
 
 			// Build candidate list
 			DBG_SDL_LOG("Simplify - Build candidate list #" << iteration);
-			auto candidates = std::move(BuildCandidateList(
-				preserveBorder, maxCandidateQueueSize
-			));
+			auto candidates = BuildCandidateList(maxCandidateQueueSize);
 
 			// Delete triangles (run batches)
 			DBG_SDL_LOG(
 				"Simplify - Delete triangles"
 				<< " #" << iteration
 				);
-			const size_t iterationDeletedTriangles = DeleteTriangles(
-				candidates, edgeScreenSize, camera, preserveBorder
-			);
+			const auto iterationDeletedTriangles = DeleteTriangles(candidates);
 
 			deletedTriangles += iterationDeletedTriangles;
 
@@ -1429,6 +1330,11 @@ private:
 		tbb::cache_aligned_allocator<std::array<float, 3>>
 	> trierrors;
 
+	// General settings
+	const slg::Camera& camera;
+	const float edgeScreenSize;
+	const bool preserveBorder;
+
 	// LuxCore specific
 	bool hasNormals = false;
 	bool hasUVs = false;
@@ -1451,12 +1357,7 @@ private:
 	// Iteration initialization
 	//
 	// Compact triangles, compute quadrics, incidents, borders
-	void InitIteration(
-		const size_t iteration,
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
-	) {
+	void InitIteration(const size_t iteration) {
 		if (iteration > 0) {
 			// Compress triangles and mark vertices to keep
 			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
@@ -1487,7 +1388,7 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			InitQuadrics(edgeScreenSize, camera, preserveBorder);
+			InitQuadrics();
 			InitBorders();
 			InitUuid();
 			ErrorCache.resize(triangles.size() * 3);
@@ -1527,11 +1428,7 @@ private:
 	// Initialize quadrics on vertices
 	//
 	// Modify triangles and vertices (q values)
-	void InitQuadrics(
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
-	) {
+	void InitQuadrics() {
 
 		// Parallel computation of per-triangle quadric contribution
 		// And accumulation into vertex quadrics
@@ -1569,9 +1466,7 @@ private:
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].UpdateTriangleError(
-					vertices, edgeScreenSize, camera, preserveBorder, trierrors[i]
-				);
+				trierrors[i] = ComputeTriangleError(triangles[i]);
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1629,6 +1524,89 @@ private:
 		}
 	}
 
+	inline float CalculateCollapseScreenErrorScale(
+		const SimplifyVertex& v0, const SimplifyVertex& v1
+	) const {
+		if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
+			const Point& p0 = v0.p;
+			const Point& p1 = v1.p;
+			constexpr float notVisibleScale = .5f;
+
+			float p0x, p0y;
+			if (!camera.GetSamplePosition(Eigen2LuxP(p0), &p0x, &p0y) ||
+					!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
+				return notVisibleScale;
+			}
+
+			// Normalize
+			p0x /= camera.filmWidth;
+			p0y /= camera.filmHeight;
+
+			float p1x, p1y;
+			if (!camera.GetSamplePosition(Eigen2LuxP(p1), &p1x, &p1y) ||
+					!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
+				return notVisibleScale;
+			}
+
+			// Normalize
+			p1x /= camera.filmWidth;
+			p1y /= camera.filmHeight;
+
+			const auto edge = sqrtf(luxrays::Sqr(p0x - p1x) + luxrays::Sqr(p0y - p1y));
+			if (not edge) {
+				return notVisibleScale;
+			}
+
+			return std::max(edge / edgeScreenSize, notVisibleScale);
+		} else {
+			return 1.f;
+		}
+	}
+
+	// Calculate collapse point and associated error
+	// Returns: error, interpolated point
+	inline std::tuple<Point, float> CalculateCollapsePoint(
+		const SimplifyVertex& v0, const SimplifyVertex& v1
+	) const {
+		// Compute resulting quadric
+		const Quadric q = v0.quad + v1.quad;
+
+		// Compute interpolated vertex
+		const Point &p0 = v0.p;
+		const Point &p1 = v1.p;
+		const Point p2 = (v0.p + v1.p) / 2.f;
+
+		// Compute error and associated point
+
+		float error;
+		Point pResult;
+		if (preserveBorder && v0.border) {
+			error = VertexError(q, p0) + 1.f;
+			pResult = p0;
+		} else if (preserveBorder && v1.border) {
+			error = VertexError(q, p1) + 1.f;
+			pResult = p1;
+		} else {
+			Eigen::Vector3f errors{
+				VertexError(q, p0),
+				VertexError(q, p1),
+				VertexError(q, p2)
+			};
+			// Error can be negative, I add 1 to have screenErrorScale to work as
+			// expected
+			errors += Eigen::Vector3f::Ones();
+			const std::array<const Point*, 3> points{&p0, &p1, &p2};
+			int minIndex;
+			error = errors.array().minCoeff(&minIndex);
+			pResult = *points[minIndex];
+		}
+
+	// Adding 1.0 because error have negative values
+	error = std::max(error + 1.f, 0.f);
+	return std::tuple(std::move(pResult), error);
+}
+
+	// TODO
 	using CandidateContainer = std::vector<
 		SimplifyRef,
 		tbb::scalable_allocator<SimplifyRef>
@@ -1636,10 +1614,7 @@ private:
 
 	// Build candidate list
 	//
-	CandidateContainer BuildCandidateList(
-		bool preserveBorder,
-		size_t maxCandidateQueueSize
-	) const {
+	CandidateContainer BuildCandidateList(size_t maxCandidateQueueSize) const {
 
 		SDL_LOG("starting BuildCandidateList");
 #ifndef NDEBUG
@@ -1697,7 +1672,7 @@ private:
 							if (v0.border != v1.border) continue;
 						}
 
-						auto&& [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+						auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 						if (Flipped<false>(p, i0, i1)) continue;
 						if (Flipped<false>(p, i1, i0)) continue;
 
@@ -1762,10 +1737,7 @@ private:
 	size_t lock_and_collapse (
 		const SimplifyRef& candidate,
 		SizeTVector& neighbors,
-		MutexVector& mutexes,
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
+		MutexVector& mutexes
 	)
 	{
 		if (not neighbors.empty()) {
@@ -1777,25 +1749,18 @@ private:
 			std::scoped_lock lock(mutexes[i0]);
 
 			// And call recursively for the next
-			size_t res = lock_and_collapse(
-				candidate, neighbors, mutexes, edgeScreenSize, camera, preserveBorder
-			);
+			size_t res = lock_and_collapse(candidate, neighbors, mutexes);
 			return res;
 		} else {
 			// Final treatment: collapse
-			return CollapseEdge(candidate, edgeScreenSize, camera, preserveBorder);
+			return CollapseEdge(candidate);
 		}
 	}
 
 	// Delete triangles
 	//
 	//
-	size_t DeleteTriangles(
-		const CandidateContainer& candidates,
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
-	) {
+	size_t DeleteTriangles(const CandidateContainer& candidates) {
 		tbb::auto_partitioner partitioner;
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
 		tbb::blocked_range<size_t> batch_range(0, candidates.size());
@@ -1843,10 +1808,7 @@ private:
 				batchDeleted.local() += lock_and_collapse(
 					candidate,
 					neighbors,
-					mutexes,
-					edgeScreenSize,
-					camera,
-					preserveBorder
+					mutexes
 				);
 			}
 		};
@@ -1866,12 +1828,7 @@ private:
 	// Collapse an edge
 	// Returns: number of deleted triangles
 	// Modifies: triangles, vertices
-	size_t CollapseEdge(
-		const SimplifyRef& candidate,  /* Candidate edge to collapse */
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
-	) {
+	size_t CollapseEdge(const SimplifyRef& candidate) {
 		// Check triangle
 		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
@@ -1894,7 +1851,7 @@ private:
 
 		// Compute vertex to collapse to
 		// Doesn't modify state (neither vertices nor triangles)
-		const auto&& [error, p] = CalculateCollapseError(v0, v1, preserveBorder);
+		const auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
@@ -1968,10 +1925,8 @@ private:
 			}
 		}
 
-		auto&& [newRefs0, deletedTriangles0] =
-			UpdateTriangles(i0, v0, deleted0, edgeScreenSize, camera, preserveBorder);
-		auto&& [newRefs1, deletedTriangles1] =
-			UpdateTriangles(i0, v1, deleted1, edgeScreenSize, camera, preserveBorder);
+		auto&& [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
+		auto&& [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
 
 		// Update incident edges of vertex
 		newRefs0.reserve(newRefs0.size() + newRefs1.size());
@@ -2063,15 +2018,28 @@ private:
 		}
 	}  // ~Flipped
 
+	// Update error for a given triangle
+	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) {
+
+		std::array<float, 3> res;
+		for (auto [i, edge]: enumerate(EDGES)) {
+			const auto [e1, e2] = edge;
+			const auto& v0 = vertices[t.v[e1]];
+			const auto& v1 = vertices[t.v[e2]];
+			auto collapseError = std::get<float>(CalculateCollapsePoint(v0, v1));
+			auto screenErrorScale = CalculateCollapseScreenErrorScale(v0, v1);
+			res[i] = collapseError * screenErrorScale;
+		}
+		return res;
+
+	}
+
 	// Update triangle connections and edge error after a edge is collapsed
 	// Returns: new incident edges list, number of deleted triangles
-	std::tuple<RefVector, size_t> UpdateTriangles(
+	inline std::tuple<RefVector, size_t> UpdateTriangles(
 		const size_t i0,
 		const SimplifyVertex &v,  // Collapsed vertex
-		const BoolVector &deleted,
-		const float edgeScreenSize,
-		const slg::Camera& camera,
-		const bool preserveBorder
+		const BoolVector &deleted
 	) {
 		size_t deletedTriangles = 0;
 		RefVector refs;
@@ -2090,9 +2058,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			t.UpdateTriangleError(
-				vertices, edgeScreenSize, camera, preserveBorder, trierrors[r.tid]
-			);
+			trierrors[r.tid] = ComputeTriangleError(t);
 
 			refs.push_back(r);
 		}
@@ -2163,27 +2129,6 @@ private:
 };  // ~class Simplify
 
 
-inline void SimplifyTriangle::UpdateTriangleError(
-	const VertexVector& vertices,
-	const float edgeScreenSize,
-	const slg::Camera& camera,
-	const bool preserveBorder,
-	std::array<float, 3>& err
-) {
-
-	for (auto [i, edge]: enumerate(EDGES)) {
-		const auto [e1, e2] = edge;
-		const auto& v0 = vertices[this->v[e1]];
-		const auto& v1 = vertices[this->v[e2]];
-		float collapseError = std::get<float>(
-			CalculateCollapseError(v0, v1, preserveBorder)
-		);
-		float screenErrorScale =
-			CalculateCollapseScreenErrorScale(v0, v1, edgeScreenSize, camera);
-		err[i] = collapseError * screenErrorScale;
-	}
-
-}
 
 
 }  // ~namespace enhanced
@@ -2223,8 +2168,8 @@ slg::SimplifyShape::SimplifyShape(
 
 
 	if (simplifyEnhanced) {
-		enhanced::Simplify simplify(*srcMesh);
-		simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
+		enhanced::Simplify simplify(*srcMesh, *camera, edgeScreenSize, preserveBorder);
+		simplify.Decimate(targetCount);
 		mesh = simplify.GetExtMesh();
 	} else {
 		simple::Simplify simplify(*srcMesh);
@@ -2251,7 +2196,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
