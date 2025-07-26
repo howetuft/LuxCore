@@ -1342,6 +1342,7 @@ private:
 	bool hasColors = false;
 	bool hasAlphas = false;
 
+	using ErrorCacheKey = std::array<size_t, 3>;
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
@@ -1351,6 +1352,23 @@ private:
 		};
 	}
 
+	using ErrorCacheEntry = std::tuple<size_t, float>;
+
+	struct ErrorCacheHash{
+		inline size_t operator()(const ErrorCacheKey& k) const noexcept {
+			size_t seed = k[0];
+			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+
+			return seed;
+		}
+	};
+
+	using ErrorCacheType = tbb::concurrent_unordered_map<
+		ErrorCacheKey,
+		ErrorCacheEntry,
+		ErrorCacheHash
+	>;
 	mutable ErrorCacheType ErrorCache;
 
 	std::atomic<size_t> vertex_counter{0};
@@ -1389,7 +1407,7 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			InitQuadrics();
+			InitQuadrics(edgeScreenSize, camera, preserveBorder);
 			InitBorders();
 			InitUuid();
 			ErrorCache.resize(triangles.size() * 3);
@@ -1636,18 +1654,11 @@ private:
 				float minError = FLOAT_INFINITY;
 
 				const ErrorCacheKey cacheKey = makeErrorCacheKey(t);
-				auto res = ErrorCache.find(cacheKey);
-#ifndef NDEBUG
-				cachecalls++;
-#endif
-				if (res.second) {
-					auto& it = res.first;
+				auto it = ErrorCache.find(cacheKey);
+				if (it != ErrorCache.end()) {
 					auto [l_minErrorIndex, l_minError] = it->second;
 					minErrorIndex = l_minErrorIndex;
 					minError = l_minError;
-#ifndef NDEBUG
-					cachehits++;
-#endif
 				} else {
 
 					auto& tv0 = t.v[0];
@@ -1695,7 +1706,6 @@ private:
 		};
 		tbb::parallel_for(tri_range, build_task);
 		SDL_LOG("after computation");
-		DBG_SDL_LOG("Cache stats: total=" << cachecalls << " hits=" << cachehits);
 		// Remove unitialized
 		{
 			decltype(candidates) candidates2;
