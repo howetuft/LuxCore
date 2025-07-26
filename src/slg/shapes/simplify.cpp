@@ -28,6 +28,7 @@
 #include <random>
 #include <execution>
 
+#define TBB_PREVIEW_MEMORY_POOL 1
 #include <tbb/mutex.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_for.h>
@@ -36,6 +37,7 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/scalable_allocator.h>
 #include <tbb/blocked_range2d.h>
+#include <tbb/memory_pool.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -1053,6 +1055,11 @@ using TriangleVector = std::vector<
 	tbb::cache_aligned_allocator<SimplifyTriangle>
 >;
 
+using TriErrorVector = std::vector<
+	std::array<float, 3>,
+	tbb::cache_aligned_allocator<std::array<float, 3>>
+>;
+
 // Error between vertex and Quadric
 inline float VertexError(const Quadric &q, const Point& p) {
 	return p.transpose() * q * p;
@@ -1135,50 +1142,54 @@ public:
 	) :
 		camera(p_camera),
 		edgeScreenSize(p_edgeScreenSize),
-		preserveBorder(p_preserveBorder)
+		preserveBorder(p_preserveBorder),
+		vertices_ptr(std::make_unique<VertexVector>()),
+		triangles_ptr(std::make_unique<TriangleVector>()),
+		trierrors_ptr(std::make_unique<TriErrorVector>())
 	{
 		using SV = SimplifyVertex;
 
 		vertex_counter = 0;
 
+
 		// Size vertices and triangles containers in accordance to inputs
 		size_t vertCount = srcMesh.GetTotalVertexCount();
 		size_t triCount = srcMesh.GetTotalTriangleCount();
-		vertices.resize(vertCount);
-		triangles.resize(triCount);
-		trierrors.resize(triCount, {.0f, .0f, .0f});
+		vertices_ptr->resize(vertCount);
+		triangles_ptr->resize(triCount);
+		trierrors_ptr->resize(triCount, {.0f, .0f, .0f});
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.p = Lux2EigenP(vs);
 			vd.refs.reserve(9);  // Seems reasonable
 		};
-		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run(vertCount);
+		ForEach(*vertices_ptr, srcMesh.GetVertices(), init_vertex).run(vertCount);
 
 		if (srcMesh.HasNormals()) {
 			auto init_normal = [](SV& v, const luxrays::Normal& n)
 				{ v.norm = Normal(n.x, n.y, n.z); };
-			ForEach(vertices, srcMesh.GetNormals(), init_normal).run(vertCount);
+			ForEach(*vertices_ptr, srcMesh.GetNormals(), init_normal).run(vertCount);
 
 			hasNormals = true;
 		}
 
 		if (srcMesh.HasUVs(0)) {
 			auto init_uv = [](SV& v, const luxrays::UV& u){ v.uv = u; };
-			ForEach(vertices, srcMesh.GetUVs(0), init_uv).run(vertCount);
+			ForEach(*vertices_ptr, srcMesh.GetUVs(0), init_uv).run(vertCount);
 
 			hasUVs = true;
 		}
 
 		if (srcMesh.HasColors(0)) {
 			auto init_col = [](SV& v, const luxrays::Spectrum& col){ v.col = col; };
-			ForEach(vertices, srcMesh.GetColors(0), init_col).run(vertCount);
+			ForEach(*vertices_ptr, srcMesh.GetColors(0), init_col).run(vertCount);
 
 			hasColors = true;
 		}
 
 		if (srcMesh.HasAlphas(0)) {
 			auto init_alpha = [](SV& v, const float alpha){ v.alpha = alpha; };
-			ForEach(vertices, srcMesh.GetAlphas(0), init_alpha).run(vertCount);
+			ForEach(*vertices_ptr, srcMesh.GetAlphas(0), init_alpha).run(vertCount);
 
 			hasAlphas = true;
 		}
@@ -1189,7 +1200,7 @@ public:
 			td.v[1] = ts.v[1];
 			td.v[2] = ts.v[2];
 		};
-		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run(triCount);
+		ForEach(*triangles_ptr, srcMesh.GetTriangles(), init_triangle).run(triCount);
 	}
 
 
@@ -1199,11 +1210,11 @@ public:
 
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
-			64u, luxrays::Floor2UInt(triangles.size() * .1f)
+			64u, luxrays::Floor2UInt(triangles_ptr->size() * .1f)
 		);
 
 		// Main iteration loop
-		const size_t startTriangleCount = triangles.size();
+		const size_t startTriangleCount = triangles_ptr->size();
 		size_t deletedTriangles = 0;
 		for (size_t iteration = 0; iteration < 64; ++iteration) {
 
@@ -1251,8 +1262,9 @@ public:
 
 	// Rebuild an output mesh after simplification
 	luxrays::ExtTriangleMesh *GetExtMesh() const {
-		const size_t vertCount = vertices.size();
-		const size_t triCount = triangles.size();
+		SDL_LOG("Simplify - Reexport mesh");
+		const size_t vertCount = vertices_ptr->size();
+		const size_t triCount = triangles_ptr->size();
 		using SV = SimplifyVertex;
 
 		luxrays::Point *newVertices =
@@ -1260,7 +1272,8 @@ public:
 		auto vert_assign = [](luxrays::Point& vd, const SV& vs) {
 			vd = Eigen2LuxP(vs.p);
 		};
-		ForEach(newVertices, vertices, vert_assign).run(vertCount);
+		ForEach(newVertices, *vertices_ptr, vert_assign).run(vertCount);
+		SDL_LOG("vertices done");
 
 		luxrays::Normal *newNorms = nullptr;
 		if (hasNormals) {
@@ -1269,7 +1282,8 @@ public:
 			auto norm_assign = [](luxrays::Normal& vd, const SV& vs) {
 				vd = Eigen2LuxN(vs.norm);
 			};
-			ForEach(newNorms, vertices, norm_assign).run(vertCount);
+			ForEach(newNorms, *vertices_ptr, norm_assign).run(vertCount);
+			SDL_LOG("normals done");
 		}
 
 		luxrays::UV *newUVs = nullptr;
@@ -1278,7 +1292,8 @@ public:
 			auto uv_assign = [](luxrays::UV& vd, const SV& vs) {
 				vd = vs.uv;
 			};
-			ForEach(newUVs, vertices, uv_assign).run(vertCount);
+			ForEach(newUVs, *vertices_ptr, uv_assign).run(vertCount);
+			SDL_LOG("uv done");
 		}
 
 		luxrays::Spectrum *newCols = nullptr;
@@ -1287,7 +1302,8 @@ public:
 			auto col_assign = [](luxrays::Spectrum& vd, const SV& vs) {
 				vd = vs.col;
 			};
-			ForEach(newCols, vertices, col_assign).run(vertCount);
+			ForEach(newCols, *vertices_ptr, col_assign).run(vertCount);
+			SDL_LOG("colors done");
 		}
 
 		float *newAlphas = nullptr;
@@ -1296,7 +1312,8 @@ public:
 			auto alpha_assign = [](float& vd, const SV& vs) {
 				vd = vs.alpha;
 			};
-			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
+			ForEach(newAlphas, *vertices_ptr, alpha_assign).run(vertCount);
+			SDL_LOG("colors done");
 		}
 
 		luxrays::Triangle *newTris =
@@ -1312,7 +1329,8 @@ public:
 			td.v[2] = ts.v[2];
 		};
 
-		ForEach(newTris, triangles, triangle_assign).run(triCount);
+		ForEach(newTris, *triangles_ptr, triangle_assign).run(triCount);
+		SDL_LOG("triangles done");
 
 		return new luxrays::ExtTriangleMesh(
 				vertCount, triCount, newVertices, newTris,
@@ -1320,16 +1338,23 @@ public:
 		);
 	}
 
+	void Clear() {
+		vertices_ptr.reset();
+		triangles_ptr.reset();
+		trierrors_ptr.reset();
+	}
+
+	~Simplify() {
+		SDL_LOG("Destructor");
+	}
+
 
 
 private:
 	// Main properties (vertices and triangles)
-	VertexVector vertices;
-	TriangleVector triangles;
-	std::vector<
-		std::array<float, 3>,
-		tbb::cache_aligned_allocator<std::array<float, 3>>
-	> trierrors;
+	std::unique_ptr<VertexVector> vertices_ptr;
+	std::unique_ptr<TriangleVector> triangles_ptr;
+	std::unique_ptr<TriErrorVector> trierrors_ptr;
 
 	// General settings
 	const slg::Camera& camera;
@@ -1345,9 +1370,9 @@ private:
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
-			vertices[t.v[0]].uuid,
-			vertices[t.v[1]].uuid,
-			vertices[t.v[2]].uuid
+			(*vertices_ptr)[t.v[0]].uuid,
+			(*vertices_ptr)[t.v[1]].uuid,
+			(*vertices_ptr)[t.v[2]].uuid
 		};
 	}
 
@@ -1362,20 +1387,19 @@ private:
 		if (iteration > 0) {
 			// Compress triangles and mark vertices to keep
 			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
-			decltype(triangles) newTriangles;
-			decltype(trierrors) newTriErrors;
-			newTriangles.reserve(triangles.size());
-			newTriErrors.reserve(triangles.size());
-			//for (auto& t: triangles | std::views::filter(not_deleted)) {
-			for (size_t i = 0; i < triangles.size(); ++i) {
-				auto& t = triangles[i];
+			auto newTriangles = std::make_unique<TriangleVector>();
+			auto newTriErrors = std::make_unique<TriErrorVector>();
+			newTriangles->reserve(triangles_ptr->size());
+			newTriErrors->reserve(triangles_ptr->size());
+			for (size_t i = 0; i < triangles_ptr->size(); ++i) {
+				auto& t = (*triangles_ptr)[i];
 				if (t.deleted) continue;
-				auto& e = trierrors[i];
-				newTriangles.push_back(t);
-				newTriErrors.push_back(e);
+				auto& e = (*trierrors_ptr)[i];
+				newTriangles->push_back(t);
+				newTriErrors->push_back(e);
 			}
-			triangles = std::move(newTriangles);
-			trierrors = std::move(newTriErrors);
+			triangles_ptr.swap(newTriangles);
+			trierrors_ptr.swap(newTriErrors);
 		}
 
 		// Build per-vertex incident edge tables
@@ -1384,7 +1408,7 @@ private:
 
 		// Init Quadrics by Plane & Edge Errors
 		//
-		// Identify boundary : vertices[].border=0,1
+		// Identify boundary : (*vertices_ptr)[].border=0,1
 		//
 		// Required at the beginning (iteration == 0)
 		//
@@ -1392,7 +1416,7 @@ private:
 			InitQuadrics();
 			InitBorders();
 			InitUuid();
-			ErrorCache.resize(triangles.size() * 3);
+			ErrorCache.resize(triangles_ptr->size() * 3);
 		}
 
 	}
@@ -1403,22 +1427,22 @@ private:
 	void InitIncidentEdges() {
 
 		// Clear previous data
-		for (auto& v: vertices) {
+		for (auto& v: *vertices_ptr) {
 			v.refs.clear();
 		}
 
 		// Build refs
 		// Possible race condition: we need mutexes (at vertex grain-scale)
-		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		MutexVector vertex_mutexes(vertices.size());
+		auto range = tbb::blocked_range<size_t>(0, triangles_ptr->size());
+		MutexVector vertex_mutexes(vertices_ptr->size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
-				const auto& v = triangles[i].v;
+				(*triangles_ptr)[i].dirty = false;  // Clear triangle dirty flags, by the way
+				const auto& v = (*triangles_ptr)[i].v;
 				for (size_t j = 0; j < 3; ++j) {
 					auto vid = v[j];
 					std::lock_guard lock(vertex_mutexes[vid]);
-					vertices[vid].refs.emplace_back(i, j);
+					(*vertices_ptr)[vid].refs.emplace_back(i, j);
 				}
 			}
 		};
@@ -1433,17 +1457,17 @@ private:
 
 		// Parallel computation of per-triangle quadric contribution
 		// And accumulation into vertex quadrics
-		MutexVector v_mtx(vertices.size());
+		MutexVector v_mtx(vertices_ptr->size());
 
-		tbb::blocked_range<size_t> triangle_range(0, triangles.size());
+		tbb::blocked_range<size_t> triangle_range(0, triangles_ptr->size());
 
 		auto quadric_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				SimplifyTriangle &t = triangles[i];
+				SimplifyTriangle &t = (*triangles_ptr)[i];
 
-				SimplifyVertex &v0 = vertices[t.v[0]];
-				SimplifyVertex &v1 = vertices[t.v[1]];
-				SimplifyVertex &v2 = vertices[t.v[2]];
+				SimplifyVertex &v0 = (*vertices_ptr)[t.v[0]];
+				SimplifyVertex &v1 = (*vertices_ptr)[t.v[1]];
+				SimplifyVertex &v2 = (*vertices_ptr)[t.v[2]];
 
 				t.geometryN = TriNormal(v0.p, v1.p, v2.p).normalized();
 
@@ -1458,7 +1482,7 @@ private:
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					std::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].quad.noalias() += sm;
+					(*vertices_ptr)[vertex_index].quad.noalias() += sm;
 				}
 			}
 		};
@@ -1467,7 +1491,7 @@ private:
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				trierrors[i] = ComputeTriangleError(triangles[i]);
+				(*trierrors_ptr)[i] = ComputeTriangleError((*triangles_ptr)[i]);
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1482,20 +1506,20 @@ private:
 		// vertex border flags are assumed to be initialized to false
 		// when vertex is created
 
-		MutexVector mutexes(vertices.size());
+		MutexVector mutexes(vertices_ptr->size());
 
 		// For each vertex
-		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
+		tbb::blocked_range<size_t> vertex_range(0, vertices_ptr->size());
 		auto border_task = [&](const tbb::blocked_range<size_t>& r){
 			for (auto i = r.begin() ; i != r.end(); ++i) {
-				const auto& v = vertices[i];
+				const auto& v = (*vertices_ptr)[i];
 				std::map<size_t, size_t> vorders;  // Vertex orders
 
 				// For each triangle incident to the current vertex
 				for (const auto& ref: v.refs) {
 
 					// For each vertex of the incident triangle
-					for (size_t vid: triangles[ref.tid].v) {
+					for (size_t vid: (*triangles_ptr)[ref.tid].v) {
 						// Increment incident vertex order
 						// If id doesn't exist yet, it will be created (with order=1)
 						vorders[vid]++;
@@ -1508,7 +1532,7 @@ private:
 						// is referenced by only one triangle, thus it is a border.
 						// So we mark p.first to belong to a border
 						std::lock_guard lock(mutexes[p.first]);
-						vertices[p.first].border = true;
+						(*vertices_ptr)[p.first].border = true;
 					}
 				}
 			}
@@ -1520,7 +1544,7 @@ private:
 	//
 	// Modify: vertices
 	void InitUuid() {
-		for (auto& v: vertices) {
+		for (auto& v: *vertices_ptr) {
 			v.uuid = vertex_counter++;
 		}
 	}
@@ -1623,14 +1647,14 @@ private:
 #endif
 
 
-		CandidateContainer candidates(triangles.size());
-		tbb::blocked_range<size_t> tri_range(0, triangles.size());
+		CandidateContainer candidates(triangles_ptr->size());
+		tbb::blocked_range<size_t> tri_range(0, triangles_ptr->size());
 
 
 		auto build_task = [&](const decltype(tri_range)& r) {
 			// Main loop
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				const SimplifyTriangle &t = triangles[i];
+				const SimplifyTriangle &t = (*triangles_ptr)[i];
 
 				size_t minErrorIndex = NULL_INDEX;
 				float minError = FLOAT_INFINITY;
@@ -1663,8 +1687,8 @@ private:
 
 					for (size_t j = 0; j < 3; ++j) {
 						const auto [i0, i1] = edges[j];
-						const SimplifyVertex &v0 = vertices[i0];
-						const SimplifyVertex &v1 = vertices[i1];
+						const SimplifyVertex &v0 = (*vertices_ptr)[i0];
+						const SimplifyVertex &v1 = (*vertices_ptr)[i1];
 
 						// Border check
 						if (preserveBorder) {
@@ -1677,9 +1701,9 @@ private:
 						if (Flipped<false>(p, i0, i1)) continue;
 						if (Flipped<false>(p, i1, i0)) continue;
 
-						if (trierrors[i][j] < minError) {
+						if ((*trierrors_ptr)[i][j] < minError) {
 							minErrorIndex = j;
-							minError = trierrors[i][j];
+							minError = (*trierrors_ptr)[i][j];
 						}
 					}
 					ErrorCache.insert(
@@ -1767,7 +1791,7 @@ private:
 		tbb::blocked_range<size_t> batch_range(0, candidates.size());
 
 		// Vertex mutexes
-		MutexVector mutexes(vertices.size());
+		MutexVector mutexes(vertices_ptr->size());
 
 		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
@@ -1777,15 +1801,15 @@ private:
 				// Get explicit edge to collapse
 				auto [e0, e1] = EDGES[candidate.tvertex];
 				auto e2 = OPPOSITE[candidate.tvertex];
-				const size_t i0 = triangles[candidate.tid].v[e0];
-				const size_t i1 = triangles[candidate.tid].v[e1];
-				const size_t i2 = triangles[candidate.tid].v[e2];
+				const size_t i0 = (*triangles_ptr)[candidate.tid].v[e0];
+				const size_t i1 = (*triangles_ptr)[candidate.tid].v[e1];
+				const size_t i2 = (*triangles_ptr)[candidate.tid].v[e2];
 
 				// Lock triangle vertices
 				std::scoped_lock lock(mutexes[i0], mutexes[i1], mutexes[i2]);
 
-				auto& v0 = vertices[i0];
-				auto& v1 = vertices[i1];
+				auto& v0 = (*vertices_ptr)[i0];
+				auto& v1 = (*vertices_ptr)[i1];
 
 				// Get neighbors (unique, and without edge vertices)
 				//
@@ -1796,7 +1820,7 @@ private:
 				refs.insert(refs.end(), v1.refs.begin(), v1.refs.end());
 				SizeTVector neighbors;
 				for (auto& ref : refs) {
-					auto vertex_index = triangles[ref.tid].v[ref.tvertex];
+					auto vertex_index = (*triangles_ptr)[ref.tid].v[ref.tvertex];
 					if (vertex_index != i0 and vertex_index != i1 and vertex_index != i2) {
 						neighbors.push_back(vertex_index);
 					}
@@ -1832,7 +1856,7 @@ private:
 	size_t CollapseEdge(const SimplifyRef& candidate) {
 		// Check triangle
 		const size_t triangleIndex = candidate.tid;
-		SimplifyTriangle &t = triangles[triangleIndex];
+		SimplifyTriangle &t = (*triangles_ptr)[triangleIndex];
 
 		if (t.deleted or t.dirty) return 0;
 
@@ -1842,8 +1866,8 @@ private:
 		const size_t i1 = t.v[e2];
 
 		// Prepare shortcuts
-		SimplifyVertex &v0 = vertices[i0];
-		SimplifyVertex &v1 = vertices[i1];
+		SimplifyVertex &v0 = (*vertices_ptr)[i0];
+		SimplifyVertex &v1 = (*vertices_ptr)[i1];
 
 		size_t deletedTriangles = 0;
 
@@ -1873,9 +1897,9 @@ private:
 		v0.uuid = vertex_counter++;
 
 		// Interpolate other vertex attributes
-		const auto& tv0 = vertices[t.v[0]];
-		const auto& tv1 = vertices[t.v[1]];
-		const auto& tv2 = vertices[t.v[2]];
+		const auto& tv0 = (*vertices_ptr)[t.v[0]];
+		const auto& tv1 = (*vertices_ptr)[t.v[1]];
+		const auto& tv2 = (*vertices_ptr)[t.v[2]];
 		const auto& triPoint0 = tv0.p;
 		const auto& triPoint1 = tv1.p;
 		const auto& triPoint2 = tv2.p;
@@ -1951,7 +1975,7 @@ private:
 	std::conditional<F, FlippedFullReturn, bool>::type
 	Flipped(const Point& p, const size_t i0, const size_t i1) const {
 
-		const auto& v0 = vertices[i0];
+		const auto& v0 = (*vertices_ptr)[i0];
 		BoolVector deleted(0);
 		bool res = false;
 
@@ -1961,7 +1985,7 @@ private:
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
-			const auto& t = triangles[ref.tid];
+			const auto& t = (*triangles_ptr)[ref.tid];
 
 			if (t.deleted) continue;
 
@@ -1978,8 +2002,8 @@ private:
 				continue;
 			}
 
-			const auto d1 = Point2Vector(vertices[id1].p - p);
-			const auto d2 = Point2Vector(vertices[id2].p - p);
+			const auto d1 = Point2Vector((*vertices_ptr)[id1].p - p);
+			const auto d2 = Point2Vector((*vertices_ptr)[id2].p - p);
 
 			// Check if one of the resulting triangles is too narrow
 			// (avoiding normalization)
@@ -2025,8 +2049,8 @@ private:
 		std::array<float, 3> res;
 		for (auto [i, edge]: enumerate(EDGES)) {
 			const auto [e1, e2] = edge;
-			const auto& v0 = vertices[t.v[e1]];
-			const auto& v1 = vertices[t.v[e2]];
+			const auto& v0 = (*vertices_ptr)[t.v[e1]];
+			const auto& v1 = (*vertices_ptr)[t.v[e2]];
 			auto collapseError = std::get<float>(CalculateCollapsePoint(v0, v1));
 			auto screenErrorScale = CalculateCollapseScreenErrorScale(v0, v1);
 			res[i] = collapseError * screenErrorScale;
@@ -2046,7 +2070,7 @@ private:
 		RefVector refs;
 		refs.reserve(v.refs.size());
 		for (const auto& [k, r]: enumerate(v.refs)) {
-			SimplifyTriangle &t = triangles[r.tid];
+			SimplifyTriangle &t = (*triangles_ptr)[r.tid];
 
 			if (t.deleted)
 				continue;
@@ -2059,7 +2083,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			trierrors[r.tid] = ComputeTriangleError(t);
+			(*trierrors_ptr)[r.tid] = ComputeTriangleError(t);
 
 			refs.push_back(r);
 		}
@@ -2072,45 +2096,49 @@ private:
 		const auto max_concurrency = tbb::this_task_arena::max_concurrency();
 
 		// Compress triangles and mark vertices to keep
-		std::vector<std::atomic_flag> keep(vertices.size());
+		std::vector<std::atomic_flag> keep(vertices_ptr->size());
 		for (auto& k: keep) k.clear();
 
-		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
-		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
-		for (auto& e: newTrianglesETS) e.reserve(triangles.size() / max_concurrency);
+		{
+			// Compress in thread locals
+			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+			tbb::enumerable_thread_specific<TriangleVector> newTrianglesETS;
+			for (auto& e: newTrianglesETS) e.reserve(triangles_ptr->size() / max_concurrency);
 
-		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& t = triangles[i];
-				if (t.deleted) continue;
-				newTrianglesETS.local().push_back(t);
+			auto range = tbb::blocked_range<size_t>(0, triangles_ptr->size());
+			auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					auto& t = (*triangles_ptr)[i];
+					if (t.deleted) continue;
+					newTrianglesETS.local().push_back(t);
 
-				keep[t.v[0]].test_and_set();
-				keep[t.v[1]].test_and_set();
-				keep[t.v[2]].test_and_set();
+					keep[t.v[0]].test_and_set();
+					keep[t.v[1]].test_and_set();
+					keep[t.v[2]].test_and_set();
+				}
+			};
+			tbb::parallel_for(range, compress_triangles);
+
+			// Reduce triangles
+			auto newTriangles = std::make_unique<TriangleVector>();
+			newTriangles->reserve(triangles_ptr->size());
+			for (auto& l: newTrianglesETS) {
+				newTriangles->insert(
+					newTriangles->end(),
+					std::make_move_iterator(l.begin()),
+					std::make_move_iterator(l.end())
+				);
 			}
-		};
-		tbb::parallel_for(range, compress_triangles);
-
-		TriangleVector newTriangles;
-		newTriangles.reserve(triangles.size());
-		for (auto& l: newTrianglesETS) {
-			newTriangles.insert(
-				newTriangles.end(),
-				std::make_move_iterator(l.begin()),
-				std::make_move_iterator(l.end())
-			);
+			triangles_ptr.swap(newTriangles);
 		}
-		triangles = std::move(newTriangles);
 
 		// Compress vertices
 		// This part must be partly sequential
 		std::vector<size_t> newIndex, vertMap;
-		newIndex.resize(vertices.size());
-		vertMap.reserve(vertices.size());
+		newIndex.resize(vertices_ptr->size());
+		vertMap.reserve(vertices_ptr->size());
 
-		for (size_t i = 0; i < vertices.size(); ++i) {
+		for (size_t i = 0; i < vertices_ptr->size(); ++i) {
 			if (not keep[i].test()) {
 				continue;
 			}
@@ -2118,25 +2146,25 @@ private:
 			vertMap.push_back(i);
 		}
 
-		decltype(vertices) newVertices(vertMap.size());
+		auto newVertices_ptr = std::make_unique<VertexVector>(vertMap.size());
 		auto range_vertices = tbb::blocked_range<size_t>(0, vertMap.size());
 		auto vertex_copy = [&](tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				newVertices[i] = std::move(vertices[vertMap[i]]);
+				(*newVertices_ptr)[i] = std::move((*vertices_ptr)[vertMap[i]]);
 			}
 		};
 		tbb::parallel_for(range_vertices, vertex_copy);
 
-		vertices = std::move(newVertices);
+		vertices_ptr.swap(newVertices_ptr);
 
 		// Update triangle vertices with new vertices
-		auto range2d = tbb::blocked_range2d<size_t, size_t>(0, triangles.size(), 0, 3);
+		auto range2d = tbb::blocked_range2d<size_t, size_t>(0, triangles_ptr->size(), 0, 3);
 		auto copy_indices = [&](tbb::blocked_range2d<size_t, size_t>& r) {
 			for (size_t i = r.rows().begin(); i != r.rows().end(); ++i) {
 				for (size_t j = r.cols().begin(); j != r.cols().end(); ++j) {
-					auto& t = triangles[i];
+					auto& t = (*triangles_ptr)[i];
 					t.v[j] = newIndex[t.v[j]];
-					assert(t.v[j] < vertices.size());
+					assert(t.v[j] < vertices_ptr->size());
 				}
 			}
 		};
@@ -2186,9 +2214,23 @@ slg::SimplifyShape::SimplifyShape(
 
 
 	if (simplifyEnhanced) {
-		enhanced::Simplify simplify(*srcMesh, *camera, edgeScreenSize, preserveBorder);
-		simplify.Decimate(targetCount);
-		mesh = simplify.GetExtMesh();
+		//SDL_LOG("before computation");
+		//enhanced::Simplify simplify(*srcMesh, *camera, edgeScreenSize, preserveBorder);
+		//simplify.Decimate(targetCount);
+		//mesh = simplify.GetExtMesh();
+		//SDL_LOG("mesh done");
+		//simplify.Clear();
+		//SDL_LOG("cleared");
+
+		SDL_LOG("before computation");
+		auto simplify = std::make_unique<enhanced::Simplify>(*srcMesh, *camera, edgeScreenSize, preserveBorder);
+		simplify->Decimate(targetCount);
+		mesh = simplify->GetExtMesh();
+		SDL_LOG("mesh done");
+		simplify->Clear();
+		SDL_LOG("cleared");
+		simplify.reset();
+		SDL_LOG("reseted");
 	} else {
 		simple::Simplify simplify(*srcMesh);
 		simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
