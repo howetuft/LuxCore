@@ -28,12 +28,13 @@
 #include <random>
 #include <execution>
 
+#include <tbb/tbb.h>
 #include <tbb/mutex.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_for.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_sort.h>
-#include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_hash_map.h>
 #include <tbb/scalable_allocator.h>
 #include <tbb/blocked_range2d.h>
 
@@ -1058,38 +1059,6 @@ inline float VertexError(const Quadric &q, const Point& p) {
 	return p.transpose() * q * p;
 }
 
-// Error caching
-using ErrorCacheKey = std::array<size_t, 3>;
-using ErrorSubCacheKey = std::array<size_t, 2>;
-using ErrorCacheEntry = std::tuple<size_t, float>;
-
-struct ErrorSubCacheHash{
-	inline size_t operator()(const ErrorSubCacheKey& k) const noexcept {
-		size_t seed = k[0];
-		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		return seed;
-	}
-};
-
-using ErrorSubCacheType = tbb::concurrent_unordered_map<
-	ErrorSubCacheKey,
-	ErrorCacheEntry,
-	ErrorSubCacheHash
->;
-
-struct ErrorCacheType : public std::vector<ErrorSubCacheType>  {
-	inline std::pair<ErrorSubCacheType::iterator, bool> find(const ErrorCacheKey& k) {
-		auto& subcache = (*this)[k[0]];
-		ErrorSubCacheKey sk{k[1], k[2]};
-		auto&& it = subcache.find(sk);
-		return std::pair(it, it != subcache.end());
-	}
-	inline void insert(std::pair<ErrorCacheKey, ErrorCacheEntry>&& v) {
-		auto& sc = (*this)[v.first[0]];
-		ErrorSubCacheKey sk{v.first[1], v.first[2]};
-		sc.insert(std::pair(sk, v.second));
-	}
-};
 
 // Synchronization
 using MutexVector = std::vector<
@@ -1242,15 +1211,15 @@ public:
 
 		}
 
-		// Clean up mesh
-		SDL_LOG("Simplify - Compact mesh");
-		CompactMesh();
+		// Clean up mesh and cache
+		SDL_LOG("Simplify - Finalize computation");
+		Finalize();
 
 	}
 
-
 	// Rebuild an output mesh after simplification
-	luxrays::ExtTriangleMesh *GetExtMesh() const {
+	// Result is written in meshResult class property
+	void RebuildExtMesh() {
 		const size_t vertCount = vertices.size();
 		const size_t triCount = triangles.size();
 		using SV = SimplifyVertex;
@@ -1314,10 +1283,34 @@ public:
 
 		ForEach(newTris, triangles, triangle_assign).run(triCount);
 
-		return new luxrays::ExtTriangleMesh(
+		meshResult = new luxrays::ExtTriangleMesh(
 				vertCount, triCount, newVertices, newTris,
 				newNorms, newUVs, newCols, newAlphas
 		);
+	}
+
+
+	// Process simultaneously cache clearing and mesh rebuilding
+	void Finalize() {
+		tbb::task_group tg;
+
+		// Clear cache
+		tg.run([&](){ ErrorCache.clear(); });
+
+		// Compact internal Mesh and Build external mesh
+		auto final_task = [&](){
+			CompactMesh();
+			assert(not meshResult);  // Should be used only once
+			RebuildExtMesh();
+		};
+		tg.run(final_task);
+
+		tg.wait();
+
+	}
+
+	luxrays::ExtTriangleMesh* GetExtMesh() const {
+		return meshResult;
 	}
 
 
@@ -1342,6 +1335,9 @@ private:
 	bool hasColors = false;
 	bool hasAlphas = false;
 
+	// Output
+	luxrays::ExtTriangleMesh* meshResult = nullptr;
+
 	using ErrorCacheKey = std::array<size_t, 3>;
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
@@ -1355,20 +1351,25 @@ private:
 	using ErrorCacheEntry = std::tuple<size_t, float>;
 
 	struct ErrorCacheHash{
-		inline size_t operator()(const ErrorCacheKey& k) const noexcept {
+		inline size_t hash(const ErrorCacheKey& k) const noexcept {
 			size_t seed = k[0];
 			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 
 			return seed;
 		}
+		inline bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) const {
+			return k0 == k1;
+		}
 	};
-
-	using ErrorCacheType = tbb::concurrent_unordered_map<
+	// Please note that concurrent_unordered_map would have been better suited
+	// for that but it exhibits a significant overload at deletion
+	using ErrorCacheType = tbb::concurrent_hash_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
 		ErrorCacheHash
 	>;
+
 	mutable ErrorCacheType ErrorCache;
 
 	std::atomic<size_t> vertex_counter{0};
@@ -1407,10 +1408,10 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
-			InitQuadrics(edgeScreenSize, camera, preserveBorder);
+			InitQuadrics();
 			InitBorders();
 			InitUuid();
-			ErrorCache.resize(triangles.size() * 3);
+			ErrorCache.rehash(triangles.size() * 3);
 		}
 
 	}
@@ -1654,9 +1655,10 @@ private:
 				float minError = FLOAT_INFINITY;
 
 				const ErrorCacheKey cacheKey = makeErrorCacheKey(t);
-				auto it = ErrorCache.find(cacheKey);
-				if (it != ErrorCache.end()) {
-					auto [l_minErrorIndex, l_minError] = it->second;
+				ErrorCacheType::accessor a;
+				auto res = ErrorCache.find(a, cacheKey);
+				if (res) {
+					auto [l_minErrorIndex, l_minError] = a->second;
 					minErrorIndex = l_minErrorIndex;
 					minError = l_minError;
 				} else {
