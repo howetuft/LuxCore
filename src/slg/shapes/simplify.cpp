@@ -35,6 +35,7 @@
 #include <tbb/parallel_sort.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/scalable_allocator.h>
+#include <tbb/blocked_range2d.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -2067,63 +2068,80 @@ private:
 
 	// Compact mesh before exiting
 	void CompactMesh() {
-		size_t dst = 0;
 
-		BoolVector keep(vertices.size(), false);
-		SizeTVector newIndex(vertices.size(), -1);
-
-		// We assume vertices 'keep' property is set to false (default value)
+		const auto max_concurrency = tbb::this_task_arena::max_concurrency();
 
 		// Compress triangles and mark vertices to keep
-		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
-		decltype(triangles) newTriangles;
-		decltype(trierrors) newTriErrors;
-		newTriangles.reserve(triangles.size());
-		newTriErrors.reserve(triangles.size());
-		//for (auto& t: triangles | std::views::filter(not_deleted)) {
-		for (size_t i = 0; i < triangles.size(); ++i) {
-			auto& t = triangles[i];
-			if (t.deleted) continue;
-			auto& e = trierrors[i];
-			newTriangles.push_back(t);
-			newTriErrors.push_back(e);
+		std::vector<std::atomic_flag> keep(vertices.size());
+		for (auto& k: keep) k.clear();
 
-			keep[t.v[0]] = true;
-			keep[t.v[1]] = true;
-			keep[t.v[2]] = true;
+		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
+		for (auto& e: newTrianglesETS) e.reserve(triangles.size() / max_concurrency);
+
+		auto range = tbb::blocked_range<size_t>(0, triangles.size());
+		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				auto& t = triangles[i];
+				if (t.deleted) continue;
+				newTrianglesETS.local().push_back(t);
+
+				keep[t.v[0]].test_and_set();
+				keep[t.v[1]].test_and_set();
+				keep[t.v[2]].test_and_set();
+			}
+		};
+		tbb::parallel_for(range, compress_triangles);
+
+		TriangleVector newTriangles;
+		newTriangles.reserve(triangles.size());
+		for (auto& l: newTrianglesETS) {
+			newTriangles.insert(
+				newTriangles.end(),
+				std::make_move_iterator(l.begin()),
+				std::make_move_iterator(l.end())
+			);
 		}
+		triangles = std::move(newTriangles);
 
 		// Compress vertices
-		decltype(vertices) newVertices;
-		for (size_t i = 0; i < vertices.size(); ++i) {
+		// This part must be partly sequential
+		std::vector<size_t> newIndex, vertMap;
+		newIndex.resize(vertices.size());
+		vertMap.reserve(vertices.size());
 
-			if (not keep[i]) {
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			if (not keep[i].test()) {
 				continue;
 			}
-			auto v_old = vertices[i];
-
-			newVertices.push_back(v_old);
-			auto& v_new = newVertices.back();
-			newIndex[i] = newVertices.size() - 1;
-
-			v_new.p = v_old.p;
-			v_new.norm = v_old.norm;
-			v_new.uv = v_old.uv;
-			v_new.col = v_old.col;
-			v_new.alpha = v_old.alpha;
-
+			newIndex[i] = vertMap.size();
+			vertMap.push_back(i);
 		}
+
+		decltype(vertices) newVertices(vertMap.size());
+		auto range_vertices = tbb::blocked_range<size_t>(0, vertMap.size());
+		auto vertex_copy = [&](tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i != r.end(); ++i) {
+				newVertices[i] = std::move(vertices[vertMap[i]]);
+			}
+		};
+		tbb::parallel_for(range_vertices, vertex_copy);
+
+		vertices = std::move(newVertices);
 
 		// Update triangle vertices with new vertices
-		for (auto& t: newTriangles) {
-			t.v[0] = newIndex[t.v[0]];
-			t.v[1] = newIndex[t.v[1]];
-			t.v[2] = newIndex[t.v[2]];
-		}
+		auto range2d = tbb::blocked_range2d<size_t, size_t>(0, triangles.size(), 0, 3);
+		auto copy_indices = [&](tbb::blocked_range2d<size_t, size_t>& r) {
+			for (size_t i = r.rows().begin(); i != r.rows().end(); ++i) {
+				for (size_t j = r.cols().begin(); j != r.cols().end(); ++j) {
+					auto& t = triangles[i];
+					t.v[j] = newIndex[t.v[j]];
+					assert(t.v[j] < vertices.size());
+				}
+			}
+		};
+		tbb::parallel_for(range2d, copy_indices);
 
-		triangles = std::move(newTriangles);
-		trierrors = std::move(newTriErrors);
-		vertices = std::move(newVertices);
 	}
 
 };  // ~class Simplify
@@ -2196,7 +2214,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
