@@ -1090,8 +1090,8 @@ inline float VertexError(const Quadric &q, const Point& p) {
 
 // Synchronization
 using MutexVector = std::vector<
-	tbb::mutex,
-	tbb::cache_aligned_allocator<tbb::mutex>
+	std::mutex,
+	tbb::cache_aligned_allocator<std::mutex>
 >;
 
 
@@ -1666,7 +1666,6 @@ private:
 	//
 	CandidateContainer BuildCandidateList(size_t maxCandidateQueueSize) const {
 
-		SDL_LOG("starting BuildCandidateList");
 #ifndef NDEBUG
 		std::atomic<size_t> cachecalls, cachehits;
 #endif
@@ -1743,7 +1742,6 @@ private:
 
 		};
 		tbb::parallel_for(tri_range, build_task);
-		SDL_LOG("after computation");
 		// Remove unitialized
 		{
 			decltype(candidates) candidates2;
@@ -1758,7 +1756,6 @@ private:
 			candidates = std::move(candidates2);
 		}
 
-		SDL_LOG("after removal");
 		// Sort
 		size_t numCandidates = std::min({
 				candidates.size(),
@@ -1772,7 +1769,6 @@ private:
 			RefLess
 		);
 
-		SDL_LOG("after sort");
 		// Take only the n first elements (resize)
 		candidates.resize(numCandidates);
 
@@ -1801,7 +1797,8 @@ private:
 			neighbors.pop_back();
 
 			// Lock current neighbor
-			std::scoped_lock lock(mutexes[i0]);
+			std::unique_lock lock(mutexes[i0], std::try_to_lock);
+			if (not lock) throw NoLock();
 
 			// And call recursively for the next
 			size_t res = lock_and_collapse(candidate, neighbors, mutexes);
@@ -1811,6 +1808,8 @@ private:
 			return CollapseEdge(candidate);
 		}
 	}
+
+	class NoLock : std::exception {};
 
 	// Delete triangles
 	//
@@ -1822,12 +1821,15 @@ private:
 
 		// Vertex mutexes
 		MutexVector mutexes(vertices.size());
+		//class triangleFeeder {
+			//void add(
+		//}
 
-		auto delete_task = [&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				// Get candidate vertex
-				auto& candidate = candidates[i];
-
+		auto delete_task = [&](
+			const SimplifyRef& candidate,
+			tbb::feeder<SimplifyRef>& feeder
+		) {
+			try {
 				// Get explicit edge to collapse
 				auto [e0, e1] = EDGES[candidate.tvertex];
 				auto e2 = OPPOSITE[candidate.tvertex];
@@ -1835,8 +1837,13 @@ private:
 				const size_t i1 = triangles[candidate.tid].v[e1];
 				const size_t i2 = triangles[candidate.tid].v[e2];
 
-				// Lock triangle vertices
-				std::scoped_lock lock(mutexes[i0], mutexes[i1], mutexes[i2]);
+				// Try to lock triangle vertices
+				using ulock = std::unique_lock<std::mutex >;
+				ulock lk0(mutexes[i0], std::try_to_lock);
+				ulock lk1(mutexes[i1], std::try_to_lock);
+				ulock lk2(mutexes[i2], std::try_to_lock);
+				bool lock_status = bool(lk0) and bool(lk1) and bool(lk2);
+				if (not lock_status) throw NoLock();
 
 				auto& v0 = vertices[i0];
 				auto& v1 = vertices[i1];
@@ -1851,7 +1858,11 @@ private:
 				SizeTVector neighbors;
 				for (auto& ref : refs) {
 					auto vertex_index = triangles[ref.tid].v[ref.tvertex];
-					if (vertex_index != i0 and vertex_index != i1 and vertex_index != i2) {
+					if (
+						vertex_index != i0
+						and vertex_index != i1
+						and vertex_index != i2
+					) {
 						neighbors.push_back(vertex_index);
 					}
 				}
@@ -1865,12 +1876,15 @@ private:
 					neighbors,
 					mutexes
 				);
+			} catch(NoLock) {
+				// We miss a lock: put the candidate back in the queue
+				feeder.add(candidate);
 			}
 		};
-		tbb::parallel_for(batch_range, delete_task, partitioner);
+		tbb::parallel_for_each(candidates, delete_task);
 
 		auto deletedTriangles = std::reduce(
-			std::execution::unseq,
+			std::execution::par,
 			batchDeleted.begin(),
 			batchDeleted.end(),
 			size_t(0),
