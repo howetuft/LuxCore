@@ -1007,14 +1007,15 @@ const auto Upper = Eigen::UpLoType::Upper;
 
 struct
 SimplifyRef {
-	size_t tid = 0;
-	size_t tvertex = std::numeric_limits<size_t>::infinity();
-	bool initialized = false;
+	size_t tid = 0;  // Triangle ID
+	char tvertex = -1;  // Vertex in triangle, should be in [0;3] (-1: not set)
 	float error;  // To prioritize candidates
 
 	SimplifyRef(size_t p_tid, size_t p_tvertex, float p_error=0.f):
-		tid(p_tid), tvertex(p_tvertex), error(p_error), initialized(true) {}
+		tid(p_tid), tvertex(p_tvertex), error(p_error) {}
 	SimplifyRef() {}
+
+	bool initialized() const { return tvertex >= 0; }
 };
 
 bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
@@ -1025,12 +1026,8 @@ using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<Simplif
 
 // Vertex
 struct SimplifyVertex {
-	// Core data
-	Point p;			  // Position in geometry
-	RefVector refs;		  // Incident edges in topology
 
-	// Unique identifier
-	size_t uuid;
+	RefVector refs;		  // Incident edges in topology
 
 	// Error computation inputs
 	Quadric quad = Quadric::Zero();     // Quadric
@@ -1040,10 +1037,27 @@ struct SimplifyVertex {
 	Normal norm;
 	Eigen::Vector2f uv;
 	Eigen::Vector3f col;
-	//TODO
-	//luxrays::UV uv;
-	//luxrays::Spectrum col;
 	float alpha;
+
+	const Point& p() const { return m_p; }
+	void setP(const Point p) {
+		m_p = p;
+		// Update uuid
+		m_uuid = 0;
+		boost::hash_combine(m_uuid, p[0]);
+		boost::hash_combine(m_uuid, p[1]);
+		boost::hash_combine(m_uuid, p[2]);
+	}
+
+	size_t uuid() const { return m_uuid; }
+
+protected:
+
+	// Position in space
+	Point m_p;			  // Position in geometry
+
+	// Unique identifier
+	size_t m_uuid;
 
 };
 
@@ -1122,7 +1136,6 @@ public:
 	{
 		using SV = SimplifyVertex;
 
-		vertex_counter = 0;
 
 		// Size vertices and triangles containers in accordance to inputs
 		size_t vertCount = srcMesh.GetTotalVertexCount();
@@ -1132,7 +1145,7 @@ public:
 		trierrors.resize(triCount, {.0f, .0f, .0f});
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
-			vd.p = Lux2EigenP(vs);
+			vd.setP(Lux2EigenP(vs));
 			vd.refs.reserve(9);  // Seems reasonable
 		};
 		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run(vertCount);
@@ -1243,7 +1256,7 @@ public:
 		luxrays::Point *newVertices =
 			luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		auto vert_assign = [](luxrays::Point& vd, const SV& vs) {
-			vd = Eigen2LuxP(vs.p);
+			vd = Eigen2LuxP(vs.p());
 		};
 		ForEach(newVertices, vertices, vert_assign).run(vertCount);
 
@@ -1357,21 +1370,23 @@ private:
 	// Output
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
+	// Key is a triangle, identified by its geometric points
 	using ErrorCacheKey = std::array<size_t, 3>;
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
-			vertices[t.v[0]].uuid,
-			vertices[t.v[1]].uuid,
-			vertices[t.v[2]].uuid
+			vertices[t.v[0]].uuid(),
+			vertices[t.v[1]].uuid(),
+			vertices[t.v[2]].uuid()
 		};
 	}
 
-	using ErrorCacheEntry = std::tuple<size_t, float>;
+	using ErrorCacheEntry = std::tuple<char, float>;  // vertex index in triangle and error
 
 	struct ErrorCacheHash{
 		inline size_t hash(const ErrorCacheKey& k) const noexcept {
-			size_t seed = k[0];
+			size_t seed = 0;
+			seed ^= k[0] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 
@@ -1381,17 +1396,23 @@ private:
 			return k0 == k1;
 		}
 	};
-	// Please note that concurrent_unordered_map would have been better suited
-	// for that but it exhibits a significant overload at deletion
+
 	using ErrorCacheType = tbb::concurrent_hash_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
-		ErrorCacheHash
+		ErrorCacheHash,
+		tbb::cache_aligned_allocator<std::pair<const ErrorCacheKey, ErrorCacheEntry>>
 	>;
 
+	// Cache feature for BuildCandidateList
+	// For each triangle, BuildCandidateList computes the best vertex and the
+	// associated error, but those computations are both heavy (linear
+	// algebra...) and redundant (made more than once per triangle...), so we
+	// use a cache. Fundamentally, the key is the triangle, but we do not
+	// directly rely on it as the underlying geometrical points can modified.
+	// We rather rely on the vertices uuid (which are computed and updated, if
+	// needed, for each vertex)
 	mutable ErrorCacheType ErrorCache;
-
-	std::atomic<size_t> vertex_counter{0};
 
 	// Iteration initialization
 	//
@@ -1429,8 +1450,7 @@ private:
 		if (iteration == 0) {
 			InitQuadrics();
 			InitBorders();
-			InitUuid();
-			ErrorCache.rehash(triangles.size() * 3);
+			ErrorCache.rehash(triangles.size() * 1.5);
 		}
 
 	}
@@ -1483,13 +1503,13 @@ private:
 				SimplifyVertex &v1 = vertices[t.v[1]];
 				SimplifyVertex &v2 = vertices[t.v[2]];
 
-				t.geometryN = TriNormal(v0.p, v1.p, v2.p).normalized();
+				t.geometryN = TriNormal(v0.p(), v1.p(), v2.p()).normalized();
 
 				const Eigen::Vector4f p(
 					t.geometryN[0],
 					t.geometryN[1],
 					t.geometryN[2],
-					-t.geometryN.dot(Point2Vector(v0.p))
+					-t.geometryN.dot(Point2Vector(v0.p()))
 				);
 				const Quadric sm(p * p.transpose());
 
@@ -1554,21 +1574,13 @@ private:
 		tbb::parallel_for(vertex_range, border_task);
 	}  // ~InitBorders
 
-	// Init border flags on vertices
-	//
-	// Modify: vertices
-	void InitUuid() {
-		for (auto& v: vertices) {
-			v.uuid = vertex_counter++;
-		}
-	}
 
 	inline float CalculateCollapseScreenErrorScale(
 		const SimplifyVertex& v0, const SimplifyVertex& v1
 	) const {
 		if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
-			const Point& p0 = v0.p;
-			const Point& p1 = v1.p;
+			const Point& p0 = v0.p();
+			const Point& p1 = v1.p();
 			constexpr float notVisibleScale = .5f;
 
 			float p0x, p0y;
@@ -1611,9 +1623,9 @@ private:
 		const Quadric q = v0.quad + v1.quad;
 
 		// Compute interpolated vertex
-		const Point &p0 = v0.p;
-		const Point &p1 = v1.p;
-		const Point p2 = (v0.p + v1.p) / 2.f;
+		const Point &p0 = v0.p();
+		const Point &p1 = v1.p();
+		const Point p2 = (v0.p() + v1.p()) / 2.f;
 
 		// Compute error and associated point
 
@@ -1645,7 +1657,6 @@ private:
 	return std::tuple(std::move(pResult), error);
 }
 
-	// TODO
 	using CandidateContainer = std::vector<
 		SimplifyRef,
 		tbb::scalable_allocator<SimplifyRef>
@@ -1661,6 +1672,7 @@ private:
 #endif
 
 
+		constexpr char UNDEFINED_INDEX = -1;
 		CandidateContainer candidates(triangles.size());
 		tbb::blocked_range<size_t> tri_range(0, triangles.size());
 
@@ -1669,19 +1681,22 @@ private:
 			// Main loop
 			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
-
-				size_t minErrorIndex = NULL_INDEX;
+				char minErrorIndex = UNDEFINED_INDEX;
 				float minError = FLOAT_INFINITY;
 
-				// Look into cache whether the triangle is already computed
-				const ErrorCacheKey cacheKey = makeErrorCacheKey(t);
+				// Look into cache whether the triangle has already been computed
+				const auto cacheKey = makeErrorCacheKey(t);
 				ErrorCacheType::accessor a;
 				auto res = ErrorCache.find(a, cacheKey);
+#ifndef NDEBUG
+				cachecalls++;
+#endif
 				if (res) {
-					// Hit!
-					auto [l_minErrorIndex, l_minError] = a->second;
-					minErrorIndex = l_minErrorIndex;
-					minError = l_minError;
+					// Hit! --> Just unpack...
+					std::tie(minErrorIndex, minError) = a->second;
+#ifndef NDEBUG
+					cachehits++;
+#endif
 				} else {
 					// No hit: compute and feed cache
 					auto& tv0 = t.v[0];
@@ -1721,7 +1736,7 @@ private:
 					);
 				}
 
-				if (minErrorIndex != NULL_INDEX) {
+				if (minErrorIndex != UNDEFINED_INDEX) {
 					candidates[i] = SimplifyRef(i, minErrorIndex, minError);
 				}
 			}
@@ -1738,7 +1753,7 @@ private:
 				candidates.begin(),
 				candidates.end(),
 				std::back_inserter(candidates2),
-				[](const SimplifyRef& r){ return r.initialized; }
+				[](const SimplifyRef& r){ return r.initialized(); }
 			);
 			candidates = std::move(candidates2);
 		}
@@ -1760,6 +1775,12 @@ private:
 		SDL_LOG("after sort");
 		// Take only the n first elements (resize)
 		candidates.resize(numCandidates);
+
+		DBG_SDL_LOG(
+			"Cache stats: hits = " << cachehits
+			<< " / total = " << cachecalls
+			<< " (size = " << ErrorCache.size() << ")"
+		);
 
 		return candidates;
 
@@ -1900,11 +1921,8 @@ private:
 		auto&& deleted1 = GetDeletedTriangles(p, i1, i0);
 
 		// Assign new vertex' position and quadric
-		v0.p = p;
+		v0.setP(p);
 		v0.quad += v1.quad;
-
-		// Attribute new uid to vertex (for cache)
-		v0.uuid = vertex_counter++;
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
@@ -1912,7 +1930,7 @@ private:
 		const auto& tv2 = vertices[t.v[2]];
 
 		// Get barycentric coordinates
-		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p, tv1.p, tv2.p);
+		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
 
 		if (bcoords_ok) {
 
@@ -1963,7 +1981,7 @@ private:
 			if (hasAlphas) { v0.alpha = tv0.alpha; }
 		}
 
-		// Update incident edges of vertex
+		// Update incident triangles
 		auto&& [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
 		auto&& [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
 		newRefs0.reserve(newRefs0.size() + newRefs1.size());
@@ -2018,8 +2036,8 @@ private:
 			// To be deleted? -> pass
 			if (id1 == i1 || id2 == i1) { continue; }
 
-			const auto d1 = Point2Vector(vertices[id1].p - p);
-			const auto d2 = Point2Vector(vertices[id2].p - p);
+			const auto d1 = Point2Vector(vertices[id1].p() - p);
+			const auto d2 = Point2Vector(vertices[id2].p() - p);
 
 			// Check if one of the resulting triangles is too narrow
 			{
@@ -2086,8 +2104,15 @@ private:
 			if (deleted[k]) {
 				t.deleted = true;
 				deletedTriangles++;
+				// Update cache (remove triangle)
+				auto cachekey = makeErrorCacheKey(t);
+				auto status = ErrorCache.erase(cachekey);
 				continue;
 			}
+
+			// Update cache (remove triangle)
+			auto cachekey = makeErrorCacheKey(t);
+			ErrorCache.erase(cachekey);
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
