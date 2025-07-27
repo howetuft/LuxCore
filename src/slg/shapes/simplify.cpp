@@ -1673,15 +1673,17 @@ private:
 				size_t minErrorIndex = NULL_INDEX;
 				float minError = FLOAT_INFINITY;
 
+				// Look into cache whether the triangle is already computed
 				const ErrorCacheKey cacheKey = makeErrorCacheKey(t);
 				ErrorCacheType::accessor a;
 				auto res = ErrorCache.find(a, cacheKey);
 				if (res) {
+					// Hit!
 					auto [l_minErrorIndex, l_minError] = a->second;
 					minErrorIndex = l_minErrorIndex;
 					minError = l_minError;
 				} else {
-
+					// No hit: compute and feed cache
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
 					auto& tv2 = t.v[2];
@@ -1706,8 +1708,8 @@ private:
 						}
 
 						auto&& [p, error] = CalculateCollapsePoint(v0, v1);
-						if (Flipped<false>(p, i0, i1)) continue;
-						if (Flipped<false>(p, i1, i0)) continue;
+						if (Flipped(p, i0, i1)) continue;
+						if (Flipped(p, i1, i0)) continue;
 
 						if (trierrors[i][j] < minError) {
 							minErrorIndex = j;
@@ -1881,26 +1883,27 @@ private:
 		// Border check
 		if (v0.border != v1.border) return 0;
 
-		// Compute vertex to collapse to
-		// Doesn't modify state (neither vertices nor triangles)
+		// Compute vertex' new position (and associated error)
 		const auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		auto&& [will_flip0, deleted0] = Flipped<true>(p, i0, i1);
-		auto&& [will_flip1, deleted1] = Flipped<true>(p, i1, i0);
-		if (will_flip0 || will_flip1) return 0;
-
+		if (Flipped(p, i0, i1)) return 0;
+		if (Flipped(p, i1, i0)) return 0;
 
 		// At this stage, no triangle flip is to fear anymore,
 		// so we can collapse edge
 
-		// Compute new position and quadric
+		// Get deleted incident triangles
+		auto&& deleted0 = GetDeletedTriangles(p, i0, i1);
+		auto&& deleted1 = GetDeletedTriangles(p, i1, i0);
+
+		// Assign new vertex' position and quadric
 		v0.p = p;
 		v0.quad += v1.quad;
 
-		// Attribute new uid
+		// Attribute new uid to vertex (for cache)
 		v0.uuid = vertex_counter++;
 
 		// Interpolate other vertex attributes
@@ -1908,6 +1911,7 @@ private:
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
 
+		// Get barycentric coordinates
 		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p, tv1.p, tv2.p);
 
 		if (bcoords_ok) {
@@ -1953,24 +1957,15 @@ private:
 			}
 		} else {
 			// Must be a malformed triangle
-			if (hasNormals) {
-				v0.norm = tv0.norm;
-			}
-			if (hasUVs) {
-				v0.uv = tv0.uv;
-			}
-			if (hasColors) {
-				v0.col = tv0.col;
-			}
-			if (hasAlphas) {
-				v0.alpha = tv0.alpha;
-			}
+			if (hasNormals) { v0.norm = tv0.norm; }
+			if (hasUVs) { v0.uv = tv0.uv; }
+			if (hasColors) { v0.col = tv0.col; }
+			if (hasAlphas) { v0.alpha = tv0.alpha; }
 		}
 
+		// Update incident edges of vertex
 		auto&& [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
 		auto&& [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
-
-		// Update incident edges of vertex
 		newRefs0.reserve(newRefs0.size() + newRefs1.size());
 		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
 		v0.refs = std::move(newRefs0);
@@ -1979,31 +1974,40 @@ private:
 		return deletedTriangles;
 	}
 
-	// Check if a triangle flips when this edge is removed
-	// Returns: check status, deleted status of each ref (vector)
-	// This template contains 2 versions (inherited from the original
-	// code...): one will only compute flip status, the second will
-	// also compute deleted refs.
-	// (templatization has been used to avoid code duplication)
-	using FlippedFullReturn = std::tuple< bool, BoolVector >;
-
-	template<bool F=true>
-	inline
-	std::conditional<F, FlippedFullReturn, bool>::type
-	Flipped(const Point& p, const size_t i0, const size_t i1) const {
-
+	// Identify triangles referencing the vertex that have been deleted
+	BoolVector GetDeletedTriangles(
+		const Point& p,
+		const size_t i0,
+		const size_t i1
+	) const {
 		const auto& v0 = vertices[i0];
-		BoolVector deleted(0);
-		bool res = false;
-
-		if constexpr(F) {
-			deleted.resize(v0.refs.size(), false);
-		}
+		BoolVector deleted(v0.refs.size(), false);
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
 			const auto& t = triangles[ref.tid];
+			if (t.deleted) continue;
 
+			// Compute vertices
+			const size_t e0 = ref.tvertex;
+			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
+
+			// Mark for deletion?
+			deleted[k] = (t.v[e1] == i1 || t.v[e2] == i1);
+		}
+		return deleted;
+	}
+
+	// Check if a triangle flips when this edge is removed
+	inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
+
+		const auto& v0 = vertices[i0];
+		bool res = false;
+
+		for (auto& ref: v0.refs) {
+			const auto& t = triangles[ref.tid];
+
+			// Deleted? -> pass
 			if (t.deleted) continue;
 
 			const size_t e0 = ref.tvertex;
@@ -2011,58 +2015,46 @@ private:
 			const size_t id1 = t.v[e1];
 			const size_t id2 = t.v[e2];
 
-			// Delete ?
-			if (id1 == i1 || id2 == i1) {
-				if constexpr(F) {
-					deleted[k] = true;
-				}
-				continue;
-			}
+			// To be deleted? -> pass
+			if (id1 == i1 || id2 == i1) { continue; }
 
 			const auto d1 = Point2Vector(vertices[id1].p - p);
 			const auto d2 = Point2Vector(vertices[id2].p - p);
 
 			// Check if one of the resulting triangles is too narrow
-			// (avoiding normalization)
 			{
+				// Nota: We use squared norms to avoid square root overhead
 				const float dot = d1.dot(d2);
 				const float sqrdot = dot * dot;
 				const float sqrnorms = d1.squaredNorm() * d2.squaredNorm();
 				constexpr float threshold = .999f * .999f;
 
-				if (sqrdot / sqrnorms > threshold) {
-					res = true;
-					break;
-				}
+				if (sqrdot > threshold * sqrnorms) { return true; }
 			}
 
-			// Check if one the Normals is changing side
-			// (avoiding normalization)
+			// Check if one of the Normals is changing side
 			{
+				// We use squared norms to avoid square root overhead
 				const Normal geometryN(d1.cross(d2));
 				const float dot = geometryN.dot(t.geometryN);
 				const float sqrdot = dot * dot;
-				const float sqrnorms = geometryN.squaredNorm();  // t.geometryN already normalized
+
+				// t.geometryN has already been normalized, so we don't have to
+				// multiply by its norm...
+				const float sqrnorms = geometryN.squaredNorm();
 				constexpr float threshold = .2f * .2f;
 
-				if (dot <= 0 or dot * dot / sqrnorms < threshold) {
-					res = true;
-					break;
+				if (std::signbit(dot) or sqrdot < threshold * sqrnorms) {
+					return true;
 				}
 			}
 
-		}
-
-		if constexpr(F) {
-			return FlippedFullReturn(res, std::move(deleted));
-		} else {
-			return res;
-		}
+		}  // ~for ref
+		return false;
 	}  // ~Flipped
 
-	// Update error for a given triangle
-	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) {
-
+	// Compute error for a given triangle
+	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) const {
 		std::array<float, 3> res;
 		for (auto [i, edge]: enumerate(EDGES)) {
 			const auto [e1, e2] = edge;
@@ -2073,7 +2065,6 @@ private:
 			res[i] = collapseError * screenErrorScale;
 		}
 		return res;
-
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
