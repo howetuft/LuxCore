@@ -934,41 +934,52 @@ inline Vector Point2Vector(const Point& p) {
 inline Normal TriNormal(const Point& p0, const Point& p1, const Point& p2) {
 	return Normal((p1 - p0).head<3>().cross((p2 - p0).head<3>()));
 }
-inline bool GetBaryCoords(
-	const Point &p0,
-	const Point &p1,
-	const Point &p2,
-	const Point &hitPoint,
-	float& b0,
-	float& b1,
-	float& b2
-) {
-	const Normal vCrossW = TriNormal(p0, p2, hitPoint);
-	const Normal vCrossU = TriNormal(p0, p2, p1);
 
-	if (std::signbit(vCrossW.dot(vCrossU))) return false;
-
-	const Vector uCrossW = TriNormal(p0, p1, hitPoint);
-	const Vector uCrossV = -vCrossU;
-
-	if (std::signbit(uCrossW.dot(uCrossV))) return false;
-
-	const float denom = uCrossV.norm();
-	const float r = vCrossW.norm() / denom;
-	const float t = uCrossW.norm() / denom;
-
-	b1 = r;
-	b2 = t;
-	b0 = 1.f - r - t;
-
-	return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
-}
 
 constexpr float FLOAT_INFINITY = std::numeric_limits<float>::infinity();
 
 constexpr std::array<std::tuple<size_t, size_t>, 3> EDGES({ {0, 1}, {1, 2}, {2, 0}, });
 constexpr std::array<size_t, 3> OPPOSITE{ 2, 0, 1};
 
+// Barycentric coordinates of p in triangle(p0, p1, p2)
+// Returns bool status and resulting vector
+// Status is false if input data are malformed (non coplanar, p out of
+// triangle...)
+inline std::tuple<bool, Vector> BaryCoords(
+	const Point &p,
+	const Point &p0,
+	const Point &p1,
+	const Point &p2
+) {
+	const auto error_result = std::tuple(
+		false,
+		Vector(FLOAT_INFINITY, FLOAT_INFINITY, FLOAT_INFINITY)
+	);
+
+	const Normal vCrossW = TriNormal(p0, p2, p);
+	const Normal vCrossU = TriNormal(p0, p2, p1);
+
+	if (std::signbit(vCrossW.dot(vCrossU))) return error_result;
+
+	const Vector uCrossW = TriNormal(p0, p1, p);
+	const Vector uCrossV = -vCrossU;
+
+	if (std::signbit(uCrossW.dot(uCrossV))) return error_result;
+
+	const float denom = uCrossV.norm();
+	if (not denom) return error_result;
+
+	const float s = vCrossW.norm() / denom;
+	const float t = uCrossW.norm() / denom;
+	const float r = 1.f - s - t;
+
+	auto res = Eigen::Vector3f{r, s, t};
+
+	// All coords should be <= 1.f
+	if (not (r <= 1.f and s <= 1.f and t <= 1.f)) return error_result;
+
+	return std::tuple(true, res);
+}
 // Enumerate helper (à la 'Python enumerate')
 template <typename T,
           typename TIter = decltype(std::begin(std::declval<T>())),
@@ -1027,8 +1038,11 @@ struct SimplifyVertex {
 
 	// LuxCore specific data
 	Normal norm;
-	luxrays::UV uv;
-	luxrays::Spectrum col;
+	Eigen::Vector2f uv;
+	Eigen::Vector3f col;
+	//TODO
+	//luxrays::UV uv;
+	//luxrays::Spectrum col;
 	float alpha;
 
 };
@@ -1132,14 +1146,16 @@ public:
 		}
 
 		if (srcMesh.HasUVs(0)) {
-			auto init_uv = [](SV& v, const luxrays::UV& u){ v.uv = u; };
+			auto init_uv = [](SV& v, const luxrays::UV& u)
+				{ v.uv = Eigen::Vector2f(u.u, u.v); };
 			ForEach(vertices, srcMesh.GetUVs(0), init_uv).run(vertCount);
 
 			hasUVs = true;
 		}
 
 		if (srcMesh.HasColors(0)) {
-			auto init_col = [](SV& v, const luxrays::Spectrum& col){ v.col = col; };
+			auto init_col = [](SV& v, const luxrays::Spectrum& col)
+				{ v.col = Vector(col.c); };
 			ForEach(vertices, srcMesh.GetColors(0), init_col).run(vertCount);
 
 			hasColors = true;
@@ -1245,7 +1261,8 @@ public:
 		if (hasUVs) {
 			newUVs = new luxrays::UV[vertCount];
 			auto uv_assign = [](luxrays::UV& vd, const SV& vs) {
-				vd = vs.uv;
+				vd.u = vs.uv[0];
+				vd.v = vs.uv[1];
 			};
 			ForEach(newUVs, vertices, uv_assign).run(vertCount);
 		}
@@ -1254,7 +1271,9 @@ public:
 		if (hasColors) {
 			newCols = new luxrays::Spectrum[vertCount];
 			auto col_assign = [](luxrays::Spectrum& vd, const SV& vs) {
-				vd = vs.col;
+				vd.c[0] = vs.col[0];
+				vd.c[1] = vs.col[1];
+				vd.c[2] = vs.col[2];
 			};
 			ForEach(newCols, vertices, col_assign).run(vertCount);
 		}
@@ -1888,53 +1907,63 @@ private:
 		const auto& tv0 = vertices[t.v[0]];
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
-		const auto& triPoint0 = tv0.p;
-		const auto& triPoint1 = tv1.p;
-		const auto& triPoint2 = tv2.p;
-		float b0, b1, b2;
-		if (GetBaryCoords(triPoint0, triPoint1, triPoint2, p, b0, b1, b2)) {
+
+		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p, tv1.p, tv2.p);
+
+		if (bcoords_ok) {
 
 			if (hasNormals) {
-				const auto triNorm0 = tv0.norm;
-				const auto triNorm1 = tv1.norm;
-				const auto triNorm2 = tv2.norm;
-				v0.norm = (b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2).normalized();
+				Eigen::Matrix3f normals;
+				normals << tv0.norm, tv1.norm, tv2.norm;
+				v0.norm = (normals * bcoords).normalized();
+				// TODO
+				//const auto triNorm0 = tv0.norm;
+				//const auto triNorm1 = tv1.norm;
+				//const auto triNorm2 = tv2.norm;
+				//v0.norm = (b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2).normalized();
 			}
 			if (hasUVs) {
-				const luxrays::UV triUV0 = tv0.uv;
-				const luxrays::UV triUV1 = tv1.uv;
-				const luxrays::UV triUV2 = tv2.uv;
-				v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
+				Eigen::Matrix<float, 2, 3> uvs;
+				uvs << tv0.uv, tv1.uv, tv2.uv;
+				v0.uv = uvs * bcoords;
+				// TODO
+				//const luxrays::UV triUV0 = tv0.uv;
+				//const luxrays::UV triUV1 = tv1.uv;
+				//const luxrays::UV triUV2 = tv2.uv;
+				//v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
 			}
 			if (hasColors) {
-				const luxrays::Spectrum triCol0 = tv0.col;
-				const luxrays::Spectrum triCol1 = tv1.col;
-				const luxrays::Spectrum triCol2 = tv2.col;
-				v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
+				Eigen::Matrix3f colors;
+				colors << tv0.col, tv1.col, tv2.col;
+				v0.col = colors * bcoords;
+				// TODO
+				//const luxrays::Spectrum triCol0 = tv0.col;
+				//const luxrays::Spectrum triCol1 = tv1.col;
+				//const luxrays::Spectrum triCol2 = tv2.col;
+				//v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
 			}
 			if (hasAlphas) {
-				const float triAlpha0 = tv0.alpha;
-				const float triAlpha1 = tv1.alpha;
-				const float triAlpha2 = tv2.alpha;
-				v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
+				Eigen::Vector3f alphas(tv0.alpha, tv1.alpha, tv2.alpha);
+				v0.alpha = alphas.dot(bcoords);
+				//TODO
+				//const float triAlpha0 = tv0.alpha;
+				//const float triAlpha1 = tv1.alpha;
+				//const float triAlpha2 = tv2.alpha;
+				//v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
 			}
 		} else {
 			// Must be a malformed triangle
 			if (hasNormals) {
-				const Normal triNorm0 = tv0.norm;
-				v0.norm = triNorm0;
+				v0.norm = tv0.norm;
 			}
 			if (hasUVs) {
-				const luxrays::UV triUV0 = tv0.uv;
-				v0.uv = triUV0;
+				v0.uv = tv0.uv;
 			}
 			if (hasColors) {
-				const luxrays::Spectrum triCol0 = tv0.col;
-				v0.col = triCol0;
+				v0.col = tv0.col;
 			}
 			if (hasAlphas) {
-				const float triAlpha0 = tv0.alpha;
-				v0.alpha = triAlpha0;
+				v0.alpha = tv0.alpha;
 			}
 		}
 
@@ -2075,7 +2104,7 @@ private:
 
 			refs.push_back(r);
 		}
-		return std::tuple(refs, deletedTriangles);
+		return std::tuple(std::move(refs), std::move(deletedTriangles));
 	}
 
 	// Compact mesh before exiting
