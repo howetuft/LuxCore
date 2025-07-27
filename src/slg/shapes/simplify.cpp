@@ -1075,7 +1075,6 @@ struct SimplifyTriangle {
 	// Dynamic data
 	bool deleted = false;
 	bool dirty = false;
-	std::array<float, 3> error{0.f, 0.f, 0.f};
 };
 
 using TriangleVector = std::vector<
@@ -1143,6 +1142,7 @@ public:
 		size_t triCount = srcMesh.GetTotalTriangleCount();
 		vertices.resize(vertCount);
 		triangles.resize(triCount);
+		trierrors.resize(triCount, {.0f, .0f, .0f});
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.setP(Lux2EigenP(vs));
@@ -1193,6 +1193,7 @@ public:
 
 	// Effectively simplify mesh (reduce triangles)
 	void Decimate(const size_t targetTriangleCount) {
+		Eigen::initParallel();
 
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
@@ -1350,6 +1351,10 @@ private:
 	// Main properties (vertices and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
+	std::vector<
+		std::array<float, 3>,
+		tbb::cache_aligned_allocator<std::array<float, 3>>
+	> trierrors;
 
 	// General settings
 	const slg::Camera& camera;
@@ -1414,46 +1419,25 @@ private:
 	// Compact triangles, compute quadrics, incidents, borders
 	void InitIteration(const size_t iteration) {
 		if (iteration > 0) {
-			// Compress triangles
-			const auto max_concurrency = tbb::this_task_arena::max_concurrency();
-
-
-			// Compress in private vectors, then reduce
-			using triangle_iterator = TriangleVector::iterator;
-
-			auto newTriangles = tbb::parallel_reduce(
-				// range
-				tbb::blocked_range<triangle_iterator>{triangles.begin(), triangles.end()},
-
-				// identity
-				TriangleVector(),
-
-				// 1st lambda: Parallel computation
-				[](const tbb::blocked_range<triangle_iterator>& r, TriangleVector&& v)  {
-					std::for_each(
-						r.begin(),
-						r.end(),
-						[&v](SimplifyTriangle& t)
-							{ if (not t.deleted) v.push_back(t); }
-					);
-					return v;
-				},
-
-				// 2nd lambda: Parallel reduction
-				[](TriangleVector&& a, const TriangleVector& b) -> TriangleVector {
-					a.insert(
-						a.end(),
-						std::make_move_iterator(b.cbegin()),
-						std::make_move_iterator(b.cend())
-					);
-					return a;
-				}
-			);
-
+			// Compress triangles and mark vertices to keep
+			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+			decltype(triangles) newTriangles;
+			decltype(trierrors) newTriErrors;
+			newTriangles.reserve(triangles.size());
+			newTriErrors.reserve(triangles.size());
+			//for (auto& t: triangles | std::views::filter(not_deleted)) {
+			for (size_t i = 0; i < triangles.size(); ++i) {
+				auto& t = triangles[i];
+				if (t.deleted) continue;
+				auto& e = trierrors[i];
+				newTriangles.push_back(t);
+				newTriErrors.push_back(e);
+			}
 			triangles = std::move(newTriangles);
+			trierrors = std::move(newTriErrors);
 		}
 
-		// (Re-)build per-vertex incident edge tables
+		// Build per-vertex incident edge tables
 		//
 		InitIncidentEdges();
 
@@ -1541,7 +1525,7 @@ private:
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].error = ComputeTriangleError(triangles[i]);
+				trierrors[i] = ComputeTriangleError(triangles[i]);
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1741,9 +1725,9 @@ private:
 						if (Flipped(p, i0, i1)) continue;
 						if (Flipped(p, i1, i0)) continue;
 
-						if (triangles[i].error[j] < minError) {
+						if (trierrors[i][j] < minError) {
 							minErrorIndex = j;
-							minError = triangles[i].error[j];
+							minError = trierrors[i][j];
 						}
 					}
 					ErrorCache.insert(
@@ -2146,7 +2130,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			triangles[r.tid].error = ComputeTriangleError(t);
+			trierrors[r.tid] = ComputeTriangleError(t);
 
 			refs.push_back(r);
 		}
