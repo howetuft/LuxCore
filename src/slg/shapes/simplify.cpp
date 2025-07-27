@@ -1075,6 +1075,7 @@ struct SimplifyTriangle {
 	// Dynamic data
 	bool deleted = false;
 	bool dirty = false;
+	std::array<float, 3> errors{0.f, 0.f, 0.f};
 };
 
 using TriangleVector = std::vector<
@@ -1142,7 +1143,6 @@ public:
 		size_t triCount = srcMesh.GetTotalTriangleCount();
 		vertices.resize(vertCount);
 		triangles.resize(triCount);
-		trierrors.resize(triCount, {.0f, .0f, .0f});
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.setP(Lux2EigenP(vs));
@@ -1193,7 +1193,7 @@ public:
 
 	// Effectively simplify mesh (reduce triangles)
 	void Decimate(const size_t targetTriangleCount) {
-		Eigen::initParallel();
+		//Eigen::initParallel();
 
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
@@ -1351,10 +1351,6 @@ private:
 	// Main properties (vertices and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
-	std::vector<
-		std::array<float, 3>,
-		tbb::cache_aligned_allocator<std::array<float, 3>>
-	> trierrors;
 
 	// General settings
 	const slg::Camera& camera;
@@ -1422,19 +1418,14 @@ private:
 			// Compress triangles and mark vertices to keep
 			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
 			decltype(triangles) newTriangles;
-			decltype(trierrors) newTriErrors;
 			newTriangles.reserve(triangles.size());
-			newTriErrors.reserve(triangles.size());
 			//for (auto& t: triangles | std::views::filter(not_deleted)) {
 			for (size_t i = 0; i < triangles.size(); ++i) {
 				auto& t = triangles[i];
 				if (t.deleted) continue;
-				auto& e = trierrors[i];
 				newTriangles.push_back(t);
-				newTriErrors.push_back(e);
 			}
 			triangles = std::move(newTriangles);
-			trierrors = std::move(newTriErrors);
 		}
 
 		// Build per-vertex incident edge tables
@@ -1525,7 +1516,7 @@ private:
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				trierrors[i] = ComputeTriangleError(triangles[i]);
+				triangles[i].errors = ComputeTriangleError(triangles[i]);
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1725,9 +1716,9 @@ private:
 						if (Flipped(p, i0, i1)) continue;
 						if (Flipped(p, i1, i0)) continue;
 
-						if (trierrors[i][j] < minError) {
+						if (triangles[i].errors[j] < minError) {
 							minErrorIndex = j;
-							minError = trierrors[i][j];
+							minError = triangles[i].errors[j];
 						}
 					}
 					ErrorCache.insert(
@@ -1952,40 +1943,20 @@ private:
 				Eigen::Matrix3f normals;
 				normals << tv0.norm, tv1.norm, tv2.norm;
 				v0.norm = (normals * bcoords).normalized();
-				// TODO
-				//const auto triNorm0 = tv0.norm;
-				//const auto triNorm1 = tv1.norm;
-				//const auto triNorm2 = tv2.norm;
-				//v0.norm = (b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2).normalized();
 			}
 			if (hasUVs) {
 				Eigen::Matrix<float, 2, 3> uvs;
 				uvs << tv0.uv, tv1.uv, tv2.uv;
 				v0.uv = uvs * bcoords;
-				// TODO
-				//const luxrays::UV triUV0 = tv0.uv;
-				//const luxrays::UV triUV1 = tv1.uv;
-				//const luxrays::UV triUV2 = tv2.uv;
-				//v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
 			}
 			if (hasColors) {
 				Eigen::Matrix3f colors;
 				colors << tv0.col, tv1.col, tv2.col;
 				v0.col = colors * bcoords;
-				// TODO
-				//const luxrays::Spectrum triCol0 = tv0.col;
-				//const luxrays::Spectrum triCol1 = tv1.col;
-				//const luxrays::Spectrum triCol2 = tv2.col;
-				//v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
 			}
 			if (hasAlphas) {
 				Eigen::Vector3f alphas(tv0.alpha, tv1.alpha, tv2.alpha);
 				v0.alpha = alphas.dot(bcoords);
-				//TODO
-				//const float triAlpha0 = tv0.alpha;
-				//const float triAlpha1 = tv1.alpha;
-				//const float triAlpha2 = tv2.alpha;
-				//v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
 			}
 		} else {
 			// Must be a malformed triangle
@@ -2130,7 +2101,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			trierrors[r.tid] = ComputeTriangleError(t);
+			triangles[r.tid].errors = ComputeTriangleError(t);
 
 			refs.push_back(r);
 		}
