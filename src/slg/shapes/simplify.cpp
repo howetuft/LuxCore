@@ -1747,7 +1747,7 @@ private:
 			decltype(candidates) candidates2;
 			candidates2.reserve(candidates.size());
 			std::copy_if(
-				std::execution::par,
+				//std::execution::par,
 				candidates.begin(),
 				candidates.end(),
 				std::back_inserter(candidates2),
