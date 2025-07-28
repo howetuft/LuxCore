@@ -30,7 +30,7 @@
 
 #include <tbb/tbb.h>
 #include <tbb/mutex.h>
-#include <tbb/cache_aligned_allocator.h>
+#include <tbb/scalable_allocator.h>
 #include <tbb/parallel_for.h>
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_sort.h>
@@ -1006,6 +1006,7 @@ using Quadric = Eigen::Matrix4f;
 const auto Upper = Eigen::UpLoType::Upper;
 
 struct
+alignas(std::hardware_destructive_interference_size)
 SimplifyRef {
 	size_t tid = 0;  // Triangle ID
 	char tvertex = -1;  // Vertex in triangle, should be in [0;3] (-1: not set)
@@ -1022,10 +1023,12 @@ bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
 	return left.error < right.error;
 }
 
-using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
+using RefVector = std::vector< SimplifyRef, tbb::scalable_allocator<SimplifyRef> >;
 
 // Vertex
-struct SimplifyVertex {
+struct
+alignas(std::hardware_destructive_interference_size)
+SimplifyVertex {
 
 	RefVector refs;		  // Incident edges in topology
 
@@ -1063,11 +1066,13 @@ protected:
 
 using VertexVector = std::vector<
 	SimplifyVertex,
-	tbb::cache_aligned_allocator<SimplifyVertex>
+	tbb::scalable_allocator<SimplifyVertex>
 >;
 
 // Triangle
-struct SimplifyTriangle {
+struct
+alignas(std::hardware_destructive_interference_size)
+SimplifyTriangle {
 	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
@@ -1080,7 +1085,7 @@ struct SimplifyTriangle {
 
 using TriangleVector = std::vector<
 	SimplifyTriangle,
-	tbb::cache_aligned_allocator<SimplifyTriangle>
+	tbb::scalable_allocator<SimplifyTriangle>
 >;
 
 // Error between vertex and Quadric
@@ -1092,7 +1097,7 @@ inline float VertexError(const Quadric &q, const Point& p) {
 // Synchronization
 using MutexVector = std::vector<
 	std::mutex,
-	tbb::cache_aligned_allocator<std::mutex>
+	tbb::scalable_allocator<std::mutex>
 >;
 
 
@@ -1371,7 +1376,9 @@ private:
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
 	// Key is a triangle, identified by its geometric points
-	struct alignas(128) ErrorCacheKey : std::array<size_t, 4>{};
+	struct
+	alignas(std::hardware_destructive_interference_size)
+	ErrorCacheKey : std::array<size_t, 4>{};
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
@@ -1381,7 +1388,9 @@ private:
 		};
 	}
 
-	struct alignas(128) ErrorCacheEntry {
+	struct
+	alignas(std::hardware_destructive_interference_size)
+	ErrorCacheEntry {
 		// vertex index in triangle and error
 		uint16_t minIndex;  // 16
 		float error; // 32
@@ -1408,7 +1417,7 @@ private:
 		ErrorCacheKey,
 		ErrorCacheEntry,
 		ErrorCacheHash,
-		tbb::cache_aligned_allocator<ErrorCachePair>
+		tbb::scalable_allocator<ErrorCachePair>
 	>;
 
 	// Cache feature for BuildCandidateList
