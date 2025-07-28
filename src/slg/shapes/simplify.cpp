@@ -1371,7 +1371,9 @@ private:
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
 	// Key is a triangle, identified by its geometric points
-	struct alignas(128) ErrorCacheKey : std::array<size_t, 4>{};
+	struct
+	alignas(std::hardware_destructive_interference_size)
+	ErrorCacheKey : std::array<size_t, 4>{};  // Need only 3, but add a 4th for padding
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
@@ -1388,26 +1390,23 @@ private:
 		uint16_t pad[5];  // 80
 	};
 
-	struct ErrorCacheHash{
-		inline size_t hash(const ErrorCacheKey& k) const noexcept {
+	struct ErrorCacheHash {
+		size_t operator()(const ErrorCacheKey& k) const {
 			size_t seed = 0;
 			seed ^= k[0] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			return seed;
 		}
-		inline bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) const {
-			return k0 == k1;
-		}
 	};
 
-	//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
 	using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
 
-	using ErrorCacheType = tbb::concurrent_hash_map<
+	using ErrorCacheType = std::unordered_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
 		ErrorCacheHash,
+		std::equal_to<ErrorCacheKey>,
 		tbb::cache_aligned_allocator<ErrorCachePair>
 	>;
 
@@ -1430,7 +1429,6 @@ private:
 			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
 			decltype(triangles) newTriangles;
 			newTriangles.reserve(triangles.size());
-			//for (auto& t: triangles | std::views::filter(not_deleted)) {
 			for (size_t i = 0; i < triangles.size(); ++i) {
 				auto& t = triangles[i];
 				if (t.deleted) continue;
@@ -1454,7 +1452,6 @@ private:
 			InitBorders();
 			ErrorCache.rehash(triangles.size() * 1.5);
 		}
-
 	}
 
 	// Initialize incident edge tables of vertices
@@ -1673,7 +1670,10 @@ private:
 		constexpr char UNDEFINED_INDEX = -1;
 		CandidateContainer candidates(triangles.size());
 		tbb::blocked_range<size_t> tri_range(0, triangles.size());
-
+		tbb::enumerable_thread_specific<std::vector<ErrorCachePair, tbb::cache_aligned_allocator<ErrorCachePair>>> cacheBufferTLS;
+		for (auto& l: cacheBufferTLS) {
+			l.reserve(triangles.size() * 0.1 / tbb::this_task_arena::max_concurrency());
+		}
 
 		auto build_task = [&](const decltype(tri_range)& r) {
 			// Main loop
@@ -1682,17 +1682,15 @@ private:
 				char minErrorIndex = UNDEFINED_INDEX;
 				float minError = FLOAT_INFINITY;
 
-				// Look into cache whether the triangle has already been computed
 				const auto cacheKey = makeErrorCacheKey(t);
-				ErrorCacheType::accessor a;
-				auto res = ErrorCache.find(a, cacheKey);
+				auto it = ErrorCache.find(cacheKey);
 #ifndef NDEBUG
 				cachecalls++;
 #endif
-				if (res) {
+				if (it != ErrorCache.end()) {
 					// Hit! --> Just unpack...
-					minErrorIndex = a->second.minIndex;
-					minError = a->second.error;
+					minErrorIndex = it->second.minIndex;
+					minError = it->second.error;
 #ifndef NDEBUG
 					cachehits++;
 #endif
@@ -1730,9 +1728,8 @@ private:
 							minError = triangles[i].errors[j];
 						}
 					}
-					ErrorCache.insert(
-						std::pair(cacheKey, ErrorCacheEntry(minErrorIndex, minError))
-					);
+					// Push in cache buffer
+					cacheBufferTLS.local().push_back(std::pair(cacheKey, ErrorCacheEntry(minErrorIndex, minError)));
 				}
 
 				if (minErrorIndex != UNDEFINED_INDEX) {
@@ -1742,6 +1739,13 @@ private:
 
 		};
 		tbb::parallel_for(tri_range, build_task);
+
+		// Update buffer
+		for (auto& l: cacheBufferTLS) {
+			ErrorCache.insert(l.begin(), l.end());
+			l.clear();
+		}
+
 		// Remove unitialized
 		{
 			decltype(candidates) candidates2;
@@ -2091,15 +2095,17 @@ private:
 			if (deleted[k]) {
 				t.deleted = true;
 				deletedTriangles++;
-				// Update cache (remove triangle)
-				auto cachekey = makeErrorCacheKey(t);
-				auto status = ErrorCache.erase(cachekey);
+				///TODO
+				//// Update cache (remove triangle)
+				//auto cachekey = makeErrorCacheKey(t);
+				//auto status = ErrorCache.erase(cachekey);
 				continue;
 			}
 
-			// Update cache (remove triangle)
-			auto cachekey = makeErrorCacheKey(t);
-			ErrorCache.erase(cachekey);
+			///TODO
+			//// Update cache (remove triangle)
+			//auto cachekey = makeErrorCacheKey(t);
+			//ErrorCache.erase(cachekey);
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
