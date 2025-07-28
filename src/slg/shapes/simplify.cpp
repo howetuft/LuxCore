@@ -1133,7 +1133,10 @@ public:
 	) :
 		camera(p_camera),
 		edgeScreenSize(p_edgeScreenSize),
-		preserveBorder(p_preserveBorder)
+		preserveBorder(p_preserveBorder),
+		vertices(srcMesh.GetTotalVertexCount()),
+		vmutexes(srcMesh.GetTotalVertexCount()),
+		triangles(srcMesh.GetTotalTriangleCount())
 	{
 		using SV = SimplifyVertex;
 
@@ -1141,8 +1144,6 @@ public:
 		// Size vertices and triangles containers in accordance to inputs
 		size_t vertCount = srcMesh.GetTotalVertexCount();
 		size_t triCount = srcMesh.GetTotalTriangleCount();
-		vertices.resize(vertCount);
-		triangles.resize(triCount);
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.setP(Lux2EigenP(vs));
@@ -1352,6 +1353,9 @@ private:
 	VertexVector vertices;
 	TriangleVector triangles;
 
+	// Synchronization & multithreading
+	MutexVector vmutexes;
+
 	// General settings
 	const slg::Camera& camera;
 	const float edgeScreenSize;
@@ -1367,7 +1371,7 @@ private:
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
 	// Key is a triangle, identified by its geometric points
-	using ErrorCacheKey = std::array<size_t, 3>;
+	struct alignas(128) ErrorCacheKey : std::array<size_t, 4>{};
 
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
@@ -1377,7 +1381,12 @@ private:
 		};
 	}
 
-	using ErrorCacheEntry = std::tuple<char, float>;  // vertex index in triangle and error
+	struct alignas(128) ErrorCacheEntry {
+		// vertex index in triangle and error
+		uint16_t minIndex;  // 16
+		float error; // 32
+		uint16_t pad[5];  // 80
+	};
 
 	struct ErrorCacheHash{
 		inline size_t hash(const ErrorCacheKey& k) const noexcept {
@@ -1385,7 +1394,6 @@ private:
 			seed ^= k[0] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-
 			return seed;
 		}
 		inline bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) const {
@@ -1393,11 +1401,14 @@ private:
 		}
 	};
 
+	//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
+	using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
+
 	using ErrorCacheType = tbb::concurrent_hash_map<
 		ErrorCacheKey,
 		ErrorCacheEntry,
 		ErrorCacheHash,
-		tbb::cache_aligned_allocator<std::pair<const ErrorCacheKey, ErrorCacheEntry>>
+		tbb::cache_aligned_allocator<ErrorCachePair>
 	>;
 
 	// Cache feature for BuildCandidateList
@@ -1459,14 +1470,13 @@ private:
 		// Build refs
 		// Possible race condition: we need mutexes (at vertex grain-scale)
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		MutexVector vertex_mutexes(vertices.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
 				const auto& v = triangles[i].v;
 				for (size_t j = 0; j < 3; ++j) {
 					auto vid = v[j];
-					std::lock_guard lock(vertex_mutexes[vid]);
+					std::lock_guard lock(vmutexes[vid]);
 					vertices[vid].refs.emplace_back(i, j);
 				}
 			}
@@ -1531,8 +1541,6 @@ private:
 		// vertex border flags are assumed to be initialized to false
 		// when vertex is created
 
-		MutexVector mutexes(vertices.size());
-
 		// For each vertex
 		tbb::blocked_range<size_t> vertex_range(0, vertices.size());
 		auto border_task = [&](const tbb::blocked_range<size_t>& r){
@@ -1556,7 +1564,7 @@ private:
 						// If p.first order is 1, it means that the edge (v, p.first)
 						// is referenced by only one triangle, thus it is a border.
 						// So we mark p.first to belong to a border
-						std::lock_guard lock(mutexes[p.first]);
+						std::lock_guard lock(vmutexes[p.first]);
 						vertices[p.first].border = true;
 					}
 				}
@@ -1683,7 +1691,8 @@ private:
 #endif
 				if (res) {
 					// Hit! --> Just unpack...
-					std::tie(minErrorIndex, minError) = a->second;
+					minErrorIndex = a->second.minIndex;
+					minError = a->second.error;
 #ifndef NDEBUG
 					cachehits++;
 #endif
@@ -1722,7 +1731,7 @@ private:
 						}
 					}
 					ErrorCache.insert(
-						std::pair(cacheKey, std::tuple(minErrorIndex, minError))
+						std::pair(cacheKey, ErrorCacheEntry(minErrorIndex, minError))
 					);
 				}
 
@@ -1778,8 +1787,7 @@ private:
 	// In order to benefit from RAII, this function is recursive
 	size_t lock_and_collapse (
 		const SimplifyRef& candidate,
-		SizeTVector& neighbors,
-		MutexVector& mutexes
+		SizeTVector& neighbors
 	)
 	{
 		if (not neighbors.empty()) {
@@ -1788,11 +1796,11 @@ private:
 			neighbors.pop_back();
 
 			// Lock current neighbor
-			std::unique_lock lock(mutexes[i0], std::try_to_lock);
+			std::unique_lock lock(vmutexes[i0], std::try_to_lock);
 			if (not lock) throw NoLock();
 
 			// And call recursively for the next
-			size_t res = lock_and_collapse(candidate, neighbors, mutexes);
+			size_t res = lock_and_collapse(candidate, neighbors);
 			return res;
 		} else {
 			// Final treatment: collapse
@@ -1810,11 +1818,6 @@ private:
 		tbb::enumerable_thread_specific<size_t> batchDeleted;
 		tbb::blocked_range<size_t> batch_range(0, candidates.size());
 
-		// Vertex mutexes
-		MutexVector mutexes(vertices.size());
-		//class triangleFeeder {
-			//void add(
-		//}
 
 		auto delete_task = [&](
 			const SimplifyRef& candidate,
@@ -1830,9 +1833,9 @@ private:
 
 				// Try to lock triangle vertices
 				using ulock = std::unique_lock<std::mutex >;
-				ulock lk0(mutexes[i0], std::try_to_lock);
-				ulock lk1(mutexes[i1], std::try_to_lock);
-				ulock lk2(mutexes[i2], std::try_to_lock);
+				ulock lk0(vmutexes[i0], std::try_to_lock);
+				ulock lk1(vmutexes[i1], std::try_to_lock);
+				ulock lk2(vmutexes[i2], std::try_to_lock);
 				bool lock_status = bool(lk0) and bool(lk1) and bool(lk2);
 				if (not lock_status) throw NoLock();
 
@@ -1864,8 +1867,7 @@ private:
 
 				batchDeleted.local() += lock_and_collapse(
 					candidate,
-					neighbors,
-					mutexes
+					neighbors
 				);
 			} catch(NoLock) {
 				// We miss a lock: put the candidate back in the queue
