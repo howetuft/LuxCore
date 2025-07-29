@@ -1172,7 +1172,8 @@ public:
 		preserveBorder(p_preserveBorder),
 		vertices(srcMesh.GetTotalVertexCount()),
 		vmutexes(srcMesh.GetTotalVertexCount()),
-		triangles(srcMesh.GetTotalTriangleCount())
+		triangles(srcMesh.GetTotalTriangleCount()),
+		ErrorCache(size_t(triangles.size() * 1.25f))
 	{
 		using SV = SimplifyVertex;
 
@@ -1422,7 +1423,7 @@ private:
 	// directly rely on it as the underlying geometrical points can modified.
 	// We rather rely on the vertices uuid (which are computed and updated, if
 	// needed, for each vertex)
-	mutable ErrorCacheType ErrorCache{20000};
+	mutable ErrorCacheType ErrorCache;
 
 	// Iteration initialization
 	//
@@ -1455,7 +1456,6 @@ private:
 		if (iteration == 0) {
 			InitQuadrics();
 			InitBorders();
-			ErrorCache.rehash(triangles.size() * 1.5);
 		}
 
 	}
@@ -1686,16 +1686,16 @@ private:
 				float minError = FLOAT_INFINITY;
 
 				// Look into cache whether the triangle has already been computed
-				const auto cacheKey = makeErrorCacheKey(t);
-				ErrorCacheType::accessor a;
-				auto res = ErrorCache.find(a, cacheKey);
+				const auto cacheKey(makeErrorCacheKey(t));
 #ifndef NDEBUG
 				cachecalls++;
 #endif
-				if (res) {
-					// Hit! --> Just unpack...
+				ErrorCacheType::const_accessor a;
+				if (ErrorCache.find(a, cacheKey)) {
+					// Hit! --> Just find and unpack...
 					minErrorIndex = a->second.minIndex;
 					minError = a->second.error;
+					a.release();
 #ifndef NDEBUG
 					cachehits++;
 #endif
