@@ -1006,6 +1006,7 @@ using Quadric = Eigen::Matrix4f;
 const auto Upper = Eigen::UpLoType::Upper;
 
 struct
+alignas(std::hardware_destructive_interference_size)
 SimplifyRef {
 	size_t tid = 0;  // Triangle ID
 	char tvertex = -1;  // Vertex in triangle, should be in [0;3] (-1: not set)
@@ -1025,7 +1026,9 @@ bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
 using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
 // Vertex
-struct SimplifyVertex {
+struct
+alignas(std::hardware_destructive_interference_size)
+SimplifyVertex {
 
 	RefVector refs;		  // Incident edges in topology
 
@@ -1067,7 +1070,9 @@ using VertexVector = std::vector<
 >;
 
 // Triangle
-struct SimplifyTriangle {
+struct
+alignas(std::hardware_destructive_interference_size)
+SimplifyTriangle {
 	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
@@ -1661,7 +1666,7 @@ private:
 
 	using CandidateContainer = std::vector<
 		SimplifyRef,
-		tbb::scalable_allocator<SimplifyRef>
+		tbb::cache_aligned_allocator<SimplifyRef>
 	>;
 
 	// Build candidate list
