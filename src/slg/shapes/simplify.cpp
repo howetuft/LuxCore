@@ -1700,6 +1700,7 @@ private:
 					cachehits++;
 #endif
 				} else {
+					a.release();
 					// No hit: compute and feed cache
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
@@ -1739,7 +1740,7 @@ private:
 				}
 
 				if (minErrorIndex != UNDEFINED_INDEX) {
-					candidates[i] = SimplifyRef(i, minErrorIndex, minError);
+					candidates[i] = std::move(SimplifyRef(i, minErrorIndex, minError));
 				}
 			}
 
