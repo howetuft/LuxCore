@@ -73,8 +73,6 @@ namespace {
 // Everything inside this namespace is kept local to this translation
 // unit (behaves like static and avoid linker namespace pollution)
 
-
-
 // Namespace containing the original code
 namespace simple {
 
@@ -904,116 +902,8 @@ private:
 	}
 };
 
-}  // ~namespace simple
+}
 
-} // ~namespace anonymous
-
-
-// New algorithm ("enhanced")
-namespace {
-namespace enhanced {
-
-// Cache feature for candidate building
-
-// Key is a triangle, identified by its geometric points
-struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
-
-struct alignas(128) ErrorCacheEntry {
-	// vertex index in triangle and error
-	uint16_t minIndex;  // 16
-	float error; // 32
-	uint16_t pad[5];  // 80
-};
-
-struct ErrorCacheHash {
-	//size_t hash(const ErrorCacheKey& k) {
-	static size_t hash(const ErrorCacheKey& k) {
-		size_t seed = k[0];
-		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		return seed;
-	}
-	static bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) {
-		return k0 == k1;
-	}
-};
-
-
-using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
-
-}  // ~namespace enhanced
-}  // ~namespace
-
-// We've no choice: std::hash must live in global namespace
-namespace std {
-template<> struct hash<enhanced::ErrorCacheKey> {
-	size_t operator()(const enhanced::ErrorCacheKey& k) const {
-		size_t seed = k[0];
-		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		return seed;
-	}
-};
-}  // ~namespace std
-
-namespace {
-namespace enhanced {
-using _error_cache_underlying_map = std::unordered_map<
-	ErrorCacheKey,
-	ErrorCacheEntry,
-	std::hash<ErrorCacheKey>,
-	std::equal_to<ErrorCacheKey>,
-	tbb::cache_aligned_allocator<ErrorCachePair>
->;
-
-class ErrorCacheType : public _error_cache_underlying_map {
-public:
-	ErrorCacheType(size_t p_size) : _error_cache_underlying_map(p_size) {
-		to_be_erased.reserve(p_size);
-		to_be_inserted.reserve(p_size);
-	}
-
-	// Record keys for defered erasure
-	inline void erase(const ErrorCacheKey& key) {
-		to_be_erased.push_back(key);
-	}
-
-	// Record keys for defered insertion
-	inline void insert(const ErrorCachePair pair) {
-		to_be_inserted.push_back(pair);
-	}
-
-	// Flush erase list (unsafe)
-	size_t unsafe_flush_erase() {
-		for (auto &k: to_be_erased) {
-			_error_cache_underlying_map::erase(k);
-		}
-		size_t res = to_be_erased.size();
-		to_be_erased.clear();
-		return res;
-	}
-
-	// Flush insertion list (unsafe)
-	size_t unsafe_flush_insert() {
-		for (const auto k: to_be_inserted) {
-			auto [it, ok] = _error_cache_underlying_map::insert(k);
-		}
-		size_t res = to_be_inserted.size();
-		to_be_inserted.clear();
-		return res;
-	}
-
-private:
-	tbb::concurrent_vector<ErrorCacheKey> to_be_erased;
-	tbb::concurrent_vector<ErrorCachePair> to_be_inserted;
-};
-}  // ~namespace enhanced
-}  // ~namespace
-
-
-
-
-namespace {
 // Namespace containing the rewriting of the algo
 namespace enhanced {
 
@@ -1237,6 +1127,41 @@ template <typename D, typename S, typename T> struct ForEach {
 #define DBG_SDL_LOG(X) {}
 #endif
 
+// Cache feature for candidate building
+
+// Key is a triangle, identified by its geometric points
+struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
+
+struct alignas(128) ErrorCacheEntry {
+	// vertex index in triangle and error
+	uint16_t minIndex;  // 16
+	float error; // 32
+	uint16_t pad[5];  // 80
+};
+
+struct ErrorCacheHash {
+	//size_t hash(const ErrorCacheKey& k) {
+	static size_t hash(const ErrorCacheKey& k) {
+		size_t seed = k[0];
+		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+	static bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) {
+		return k0 == k1;
+	}
+};
+
+//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
+using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
+
+using ErrorCacheType = tbb::concurrent_hash_map<
+	ErrorCacheKey,
+	ErrorCacheEntry,
+	ErrorCacheHash,
+	tbb::cache_aligned_allocator<ErrorCachePair>
+>;
+
 
 // The main class
 class Simplify {
@@ -1311,7 +1236,7 @@ public:
 
 	// Effectively simplify mesh (reduce triangles)
 	void Decimate(const size_t targetTriangleCount) {
-		Eigen::initParallel();
+		//Eigen::initParallel();
 
 		// Work on 10% of all triangles for each iteration
 		size_t maxCandidateQueueSize = std::max(
@@ -1756,13 +1681,6 @@ private:
 		std::atomic<size_t> cachecalls, cachehits;
 #endif
 
-		auto count_flush_erase = ErrorCache.unsafe_flush_erase();
-		auto count_flush_insert = ErrorCache.unsafe_flush_insert();
-		DBG_SDL_LOG(
-			"Simplify - Build candidates - flush erase/insert = "
-			<< count_flush_erase << " / "
-			<< count_flush_insert
-		);
 
 		constexpr char UNDEFINED_INDEX = -1;
 		CandidateContainer candidates(triangles.size());
@@ -1781,15 +1699,17 @@ private:
 #ifndef NDEBUG
 				cachecalls++;
 #endif
-				auto it = ErrorCache.find(cacheKey);
-				if (it != ErrorCache.end()) {
+				ErrorCacheType::const_accessor a;
+				if (ErrorCache.find(a, cacheKey)) {
 					// Hit! --> Just find and unpack...
-					minErrorIndex = it->second.minIndex;
-					minError = it->second.error;
+					minErrorIndex = a->second.minIndex;
+					minError = a->second.error;
+					a.release();
 #ifndef NDEBUG
 					cachehits++;
 #endif
 				} else {
+					a.release();
 					// No hit: compute and feed cache
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
@@ -2165,9 +2085,7 @@ private:
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
-	// Returns:
-	//   new incident edges list,
-	//   number of deleted triangles
+	// Returns: new incident edges list, number of deleted triangles
 	inline std::tuple<RefVector, size_t> UpdateTriangles(
 		const size_t i0,
 		const SimplifyVertex &v,  // Collapsed vertex
@@ -2187,7 +2105,7 @@ private:
 				deletedTriangles++;
 				// Update cache (remove triangle)
 				auto cachekey = makeErrorCacheKey(t);
-				ErrorCache.erase(cachekey);
+				auto status = ErrorCache.erase(cachekey);
 				continue;
 			}
 
@@ -2289,8 +2207,6 @@ private:
 
 }  // ~namespace enhanced
 }  // ~namespace (local)
-
-
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
