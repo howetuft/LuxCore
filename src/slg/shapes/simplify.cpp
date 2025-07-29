@@ -1653,10 +1653,14 @@ private:
 			// Error can be negative, I add 1 to have screenErrorScale to work as
 			// expected
 			errors += Eigen::Vector3f::Ones();
-			const std::array<const Point*, 3> points{&p0, &p1, &p2};
 			int minIndex;
 			error = errors.array().minCoeff(&minIndex);
-			pResult = *points[minIndex];
+			switch(minIndex) {
+				case 0: pResult = p0; break;
+				case 1: pResult = p1; break;
+				case 2: pResult = p2; break;
+				default: throw std::range_error("Bad point index");
+			}
 		}
 
 	// Adding 1.0 because error have negative values
@@ -1710,16 +1714,15 @@ private:
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
 					auto& tv2 = t.v[2];
-					const std::array<std::tuple<size_t, size_t>, 3> edges(
-						{
-							{tv0, tv1},
-							{tv1, tv2},
-							{tv2, tv0},
-						}
-					);
 
 					for (size_t j = 0; j < 3; ++j) {
-						const auto [i0, i1] = edges[j];
+						size_t i0, i1;
+						switch(j) {
+							case 0: i0 = tv0; i1 = tv1; break;
+							case 1: i0 = tv1; i1 = tv2; break;
+							case 2: i0 = tv2; i1 = tv0; break;
+							default: throw std::logic_error("Bad index");
+						}
 						const SimplifyVertex &v0 = vertices[i0];
 						const SimplifyVertex &v1 = vertices[i1];
 
