@@ -1122,7 +1122,43 @@ template <typename D, typename S, typename T> struct ForEach {
 #define DBG_SDL_LOG(X) {}
 #endif
 
+// Cache feature for candidate building
 
+// Key is a triangle, identified by its geometric points
+struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
+
+struct alignas(128) ErrorCacheEntry {
+	// vertex index in triangle and error
+	uint16_t minIndex;  // 16
+	float error; // 32
+	uint16_t pad[5];  // 80
+};
+
+struct ErrorCacheHash {
+	//size_t hash(const ErrorCacheKey& k) {
+	static size_t hash(const ErrorCacheKey& k) {
+		size_t seed = k[0];
+		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+	static bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) {
+		return k0 == k1;
+	}
+};
+
+//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
+using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
+
+using ErrorCacheType = tbb::concurrent_hash_map<
+	ErrorCacheKey,
+	ErrorCacheEntry,
+	ErrorCacheHash,
+	tbb::cache_aligned_allocator<ErrorCachePair>
+>;
+
+
+// The main class
 class Simplify {
 public:
 	Simplify(
@@ -1370,9 +1406,6 @@ private:
 	// Output
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
-	// Key is a triangle, identified by its geometric points
-	struct alignas(128) ErrorCacheKey : std::array<size_t, 4>{};
-
 	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
 		return ErrorCacheKey{
 			vertices[t.v[0]].uuid(),
@@ -1380,36 +1413,6 @@ private:
 			vertices[t.v[2]].uuid()
 		};
 	}
-
-	struct alignas(128) ErrorCacheEntry {
-		// vertex index in triangle and error
-		uint16_t minIndex;  // 16
-		float error; // 32
-		uint16_t pad[5];  // 80
-	};
-
-	struct ErrorCacheHash{
-		inline size_t hash(const ErrorCacheKey& k) const noexcept {
-			size_t seed = 0;
-			seed ^= k[0] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			return seed;
-		}
-		inline bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) const {
-			return k0 == k1;
-		}
-	};
-
-	//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
-	using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
-
-	using ErrorCacheType = tbb::concurrent_hash_map<
-		ErrorCacheKey,
-		ErrorCacheEntry,
-		ErrorCacheHash,
-		tbb::cache_aligned_allocator<ErrorCachePair>
-	>;
 
 	// Cache feature for BuildCandidateList
 	// For each triangle, BuildCandidateList computes the best vertex and the
@@ -1419,7 +1422,7 @@ private:
 	// directly rely on it as the underlying geometrical points can modified.
 	// We rather rely on the vertices uuid (which are computed and updated, if
 	// needed, for each vertex)
-	mutable ErrorCacheType ErrorCache;
+	mutable ErrorCacheType ErrorCache{20000};
 
 	// Iteration initialization
 	//
