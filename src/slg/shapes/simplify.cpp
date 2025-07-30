@@ -1093,18 +1093,30 @@ SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
 
-	// Dynamic data
-	std::array<float, 3> errors{0.f, 0.f, 0.f};
+	// Status handling
+	inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
+	inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
+	inline void set_deleted() { status = status | TriangleStatus::DELETED; }
+	inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
+	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
+	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
 
-	bool deleted() const { return bool(status & TriangleStatus::DELETED); }
-	bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
-	void set_deleted() { status = status | TriangleStatus::DELETED; }
-	void set_dirty() { status = status | TriangleStatus::DIRTY; }
-	void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
-	void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+	// Triangle error handling
+	inline void set_vertex_error(uint8_t vertex_index, float error) {
+		errors[vertex_index] = error;
+	}
+	inline void set_errors(const std::array<float, 3>& p_errors) {
+		errors = p_errors;
+	}
+	inline float get_vertex_error(uint8_t vertex_index) const {
+		return errors[vertex_index];
+	}
 
 protected:
+	// Dynamic data
 	TriangleStatus status;
+	std::array<float, 3> errors{0.f, 0.f, 0.f};
+
 	void clear_flag(TriangleStatus flag) {
 		using T = uint8_t;
 		T mask = !static_cast<T>(flag);
@@ -1564,7 +1576,7 @@ private:
 		// Triangle error update
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].errors = ComputeTriangleError(triangles[i]);
+				triangles[i].set_errors(ComputeTriangleError(triangles[i]));
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1767,9 +1779,10 @@ private:
 						if (Flipped(p, i0, i1)) continue;
 						if (Flipped(p, i1, i0)) continue;
 
-						if (triangles[i].errors[j] < minError) {
+						float vertex_error = triangles[i].get_vertex_error(j);
+						if (vertex_error < minError) {
 							minErrorIndex = j;
-							minError = triangles[i].errors[j];
+							minError = vertex_error;
 						}
 					}
 					ErrorCache.insert(
@@ -2145,7 +2158,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.set_dirty();
-			triangles[r.tid].errors = ComputeTriangleError(t);
+			triangles[r.tid].set_errors(ComputeTriangleError(t));
 
 			refs.push_back(r);
 		}
@@ -2300,7 +2313,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
