@@ -1069,18 +1069,48 @@ using VertexVector = std::vector<
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
+// Triangle status
+enum struct TriangleStatus : uint8_t {
+	DIRTY = 1 << 0, DELETED = 1 << 1
+};
+inline TriangleStatus operator&(TriangleStatus a, TriangleStatus b) {
+	return static_cast<TriangleStatus>(
+		static_cast<uint8_t>(a) & static_cast<uint8_t>(b)
+	);
+}
+inline TriangleStatus operator|(TriangleStatus a, TriangleStatus b) {
+	return static_cast<TriangleStatus>(
+		static_cast<uint8_t>(a) | static_cast<uint8_t>(b)
+	);
+}
+
 // Triangle
 struct
 alignas(std::hardware_destructive_interference_size)
 SimplifyTriangle {
+
 	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
 
 	// Dynamic data
-	bool deleted = false;
-	bool dirty = false;
 	std::array<float, 3> errors{0.f, 0.f, 0.f};
+
+	bool deleted() const { return bool(status & TriangleStatus::DELETED); }
+	bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
+	void set_deleted() { status = status | TriangleStatus::DELETED; }
+	void set_dirty() { status = status | TriangleStatus::DIRTY; }
+	void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
+	void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+
+protected:
+	TriangleStatus status;
+	void clear_flag(TriangleStatus flag) {
+		using T = uint8_t;
+		T mask = !static_cast<T>(flag);
+		status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
+	}
+
 };
 
 using TriangleVector = std::vector<
@@ -1436,13 +1466,13 @@ private:
 	void InitIteration(const size_t iteration) {
 		if (iteration > 0) {
 			// Compress triangles and mark vertices to keep
-			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
 			decltype(triangles) newTriangles;
 			newTriangles.reserve(triangles.size());
 			//for (auto& t: triangles | std::views::filter(not_deleted)) {
 			for (size_t i = 0; i < triangles.size(); ++i) {
 				auto& t = triangles[i];
-				if (t.deleted) continue;
+				if (t.deleted()) continue;
 				newTriangles.push_back(t);
 			}
 			triangles = std::move(newTriangles);
@@ -1480,7 +1510,7 @@ private:
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].dirty = false;  // Clear triangle dirty flags, by the way
+				triangles[i].clear_dirty();  // Clear triangle dirty flags, by the way
 				const auto& v = triangles[i].v;
 				for (size_t j = 0; j < 3; ++j) {
 					auto vid = v[j];
@@ -1907,7 +1937,7 @@ private:
 		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
-		if (t.deleted or t.dirty) return 0;
+		if (t.deleted() or t.dirty()) return 0;
 
 		// Get explicit edge to collapse
 		auto [e1, e2] = EDGES[candidate.tvertex];
@@ -2003,7 +2033,7 @@ private:
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
 			const auto& t = triangles[ref.tid];
-			if (t.deleted) continue;
+			if (t.deleted()) continue;
 
 			// Compute vertices
 			const size_t e0 = ref.tvertex;
@@ -2025,7 +2055,7 @@ private:
 			const auto& t = triangles[ref.tid];
 
 			// Deleted? -> pass
-			if (t.deleted) continue;
+			if (t.deleted()) continue;
 
 			const size_t e0 = ref.tvertex;
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
@@ -2097,11 +2127,11 @@ private:
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r.tid];
 
-			if (t.deleted)
+			if (t.deleted())
 				continue;
 
 			if (deleted[k]) {
-				t.deleted = true;
+				t.set_deleted();
 				deletedTriangles++;
 				// Update cache (remove triangle)
 				auto cachekey = makeErrorCacheKey(t);
@@ -2114,7 +2144,7 @@ private:
 			ErrorCache.erase(cachekey);
 
 			t.v[r.tvertex] = i0;
-			t.dirty = true;
+			t.set_dirty();
 			triangles[r.tid].errors = ComputeTriangleError(t);
 
 			refs.push_back(r);
@@ -2131,7 +2161,7 @@ private:
 		std::vector<std::atomic_flag> keep(vertices.size());
 		for (auto& k: keep) k.clear();
 
-		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
+		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
 		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
 		for (auto& e: newTrianglesETS) e.reserve(triangles.size() / max_concurrency);
 
@@ -2139,7 +2169,7 @@ private:
 		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				auto& t = triangles[i];
-				if (t.deleted) continue;
+				if (t.deleted()) continue;
 				newTrianglesETS.local().push_back(t);
 
 				keep[t.v[0]].test_and_set();
@@ -2270,7 +2300,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
