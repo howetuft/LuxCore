@@ -1084,6 +1084,8 @@ inline TriangleStatus operator|(TriangleStatus a, TriangleStatus b) {
 	);
 }
 
+class TriangleVector;
+
 // Triangle
 struct
 alignas(std::hardware_destructive_interference_size)
@@ -1093,13 +1095,8 @@ SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
 
-	// Status handling
-	inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
-	inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
-	inline void set_deleted() { status = status | TriangleStatus::DELETED; }
-	inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
-	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
-	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+	//using enhanced::TriangleVector;
+	friend class TriangleVector;
 
 protected:
 	// Dynamic data
@@ -1111,12 +1108,39 @@ protected:
 		status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
 	}
 
+	// Status handling
+	inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
+	inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
+	inline void set_deleted() { status = status | TriangleStatus::DELETED; }
+	inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
+	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
+	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+
 };
 
-using TriangleVector = std::vector<
+using TriangleVectorBase = std::vector<
 	SimplifyTriangle,
 	tbb::cache_aligned_allocator<SimplifyTriangle>
 >;
+
+class TriangleVector : protected TriangleVectorBase {
+public:
+	TriangleVector() : TriangleVectorBase() {}
+	TriangleVector(size_t p_size) : TriangleVectorBase(p_size) {}
+
+	using TriangleVectorBase::size;
+	using TriangleVectorBase::resize;
+	using TriangleVectorBase::reserve;
+	using TriangleVectorBase::push_back;
+	using TriangleVectorBase::operator[];
+
+	inline bool deleted(size_t i) const { return (*this)[i].deleted(); }
+	inline bool dirty(size_t i) const { return (*this)[i].dirty(); }
+	inline void set_deleted(size_t i) { (*this)[i].set_deleted(); }
+	inline void set_dirty(size_t i) { (*this)[i].set_dirty(); }
+	inline void clear_deleted(size_t i) { (*this)[i].clear_deleted(); }
+	inline void clear_dirty(size_t i) { (*this)[i].clear_dirty(); }
+};
 
 // Error between vertex and Quadric
 inline float VertexError(const Quadric &q, const Point& p) {
@@ -1431,6 +1455,10 @@ private:
 		std::array<float, 3>,
 		tbb::cache_aligned_allocator<std::array<float, 3>>
 	> trierrors;
+	std::vector<
+		TriangleStatus,
+		tbb::cache_aligned_allocator<TriangleStatus>
+	> tristatus;
 
 	// Synchronization & multithreading
 	MutexVector vmutexes;
@@ -1473,15 +1501,13 @@ private:
 	void InitIteration(const size_t iteration) {
 		if (iteration > 0) {
 			// Compress triangles and mark vertices to keep
-			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
 			decltype(triangles) newTriangles;
 			decltype(trierrors) newTriErrors;
 			newTriangles.reserve(triangles.size());
 			newTriErrors.reserve(triangles.size());
-			//for (auto& t: triangles | std::views::filter(not_deleted)) {
 			for (size_t i = 0; i < triangles.size(); ++i) {
 				auto& t = triangles[i];
-				if (t.deleted()) continue;
+				if (triangles.deleted(i)) continue;
 				auto& e = trierrors[i];
 				newTriangles.push_back(t);
 				newTriErrors.push_back(e);
@@ -1522,7 +1548,7 @@ private:
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles[i].clear_dirty();  // Clear triangle dirty flags, by the way
+				triangles.clear_dirty(i);  // Clear triangle dirty flags, by the way
 				const auto& v = triangles[i].v;
 				for (size_t j = 0; j < 3; ++j) {
 					auto vid = v[j];
@@ -1949,7 +1975,9 @@ private:
 		const size_t triangleIndex = candidate.tid;
 		SimplifyTriangle &t = triangles[triangleIndex];
 
-		if (t.deleted() or t.dirty()) return 0;
+		if (triangles.deleted(triangleIndex) or triangles.dirty(triangleIndex)) {
+			return 0;
+		}
 
 		// Get explicit edge to collapse
 		auto [e1, e2] = EDGES[candidate.tvertex];
@@ -2065,7 +2093,7 @@ private:
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
 			const auto& t = triangles[ref.tid];
-			if (t.deleted()) continue;
+			if (triangles.deleted(ref.tid)) continue;
 
 			// Compute vertices
 			const size_t e0 = ref.tvertex;
