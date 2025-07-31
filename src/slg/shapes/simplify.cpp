@@ -1132,7 +1132,10 @@ public:
 	using TriangleVectorBase::resize;
 	using TriangleVectorBase::reserve;
 	using TriangleVectorBase::push_back;
+	using TriangleVectorBase::insert;
 	using TriangleVectorBase::operator[];
+	using TriangleVectorBase::begin;
+	using TriangleVectorBase::end;
 
 	inline bool deleted(size_t i) const { return (*this)[i].deleted(); }
 	inline bool dirty(size_t i) const { return (*this)[i].dirty(); }
@@ -2115,7 +2118,7 @@ private:
 			const auto& t = triangles[ref.tid];
 
 			// Deleted? -> pass
-			if (t.deleted()) continue;
+			if (triangles.deleted(ref.tid)) continue;
 
 			const size_t e0 = ref.tvertex;
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
@@ -2187,11 +2190,11 @@ private:
 		for (const auto& [k, r]: enumerate(v.refs)) {
 			SimplifyTriangle &t = triangles[r.tid];
 
-			if (t.deleted())
+			if (triangles.deleted(r.tid))
 				continue;
 
 			if (deleted[k]) {
-				t.set_deleted();
+				triangles.set_deleted(r.tid);
 				deletedTriangles++;
 				// Update cache (remove triangle)
 				auto cachekey = makeErrorCacheKey(t);
@@ -2204,7 +2207,7 @@ private:
 			ErrorCache.erase(cachekey);
 
 			t.v[r.tvertex] = i0;
-			t.set_dirty();
+			triangles.set_dirty(r.tid);
 			trierrors[r.tid] = ComputeTriangleError(t);
 
 			refs.push_back(r);
@@ -2221,7 +2224,7 @@ private:
 		std::vector<std::atomic_flag> keep(vertices.size());
 		for (auto& k: keep) k.clear();
 
-		auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
+		//auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
 		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
 		for (auto& e: newTrianglesETS) e.reserve(triangles.size() / max_concurrency);
 
@@ -2229,7 +2232,7 @@ private:
 		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				auto& t = triangles[i];
-				if (t.deleted()) continue;
+				if (triangles.deleted(i)) continue;
 				newTrianglesETS.local().push_back(t);
 
 				keep[t.v[0]].test_and_set();
