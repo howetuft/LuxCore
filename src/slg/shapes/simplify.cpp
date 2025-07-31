@@ -1101,21 +1101,9 @@ SimplifyTriangle {
 	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
 	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
 
-	// Triangle error handling
-	inline void set_vertex_error(uint8_t vertex_index, float error) {
-		errors[vertex_index] = error;
-	}
-	inline void set_errors(const std::array<float, 3>& p_errors) {
-		errors = p_errors;
-	}
-	inline float get_vertex_error(uint8_t vertex_index) const {
-		return errors[vertex_index];
-	}
-
 protected:
 	// Dynamic data
 	TriangleStatus status;
-	std::array<float, 3> errors{0.f, 0.f, 0.f};
 
 	void clear_flag(TriangleStatus flag) {
 		using T = uint8_t;
