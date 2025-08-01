@@ -61,17 +61,17 @@ def main():
     parser_wheel.set_defaults(func=make_wheel)
 
     # Windows wheel recomposing
-    parser_wheel = subparsers.add_parser("win-recompose")
-    parser_wheel.add_argument("wheel")
-    parser_wheel.set_defaults(func=win_recompose)
+    parser_wheel_windows = subparsers.add_parser("win-recompose")
+    parser_wheel_windows.add_argument("wheel")
+    parser_wheel_windows.set_defaults(func=win_recompose)
 
     # Clear
     parser_clear = subparsers.add_parser("clear")
     parser_clear.set_defaults(func=clear)
 
     # Clean
-    parser_clear = subparsers.add_parser("clean")
-    parser_clear.set_defaults(func=clean)
+    parser_clean = subparsers.add_parser("clean")
+    parser_clean.set_defaults(func=clean)
 
     args = parser.parse_args()
     if args.verbose:
