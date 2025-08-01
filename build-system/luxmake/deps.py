@@ -18,7 +18,7 @@ import platform
 from functools import cache
 
 
-from .constants import BINARY_DIR
+from .constants import BINARY_DIR, EXTENDED_BUILD_TYPES
 from .utils import logger, fail, Colors, set_logger_verbose
 from .check import check_requirements
 
@@ -443,7 +443,7 @@ def main(
             "Debug",
             "Release",
         ]
-        if args.extended:
+        if args.extended or EXTENDED_BUILD_TYPES:
             build_types += [
                 "RelWithDebInfo",
                 "MinSizeRel",

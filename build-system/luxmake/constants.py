@@ -24,6 +24,11 @@ BUILD_TYPE = os.getenv(
     "LUX_BUILD_TYPE",
     "Release",
 )
+# Extended build types introduce RelWithDebInfo & MinSizeRel
+EXTENDED_BUILD_TYPES = os.getenv(
+    "LUX_EXTENDED_BUILD_TYPES",
+    None,
+)
 
 # Computed variables
 BUILD_DIR = BINARY_DIR / "build"
