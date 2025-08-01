@@ -1087,34 +1087,32 @@ inline TriangleStatus operator|(TriangleStatus a, TriangleStatus b) {
 class TriangleVector;
 
 // Triangle
-struct
-alignas(std::hardware_destructive_interference_size)
-SimplifyTriangle {
+struct alignas(std::hardware_destructive_interference_size) SimplifyTriangle {
 
 	// Static data
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
 
 	//using enhanced::TriangleVector;
-	friend class TriangleVector;
+	//friend class TriangleVector;
 
-protected:
-	// Dynamic data
-	TriangleStatus status;
+//protected:
+	//// Dynamic data
+	//TriangleStatus status;
 
-	void clear_flag(TriangleStatus flag) {
-		using T = uint8_t;
-		T mask = !static_cast<T>(flag);
-		status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
-	}
+	//void clear_flag(TriangleStatus flag) {
+		//using T = uint8_t;
+		//T mask = !static_cast<T>(flag);
+		//status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
+	//}
 
-	// Status handling
-	inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
-	inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
-	inline void set_deleted() { status = status | TriangleStatus::DELETED; }
-	inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
-	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
-	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+	//// Status handling
+	//inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
+	//inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
+	//inline void set_deleted() { status = status | TriangleStatus::DELETED; }
+	//inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
+	//inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
+	//inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
 
 };
 
@@ -1126,7 +1124,9 @@ using TriangleVectorBase = std::vector<
 class TriangleVector {
 public:
 	TriangleVector() = default;
-	TriangleVector(size_t p_size) : base(p_size), trierrors(p_size) {}
+	TriangleVector(size_t p_size) : base(p_size), trierrors(p_size), status(p_size) {}
+
+	using errors_t = std::array<float, 3>;
 
 	size_t size() const {
 		assert(base.size() == trierrors.size());
@@ -1136,22 +1136,49 @@ public:
 	inline void resize(size_t size) {
 		base.resize(size);
 		trierrors.resize(size, {.0f, .0f, .0f});
+		status.resize(size);
+		assert(base.size() == trierrors.size());
 	}
 	inline void reserve(size_t size) {
 		base.reserve(size);
 		trierrors.reserve(size);
+		status.reserve(size);
+		assert(base.size() == trierrors.size());
 	}
-	inline const SimplifyTriangle& operator[](size_t i) {
-		return base[i];
+	inline const Normal& get_normal(size_t i) const {
+		assert(base.size() == trierrors.size());
+		return base[i].geometryN;
 	}
-	inline set_normal(size_t i, Normal&& normal) {
-		base[i] = normal;
+	inline void set_normal(size_t i, const Normal& normal) {
+		assert(base.size() == trierrors.size());
+		base[i].geometryN = normal;
+	}
+	inline size_t get_vertex_index(size_t tid, char tvertex) const {
+		assert(base.size() == trierrors.size());
+		return base[tid].v[tvertex];
+	}
+	inline void set_vertex_index(size_t tid, char tvertex, size_t value) {
+		assert(base.size() == trierrors.size());
+		base[tid].v[tvertex] = value;
+	}
+	inline const std::array<size_t, 3>& get_vertices(size_t tid) const {
+		assert(base.size() == trierrors.size());
+		return base[tid].v;
 	}
 
-	//using TriangleVectorBase::insert;
-	//using TriangleVectorBase::operator[];
-	//using TriangleVectorBase::begin;
-	//using TriangleVectorBase::end;
+	TriangleVector& operator+=(const TriangleVector& rhs) {
+		assert(base.size() == trierrors.size());
+		base.insert(base.end(), rhs.base.begin(), rhs.base.end());
+		trierrors.insert(trierrors.end(), rhs.trierrors.begin(), rhs.trierrors.end());
+		status.insert(status.end(), rhs.status.begin(), rhs.status.end());
+		return *this;
+	}
+	void push_to_other_back(size_t tid, TriangleVector& other) const {
+		other.base.push_back(base[tid]);
+		other.trierrors.push_back(trierrors[tid]);
+		other.status.push_back(status[tid]);
+		assert(other.base.size() == other.trierrors.size());
+	}
 
 	void prune() {
 		decltype(base) newBase;
@@ -1167,28 +1194,56 @@ public:
 		}
 		base = std::move(newBase);
 		trierrors = std::move(newErrors);
+		assert(base.size() == trierrors.size());
 	}
 
 	// Status
-	inline bool deleted(size_t i) const { return base[i].deleted(); }
-	inline bool dirty(size_t i) const { return base[i].dirty(); }
-	inline void set_deleted(size_t i) { base[i].set_deleted(); }
-	inline void set_dirty(size_t i) { base[i].set_dirty(); }
-	inline void clear_deleted(size_t i) { base[i].clear_deleted(); }
-	inline void clear_dirty(size_t i) { base[i].clear_dirty(); }
+	//inline bool deleted(size_t i) const { return status[i].deleted(); }
+	//inline bool dirty(size_t i) const { return status[i].dirty(); }
+	//inline void set_deleted(size_t i) { status[i].set_deleted(); }
+	//inline void set_dirty(size_t i) { status[i].set_dirty(); }
+	//inline void clear_deleted(size_t i) { status[i].clear_deleted(); }
+	//inline void clear_dirty(size_t i) { status[i].clear_dirty(); }
+
+	inline bool deleted(size_t i) const {
+		return bool(status[i] & TriangleStatus::DELETED);
+	}
+	inline bool dirty(size_t i) const {
+		return bool(status[i] & TriangleStatus::DIRTY);
+	}
+	inline void set_deleted(size_t i) {
+		status[i] = status[i] | TriangleStatus::DELETED;
+	}
+	inline void set_dirty(size_t i) {
+		status[i] = status[i] | TriangleStatus::DIRTY;
+	}
+	inline void clear_deleted(size_t i) {
+		clear_flag(i, TriangleStatus::DELETED);
+	}
+	inline void clear_dirty(size_t i) {
+		clear_flag(i, TriangleStatus::DIRTY);
+	}
 
 	// Vertex errors
-	using errors_t = std::array<float, 3>;
 	inline void set_errors(size_t tid, errors_t&& errors) {
 		trierrors[tid] = errors;
+		assert(base.size() == trierrors.size());
 	}
 	inline const errors_t& get_errors(size_t tid) const {
+		assert(base.size() == trierrors.size());
 		return trierrors[tid];
 	}
 
 private:
 	TriangleVectorBase base;
-	std::vector< errors_t, tbb::cache_aligned_allocator<errors_t> > trierrors;
+	std::vector< errors_t, tbb::scalable_allocator<errors_t> > trierrors;
+	std::vector< TriangleStatus, tbb::scalable_allocator<TriangleStatus> > status;
+
+	void clear_flag(size_t tid, TriangleStatus flag) {
+		using T = uint8_t;
+		T mask = !static_cast<T>(flag);
+		status[tid] = static_cast<TriangleStatus>(static_cast<T>(status[tid]) & mask);
+	}
 };
 
 // Error between vertex and Quadric
@@ -1331,12 +1386,32 @@ public:
 		}
 
 		// Init triangles
-		auto init_triangle = [](SimplifyTriangle& td, const luxrays::Triangle& ts){
-			td.v[0] = ts.v[0];
-			td.v[1] = ts.v[1];
-			td.v[2] = ts.v[2];
-		};
-		ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run(triCount);
+		// TODO
+		//auto init_triangle = [](SimplifyTriangle& td, const luxrays::Triangle& ts){
+			//td.v[0] = ts.v[0];
+			//td.v[1] = ts.v[1];
+			//td.v[2] = ts.v[2];
+		//};
+		//ForEach(triangles, srcMesh.GetTriangles(), init_triangle).run(triCount);
+		//auto init_triangle = [](SimplifyTriangle& td, const luxrays::Triangle& ts){
+			//td.v[0] = ts.v[0];
+			//td.v[1] = ts.v[1];
+			//td.v[2] = ts.v[2];
+		//};
+		const auto& luxTriangles = srcMesh.GetTriangles();
+		triangles.resize(triCount);
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, triangles.size()),
+			[&](tbb::blocked_range<size_t>& r){
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					auto luxTriangle = luxTriangles + i;
+					triangles.set_vertex_index(i, 0, luxTriangle->v[0]);
+					triangles.set_vertex_index(i, 1, luxTriangle->v[1]);
+					triangles.set_vertex_index(i, 2, luxTriangle->v[2]);
+				}
+			}
+		);
+
 	}
 
 
@@ -1449,21 +1524,36 @@ public:
 			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
 		}
 
-		luxrays::Triangle *newTris =
+		//luxrays::Triangle *newTris =
+			//luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+
+		//auto triangle_assign =
+			//[vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
+			//assert (ts.v[0] < vertCount);
+			//assert (ts.v[1] < vertCount);
+			//assert (ts.v[2] < vertCount);
+			//td.v[0] = ts.v[0];
+			//td.v[1] = ts.v[1];
+			//td.v[2] = ts.v[2];
+		//};
+
+		//ForEach(newTris, triangles, triangle_assign).run(triCount);
+
+		luxrays::Triangle* newTris =
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, triangles.size()),
+			[&](tbb::blocked_range<size_t>& r){
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					auto luxTriangle = newTris + i;
+					luxTriangle->v[0] = triangles.get_vertex_index(i, 0);
+					luxTriangle->v[1] = triangles.get_vertex_index(i, 1);
+					luxTriangle->v[2] = triangles.get_vertex_index(i, 2);
+				}
+			}
+		);
 
-		auto triangle_assign =
-			[vertCount](luxrays::Triangle& td, const SimplifyTriangle& ts) {
-			assert (ts.v[0] < vertCount);
-			assert (ts.v[1] < vertCount);
-			assert (ts.v[2] < vertCount);
-			td.v[0] = ts.v[0];
-			td.v[1] = ts.v[1];
-			td.v[2] = ts.v[2];
-		};
-
-		ForEach(newTris, triangles, triangle_assign).run(triCount);
-
+		// Create mesh
 		meshResult = new luxrays::ExtTriangleMesh(
 				vertCount, triCount, newVertices, newTris,
 				newNorms, newUVs, newCols, newAlphas
@@ -1505,10 +1595,18 @@ private:
 		//std::array<float, 3>,
 		//tbb::cache_aligned_allocator<std::array<float, 3>>
 	//> trierrors;
-	std::vector<
-		TriangleStatus,
-		tbb::cache_aligned_allocator<TriangleStatus>
-	> tristatus;
+	//std::vector<
+		//TriangleStatus,
+		//tbb::cache_aligned_allocator<TriangleStatus>
+	//> tristatus;
+
+	ErrorCacheKey makeErrorCacheKey(size_t tid) const {
+		return ErrorCacheKey{
+			vertices[triangles.get_vertex_index(tid, 0)].uuid(),
+			vertices[triangles.get_vertex_index(tid, 1)].uuid(),
+			vertices[triangles.get_vertex_index(tid, 2)].uuid()
+		};
+	}
 
 	// Synchronization & multithreading
 	MutexVector vmutexes;
@@ -1527,13 +1625,14 @@ private:
 	// Output
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
-	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
-		return ErrorCacheKey{
-			vertices[t.v[0]].uuid(),
-			vertices[t.v[1]].uuid(),
-			vertices[t.v[2]].uuid()
-		};
-	}
+	// TODO
+	//ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
+		//return ErrorCacheKey{
+			//vertices[t.v[0]].uuid(),
+			//vertices[t.v[1]].uuid(),
+			//vertices[t.v[2]].uuid()
+		//};
+	//}
 
 	// Cache feature for BuildCandidateList
 	// For each triangle, BuildCandidateList computes the best vertex and the
@@ -1601,7 +1700,8 @@ private:
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				triangles.clear_dirty(i);  // Clear triangle dirty flags, by the way
-				const auto& v = triangles[i].v;
+				//const auto& v = triangles[i].v;
+				const auto& v = triangles.get_vertices(i);
 				for (size_t j = 0; j < 3; ++j) {
 					auto vid = v[j];
 					std::lock_guard lock(vmutexes[vid]);
@@ -1626,11 +1726,14 @@ private:
 
 		auto quadric_task = [&](const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				SimplifyTriangle &t = triangles[i];
+				//const SimplifyTriangle &t = triangles[i];
 
-				SimplifyVertex &v0 = vertices[t.v[0]];
-				SimplifyVertex &v1 = vertices[t.v[1]];
-				SimplifyVertex &v2 = vertices[t.v[2]];
+				//SimplifyVertex &v0 = vertices[t.v[0]];
+				//SimplifyVertex &v1 = vertices[t.v[1]];
+				//SimplifyVertex &v2 = vertices[t.v[2]];
+				SimplifyVertex &v0 = vertices[triangles.get_vertex_index(i, 0)];
+				SimplifyVertex &v1 = vertices[triangles.get_vertex_index(i, 1)];
+				SimplifyVertex &v2 = vertices[triangles.get_vertex_index(i, 2)];
 
 				// TODO
 				//t.geometryN = TriNormal(v0.p(), v1.p(), v2.p()).normalized();
@@ -1638,16 +1741,17 @@ private:
 					i, TriNormal(v0.p(), v1.p(), v2.p()).normalized()
 				);
 
+				auto geometryN = triangles.get_normal(i);
 				const Eigen::Vector4f p(
-					t.geometryN[0],
-					t.geometryN[1],
-					t.geometryN[2],
-					-t.geometryN.dot(Point2Vector(v0.p()))
+					geometryN[0],
+					geometryN[1],
+					geometryN[2],
+					-geometryN.dot(Point2Vector(v0.p()))
 				);
 				const Quadric sm(p * p.transpose());
 
 				for (size_t j = 0; j < 3; ++j) {
-					auto vertex_index = t.v[j];
+					auto vertex_index = triangles.get_vertex_index(i, j);
 					std::scoped_lock lock(v_mtx[vertex_index]);
 					vertices[vertex_index].quad.noalias() += sm;
 				}
@@ -1659,7 +1763,7 @@ private:
 		auto update_task = [&](decltype(triangle_range)& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				//trierrors[i] = ComputeTriangleError(triangles[i]);
-				triangles.set_errors(i, ComputeTriangleError(triangles[i]));
+				triangles.set_errors(i, ComputeTriangleError(i));
 			}
 		};
 		tbb::parallel_for(triangle_range, update_task);
@@ -1685,7 +1789,7 @@ private:
 				for (const auto& ref: v.refs) {
 
 					// For each vertex of the incident triangle
-					for (size_t vid: triangles[ref.tid].v) {
+					for (size_t vid: triangles.get_vertices(ref.tid)) {
 						// Increment incident vertex order
 						// If id doesn't exist yet, it will be created (with order=1)
 						vorders[vid]++;
@@ -1815,12 +1919,11 @@ private:
 		auto build_task = [&](const decltype(tri_range)& r) {
 			// Main loop
 			for (size_t i = r.begin(); i != r.end(); ++i) {
-				const SimplifyTriangle &t = triangles[i];
 				char minErrorIndex = UNDEFINED_INDEX;
 				float minError = FLOAT_INFINITY;
 
 				// Look into cache whether the triangle has already been computed
-				const auto cacheKey(makeErrorCacheKey(t));
+				const auto cacheKey(makeErrorCacheKey(i));
 #ifndef NDEBUG
 				cachecalls++;
 #endif
@@ -1836,9 +1939,9 @@ private:
 				} else {
 					a.release();
 					// No hit: compute and feed cache
-					auto& tv0 = t.v[0];
-					auto& tv1 = t.v[1];
-					auto& tv2 = t.v[2];
+					const auto tv0 = triangles.get_vertex_index(i, 0);
+					const auto tv1 = triangles.get_vertex_index(i, 1);
+					const auto tv2 = triangles.get_vertex_index(i, 2);
 
 					for (size_t j = 0; j < 3; ++j) {
 						size_t i0, i1;
@@ -1966,9 +2069,12 @@ private:
 				// Get explicit edge to collapse
 				auto [e0, e1] = EDGES[candidate.tvertex];
 				auto e2 = OPPOSITE[candidate.tvertex];
-				const size_t i0 = triangles[candidate.tid].v[e0];
-				const size_t i1 = triangles[candidate.tid].v[e1];
-				const size_t i2 = triangles[candidate.tid].v[e2];
+				//const size_t i0 = triangles[candidate.tid].v[e0];
+				//const size_t i1 = triangles[candidate.tid].v[e1];
+				//const size_t i2 = triangles[candidate.tid].v[e2];
+				const size_t i0 = triangles.get_vertex_index(candidate.tid, e0);
+				const size_t i1 = triangles.get_vertex_index(candidate.tid, e1);
+				const size_t i2 = triangles.get_vertex_index(candidate.tid, e2);
 
 				// Try to lock triangle vertices
 				using ulock = std::unique_lock<std::mutex >;
@@ -1990,7 +2096,10 @@ private:
 				refs.insert(refs.end(), v1.refs.begin(), v1.refs.end());
 				SizeTVector neighbors;
 				for (auto& ref : refs) {
-					auto vertex_index = triangles[ref.tid].v[ref.tvertex];
+					//auto vertex_index = triangles[ref.tid].v[ref.tvertex];
+					auto vertex_index = triangles.get_vertex_index(
+						ref.tid, ref.tvertex
+					);
 					if (
 						vertex_index != i0
 						and vertex_index != i1
@@ -2032,16 +2141,16 @@ private:
 	size_t CollapseEdge(const SimplifyRef& candidate) {
 		// Check triangle
 		const size_t triangleIndex = candidate.tid;
-		SimplifyTriangle &t = triangles[triangleIndex];
+		//const SimplifyTriangle &t = triangles[triangleIndex];
 
 		if (triangles.deleted(triangleIndex) or triangles.dirty(triangleIndex)) {
 			return 0;
 		}
 
 		// Get explicit edge to collapse
-		auto [e1, e2] = EDGES[candidate.tvertex];
-		const size_t i0 = t.v[e1];
-		const size_t i1 = t.v[e2];
+		auto [e0, e1] = EDGES[candidate.tvertex];
+		const size_t i0 = triangles.get_vertex_index(candidate.tid, e0);
+		const size_t i1 = triangles.get_vertex_index(candidate.tid, e1);
 
 		// Prepare shortcuts
 		SimplifyVertex &v0 = vertices[i0];
@@ -2073,9 +2182,12 @@ private:
 		v0.quad += v1.quad;
 
 		// Interpolate other vertex attributes
-		const auto& tv0 = vertices[t.v[0]];
-		const auto& tv1 = vertices[t.v[1]];
-		const auto& tv2 = vertices[t.v[2]];
+		//const auto& tv0 = vertices[t.v[0]];
+		//const auto& tv1 = vertices[t.v[1]];
+		//const auto& tv2 = vertices[t.v[2]];
+		const auto& tv0 = vertices[triangles.get_vertex_index(candidate.tid, 0)];
+		const auto& tv1 = vertices[triangles.get_vertex_index(candidate.tid, 1)];
+		const auto& tv2 = vertices[triangles.get_vertex_index(candidate.tid, 2)];
 
 		// Get barycentric coordinates
 		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
@@ -2151,7 +2263,7 @@ private:
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
-			const auto& t = triangles[ref.tid];
+			//const auto& t = triangles[ref.tid];
 			if (triangles.deleted(ref.tid)) continue;
 
 			// Compute vertices
@@ -2159,7 +2271,10 @@ private:
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 
 			// Mark for deletion?
-			deleted[k] = (t.v[e1] == i1 || t.v[e2] == i1);
+			//deleted[k] = (t.v[e1] == i1 || t.v[e2] == i1);
+			deleted[k] =
+				(triangles.get_vertex_index(ref.tid, e1) == i1
+				 || triangles.get_vertex_index(ref.tid, e2) == i1);
 		}
 		return deleted;
 	}
@@ -2171,15 +2286,15 @@ private:
 		bool res = false;
 
 		for (auto& ref: v0.refs) {
-			const auto& t = triangles[ref.tid];
+			//const auto& t = triangles[ref.tid];
 
 			// Deleted? -> pass
 			if (triangles.deleted(ref.tid)) continue;
 
 			const size_t e0 = ref.tvertex;
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-			const size_t id1 = t.v[e1];
-			const size_t id2 = t.v[e2];
+			const size_t id1 = triangles.get_vertex_index(ref.tid, e1);
+			const size_t id2 = triangles.get_vertex_index(ref.tid, e2);
 
 			// To be deleted? -> pass
 			if (id1 == i1 || id2 == i1) { continue; }
@@ -2202,7 +2317,7 @@ private:
 			{
 				// We use squared norms to avoid square root overhead
 				const Normal geometryN(d1.cross(d2));
-				const float dot = geometryN.dot(t.geometryN);
+				const float dot = geometryN.dot(triangles.get_normal(ref.tid));
 				const float sqrdot = dot * dot;
 
 				// t.geometryN has already been normalized, so we don't have to
@@ -2220,12 +2335,12 @@ private:
 	}  // ~Flipped
 
 	// Compute error for a given triangle
-	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) const {
+	inline std::array<float, 3> ComputeTriangleError(size_t tid) const {
 		std::array<float, 3> res;
 		for (auto [i, edge]: enumerate(EDGES)) {
-			const auto [e1, e2] = edge;
-			const auto& v0 = vertices[t.v[e1]];
-			const auto& v1 = vertices[t.v[e2]];
+			const auto [e0, e1] = edge;
+			const auto& v0 = vertices[triangles.get_vertex_index(tid, e0)];
+			const auto& v1 = vertices[triangles.get_vertex_index(tid, e1)];
 			auto collapseError = std::get<float>(CalculateCollapsePoint(v0, v1));
 			auto screenErrorScale = CalculateCollapseScreenErrorScale(v0, v1);
 			res[i] = collapseError * screenErrorScale;
@@ -2244,7 +2359,7 @@ private:
 		RefVector refs;
 		refs.reserve(v.refs.size());
 		for (const auto& [k, r]: enumerate(v.refs)) {
-			SimplifyTriangle &t = triangles[r.tid];
+			//const SimplifyTriangle &t = std::get<0>(triangles[r.tid]);  // TODO
 
 			if (triangles.deleted(r.tid))
 				continue;
@@ -2253,19 +2368,20 @@ private:
 				triangles.set_deleted(r.tid);
 				deletedTriangles++;
 				// Update cache (remove triangle)
-				auto cachekey = makeErrorCacheKey(t);
+				auto cachekey = makeErrorCacheKey(r.tid);
 				auto status = ErrorCache.erase(cachekey);
 				continue;
 			}
 
 			// Update cache (remove triangle)
-			auto cachekey = makeErrorCacheKey(t);
+			auto cachekey = makeErrorCacheKey(r.tid);
 			ErrorCache.erase(cachekey);
 
-			t.v[r.tvertex] = i0;
+			//t.v[r.tvertex] = i0;
+			triangles.set_vertex_index(r.tid, r.tvertex, i0);
 			triangles.set_dirty(r.tid);
 			//trierrors[r.tid] = ComputeTriangleError(t);
-			triangles.set_errors(r.tid, ComputeTriangleError(t));
+			triangles.set_errors(r.tid, ComputeTriangleError(r.tid));
 
 			refs.push_back(r);
 		}
@@ -2288,13 +2404,17 @@ private:
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& t = triangles[i];
 				if (triangles.deleted(i)) continue;
-				newTrianglesETS.local().push_back(t);
+				//auto& t = triangles[i];
+				triangles.push_to_other_back(i, newTrianglesETS.local());
+				//newTrianglesETS.local().push_back(t);
 
-				keep[t.v[0]].test_and_set();
-				keep[t.v[1]].test_and_set();
-				keep[t.v[2]].test_and_set();
+				//keep[t.v[0]].test_and_set();
+				//keep[t.v[1]].test_and_set();
+				//keep[t.v[2]].test_and_set();
+				keep[triangles.get_vertex_index(i, 0)].test_and_set();
+				keep[triangles.get_vertex_index(i, 1)].test_and_set();
+				keep[triangles.get_vertex_index(i, 2)].test_and_set();
 			}
 		};
 		tbb::parallel_for(range, compress_triangles);
@@ -2302,11 +2422,12 @@ private:
 		TriangleVector newTriangles;
 		newTriangles.reserve(triangles.size());
 		for (auto& l: newTrianglesETS) {
-			newTriangles.insert(
-				newTriangles.end(),
-				std::make_move_iterator(l.begin()),
-				std::make_move_iterator(l.end())
-			);
+			newTriangles += l;  // Concat
+			//newTriangles.insert(
+				//newTriangles.end(),
+				//std::make_move_iterator(l.begin()),
+				//std::make_move_iterator(l.end())
+			//);
 		}
 		triangles = std::move(newTriangles);
 
@@ -2340,9 +2461,16 @@ private:
 		auto copy_indices = [&](tbb::blocked_range2d<size_t, size_t>& r) {
 			for (size_t i = r.rows().begin(); i != r.rows().end(); ++i) {
 				for (size_t j = r.cols().begin(); j != r.cols().end(); ++j) {
-					auto& t = triangles[i];
-					t.v[j] = newIndex[t.v[j]];
-					assert(t.v[j] < vertices.size());
+					//TODO
+					//auto& t = triangles[i];
+					//t.v[j] = newIndex[t.v[j]];
+					triangles.set_vertex_index(
+						i,
+						j,
+						newIndex[triangles.get_vertex_index(i, j)]
+					);
+					//assert(t.v[j] < vertices.size());
+					assert(triangles.get_vertex_index(i, j) < vertices.size());
 				}
 			}
 		};
