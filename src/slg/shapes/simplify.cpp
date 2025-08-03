@@ -2184,6 +2184,8 @@ private:
 			oldVertexIdx1(p_oldVertexIdx1),
 			deletedTriangles(p_deletedTriangles)
 		{}
+
+		CollapsingResult() = default;
 	};
 
 	// Delete triangles
@@ -2193,7 +2195,9 @@ private:
 
 		size_t numDeletedTriangles = 0;
 
-		// Step #1 - Get list of collapsing vertices (parallel-reduce algo)
+		SDL_LOG("Entering step 1");
+
+		// Step #1 - Get list of collapsing vertices (parallel-reduce approach)
 		using CandidateIterator = CandidateContainer::const_iterator;
 		using CandidateBRange = tbb::blocked_range<CandidateIterator>;
 		using CollapsingResultVector = std::vector<
@@ -2221,6 +2225,7 @@ private:
 		auto reduceTask = [&](
 			CollapsingResultVector a, const CollapsingResultVector& b
 		) {
+			a.reserve(a.size() + b.size());
 			a.insert(a.end(), b.begin(), b.end());
 			return a;
 		};
@@ -2232,7 +2237,7 @@ private:
 			candidateRange,
 
 			// Identity
-			identity,
+			CollapsingResultVector(0),
 
 			// Parallel computation on private list
 			collapseTask,
@@ -2241,22 +2246,29 @@ private:
 			reduceTask
 		);
 
+		SDL_LOG("Entering step 2");
 		// Step #2 - Apply effectively (sequential)
+		std::vector<size_t, tbb::tbb_allocator<size_t>> trianglesToUpdate;
+		trianglesToUpdate.reserve(triangles.size() / 10);
 		vertices.reserve(vertices.size() + collapsingOutput.size());
-		for (const auto& collapsing: collapsingOutput) {
-			// Check whether triangle still exists
 
-			// Check whether impacted triangles have not been already deleted
+		for (const auto& collapsing: collapsingOutput) {
+
+			// Check whether incident triangles have not been already deleted
 			bool anyDeletedTriangle =
-				std::ranges::any_of(
-					collapsing.deletedTriangles,
+				std::any_of(
+					//std::execution::par,
+					collapsing.deletedTriangles.begin(),
+					collapsing.deletedTriangles.end(),
 					[&](size_t i){
 						return triangles[i].deleted;
 					}
 				)
 				or
-				std::ranges::any_of(
-					collapsing.newVertex.refs,
+				std::any_of(
+					//std::execution::par,
+					collapsing.newVertex.refs.begin(),
+					collapsing.newVertex.refs.end(),
 					[&](const SimplifyRef& r) {
 						return triangles[r.tid].deleted;
 					}
@@ -2269,17 +2281,18 @@ private:
 			assert(vertices[inew] == collapsing.newVertex);
 
 			// Mark deleted triangles
-			for (size_t i: collapsing.deletedTriangles) {
-				triangles[i].deleted = true;
-			}
+			std::for_each(
+				std::execution::par,
+				collapsing.deletedTriangles.begin(),
+				collapsing.deletedTriangles.end(),
+				[&](size_t i){ triangles[i].deleted = true; }
+			);
 
 			// Update counter
 			numDeletedTriangles += collapsing.deletedTriangles.size();
 
 			// Modify affected triangle vertices ("remend" the mesh)
 			// SEQUENTIAL
-			// TODO update triangles in another (parallel) dedicated loop
-			std::vector<size_t, tbb::tbb_allocator<size_t>> trianglesToUpdate;
 			for (auto& ref: collapsing.newVertex.refs) {
 				auto& t = triangles[ref.tid];
 				assert(not t.deleted);
@@ -2287,31 +2300,38 @@ private:
 				trianglesToUpdate.push_back(ref.tid);
 			}
 
-			// Get unique incident triangles to update
-			std::sort(trianglesToUpdate.begin(), trianglesToUpdate.end());
-			auto last = std::unique(trianglesToUpdate.begin(), trianglesToUpdate.end());
-			trianglesToUpdate.erase(last, trianglesToUpdate.end());
-
-			// Update incident triangles
-			// TODO parallelize
-			for (auto tid: trianglesToUpdate) {
-				auto& t = triangles[tid];
-				t.errors = ComputeTriangleError(t);
-				t.geometryN = TriNormal(
-					vertices[t.v[0]].p(),
-					vertices[t.v[1]].p(),
-					vertices[t.v[2]].p()
-				).normalized();
-
-				// Update cache (remove triangle)
-				auto cachekey = makeErrorCacheKey(t);
-				ErrorCache.erase(cachekey);
-			}
-
 		}  // ~for collapsing
 
-		return numDeletedTriangles;
+		SDL_LOG("Entering step 3");
+		// Step #3 - Update triangles
 
+		// Get unique incident triangles to update
+		tbb::parallel_sort(trianglesToUpdate.begin(), trianglesToUpdate.end());
+		auto last = std::unique(trianglesToUpdate.begin(), trianglesToUpdate.end());
+		trianglesToUpdate.erase(last, trianglesToUpdate.end());
+
+		// Update incident triangles
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, trianglesToUpdate.size()),
+			[&](const tbb::blocked_range<size_t>& r){
+				for (size_t tid = r.begin(); tid != r.end(); ++tid) {
+					auto& t = triangles[tid];
+					t.errors = ComputeTriangleError(t);
+					t.geometryN = TriNormal(
+						vertices[t.v[0]].p(),
+						vertices[t.v[1]].p(),
+						vertices[t.v[2]].p()
+					).normalized();
+
+					// Clean cache
+					auto cachekey = makeErrorCacheKey(t);
+					ErrorCache.erase(cachekey);
+				}  // ~for
+			}  // ~lambda
+		);
+
+		SDL_LOG("Terminating");
+		return numDeletedTriangles;
 
 	}  // ~DeleteTriangles2
 
@@ -2323,8 +2343,6 @@ private:
 		const size_t triangleIndex = candidate.tid;
 		const SimplifyTriangle &t = triangles[triangleIndex];
 
-		//if (t.deleted or t.dirty) return std::nullopt;
-
 		// Get explicit edge to collapse
 		auto [e0, e1] = EDGES[candidate.tvertex];
 		const size_t i0 = t.v[e0];
@@ -2335,18 +2353,17 @@ private:
 		const SimplifyVertex& v1 = vertices[i1];
 
 		// Border check
-		// TODO
+		// TODO should have been checked in candidate contest
 		if (v0.border != v1.border) return std::nullopt;
 
 		// Compute vertex new position (and associated error)
+		// TODO should have been computed in candidate contest
 		const auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 
 		// Do not collapse edge if it makes a face flip
-		if (Flipped(p, i0, i1)) return std::nullopt;
-		if (Flipped(p, i1, i0)) return std::nullopt;
-
-		// At this stage, no triangle flip is to fear anymore,
-		// so we can compute collapsing
+		// This should have been checked when building candidate list
+		assert(not Flipped(p, i0, i1));
+		assert(not Flipped(p, i1, i0));
 
 		// Get deleted incident triangles
 		auto&& deleted0 = GetDeletedTriangles2(i0, i1);
@@ -2632,7 +2649,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
