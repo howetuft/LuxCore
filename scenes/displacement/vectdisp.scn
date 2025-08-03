@@ -48,6 +48,7 @@ scene.shapes.spheredisp.scale = 2.0
 scene.shapes.spheresimp.type = simplify
 scene.shapes.spheresimp.source = spheredisp
 scene.shapes.spheresimp.target = 0.1
+scene.shapes.spheresimp.enhanced = 1
 ##
 scene.shapes.sphereharl1.type = harlequin
 scene.shapes.sphereharl1.source = spheredisp
