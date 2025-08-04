@@ -1156,7 +1156,7 @@ using TriangleVector = std::vector<
 
 // Error between vertex and Quadric
 inline float VertexError(const Quadric &q, const Point& p) {
-	return p.transpose() * q * p;
+	return fabs(p.transpose() * q * p);
 }
 
 
@@ -1778,10 +1778,10 @@ private:
 		float error;
 		Point pResult;
 		if (preserveBorder && v0.getBorder()) {
-			error = VertexError(q, p0) + 1.f;
+			error = VertexError(q, p0);
 			pResult = p0;
 		} else if (preserveBorder && v1.getBorder()) {
-			error = VertexError(q, p1) + 1.f;
+			error = VertexError(q, p1);
 			pResult = p1;
 		} else {
 			Eigen::Vector3f errors{
@@ -1789,9 +1789,6 @@ private:
 				VertexError(q, p1),
 				VertexError(q, p2)
 			};
-			// Error can be negative, I add 1 to have screenErrorScale to work as
-			// expected
-			errors += Eigen::Vector3f::Ones();
 			int minIndex;
 			error = errors.array().minCoeff(&minIndex);
 			switch(minIndex) {
@@ -1802,8 +1799,6 @@ private:
 			}
 		}
 
-	// Adding 1.0 because error have negative values
-	error = std::max(error + 1.f, 0.f);
 	return std::tuple(pResult, error);
 }
 
