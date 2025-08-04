@@ -1008,22 +1008,31 @@ const auto Upper = Eigen::UpLoType::Upper;
 struct
 alignas(std::hardware_destructive_interference_size)
 SimplifyRef {
-	size_t tid = 0;  // Triangle ID
-	char tvertex = -1;  // Vertex in triangle, should be in [0;3] (-1: not set)
-	float error;  // To prioritize candidates
 
 	SimplifyRef(size_t p_tid, size_t p_tvertex, float p_error=0.f):
 		tid(p_tid), tvertex(p_tvertex), error(p_error) {}
-	SimplifyRef() {}
+	SimplifyRef() = default;
 
 	bool initialized() const { return tvertex >= 0; }
+
+	size_t getTid() const { return tid; }
+	int8_t getVertex() const { return tvertex; }
+	float getError() const { return error; }
+
+private:
+	size_t tid = 0;  // Triangle ID
+	int8_t tvertex = -1;  // Vertex in triangle, should be in [0;3] (-1: not set)
+	float error;  // To prioritize candidates
 };
 
-bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
-	return left.error < right.error;
-}
+// TODO remove
+//bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
+	//return left.getError() < right.getError();
+//}
 
-using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
+//TODO
+//using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
+using RefVector = tbb::concurrent_vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
 // Vertex
 struct
@@ -1085,6 +1094,7 @@ SimplifyTriangle {
 	bool deleted = false;
 	bool dirty = false;
 	std::array<float, 3> errors{0.f, 0.f, 0.f};
+
 };
 
 using TriangleVector = std::vector<
@@ -1131,17 +1141,49 @@ template <typename D, typename S, typename T> struct ForEach {
 #define DBG_SDL_LOG(X) {}
 #endif
 
+// Candidate for decimation
+struct alignas(128) Candidate {
+
+	Candidate() = delete;
+	Candidate(
+		bool p_valid,
+		const SimplifyRef& p_ref,
+		Point p_point,
+		float p_error
+	) : valid(p_valid), ref(p_ref), collapsePoint(p_point), error(p_error)
+	{}
+
+	bool getValid() const { return valid; }
+	const SimplifyRef& getRef() const { return ref; }
+	const Point& getCollapsePoint() const { return collapsePoint; }
+	float getError() const { return error; }
+
+private:
+	bool valid = false;  // Will be set to true if this candidate is a valid one
+	SimplifyRef ref;
+	Point collapsePoint;
+	float error = std::numeric_limits<float>::max();
+};
+
+bool CandidateLess(const Candidate& left, const Candidate& right) {
+	return left.getError() < right.getError();
+}
+
+// TODO Rename into CandidateCache
+
 // Cache feature for candidate building
 
 // Key is a triangle, identified by its geometric points
 struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
 
-struct alignas(128) ErrorCacheEntry {
-	// vertex index in triangle and error
-	uint16_t minIndex;  // 16
-	float error; // 32
-	uint16_t pad[5];  // 80
-};
+using ErrorCacheEntry = Candidate;
+
+//struct alignas(128) ErrorCacheEntry {
+	//// vertex index in triangle and error
+	//uint16_t minIndex;  // 16
+	//float error; // 32
+	//uint16_t pad[5];  // 80
+//};
 
 struct ErrorCacheHash {
 	//size_t hash(const ErrorCacheKey& k) {
@@ -1603,7 +1645,7 @@ private:
 				for (const auto& ref: v.refs) {
 
 					// For each vertex of the incident triangle
-					for (size_t vid: triangles[ref.tid].v) {
+					for (size_t vid: triangles[ref.getTid()].v) {
 						// Increment incident vertex order
 						// If id doesn't exist yet, it will be created (with order=1)
 						vorders[vid]++;
@@ -1708,12 +1750,12 @@ private:
 
 	// Adding 1.0 because error have negative values
 	error = std::max(error + 1.f, 0.f);
-	return std::tuple(std::move(pResult), error);
+	return std::tuple(pResult, error);
 }
 
-	using CandidateContainer = std::vector<
-		SimplifyRef,
-		tbb::cache_aligned_allocator<SimplifyRef>
+	using CandidateContainer = tbb::concurrent_vector<
+		Candidate,
+		tbb::cache_aligned_allocator<Candidate>
 	>;
 
 	// Build candidate list
@@ -1726,36 +1768,41 @@ private:
 
 
 		constexpr char UNDEFINED_INDEX = -1;
-		CandidateContainer candidates(triangles.size());
+		CandidateContainer candidates;
+		candidates.reserve(triangles.size());
 		tbb::blocked_range<size_t> tri_range(0, triangles.size());
 
 
 		auto build_task = [&](const decltype(tri_range)& r) {
-			// Main loop
+			// Loop into triangles
 			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
 				if (t.deleted) continue;
 
-				char minErrorIndex = UNDEFINED_INDEX;
+				int8_t minErrorIndex = UNDEFINED_INDEX;
 				float minError = FLOAT_INFINITY;
+				Point minP;
 
 				// Look into cache whether the triangle has already been computed
 				const auto cacheKey(makeErrorCacheKey(t));
 #ifndef NDEBUG
+				// Debug: count all cache requests
 				cachecalls++;
 #endif
 				ErrorCacheType::const_accessor a;
-				if (ErrorCache.find(a, cacheKey)) {
-					// Hit! --> Just find and unpack...
-					minErrorIndex = a->second.minIndex;
-					minError = a->second.error;
+				//if (ErrorCache.find(a, cacheKey)) {  TODO
+				if (false) {
+					// Hit! --> Just add it to candidates
+					candidates.push_back(a->second);
 					a.release();
+
 #ifndef NDEBUG
+					// Debug: count hits
 					cachehits++;
 #endif
 				} else {
 					a.release();
-					// No hit: compute and feed cache
+					// No hit in cache: compute and feed cache
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
 					auto& tv2 = t.v[2];
@@ -1778,28 +1825,40 @@ private:
 							if (v0.border != v1.border) continue;
 						}
 
-						auto&& [p, error] = CalculateCollapsePoint(v0, v1);
+						auto [p, error] = CalculateCollapsePoint(v0, v1);
 						if (Flipped(p, i0, i1)) continue;
 						if (Flipped(p, i1, i0)) continue;
 
 						if (triangles[i].errors[j] < minError) {
 							minErrorIndex = j;
+							// TODO this error or the one from CalculateCollapsePoint?
 							minError = triangles[i].errors[j];
+							minP = p;
 						}
-					}
-					ErrorCache.insert(
-						std::pair(cacheKey, ErrorCacheEntry(minErrorIndex, minError))
-					);
-				}
+					}  // ~for j
 
-				if (minErrorIndex != UNDEFINED_INDEX) {
-					candidates[i] = std::move(SimplifyRef(i, minErrorIndex, minError));
-				}
-			}
+					// Candidate is valid only if it is relinked to a vertex...
+					if (minErrorIndex != UNDEFINED_INDEX) {;
+						Candidate candidate{
+							true,  // valid
+							SimplifyRef(i, minErrorIndex, minError),  // TODO remove minError
+							minP,
+							minError
+						};
+						// Fill cache
+						ErrorCache.insert(std::pair(cacheKey, candidate));
+						// Add to candidates
+						candidates.push_back(candidate);
+					}
+
+				}  // ~else
+
+
+			}  // ~for i
 
 		};
 		tbb::parallel_for(tri_range, build_task);
-		// Remove unitialized
+		// Keep only valid candidates
 		{
 			decltype(candidates) candidates2;
 			candidates2.reserve(candidates.size());
@@ -1808,7 +1867,7 @@ private:
 				candidates.begin(),
 				candidates.end(),
 				std::back_inserter(candidates2),
-				[](const SimplifyRef& r){ return r.initialized(); }
+				[](const Candidate& c) -> bool { return c.getValid(); }
 			);
 			candidates = std::move(candidates2);
 		}
@@ -1823,11 +1882,18 @@ private:
 			candidates.begin(),
 			candidates.begin() + numCandidates,
 			candidates.end(),
-			RefLess
+			CandidateLess
 		);
 
 		// Take only the n first elements (resize)
-		candidates.resize(numCandidates);
+		{
+			decltype(candidates) candidates2;
+			candidates.reserve(numCandidates);
+			candidates2.assign(candidates.begin(), candidates.begin() + numCandidates);
+			candidates = std::move(candidates2);
+		}
+
+		SDL_LOG("Simplify - Selected " << candidates.size() << " candidates");
 
 		DBG_SDL_LOG(
 			"Cache stats: hits = " << cachehits
@@ -1847,12 +1913,12 @@ private:
 		bool res = false;
 
 		for (auto& ref: v0.refs) {
-			const auto& t = triangles[ref.tid];
+			const auto& t = triangles[ref.getTid()];
 
 			// Deleted? -> pass
 			if (t.deleted) continue;
 
-			const size_t e0 = ref.tvertex;
+			const size_t e0 = ref.getVertex();
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 			const size_t id1 = t.v[e1];
 			const size_t id2 = t.v[e2];
@@ -1909,43 +1975,43 @@ private:
 		return res;
 	}
 
-	// Update triangle connections and edge error after a edge is collapsed
-	// Returns: new incident edges list, number of deleted triangles
-	inline std::tuple<RefVector, size_t> UpdateTriangles(
-		const size_t i0,
-		const SimplifyVertex &v,  // Collapsed vertex
-		const BoolVector &deleted
-	) {
-		size_t deletedTriangles = 0;
-		RefVector refs;
-		refs.reserve(v.refs.size());
-		for (const auto& [k, r]: enumerate(v.refs)) {
-			SimplifyTriangle &t = triangles[r.tid];
+	//// Update triangle connections and edge error after a edge is collapsed
+	//// Returns: new incident edges list, number of deleted triangles
+	//inline std::tuple<RefVector, size_t> UpdateTriangles(
+		//const size_t i0,
+		//const SimplifyVertex &v,  // Collapsed vertex
+		//const BoolVector &deleted
+	//) {
+		//size_t deletedTriangles = 0;
+		//RefVector refs;
+		//refs.reserve(v.refs.size());
+		//for (const auto& [k, r]: enumerate(v.refs)) {
+			//SimplifyTriangle &t = triangles[r.getTid()];
 
-			if (t.deleted)
-				continue;
+			//if (t.deleted)
+				//continue;
 
-			if (deleted[k]) {
-				t.deleted = true;
-				deletedTriangles++;
-				// Update cache (remove triangle)
-				auto cachekey = makeErrorCacheKey(t);
-				auto status = ErrorCache.erase(cachekey);
-				continue;
-			}
+			//if (deleted[k]) {
+				//t.deleted = true;
+				//deletedTriangles++;
+				//// Update cache (remove triangle)
+				//auto cachekey = makeErrorCacheKey(t);
+				//auto status = ErrorCache.erase(cachekey);
+				//continue;
+			//}
 
-			// Update cache (remove triangle)
-			auto cachekey = makeErrorCacheKey(t);
-			ErrorCache.erase(cachekey);
+			//// Update cache (remove triangle)
+			//auto cachekey = makeErrorCacheKey(t);
+			//ErrorCache.erase(cachekey);
 
-			t.v[r.tvertex] = i0;
-			t.dirty = true;
-			triangles[r.tid].errors = ComputeTriangleError(t);
+			//t.v[r.getVertex()] = i0;
+			//t.dirty = true;
+			//triangles[r.getTid()].errors = ComputeTriangleError(t);
 
-			refs.push_back(r);
-		}
-		return std::tuple(std::move(refs), std::move(deletedTriangles));
-	}
+			//refs.push_back(r);
+		//}
+		//return std::tuple(refs, deletedTriangles);
+	//}
 
 	// CollapsingResult result
 	struct CollapsingResult {
@@ -1986,34 +2052,67 @@ private:
 			tbb::scalable_allocator<CollapsingResult>
 		>;
 
+		assert(
+			std::all_of(
+				candidates.begin(),
+				candidates.end(),
+				[&](const Candidate& c){ return not triangles[c.getRef().getTid()].deleted; }
+			)
+		);
+
 		CandidateBRange candidateRange{candidates.begin(), candidates.end()};
 
-		auto collapseTask = [&](const CandidateBRange& r, CollapsingResultVector v) {
-			v.reserve(v.size() + std::distance(r.begin(), r.end()));
-			std::for_each(
-				r.begin(),
-				r.end(),
-				[&](const SimplifyRef& ref){
-					auto&& collapsing = CollapseEdge2(ref);
+		struct CollapseTask {
+			CollapseTask(const Simplify& p_simplify) : simplify(p_simplify) {}
+
+			CollapsingResultVector operator()(
+				const CandidateBRange& r, CollapsingResultVector v
+			) const {  // Do not forget const!
+				v.reserve(v.size() + std::distance(r.begin(), r.end()));
+				for (auto i = r.begin(); i != r.end(); ++i) {
+					std::optional<CollapsingResult>
+						collapsing{simplify.CollapseCandidate(*i)};
 					if (collapsing.has_value()) {
 						v.push_back(*collapsing);
 					}
 				}
-			);
-			return v;
+				return v;
+			}
+		private:
+			const Simplify& simplify;
+
 		};
 
-		auto reduceTask = [&](
-			CollapsingResultVector a, const CollapsingResultVector& b
-		) {
-			a.reserve(a.size() + b.size());
-			a.insert(a.end(), b.begin(), b.end());
-			return a;
+
+		struct ReduceTask {
+			ReduceTask() = default;
+
+			CollapsingResultVector operator()(
+				CollapsingResultVector a,
+				const CollapsingResultVector& b
+			) const {  // Do not forget const!
+				a.reserve(a.size() + b.size());
+				a.insert(a.end(), b.begin(), b.end());
+				return a;
+			}
+
 		};
+
+
+		//static_assert(std::is_invocable_v<reduceTask>);
+		//static_assert(std::is_invocable_v<collapseTask>);
+
+		//auto reduceTask = [&](
+			//CollapsingResultVector a, const CollapsingResultVector& b
+		//) {
+			//a.reserve(a.size() + b.size());
+			//a.insert(a.end(), b.begin(), b.end());
+			//return a;
+		//};
 
 		CollapsingResultVector identity;
 
-		auto collapsingOutput = tbb::parallel_reduce(
+		auto collapsingOutput = tbb::parallel_reduce (
 			// Range
 			candidateRange,
 
@@ -2021,15 +2120,18 @@ private:
 			CollapsingResultVector(0),
 
 			// Parallel computation on private list
-			collapseTask,
+			CollapseTask(*this),
 
 			// Parallel reduction
-			reduceTask
+			ReduceTask{}
 		);
 
-		SDL_LOG("Entering step 2");
 		// Step #2 - Apply effectively (sequential)
-		std::vector<size_t, tbb::tbb_allocator<size_t>> trianglesToUpdate;
+		SDL_LOG("Entering step 2");
+		std::vector<
+			std::tuple<size_t, ErrorCacheKey>,
+			tbb::tbb_allocator<std::tuple<size_t, ErrorCacheKey>>
+		> trianglesToUpdate;
 		trianglesToUpdate.reserve(triangles.size() / 10);
 		vertices.reserve(vertices.size() + collapsingOutput.size());
 
@@ -2051,7 +2153,7 @@ private:
 					collapsing.newVertex.refs.begin(),
 					collapsing.newVertex.refs.end(),
 					[&](const SimplifyRef& r) {
-						return triangles[r.tid].deleted;
+						return triangles[r.getTid()].deleted;
 					}
 				);
 			if (anyDeletedTriangle) continue;
@@ -2061,30 +2163,52 @@ private:
 			auto inew = vertices.size() - 1;  // Index of new vertex
 			assert(vertices[inew] == collapsing.newVertex);
 
-			// Mark deleted triangles
+			// TODO
+			for (auto& ref: collapsing.newVertex.refs) {
+				auto& t = triangles[ref.getTid()];
+				assert(not t.deleted);
+			}
+
+			// Modify affected triangle vertices ("remend" the mesh)
+			// SERIAL
+			for (auto& ref: collapsing.newVertex.refs) {
+				auto& t = triangles[ref.getTid()];
+				assert(not t.deleted);
+
+				// Store previous cache key (must be done before vertex is
+				// updated)
+				auto cacheKey = makeErrorCacheKey(t);
+
+				// Update triangle vertex
+				t.v[ref.getVertex()] = inew;
+
+				// Push update task
+				trianglesToUpdate.push_back(
+					std::tuple(ref.getTid(), cacheKey)
+				);
+
+			}
+
+			// Mark deleted triangles and erase cache accordingly
 			std::for_each(
 				std::execution::par,
 				collapsing.deletedTriangles.begin(),
 				collapsing.deletedTriangles.end(),
-				[&](size_t i){ triangles[i].deleted = true; }
+				[&](size_t i){
+					auto& t = triangles[i];
+					t.deleted = true;
+					ErrorCache.erase(makeErrorCacheKey(t));
+				}
 			);
 
 			// Update counter
 			numDeletedTriangles += collapsing.deletedTriangles.size();
 
-			// Modify affected triangle vertices ("remend" the mesh)
-			// SEQUENTIAL
-			for (auto& ref: collapsing.newVertex.refs) {
-				auto& t = triangles[ref.tid];
-				assert(not t.deleted);
-				t.v[ref.tvertex] = inew;
-				trianglesToUpdate.push_back(ref.tid);
-			}
 
 		}  // ~for collapsing
 
-		SDL_LOG("Entering step 3");
 		// Step #3 - Update triangles
+		SDL_LOG("Entering step 3");
 
 		// Get unique incident triangles to update
 		tbb::parallel_sort(trianglesToUpdate.begin(), trianglesToUpdate.end());
@@ -2095,8 +2219,11 @@ private:
 		tbb::parallel_for(
 			tbb::blocked_range<size_t>(0, trianglesToUpdate.size()),
 			[&](const tbb::blocked_range<size_t>& r){
-				for (size_t tid = r.begin(); tid != r.end(); ++tid) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					auto [tid, cacheKey] = trianglesToUpdate[i];
 					auto& t = triangles[tid];
+
+					// Update triangle
 					t.errors = ComputeTriangleError(t);
 					t.geometryN = TriNormal(
 						vertices[t.v[0]].p(),
@@ -2105,8 +2232,8 @@ private:
 					).normalized();
 
 					// Clean cache
-					auto cachekey = makeErrorCacheKey(t);
-					ErrorCache.erase(cachekey);
+					ErrorCache.erase(cacheKey);
+
 				}  // ~for
 			}  // ~lambda
 		);
@@ -2119,13 +2246,16 @@ private:
 
 	// Collapse an edge
 	// Returns: a CollapsingResult object, or nullopt
-	std::optional<CollapsingResult> CollapseEdge2(const SimplifyRef& candidate) const {
+	std::optional<CollapsingResult> CollapseCandidate(const Candidate& candidate) const {
 		// Check triangle
-		const size_t triangleIndex = candidate.tid;
+		const size_t triangleIndex = candidate.getRef().getTid();
 		const SimplifyTriangle &t = triangles[triangleIndex];
 
+		assert(not t.deleted);
+
 		// Get explicit edge to collapse
-		auto [e0, e1] = EDGES[candidate.tvertex];
+		assert(candidate.getRef().getVertex() >= 0 and candidate.getRef().getVertex() <= 3);
+		auto& [e0, e1] = EDGES[candidate.getRef().getVertex()];
 		const size_t i0 = t.v[e0];
 		const size_t i1 = t.v[e1];
 
@@ -2139,7 +2269,9 @@ private:
 
 		// Compute vertex new position (and associated error)
 		// TODO should have been computed in candidate contest
-		const auto&& [p, error] = CalculateCollapsePoint(v0, v1);
+		//const auto [p, error] = CalculateCollapsePoint(v0, v1);
+		Point p = candidate.getCollapsePoint();
+		float error = candidate.getError();
 
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
@@ -2147,8 +2279,8 @@ private:
 		assert(not Flipped(p, i1, i0));
 
 		// Get deleted incident triangles
-		auto&& deleted0 = GetDeletedTriangles2(i0, i1);
-		auto&& deleted1 = GetDeletedTriangles2(i1, i0);
+		auto deleted0 = GetDeletedTriangles2(i0, i1);
+		auto deleted1 = GetDeletedTriangles2(i1, i0);
 
 		// Create new vertex
 		SimplifyVertex vnew;
@@ -2162,7 +2294,7 @@ private:
 		const auto& tv0 = vertices[t.v[0]];
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
-		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
+		auto [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
 
 		if (bcoords_ok) {
 
@@ -2209,32 +2341,21 @@ private:
 		auto last = std::unique(deletedTriangles.begin(), deletedTriangles.end());
 		deletedTriangles.erase(last, deletedTriangles.end());
 
-
+		// Add refs to vnew
 		for (size_t j = 0; j < v0.refs.size(); ++j) {
 			const auto& ref = v0.refs[j];
-			const auto& t = triangles[ref.tid];
+			const auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
-			//if (deleted0[j]) {
-				//deletedTriangles.push_back(ref.tid);
-				//continue;
-			//}
-			newRefs.push_back(ref);
+			vnew.refs.push_back(ref);
 		}
 
 		for (size_t j = 0; j < v1.refs.size(); ++j) {
 			const auto& ref = v1.refs[j];
-			const auto& t = triangles[ref.tid];
+			const auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
-			//if (deleted1[j]) {
-				//deletedTriangles.push_back(ref.tid);
-				//continue;
-			//}
-			newRefs.push_back(ref);
+			vnew.refs.push_back(ref);
 		}
 
-		//auto&& [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);  // TODO
-		//auto&& [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
-		vnew.refs = std::move(newRefs);
 
 		return std::make_optional<CollapsingResult>(
 			vnew,
@@ -2254,17 +2375,18 @@ SizeTVector GetDeletedTriangles2(
 
 		for (size_t k = 0; k < v0.refs.size(); ++k) {
 			auto& ref = v0.refs[k];
-			auto& t = triangles[ref.tid];
+			auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
 
 			// Compute vertices
-			const size_t e0 = ref.tvertex;
+			const size_t e0 = ref.getVertex();
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 
 			//// Mark for deletion?
 
 			if(t.v[e1] == i1 || t.v[e2] == i1) {
-				result.push_back(ref.tid);
+				assert(ref.getTid() < triangles.size());
+				result.push_back(ref.getTid());
 			}
 		}
 		return result;
@@ -2430,7 +2552,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
