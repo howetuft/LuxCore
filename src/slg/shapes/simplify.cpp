@@ -1564,8 +1564,9 @@ private:
 	//
 	// Compact triangles, compute quadrics, incidents, borders
 	void InitIteration(const size_t iteration) {
+#if 0
 		if (iteration > 0) {
-			// Compress triangles and mark vertices to keep
+			// Compress triangles
 			auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted; };
 			decltype(triangles) newTriangles;
 			newTriangles.reserve(triangles.size());
@@ -1577,12 +1578,12 @@ private:
 			}
 			triangles = std::move(newTriangles);
 		}
+#endif
 
 
 
 		// Build per-vertex incident edge tables
 		//
-		InitIncidentEdges();
 
 		// Init Quadrics by Plane & Edge Errors
 		//
@@ -1591,6 +1592,7 @@ private:
 		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
+			InitIncidentEdges();
 			InitQuadrics();
 			InitBorders();
 		}
@@ -2205,13 +2207,20 @@ private:
 			assert(vertices[inew] == collapsing.newVertex);
 			assert(vertices[inew].getSizeRefs() > 0);
 
-			// TODO
+			// Remove refs of old vertices
+			// (but don't remove them, otherwise it will mess triangle-vertices
+			// correspondance)
+			vertices[collapsing.oldVertexIdx0].clearRefs();
+			vertices[collapsing.oldVertexIdx1].clearRefs();
+
+#ifndef NDEBUG
 			for (auto& ref: collapsing.newVertex.getRefs()) {
 				auto& t = triangles[ref.getTid()];
 				assert(not t.deleted);
 			}
+#endif
 
-			// Modify affected triangle vertices ("remend" the mesh)
+			// Modify affected triangle vertices ("mend" the mesh)
 			// SERIAL
 			for (auto& ref: collapsing.newVertex.getRefs()) {
 				auto& t = triangles[ref.getTid()];
