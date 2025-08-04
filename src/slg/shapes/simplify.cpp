@@ -1886,8 +1886,8 @@ private:
 					}
 
 					auto [p, error] = CalculateCollapsePoint(v0, v1);
-					if (Flipped(p, i0, i1)) continue;
-					if (Flipped(p, i1, i0)) continue;
+					if (Flipped(p, v0, v1)) continue;
+					if (Flipped(p, v1, v0)) continue;
 
 					if (t.errors[j] < minError) {
 						minErrorIndex = j;
@@ -1953,9 +1953,14 @@ private:
 
 
 	// Check if a triangle flips when this edge is removed
-	inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
+	//inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
+	inline bool Flipped(
+		const Point& p,
+		const SimplifyVertex& v0,
+		const SimplifyVertex& v1
+	) const {
 
-		const auto& v0 = vertices[i0];
+		//const auto& v0 = vertices[i0];
 		bool res = false;
 
 		for (auto& ref: v0.getRefs()) {
@@ -1966,16 +1971,16 @@ private:
 
 			const size_t e0 = ref.getVertex();
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-			const size_t id1 = t.v[e1];
-			const size_t id2 = t.v[e2];
+			const SimplifyVertex& ve1 = vertices[t.v[e1]];
+			const SimplifyVertex& ve2 = vertices[t.v[e2]];
 
 			// To be deleted? -> pass
-			if (id1 == i1 || id2 == i1) { continue; }
+			if (&ve1 == &v1 || &ve2 == &v1) { continue; }
 
 			ErrorCacheKey key{
 				p,
-				vertices[id1].getP(),
-				vertices[id2].getP(),
+				ve1.getP(),
+				ve2.getP(),
 				t.geometryN
 			};
 
@@ -1988,7 +1993,7 @@ private:
 			}
 			if (not hit) {
 				assertTriangle = AssertTriangle(
-					p, vertices[id1].getP(), vertices[id2].getP(), t.geometryN
+					p, ve1.getP(), ve2.getP(), t.geometryN
 				);
 				ErrorCache.insert(std::pair(key, assertTriangle));
 			}
@@ -2303,15 +2308,8 @@ private:
 
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
-		if (Flipped(p, i1, i0)) {
-			SDL_LOG("Flip error " << i1);
-			for (auto& ref: vertices[i1].getRefs()) {
-				SDL_LOG("Refs: " << ref.getTid() << " / " << size_t(ref.getVertex()));
-				throw std::runtime_error("");
-			}
-		}
-		assert(not Flipped(p, i0, i1));
-		assert(not Flipped(p, i1, i0));
+		assert(not Flipped(p, v0, v1));
+		assert(not Flipped(p, v1, v0));
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
