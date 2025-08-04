@@ -1294,11 +1294,6 @@ using ErrorCacheType = tbb::concurrent_hash_map<
 >;
 
 
-#ifndef NDEBUG
-	std::atomic<size_t> cachecalls, cachehits;
-#endif
-
-
 // The main class
 class Simplify {
 public:
@@ -1842,6 +1837,9 @@ private:
 	//
 	CandidateContainer BuildCandidateList(size_t maxCandidateQueueSize) const {
 
+#ifndef NDEBUG
+		std::atomic<size_t> cachecalls, cachehits;
+#endif
 
 
 		constexpr char UNDEFINED_INDEX = -1;
@@ -1984,53 +1982,6 @@ private:
 
 	}  // ~BuildCandidateList
 
-	// Check one ref
-	bool FlippedRef(const SimplifyRef& ref, const Point& p, size_t i1) const {
-		const auto& t = triangles[ref.getTid()];
-
-		// Deleted? -> pass
-		if (t.deleted) return false;
-
-		const size_t e0 = ref.getVertex();
-		const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-		const size_t id1 = t.v[e1];
-		const size_t id2 = t.v[e2];
-		const Normal& n = t.geometryN;
-		const Point& p1 = vertices[id1].getP();
-		const Point& p2 = vertices[id2].getP();
-
-		// To be deleted? -> pass
-		if (id1 == i1 || id2 == i1) { return false; }
-
-		// Try cache
-		ErrorCacheKey key{p, p1, p2, n};
-
-		bool hit;
-		bool assertTriangle;
-		{  // Scope for accessor
-			ErrorCacheType::const_accessor a;
-			hit = ErrorCache.find(a, key);
-#ifndef NDEBUG
-			cachecalls++;
-#endif
-			if (hit) {
-				assertTriangle = a->second;
-#ifndef NDEBUG
-				cachehits++;
-#endif
-
-			}
-		}
-		if (not hit) {
-			assertTriangle = AssertTriangle(p, p1, p2, n);
-			ErrorCache.insert(std::pair(key, assertTriangle));
-		}
-		if (not assertTriangle) {
-			return true;
-		}
-
-		return false;
-	}
 
 	// Check if a triangle flips when this edge is removed
 	inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
@@ -2038,43 +1989,49 @@ private:
 		const auto& v0 = vertices[i0];
 		bool res = false;
 
-		const RefVector& refs = v0.getRefs();
+		for (auto& ref: v0.getRefs()) {
+			const auto& t = triangles[ref.getTid()];
 
-		auto compute = [&](const tbb::blocked_range<size_t>& r, bool res) -> bool {
-			res = false;
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& ref = refs[i];
-				res = res or FlippedRef(ref, p, i1);
+			// Deleted? -> pass
+			if (t.deleted) continue;
+
+			const size_t e0 = ref.getVertex();
+			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
+			const size_t id1 = t.v[e1];
+			const size_t id2 = t.v[e2];
+
+			// To be deleted? -> pass
+			if (id1 == i1 || id2 == i1) { continue; }
+
+			ErrorCacheKey key{
+				p,
+				vertices[id1].getP(),
+				vertices[id2].getP(),
+				t.geometryN
+			};
+
+			bool hit;
+			bool assertTriangle;
+			{  // Scope for accessor
+				ErrorCacheType::const_accessor a;
+				hit = ErrorCache.find(a, key);
+				if (hit) { assertTriangle = a->second; }
 			}
-			return res;
-		};
+			if (not hit) {
+				assertTriangle = AssertTriangle(
+					p, vertices[id1].getP(), vertices[id2].getP(), t.geometryN
+				);
+				ErrorCache.insert(std::pair(key, assertTriangle));
+			}
+			if (not assertTriangle) {
+				return true;
+			}
 
-		auto reduce = [](bool a, bool b) -> bool {
-			a = a or b;
-			return a;
-		};
-
-
-		bool result = tbb::parallel_reduce(
-			// Range
-			tbb::blocked_range<size_t>(0, refs.size()),
-
-			// Identity
-			false,
-
-			// Computation
-			compute,
-
-			// Reduction
-			reduce
-		);
-
-		return result;
-
-
+		}  // ~for ref
+		return false;
 	}  // ~Flipped
 
-	static inline bool AssertTriangle(
+	static bool AssertTriangle(
 		const Point& p,
 		const Point& p1,
 		const Point& p2,
@@ -2413,8 +2370,16 @@ private:
 		float error = candidate.getError();
 
 		// Do not collapse edge if it makes a face flip
-		if (Flipped(p, i0, i1)) return std::nullopt;
-		if (Flipped(p, i1, i0)) return std::nullopt;
+		// This should have been checked when building candidate list
+		if (Flipped(p, i1, i0)) {
+			SDL_LOG("Flip error " << i1);
+			for (auto& ref: vertices[i1].getRefs()) {
+				SDL_LOG("Refs: " << ref.getTid() << " / " << size_t(ref.getVertex()));
+				throw std::runtime_error("");
+			}
+		}
+		assert(not Flipped(p, i0, i1));
+		assert(not Flipped(p, i1, i0));
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
@@ -2690,7 +2655,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
