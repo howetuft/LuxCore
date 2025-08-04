@@ -1839,8 +1839,8 @@ private:
 				cachecalls++;
 #endif
 				ErrorCacheType::const_accessor a;
-				//if (ErrorCache.find(a, cacheKey)) {  TODO
-				if (false) {
+				if (ErrorCache.find(a, cacheKey)) {
+				//if (false) {
 					// Hit! --> Just add it to candidates
 					candidates.push_back(a->second);
 					a.release();
