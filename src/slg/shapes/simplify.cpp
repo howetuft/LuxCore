@@ -1016,7 +1016,7 @@ SimplifyRef {
 	bool initialized() const { return tvertex >= 0; }
 
 	size_t getTid() const { return tid; }
-	int8_t getVertex() const { return tvertex; }
+	int8_t getTVertex() const { return tvertex; }
 	float getError() const { return error; }
 
 private:
@@ -1052,32 +1052,32 @@ SimplifyVertex {
 	}
 
 	// Ref handlers
-	const RefVector& getRefs() const { return refs; }
-	const SimplifyRef& getRef(size_t i) const { return refs[i]; }
-	void setRefs(const RefVector& p_refs) { refs = p_refs; }
-	void setRefs(RefVector&& p_refs) { refs = p_refs; }
-	void reserveRefs(size_t size) {
+	inline const RefVector& getRefs() const { return refs; }
+	inline const SimplifyRef& getRef(size_t i) const { return refs[i]; }
+	inline void setRefs(const RefVector& p_refs) { refs = p_refs; }
+	inline void setRefs(RefVector&& p_refs) { refs = p_refs; }
+	inline void reserveRefs(size_t size) {
 		refs.reserve(size);
 	}
-	void clearRefs() {
+	inline void clearRefs() {
 		refs.clear();
 	}
-	void emplaceBackRefs(size_t p_tid, int8_t p_tvertex) {
+	inline void emplaceBackRefs(size_t p_tid, int8_t p_tvertex) {
 		refs.emplace_back(p_tid, p_tvertex);
 	}
-	void pushBackRefs(const SimplifyRef& ref) {
+	inline void pushBackRefs(const SimplifyRef& ref) {
 		refs.push_back(ref);
 	}
-	size_t getSizeRefs() const { return refs.size(); }
+	inline size_t getSizeRefs() const { return refs.size(); }
 
 	// Other core accessors
-	const Quadric& getQuad() const { return quad; }
-	void addQuad(const Quadric& other) { quad += other; }
-	bool getBorder() const { return border; }
-	void setBorder(bool p_border) { border = p_border; }
+	inline const Quadric& getQuad() const { return quad; }
+	inline void addQuad(const Quadric& other) { quad += other; }
+	inline bool getBorder() const { return border; }
+	inline void setBorder(bool p_border) { border = p_border; }
 
-	const Point& getP() const { return m_p; }
-	void setP(const Point p) {
+	inline const Point& getP() const { return m_p; }
+	inline void setP(const Point p) {
 		m_p = p;
 		// Update uuid
 		m_uuid = 0;
@@ -1086,25 +1086,25 @@ SimplifyVertex {
 		boost::hash_combine(m_uuid, p[2]);
 	}
 
-	size_t uuid() const { return m_uuid; }
+	inline size_t uuid() const { return m_uuid; }
 
 	// Lux accessors
-	const Normal& getNormal() const { return norm; }
-	void setNormal(const Normal& p_norm) { norm = p_norm; }
-	void setNormal(Normal&& p_norm) { norm = p_norm; }
+	inline const Normal& getNormal() const { return norm; }
+	inline void setNormal(const Normal& p_norm) { norm = p_norm; }
+	inline void setNormal(Normal&& p_norm) { norm = p_norm; }
 
-	const Eigen::Vector2f& getUV() const { return uv; }
-	void setUV(const Eigen::Vector2f& p_uv) { uv = p_uv; }
-	void setUV(Eigen::Vector2f&& p_uv) { uv = p_uv; }
+	inline const Eigen::Vector2f& getUV() const { return uv; }
+	inline void setUV(const Eigen::Vector2f& p_uv) { uv = p_uv; }
+	inline void setUV(Eigen::Vector2f&& p_uv) { uv = p_uv; }
 
-	const Eigen::Vector3f& getCol() const { return col; }
-	void setCol(const Eigen::Vector3f& p_col) { col = p_col; }
-	void setCol(Eigen::Vector3f&& p_col) { col = p_col; }
+	inline const Eigen::Vector3f& getCol() const { return col; }
+	inline void setCol(const Eigen::Vector3f& p_col) { col = p_col; }
+	inline void setCol(Eigen::Vector3f&& p_col) { col = p_col; }
 
-	float getAlpha() const { return alpha; }
-	void setAlpha(float p_alpha) { alpha = p_alpha; }
+	inline float getAlpha() const { return alpha; }
+	inline void setAlpha(float p_alpha) { alpha = p_alpha; }
 
-	bool operator==(const SimplifyVertex& other) {
+	inline bool operator==(const SimplifyVertex& other) {
 		return m_p == other.m_p;
 	}
 
@@ -1577,7 +1577,6 @@ private:
 	// Output
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
-
 	// Cache feature for BuildCandidateList
 	// For each triangle, BuildCandidateList computes the best vertex and the
 	// associated error, but those computations are both heavy (linear
@@ -1867,16 +1866,17 @@ private:
 				auto& tv1 = t.v[1];
 				auto& tv2 = t.v[2];
 
-				for (size_t j = 0; j < 3; ++j) {
+				for (int8_t j = 0; j < 3; ++j) {
 					size_t i0, i1;
+					int8_t k;
 					switch(j) {
-						case 0: i0 = tv0; i1 = tv1; break;
-						case 1: i0 = tv1; i1 = tv2; break;
-						case 2: i0 = tv2; i1 = tv0; break;
+						case 0: i0 = tv0; i1 = tv1; k = 1; break;
+						case 1: i0 = tv1; i1 = tv2; k = 2; break;
+						case 2: i0 = tv2; i1 = tv0; k = 0; break;
 						default: throw std::logic_error("Bad index");
 					}
-					const SimplifyVertex &v0 = vertices[i0];
-					const SimplifyVertex &v1 = vertices[i1];
+					const SimplifyVertex& v0 = vertices[i0];
+					const SimplifyVertex& v1 = vertices[i1];
 
 					// Border check
 					if (preserveBorder) {
@@ -1916,9 +1916,16 @@ private:
 
 	};  // ~build_task
 
-		auto reduce_task = [](CandidateContainer a, const CandidateContainer& b) {
+
+		auto reduce_task = [&](CandidateContainer a, const CandidateContainer& b) {
+			size_t numCandidates = std::min(
+					a.size() + b.size(),
+					size_t(float(triangles.size()) * 0.1)
+					//size_t(maxCandidateQueueSize)
+			);
 			CandidateContainer r(a.size() + b.size());
 			std::merge(a.begin(), a.end(), b.begin(), b.end(), r.begin(), CandidateLess);
+			r.resize(numCandidates);
 			return r;
 		};
 
@@ -1932,12 +1939,7 @@ private:
 		);
 
 		// Take only the n first elements (resize)
-		size_t numCandidates = std::min({
-				candidates.size(),
-				size_t(float(triangles.size()) * 0.9)
-				//size_t(maxCandidateQueueSize)
-		});
-		candidates.resize(numCandidates);
+		//candidates.resize(numCandidates);
 
 		SDL_LOG("Simplify - Selected " << candidates.size() << " candidates");
 
@@ -1969,20 +1971,26 @@ private:
 			// Deleted? -> pass
 			if (t.deleted) continue;
 
-			const size_t e0 = ref.getVertex();
-			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
+			auto& normal = t.geometryN;
+
+			const size_t e0 = ref.getTVertex();
+			int8_t e1, e2;
+			switch(e0) {
+				case 0: e1 = 1; e2 = 2; break;
+				case 1: e1 = 2; e2 = 0; break;
+				case 2: e1 = 0; e2 = 1; break;
+			}
+			//const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 			const SimplifyVertex& ve1 = vertices[t.v[e1]];
 			const SimplifyVertex& ve2 = vertices[t.v[e2]];
 
 			// To be deleted? -> pass
-			if (&ve1 == &v1 || &ve2 == &v1) { continue; }
+			if (ve1.uuid() == v1.uuid() || ve2.uuid() == v1.uuid()) { continue; }
 
-			ErrorCacheKey key{
-				p,
-				ve1.getP(),
-				ve2.getP(),
-				t.geometryN
-			};
+			const Point& p1(ve1.getP());
+			const Point& p2(ve2.getP());
+
+			ErrorCacheKey key{ p, p1, p2, normal };
 
 			bool hit;
 			bool assertTriangle;
@@ -1992,9 +2000,7 @@ private:
 				if (hit) { assertTriangle = a->second; }
 			}
 			if (not hit) {
-				assertTriangle = AssertTriangle(
-					p, ve1.getP(), ve2.getP(), t.geometryN
-				);
+				assertTriangle = AssertTriangle(p, p1, p2, normal);
 				ErrorCache.insert(std::pair(key, assertTriangle));
 			}
 			if (not assertTriangle) {
@@ -2218,7 +2224,7 @@ private:
 				assert(not t.deleted);
 
 				// Update triangle vertex
-				t.v[ref.getVertex()] = inew;
+				t.v[ref.getTVertex()] = inew;
 
 				// Register for update
 				trianglesToUpdate.push_back(ref.getTid());
@@ -2287,8 +2293,8 @@ private:
 		assert(not t.deleted);
 
 		// Get explicit edge to collapse
-		assert(candidate.getRef().getVertex() >= 0 and candidate.getRef().getVertex() <= 3);
-		auto& [e0, e1] = EDGES[candidate.getRef().getVertex()];
+		assert(candidate.getRef().getTVertex() >= 0 and candidate.getRef().getTVertex() <= 3);
+		auto& [e0, e1] = EDGES[candidate.getRef().getTVertex()];
 		const size_t i0 = t.v[e0];
 		const size_t i1 = t.v[e1];
 
@@ -2412,7 +2418,7 @@ private:
 			if (t.deleted) continue;
 
 			// Compute vertices
-			const size_t e0 = ref.getVertex();
+			const size_t e0 = ref.getTVertex();
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 
 			//// Mark for deletion?
