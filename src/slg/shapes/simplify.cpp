@@ -1226,9 +1226,25 @@ bool CandidateLess(const Candidate& left, const Candidate& right) {
 // Cache feature for candidate building
 
 // Key is a triangle, identified by its geometric points
-struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
+struct alignas(128) ErrorCacheKey {
+	const Point p0;
+	const Point p1;
+	const Point p2;
+	const Normal n;
 
-using ErrorCacheEntry = Candidate;
+	ErrorCacheKey(
+		const Point& p_p0,
+		const Point& p_p1,
+		const Point& p_p2,
+		const Normal& p_n
+	) : p0(p_p0), p1(p_p1), p2(p_p2), n(p_n)
+	{}
+
+
+
+};
+
+using ErrorCacheEntry = bool;
 
 //struct alignas(128) ErrorCacheEntry {
 	//// vertex index in triangle and error
@@ -1240,13 +1256,30 @@ using ErrorCacheEntry = Candidate;
 struct ErrorCacheHash {
 	//size_t hash(const ErrorCacheKey& k) {
 	static size_t hash(const ErrorCacheKey& k) {
-		size_t seed = k[0];
-		seed ^= k[1] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-		seed ^= k[2] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		size_t seed = hashPoint(k.p0);
+		seed ^= hashPoint(k.p1) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= hashPoint(k.p2) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= hashNormal(k.n) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 		return seed;
 	}
 	static bool equal(const ErrorCacheKey& k0, const ErrorCacheKey& k1) {
-		return k0 == k1;
+		return (
+			k0.p0 == k1.p0 and k0.p1 == k1.p1 and k0.p2 == k1.p2 and k0.n == k0.n
+		);
+	}
+
+	private:
+	static size_t hashPoint(const Point& p) {
+		size_t seed = std::hash<float>{}(p[0]);
+		seed ^= std::hash<float>{}(p[1]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= std::hash<float>{}(p[2]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
+	}
+	static size_t hashNormal(const Normal& n) {
+		size_t seed = std::hash<float>{}(n[0]);
+		seed ^= std::hash<float>{}(n[1]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= std::hash<float>{}(n[2]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		return seed;
 	}
 };
 
@@ -1276,7 +1309,7 @@ public:
 		vertices(srcMesh.GetTotalVertexCount()),
 		vmutexes(srcMesh.GetTotalVertexCount()),
 		triangles(srcMesh.GetTotalTriangleCount()),
-		ErrorCache(size_t(triangles.size() * 1.25f))
+		ErrorCache(size_t(vertices.size() * 2))
 	{
 		using SV = SimplifyVertex;
 
@@ -1542,13 +1575,6 @@ private:
 	// Output
 	luxrays::ExtTriangleMesh* meshResult = nullptr;
 
-	ErrorCacheKey makeErrorCacheKey(const SimplifyTriangle& t) const {
-		return ErrorCacheKey{
-			vertices[t.v[0]].uuid(),
-			vertices[t.v[1]].uuid(),
-			vertices[t.v[2]].uuid()
-		};
-	}
 
 	// Cache feature for BuildCandidateList
 	// For each triangle, BuildCandidateList computes the best vertex and the
@@ -1832,26 +1858,27 @@ private:
 				float minError = FLOAT_INFINITY;
 				Point minP;
 
-				// Look into cache whether the triangle has already been computed
-				const auto cacheKey(makeErrorCacheKey(t));
-#ifndef NDEBUG
-				// Debug: count all cache requests
-				cachecalls++;
-#endif
-				ErrorCacheType::const_accessor a;
-				if (ErrorCache.find(a, cacheKey)) {
-				//if (false) {
-					// Hit! --> Just add it to candidates
-					candidates.push_back(a->second);
-					a.release();
+				//// Look into cache whether the triangle has already been computed
+//#ifndef NDEBUG
+				//// Debug: count all cache requests
+				//cachecalls++;
+//#endif
+				//ErrorCacheType::const_accessor a;
+				//if (ErrorCache.find(a, i)) {
+				////if (false) {
+					//// Hit! --> Just add it to candidates
+					//candidates.push_back(a->second);
+					//a.release();
 
-#ifndef NDEBUG
-					// Debug: count hits
-					cachehits++;
-#endif
-				} else {
-					a.release();
+//#ifndef NDEBUG
+					//// Debug: count hits
+					//cachehits++;
+//#endif
+				//} else {
+					//a.release();
+
 					// No hit in cache: compute and feed cache
+				{
 					auto& tv0 = t.v[0];
 					auto& tv1 = t.v[1];
 					auto& tv2 = t.v[2];
@@ -1894,8 +1921,9 @@ private:
 							minP,
 							minError
 						};
-						// Fill cache
-						ErrorCache.insert(std::pair(cacheKey, candidate));
+						/// TODO
+						//// Fill cache
+						//ErrorCache.insert(std::pair(i, candidate));
 						// Add to candidates
 						candidates.push_back(candidate);
 					}
@@ -1975,40 +2003,72 @@ private:
 			// To be deleted? -> pass
 			if (id1 == i1 || id2 == i1) { continue; }
 
-			const auto d1 = Point2Vector(vertices[id1].getP() - p);
-			const auto d2 = Point2Vector(vertices[id2].getP() - p);
+			ErrorCacheKey key{
+				p,
+				vertices[id1].getP(),
+				vertices[id2].getP(),
+				t.geometryN
+			};
 
-			// Check if one of the resulting triangles is too narrow
-			{
-				// Nota: We use squared norms to avoid square root overhead
-				const float dot = d1.dot(d2);
-				const float sqrdot = dot * dot;
-				const float sqrnorms = d1.squaredNorm() * d2.squaredNorm();
-				constexpr float threshold = .999f * .999f;
-
-				if (sqrdot > threshold * sqrnorms) { return true; }
+			bool hit;
+			bool assertTriangle;
+			{  // Scope for accessor
+				ErrorCacheType::const_accessor a;
+				hit = ErrorCache.find(a, key);
+				if (hit) { assertTriangle = a->second; }
 			}
-
-			// Check if one of the Normals is changing side
-			{
-				// We use squared norms to avoid square root overhead
-				const Normal geometryN(d1.cross(d2));
-				const float dot = geometryN.dot(t.geometryN);
-				const float sqrdot = dot * dot;
-
-				// t.geometryN has already been normalized, so we don't have to
-				// multiply by its norm...
-				const float sqrnorms = geometryN.squaredNorm();
-				constexpr float threshold = .2f * .2f;
-
-				if (std::signbit(dot) or sqrdot < threshold * sqrnorms) {
-					return true;
-				}
+			if (not hit) {
+				assertTriangle = AssertTriangle(
+					p, vertices[id1].getP(), vertices[id2].getP(), t.geometryN
+				);
+				ErrorCache.insert(std::pair(key, assertTriangle));
+			}
+			if (not assertTriangle) {
+				return true;
 			}
 
 		}  // ~for ref
 		return false;
 	}  // ~Flipped
+
+	static bool AssertTriangle(
+		const Point& p,
+		const Point& p1,
+		const Point& p2,
+		const Normal& tNormal  // Triangle normal
+	) {
+		const auto d1 = Point2Vector(p1 - p);
+		const auto d2 = Point2Vector(p2 - p);
+
+		// Check if one of the resulting triangles is too narrow
+		{
+			// Nota: We use squared norms to avoid square root overhead
+			const float dot = d1.dot(d2);
+			const float sqrdot = dot * dot;
+			const float sqrnorms = d1.squaredNorm() * d2.squaredNorm();
+			constexpr float threshold = .999f * .999f;
+
+			if (sqrdot > threshold * sqrnorms) { return false; }
+		}
+
+		// Check if one of the Normals is changing side
+		{
+			// We use squared norms to avoid square root overhead
+			const Normal geometryN(d1.cross(d2));
+			const float dot = geometryN.dot(tNormal);
+			const float sqrdot = dot * dot;
+
+			// t.geometryN has already been normalized, so we don't have to
+			// multiply by its norm...
+			const float sqrnorms = geometryN.squaredNorm();
+			constexpr float threshold = .2f * .2f;
+
+			if (std::signbit(dot) or sqrdot < threshold * sqrnorms) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	// Compute error for a given triangle
 	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) const {
@@ -2091,8 +2151,6 @@ private:
 
 		size_t numDeletedTriangles = 0;
 
-		SDL_LOG("Entering step 1");
-
 		// Step #1 - Get list of collapsing vertices (parallel-reduce approach)
 		using CandidateIterator = CandidateContainer::const_iterator;
 		using CandidateBRange = tbb::blocked_range<CandidateIterator>;
@@ -2165,11 +2223,7 @@ private:
 		);
 
 		// Step #2 - Apply effectively (sequential)
-		SDL_LOG("Entering step 2");
-		std::vector<
-			std::tuple<size_t, ErrorCacheKey>,
-			tbb::tbb_allocator<std::tuple<size_t, ErrorCacheKey>>
-		> trianglesToUpdate;
+		std::vector< size_t, tbb::tbb_allocator<size_t>> trianglesToUpdate;
 		trianglesToUpdate.reserve(triangles.size() / 10);
 		vertices.reserve(vertices.size() + collapsingOutput.size());
 
@@ -2202,11 +2256,16 @@ private:
 			assert(vertices[inew] == collapsing.newVertex);
 			assert(vertices[inew].getSizeRefs() > 0);
 
-			// Remove refs of old vertices
+			// Call for triangle updates and remove refs of old vertices
 			// (but don't remove them, otherwise it will mess triangle-vertices
 			// correspondance)
-			vertices[collapsing.oldVertexIdx0].clearRefs();
-			vertices[collapsing.oldVertexIdx1].clearRefs();
+			auto& oldv0 = vertices[collapsing.oldVertexIdx0];
+			auto& oldv1 = vertices[collapsing.oldVertexIdx0];
+			// Call for triangle updates
+			for (auto& ref: oldv0.getRefs()) trianglesToUpdate.push_back(ref.getTid());
+			for (auto& ref: oldv1.getRefs()) trianglesToUpdate.push_back(ref.getTid());
+			oldv0.clearRefs();
+			oldv1.clearRefs();
 
 #ifndef NDEBUG
 			for (auto& ref: collapsing.newVertex.getRefs()) {
@@ -2221,17 +2280,11 @@ private:
 				auto& t = triangles[ref.getTid()];
 				assert(not t.deleted);
 
-				// Store previous cache key (must be done before vertex is
-				// updated)
-				auto cacheKey = makeErrorCacheKey(t);
-
 				// Update triangle vertex
 				t.v[ref.getVertex()] = inew;
 
-				// Push update task
-				trianglesToUpdate.push_back(
-					std::tuple(ref.getTid(), cacheKey)
-				);
+				// Register for update
+				trianglesToUpdate.push_back(ref.getTid());
 
 			}
 
@@ -2243,7 +2296,6 @@ private:
 				[&](size_t i){
 					auto& t = triangles[i];
 					t.deleted = true;
-					ErrorCache.erase(makeErrorCacheKey(t));
 				}
 			);
 
@@ -2254,7 +2306,6 @@ private:
 		}  // ~for collapsing
 
 		// Step #3 - Update triangles
-		SDL_LOG("Entering step 3");
 
 		// Get unique incident triangles to update
 		tbb::parallel_sort(trianglesToUpdate.begin(), trianglesToUpdate.end());
@@ -2266,7 +2317,7 @@ private:
 			tbb::blocked_range<size_t>(0, trianglesToUpdate.size()),
 			[&](const tbb::blocked_range<size_t>& r){
 				for (size_t i = r.begin(); i != r.end(); ++i) {
-					auto [tid, cacheKey] = trianglesToUpdate[i];
+					auto tid = trianglesToUpdate[i];
 					auto& t = triangles[tid];
 
 					// Update triangle
@@ -2277,8 +2328,6 @@ private:
 						vertices[t.v[2]].getP()
 					).normalized();
 
-					// Clean cache
-					ErrorCache.erase(cacheKey);
 
 				}  // ~for
 			}  // ~lambda
@@ -2322,6 +2371,13 @@ private:
 
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
+		if (Flipped(p, i1, i0)) {
+			SDL_LOG("Flip error " << i1);
+			for (auto& ref: vertices[i1].getRefs()) {
+				SDL_LOG("Refs: " << ref.getTid() << " / " << size_t(ref.getVertex()));
+				throw std::runtime_error("");
+			}
+		}
 		assert(not Flipped(p, i0, i1));
 		assert(not Flipped(p, i1, i0));
 
