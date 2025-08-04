@@ -1034,24 +1034,49 @@ private:
 //using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 using RefVector = tbb::concurrent_vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
+
 // Vertex
 struct
 alignas(std::hardware_destructive_interference_size)
 SimplifyVertex {
 
-	RefVector refs;		  // Incident edges in topology
+	// Constructor
+	SimplifyVertex() = default;
+	SimplifyVertex(
+		const Point& p_point,
+		const Quadric& p_quad,
+		const bool p_border
+	) : quad(p_quad), border(p_border)
+	{
+		setP(p_point);
+	}
 
-	// Error computation inputs
-	Quadric quad = Quadric::Zero();     // Quadric
-	bool border;						// Border status
+	// Ref handlers
+	const RefVector& getRefs() const { return refs; }
+	const SimplifyRef& getRef(size_t i) const { return refs[i]; }
+	void setRefs(const RefVector& p_refs) { refs = p_refs; }
+	void setRefs(RefVector&& p_refs) { refs = p_refs; }
+	void reserveRefs(size_t size) {
+		refs.reserve(size);
+	}
+	void clearRefs() {
+		refs.clear();
+	}
+	void emplaceBackRefs(size_t p_tid, int8_t p_tvertex) {
+		refs.emplace_back(p_tid, p_tvertex);
+	}
+	void pushBackRefs(const SimplifyRef& ref) {
+		refs.push_back(ref);
+	}
+	size_t getSizeRefs() const { return refs.size(); }
 
-	// LuxCore specific data
-	Normal norm;
-	Eigen::Vector2f uv;
-	Eigen::Vector3f col;
-	float alpha;
+	// Other core accessors
+	const Quadric& getQuad() const { return quad; }
+	void addQuad(const Quadric& other) { quad += other; }
+	bool getBorder() const { return border; }
+	void setBorder(bool p_border) { border = p_border; }
 
-	const Point& p() const { return m_p; }
+	const Point& getP() const { return m_p; }
 	void setP(const Point p) {
 		m_p = p;
 		// Update uuid
@@ -1063,11 +1088,38 @@ SimplifyVertex {
 
 	size_t uuid() const { return m_uuid; }
 
+	// Lux accessors
+	const Normal& getNormal() const { return norm; }
+	void setNormal(const Normal& p_norm) { norm = p_norm; }
+	void setNormal(Normal&& p_norm) { norm = p_norm; }
+
+	const Eigen::Vector2f& getUV() const { return uv; }
+	void setUV(const Eigen::Vector2f& p_uv) { uv = p_uv; }
+	void setUV(Eigen::Vector2f&& p_uv) { uv = p_uv; }
+
+	const Eigen::Vector3f& getCol() const { return col; }
+	void setCol(const Eigen::Vector3f& p_col) { col = p_col; }
+	void setCol(Eigen::Vector3f&& p_col) { col = p_col; }
+
+	float getAlpha() const { return alpha; }
+	void setAlpha(float p_alpha) { alpha = p_alpha; }
+
 	bool operator==(const SimplifyVertex& other) {
 		return m_p == other.m_p;
 	}
 
 protected:
+	RefVector refs;		  // Incident edges in topology
+
+	// Error computation inputs
+	Quadric quad = Quadric::Zero();     // Quadric
+	bool border;						// Border status
+
+	// LuxCore specific data
+	Normal norm;
+	Eigen::Vector2f uv;
+	Eigen::Vector3f col;
+	float alpha;
 
 	// Position in space
 	Point m_p;			  // Position in geometry
@@ -1235,13 +1287,13 @@ public:
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.setP(Lux2EigenP(vs));
-			vd.refs.reserve(9);  // Seems reasonable
+			vd.reserveRefs(9);  // Seems reasonable
 		};
 		ForEach(vertices, srcMesh.GetVertices(), init_vertex).run(vertCount);
 
 		if (srcMesh.HasNormals()) {
 			auto init_normal = [](SV& v, const luxrays::Normal& n)
-				{ v.norm = Normal(n.x, n.y, n.z); };
+				{ v.setNormal(Normal(n.x, n.y, n.z)); };
 			ForEach(vertices, srcMesh.GetNormals(), init_normal).run(vertCount);
 
 			hasNormals = true;
@@ -1249,7 +1301,7 @@ public:
 
 		if (srcMesh.HasUVs(0)) {
 			auto init_uv = [](SV& v, const luxrays::UV& u)
-				{ v.uv = Eigen::Vector2f(u.u, u.v); };
+				{ v.setUV(Eigen::Vector2f(u.u, u.v)); };
 			ForEach(vertices, srcMesh.GetUVs(0), init_uv).run(vertCount);
 
 			hasUVs = true;
@@ -1257,14 +1309,14 @@ public:
 
 		if (srcMesh.HasColors(0)) {
 			auto init_col = [](SV& v, const luxrays::Spectrum& col)
-				{ v.col = Vector(col.c); };
+				{ v.setCol(Vector(col.c)); };
 			ForEach(vertices, srcMesh.GetColors(0), init_col).run(vertCount);
 
 			hasColors = true;
 		}
 
 		if (srcMesh.HasAlphas(0)) {
-			auto init_alpha = [](SV& v, const float alpha){ v.alpha = alpha; };
+			auto init_alpha = [](SV& v, const float alpha){ v.setAlpha(alpha); };
 			ForEach(vertices, srcMesh.GetAlphas(0), init_alpha).run(vertCount);
 
 			hasAlphas = true;
@@ -1361,7 +1413,7 @@ public:
 		luxrays::Point *newVertices =
 			luxrays::ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		auto vert_assign = [](luxrays::Point& vd, const SV& vs) {
-			vd = Eigen2LuxP(vs.p());
+			vd = Eigen2LuxP(vs.getP());
 		};
 		ForEach(newVertices, vertices, vert_assign).run(vertCount);
 
@@ -1370,7 +1422,7 @@ public:
 			newNorms = new luxrays::Normal[vertCount];
 
 			auto norm_assign = [](luxrays::Normal& vd, const SV& vs) {
-				vd = Eigen2LuxN(vs.norm);
+				vd = Eigen2LuxN(vs.getNormal());
 			};
 			ForEach(newNorms, vertices, norm_assign).run(vertCount);
 		}
@@ -1379,8 +1431,8 @@ public:
 		if (hasUVs) {
 			newUVs = new luxrays::UV[vertCount];
 			auto uv_assign = [](luxrays::UV& vd, const SV& vs) {
-				vd.u = vs.uv[0];
-				vd.v = vs.uv[1];
+				vd.u = vs.getUV()[0];
+				vd.v = vs.getUV()[1];
 			};
 			ForEach(newUVs, vertices, uv_assign).run(vertCount);
 		}
@@ -1389,9 +1441,9 @@ public:
 		if (hasColors) {
 			newCols = new luxrays::Spectrum[vertCount];
 			auto col_assign = [](luxrays::Spectrum& vd, const SV& vs) {
-				vd.c[0] = vs.col[0];
-				vd.c[1] = vs.col[1];
-				vd.c[2] = vs.col[2];
+				vd.c[0] = vs.getCol()[0];
+				vd.c[1] = vs.getCol()[1];
+				vd.c[2] = vs.getCol()[2];
 			};
 			ForEach(newCols, vertices, col_assign).run(vertCount);
 		}
@@ -1400,7 +1452,7 @@ public:
 		if (hasAlphas) {
 			newAlphas = new float[vertCount];
 			auto alpha_assign = [](float& vd, const SV& vs) {
-				vd = vs.alpha;
+				vd = vs.getAlpha();
 			};
 			ForEach(newAlphas, vertices, alpha_assign).run(vertCount);
 		}
@@ -1526,11 +1578,11 @@ private:
 			triangles = std::move(newTriangles);
 		}
 
-		InitIncidentEdges();
 
 
 		// Build per-vertex incident edge tables
 		//
+		InitIncidentEdges();
 
 		// Init Quadrics by Plane & Edge Errors
 		//
@@ -1552,7 +1604,7 @@ private:
 
 		// Clear previous data
 		for (auto& v: vertices) {
-			v.refs.clear();
+			v.clearRefs();
 		}
 
 		// Resize mutexes
@@ -1570,7 +1622,7 @@ private:
 				for (size_t tvertex = 0; tvertex < 3; ++tvertex) {
 					auto vid = v[tvertex];
 					std::lock_guard lock(vmutexes[vid]);
-					vertices[vid].refs.emplace_back(tid, tvertex);
+					vertices[vid].emplaceBackRefs(tid, tvertex);
 				}
 			}
 		};
@@ -1597,20 +1649,20 @@ private:
 				SimplifyVertex &v1 = vertices[t.v[1]];
 				SimplifyVertex &v2 = vertices[t.v[2]];
 
-				t.geometryN = TriNormal(v0.p(), v1.p(), v2.p()).normalized();
+				t.geometryN = TriNormal(v0.getP(), v1.getP(), v2.getP()).normalized();
 
 				const Eigen::Vector4f p(
 					t.geometryN[0],
 					t.geometryN[1],
 					t.geometryN[2],
-					-t.geometryN.dot(Point2Vector(v0.p()))
+					-t.geometryN.dot(Point2Vector(v0.getP()))
 				);
 				const Quadric sm(p * p.transpose());
 
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					std::scoped_lock lock(v_mtx[vertex_index]);
-					vertices[vertex_index].quad.noalias() += sm;
+					vertices[vertex_index].addQuad(sm);
 				}
 			}
 		};
@@ -1642,7 +1694,7 @@ private:
 				std::map<size_t, size_t> vorders;  // Vertex orders
 
 				// For each triangle incident to the current vertex
-				for (const auto& ref: v.refs) {
+				for (const auto& ref: v.getRefs()) {
 
 					// For each vertex of the incident triangle
 					for (size_t vid: triangles[ref.getTid()].v) {
@@ -1658,7 +1710,7 @@ private:
 						// is referenced by only one triangle, thus it is a border.
 						// So we mark p.first to belong to a border
 						std::lock_guard lock(vmutexes[p.first]);
-						vertices[p.first].border = true;
+						vertices[p.first].setBorder(true);
 					}
 				}
 			}
@@ -1671,8 +1723,8 @@ private:
 		const SimplifyVertex& v0, const SimplifyVertex& v1
 	) const {
 		if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
-			const Point& p0 = v0.p();
-			const Point& p1 = v1.p();
+			const Point& p0 = v0.getP();
+			const Point& p1 = v1.getP();
 			constexpr float notVisibleScale = .5f;
 
 			float p0x, p0y;
@@ -1712,21 +1764,21 @@ private:
 		const SimplifyVertex& v0, const SimplifyVertex& v1
 	) const {
 		// Compute resulting quadric
-		const Quadric q = v0.quad + v1.quad;
+		const Quadric q = v0.getQuad() + v1.getQuad();
 
 		// Compute interpolated vertex
-		const Point &p0 = v0.p();
-		const Point &p1 = v1.p();
-		const Point p2 = (v0.p() + v1.p()) / 2.f;
+		const Point &p0 = v0.getP();
+		const Point &p1 = v1.getP();
+		const Point p2 = (v0.getP() + v1.getP()) / 2.f;
 
 		// Compute error and associated point
 
 		float error;
 		Point pResult;
-		if (preserveBorder && v0.border) {
+		if (preserveBorder && v0.getBorder()) {
 			error = VertexError(q, p0) + 1.f;
 			pResult = p0;
-		} else if (preserveBorder && v1.border) {
+		} else if (preserveBorder && v1.getBorder()) {
 			error = VertexError(q, p1) + 1.f;
 			pResult = p1;
 		} else {
@@ -1820,9 +1872,9 @@ private:
 
 						// Border check
 						if (preserveBorder) {
-							if (v0.border && v1.border) continue;
+							if (v0.getBorder() && v1.getBorder()) continue;
 						} else {
-							if (v0.border != v1.border) continue;
+							if (v0.getBorder() != v1.getBorder()) continue;
 						}
 
 						auto [p, error] = CalculateCollapsePoint(v0, v1);
@@ -1912,7 +1964,7 @@ private:
 		const auto& v0 = vertices[i0];
 		bool res = false;
 
-		for (auto& ref: v0.refs) {
+		for (auto& ref: v0.getRefs()) {
 			const auto& t = triangles[ref.getTid()];
 
 			// Deleted? -> pass
@@ -1926,8 +1978,8 @@ private:
 			// To be deleted? -> pass
 			if (id1 == i1 || id2 == i1) { continue; }
 
-			const auto d1 = Point2Vector(vertices[id1].p() - p);
-			const auto d2 = Point2Vector(vertices[id2].p() - p);
+			const auto d1 = Point2Vector(vertices[id1].getP() - p);
+			const auto d2 = Point2Vector(vertices[id2].getP() - p);
 
 			// Check if one of the resulting triangles is too narrow
 			{
@@ -2056,7 +2108,8 @@ private:
 			std::all_of(
 				candidates.begin(),
 				candidates.end(),
-				[&](const Candidate& c){ return not triangles[c.getRef().getTid()].deleted; }
+				[&](const Candidate& c)
+				{ return not triangles[c.getRef().getTid()].deleted; }
 			)
 		);
 
@@ -2083,7 +2136,6 @@ private:
 
 		};
 
-
 		struct ReduceTask {
 			ReduceTask() = default;
 
@@ -2099,17 +2151,6 @@ private:
 		};
 
 
-		//static_assert(std::is_invocable_v<reduceTask>);
-		//static_assert(std::is_invocable_v<collapseTask>);
-
-		//auto reduceTask = [&](
-			//CollapsingResultVector a, const CollapsingResultVector& b
-		//) {
-			//a.reserve(a.size() + b.size());
-			//a.insert(a.end(), b.begin(), b.end());
-			//return a;
-		//};
-
 		CollapsingResultVector identity;
 
 		auto collapsingOutput = tbb::parallel_reduce (
@@ -2117,7 +2158,7 @@ private:
 			candidateRange,
 
 			// Identity
-			CollapsingResultVector(0),
+			identity,
 
 			// Parallel computation on private list
 			CollapseTask(*this),
@@ -2150,8 +2191,8 @@ private:
 				or
 				std::any_of(
 					//std::execution::par,
-					collapsing.newVertex.refs.begin(),
-					collapsing.newVertex.refs.end(),
+					collapsing.newVertex.getRefs().begin(),
+					collapsing.newVertex.getRefs().end(),
 					[&](const SimplifyRef& r) {
 						return triangles[r.getTid()].deleted;
 					}
@@ -2162,16 +2203,17 @@ private:
 			vertices.push_back(collapsing.newVertex);
 			auto inew = vertices.size() - 1;  // Index of new vertex
 			assert(vertices[inew] == collapsing.newVertex);
+			assert(vertices[inew].getSizeRefs() > 0);
 
 			// TODO
-			for (auto& ref: collapsing.newVertex.refs) {
+			for (auto& ref: collapsing.newVertex.getRefs()) {
 				auto& t = triangles[ref.getTid()];
 				assert(not t.deleted);
 			}
 
 			// Modify affected triangle vertices ("remend" the mesh)
 			// SERIAL
-			for (auto& ref: collapsing.newVertex.refs) {
+			for (auto& ref: collapsing.newVertex.getRefs()) {
 				auto& t = triangles[ref.getTid()];
 				assert(not t.deleted);
 
@@ -2226,9 +2268,9 @@ private:
 					// Update triangle
 					t.errors = ComputeTriangleError(t);
 					t.geometryN = TriNormal(
-						vertices[t.v[0]].p(),
-						vertices[t.v[1]].p(),
-						vertices[t.v[2]].p()
+						vertices[t.v[0]].getP(),
+						vertices[t.v[1]].getP(),
+						vertices[t.v[2]].getP()
 					).normalized();
 
 					// Clean cache
@@ -2246,7 +2288,8 @@ private:
 
 	// Collapse an edge
 	// Returns: a CollapsingResult object, or nullopt
-	std::optional<CollapsingResult> CollapseCandidate(const Candidate& candidate) const {
+	std::optional<CollapsingResult>
+	CollapseCandidate(const Candidate& candidate) const {
 		// Check triangle
 		const size_t triangleIndex = candidate.getRef().getTid();
 		const SimplifyTriangle &t = triangles[triangleIndex];
@@ -2265,7 +2308,7 @@ private:
 
 		// Border check
 		// TODO should have been checked in candidate contest
-		if (v0.border != v1.border) return std::nullopt;
+		if (v0.getBorder() != v1.getBorder()) return std::nullopt;
 
 		// Compute vertex new position (and associated error)
 		// TODO should have been computed in candidate contest
@@ -2283,52 +2326,52 @@ private:
 		auto deleted1 = GetDeletedTriangles2(i1, i0);
 
 		// Create new vertex
-		SimplifyVertex vnew;
-
-		// Assign new vertex position and quadric
-		vnew.setP(p);
-		vnew.quad = v0.quad + v1.quad;
-		vnew.border = v0.border or v1.border;
+		SimplifyVertex vnew{
+			p,
+			v0.getQuad() + v1.getQuad(),
+			v0.getBorder() or v1.getBorder()
+		};
 
 		// Interpolate other vertex attributes
 		const auto& tv0 = vertices[t.v[0]];
 		const auto& tv1 = vertices[t.v[1]];
 		const auto& tv2 = vertices[t.v[2]];
-		auto [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
+		auto [bcoords_ok, bcoords] = BaryCoords(p, tv0.getP(), tv1.getP(), tv2.getP());
 
 		if (bcoords_ok) {
 
 			if (hasNormals) {
 				Eigen::Matrix3f normals;
-				normals << tv0.norm, tv1.norm, tv2.norm;
-				vnew.norm = (normals * bcoords).normalized();
+				normals << tv0.getNormal(), tv1.getNormal(), tv2.getNormal();
+				vnew.setNormal((normals * bcoords).normalized());
 			}
 			if (hasUVs) {
 				Eigen::Matrix<float, 2, 3> uvs;
-				uvs << tv0.uv, tv1.uv, tv2.uv;
-				vnew.uv = uvs * bcoords;
+				uvs << tv0.getUV(), tv1.getUV(), tv2.getUV();
+				vnew.setUV(uvs * bcoords);
 			}
 			if (hasColors) {
 				Eigen::Matrix3f colors;
-				colors << tv0.col, tv1.col, tv2.col;
-				vnew.col = colors * bcoords;
+				colors << tv0.getCol(), tv1.getCol(), tv2.getCol();
+				vnew.setCol(colors * bcoords);
 			}
 			if (hasAlphas) {
-				Eigen::Vector3f alphas(tv0.alpha, tv1.alpha, tv2.alpha);
-				vnew.alpha = alphas.dot(bcoords);
+				Eigen::Vector3f alphas(tv0.getAlpha(), tv1.getAlpha(), tv2.getAlpha());
+				vnew.setAlpha(alphas.dot(bcoords));
 			}
 		} else {
 			// Must be a malformed triangle
-			if (hasNormals) { vnew.norm = tv0.norm; }
-			if (hasUVs) { vnew.uv = tv0.uv; }
-			if (hasColors) { vnew.col = tv0.col; }
-			if (hasAlphas) { vnew.alpha = tv0.alpha; }
+			if (hasNormals) { vnew.setNormal(tv0.getNormal()); }
+			if (hasUVs) { vnew.setUV(tv0.getUV()); }
+			if (hasColors) { vnew.setCol(tv0.getCol()); }
+			if (hasAlphas) { vnew.setAlpha(tv0.getAlpha()); }
 		}
 
 		// Update incident triangles
-		RefVector newRefs;
+		//RefVector newRefs;
 		SizeTVector deletedTriangles;
-		newRefs.reserve(v0.refs.size() + v1.refs.size());
+		//newRefs.reserve(v0.refs.size() + v1.refs.size());
+		vnew.reserveRefs(v0.getSizeRefs() + v1.getSizeRefs());
 
 		// Record triangles to delete and make list unique
 		deletedTriangles.insert(
@@ -2342,18 +2385,18 @@ private:
 		deletedTriangles.erase(last, deletedTriangles.end());
 
 		// Add refs to vnew
-		for (size_t j = 0; j < v0.refs.size(); ++j) {
-			const auto& ref = v0.refs[j];
+		for (size_t j = 0; j < v0.getSizeRefs(); ++j) {
+			const auto& ref = v0.getRef(j);
 			const auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
-			vnew.refs.push_back(ref);
+			vnew.pushBackRefs(ref);
 		}
 
-		for (size_t j = 0; j < v1.refs.size(); ++j) {
-			const auto& ref = v1.refs[j];
+		for (size_t j = 0; j < v1.getSizeRefs(); ++j) {
+			const auto& ref = v1.getRef(j);
 			const auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
-			vnew.refs.push_back(ref);
+			vnew.pushBackRefs(ref);
 		}
 
 
@@ -2365,7 +2408,7 @@ private:
 		);
 	}
 
-SizeTVector GetDeletedTriangles2(
+	SizeTVector GetDeletedTriangles2(
 		const size_t i0,
 		const size_t i1
 	) const {
@@ -2373,8 +2416,8 @@ SizeTVector GetDeletedTriangles2(
 
 		const auto& v0 = vertices[i0];
 
-		for (size_t k = 0; k < v0.refs.size(); ++k) {
-			auto& ref = v0.refs[k];
+		for (size_t k = 0; k < v0.getSizeRefs(); ++k) {
+			auto& ref = v0.getRef(k);
 			auto& t = triangles[ref.getTid()];
 			if (t.deleted) continue;
 
