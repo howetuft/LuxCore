@@ -1134,27 +1134,6 @@ using VertexVector = std::vector<
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
-// Triangle
-struct
-alignas(std::hardware_destructive_interference_size)
-SimplifyTriangle {
-	// Static data
-	std::array<size_t, 3> v;  // Vertex indices
-	Normal geometryN;
-
-	// Dynamic data
-	bool deleted = false;
-	bool dirty = false;
-	std::array<float, 3> errors{0.f, 0.f, 0.f};
-
-};
-
-using TriangleVector = std::vector<
-	SimplifyTriangle,
-	tbb::cache_aligned_allocator<SimplifyTriangle>
->;
-
-using TriangleIterator = TriangleVector::iterator;
 
 // Error between vertex and Quadric
 inline float VertexError(const Quadric &q, const Point& p) {
@@ -1222,6 +1201,57 @@ private:
 bool CandidateLess(const Candidate& left, const Candidate& right) {
 	return left.getError() < right.getError();
 }
+
+// Triangle
+struct
+alignas(std::hardware_destructive_interference_size)
+SimplifyTriangle {
+	// Static data
+	std::array<size_t, 3> v;  // Vertex indices
+	Normal geometryN;
+
+	// Dynamic data
+	bool deleted = false;
+	bool dirty = false;
+	std::array<float, 3> errors{0.f, 0.f, 0.f};
+
+
+	const std::optional<Candidate>& getCandidate(
+		size_t p_uuid0, size_t p_uuid1, size_t p_uuid2
+	) const {
+		if (p_uuid0 == uuid0 and p_uuid1 == uuid1 and p_uuid2 == uuid2) {
+			return optCandidate;
+		} else {
+			return NullCandidate;
+		}
+	}
+
+	void setCandidate(
+		const Candidate& candidate,
+		size_t p_uuid0,
+		size_t p_uuid1,
+		size_t p_uuid2
+	) const {
+		uuid0 = p_uuid0;
+		uuid1 = p_uuid1;
+		uuid2 = p_uuid2;
+		optCandidate.emplace(candidate);
+	}
+
+	private:
+	// Cache data
+	mutable size_t uuid0, uuid1, uuid2;  // Vertex uuid
+	mutable std::optional<Candidate> optCandidate;  // Associated candidate
+	static constexpr std::optional<Candidate> NullCandidate{};
+
+};
+
+using TriangleVector = std::vector<
+	SimplifyTriangle,
+	tbb::cache_aligned_allocator<SimplifyTriangle>
+>;
+
+using TriangleIterator = TriangleVector::iterator;
 
 // TODO Rename into CandidateCache
 
@@ -1866,6 +1896,19 @@ private:
 				auto& tv1 = t.v[1];
 				auto& tv2 = t.v[2];
 
+				// Vertex uuids
+				auto uuid0 = vertices[tv0].uuid();
+				auto uuid1 = vertices[tv1].uuid();
+				auto uuid2 = vertices[tv2].uuid();
+
+				// Check whether triangle has not already been computed
+				auto& optCandidate = t.getCandidate(uuid0, uuid1, uuid2);
+				if (optCandidate.has_value()) {
+					v.push_back(*optCandidate);
+					continue;
+				}
+
+
 				for (int8_t j = 0; j < 3; ++j) {
 					size_t i0, i1;
 					int8_t k;
@@ -1905,16 +1948,17 @@ private:
 						SimplifyRef(tid , minErrorIndex, minError),  // TODO remove minError
 						minP,
 						minError
-				};
-				v.push_back(candidate);
+					};
+					v.push_back(candidate);
+					t.setCandidate(candidate, uuid0, uuid1, uuid2);
 
-			}  // ~else
+				}  // ~if minError
 
-		}  // ~for i
-		tbb::parallel_sort(v.begin(), v.end(), CandidateLess);
-		return v;
+			}  // ~for i
+			tbb::parallel_sort(v.begin(), v.end(), CandidateLess);
+			return v;
 
-	};  // ~build_task
+		};  // ~build_task
 
 
 		auto reduce_task = [&](CandidateContainer a, const CandidateContainer& b) {
