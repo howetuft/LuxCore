@@ -1927,10 +1927,14 @@ private:
 
 				// Check whether triangle has already been computed
 				auto& optCandidate = t.getCandidate(uuid0, uuid1, uuid2);
+#ifndef NDEBUG
 				cachecalls++;
+#endif
 				if (optCandidate.has_value()) {
 					v.push_back(*optCandidate);
+#ifndef NDEBUG
 					cachehits++;
+#endif
 					continue;
 				}
 
@@ -1954,14 +1958,8 @@ private:
 						if (v0.getBorder() != v1.getBorder()) continue;
 					}
 
-					// Collapse point and flip check
+					// Compute collapse point and error
 					auto&& [p, error] = CalculateCollapsePoint(v0, v1);
-					bool flip0, flip1;
-					tbb::parallel_invoke(
-						[&]{ Flipped(p, v0, v1, flip0); },
-						[&]{ Flipped(p, v1, v0, flip1); }
-					);
-					if (flip0 or flip1) continue;
 
 					if (t.errors[j] < minError) {
 						minErrorIndex = j;
@@ -2172,6 +2170,7 @@ private:
 	size_t DeleteTriangles2(const CandidateContainer& candidates) {
 
 		size_t numDeletedTriangles = 0;
+		SDL_LOG("Start Delete Triangles");
 
 		// Step #1 - Get list of collapsing vertices (parallel-reduce approach)
 		using CandidateIterator = CandidateContainer::const_iterator;
@@ -2243,6 +2242,7 @@ private:
 			// Parallel reduction
 			ReduceTask{}
 		);
+		SDL_LOG("Start Apply effectively");
 
 		// Step #2 - Apply effectively (sequential)
 		std::vector< size_t, tbb::tbb_allocator<size_t>> trianglesToUpdate;
@@ -2280,7 +2280,7 @@ private:
 			assert(vertices[inew] == collapsing.newVertex);
 			assert(vertices[inew].getSizeRefs() > 0);
 
-			// Call for triangle updates and remove refs of old vertices
+			// Ask for triangle updates and remove refs of old vertices
 			// (but don't remove vertices, otherwise it would mess triangle-vertices
 			// correspondance)
 			auto& oldv0 = vertices[collapsing.oldVertexIdx0];
@@ -2328,6 +2328,7 @@ private:
 
 		}  // ~for collapsing
 
+		SDL_LOG("Start Update triangles");
 		// Step #3 - Update triangles
 
 		// Get unique incident triangles to update
@@ -2351,19 +2352,12 @@ private:
 						vertices[t.v[2]].getP()
 					).normalized();
 
-					// Invalidate neighbourhood cache (due to update of normal)
-					for (int8_t i = 0; i < 3; ++i) {
-						for (auto& ref: vertices[t.v[i]].getRefs()) {
-							auto tid = ref.getTid();
-							triangles[tid].clearCandidate();
-						}
-					}
-
 
 				}  // ~for
 			}  // ~lambda
 		);
 
+		SDL_LOG("End Update triangles");
 		return numDeletedTriangles;
 
 	}  // ~DeleteTriangles2
@@ -2381,7 +2375,14 @@ private:
 
 		// Get explicit edge to collapse
 		assert(candidate.getRef().getTVertex() >= 0 and candidate.getRef().getTVertex() <= 3);
-		auto& [e0, e1] = EDGES[candidate.getRef().getTVertex()];
+		int8_t e0 = candidate.getRef().getTVertex();
+		int8_t e1;
+		switch(e0) {
+			case 0: e1 = 1; break;
+			case 1: e1 = 2; break;
+			case 2: e1 = 0; break;
+			default: throw(std::logic_error("Bad vertex"));
+		}
 		const size_t i0 = t.v[e0];
 		const size_t i1 = t.v[e1];
 
@@ -2389,27 +2390,28 @@ private:
 		const SimplifyVertex& v0 = vertices[i0];
 		const SimplifyVertex& v1 = vertices[i1];
 
-		// Border check
-		// TODO should have been checked in candidate contest
-		if (v0.getBorder() != v1.getBorder()) return std::nullopt;
 
-		// Compute vertex new position (and associated error)
-		// TODO should have been computed in candidate contest
-		//const auto [p, error] = CalculateCollapsePoint(v0, v1);
-		Point p = candidate.getCollapsePoint();
+		// Retrieve vertex new position (and associated error)
+		const Point& p = candidate.getCollapsePoint();
 		float error = candidate.getError();
 
+		//// Border check
 		// Do not collapse edge if it makes a face flip
-		// This should have been checked when building candidate list
-		// but neighbourhood modifications may invalidate it due to normal
-#ifndef NDEBUG
 		bool flip0, flip1;
 		tbb::parallel_invoke(
 			[&]{ Flipped(p, v0, v1, flip0); },
 			[&]{ Flipped(p, v1, v0, flip1); }
 		);
-		assert(not flip0 and not flip1);
-#endif
+		if (flip0 or flip1) return std::nullopt;
+		//TODO
+//#ifndef NDEBUG
+		//bool flip0, flip1;
+		//tbb::parallel_invoke(
+			//[&]{ Flipped(p, v0, v1, flip0); },
+			//[&]{ Flipped(p, v1, v0, flip1); }
+		//);
+		//assert(not flip0 and not flip1);
+//#endif
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
@@ -2470,7 +2472,7 @@ private:
 		markedForDeletionTriangles.insert(
 			markedForDeletionTriangles.end(), deleted1.begin(), deleted1.end()
 		);
-		std::sort(markedForDeletionTriangles.begin(), markedForDeletionTriangles.end());
+		tbb::parallel_sort(markedForDeletionTriangles.begin(), markedForDeletionTriangles.end());
 		auto last = std::unique(markedForDeletionTriangles.begin(), markedForDeletionTriangles.end());
 		markedForDeletionTriangles.erase(last, markedForDeletionTriangles.end());
 
@@ -2685,7 +2687,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
