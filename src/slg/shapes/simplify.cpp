@@ -1235,6 +1235,12 @@ SimplifyTriangle {
 		optCandidate.emplace(candidate);
 	}
 
+	void clearCandidate() {
+		uuid0 = uuid1 = uuid2 = 0;
+		optCandidate.reset();
+	}
+
+
 	private:
 	// Cache data
 	mutable size_t uuid0, uuid1, uuid2;  // Vertex uuid
@@ -1324,6 +1330,7 @@ using ErrorCacheType = tbb::concurrent_hash_map<
 >;
 
 
+
 // The main class
 class Simplify {
 public:
@@ -1400,17 +1407,25 @@ public:
 	void Decimate(const size_t targetTriangleCount) {
 		//Eigen::initParallel();
 
-		// Work on 10% of all triangles for each iteration
-		size_t maxCandidateQueueSize = std::max(
-			64u, luxrays::Floor2UInt(triangles.size() * .1f)
-		);
+		//// Work on 10% of all triangles for each iteration
+		//size_t maxCandidateQueueSize = std::max(
+			//64u, luxrays::Floor2UInt(triangles.size() * .1f)
+		//);
 
 		// Main iteration loop
 		const size_t startTriangleCount = triangles.size();
 		size_t totalDeletedTriangles = 0;
+
+		// We'll use a higher ratio than single threaded version
+		// as we compute the whole candidate list and we've got
+		// a higher fail ratio
+		constexpr float DECIMATE_RATIO = 0.2;
+
 		for (size_t iteration = 0; iteration < 64; ++iteration) {
 
-			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount) break;
+			size_t remainingTriangleCount = startTriangleCount - totalDeletedTriangles;
+
+			if (remainingTriangleCount <= targetTriangleCount) break;
 
 			SDL_LOG("Simplify - Start iteration #" << iteration);
 
@@ -1420,7 +1435,8 @@ public:
 
 			// Build candidate list
 			SDL_LOG("Simplify - Build candidate list #" << iteration);
-			auto candidates = BuildCandidateList(maxCandidateQueueSize);
+			size_t maxCandidates = startTriangleCount * DECIMATE_RATIO;
+			auto candidates = BuildCandidateList(maxCandidates);
 
 			// Delete triangles (run batches)
 			SDL_LOG(
@@ -1874,7 +1890,7 @@ private:
 
 	// Build candidate list
 	//
-	CandidateContainer BuildCandidateList(size_t maxCandidateQueueSize) const {
+	CandidateContainer BuildCandidateList(size_t maxCandidates) const {
 
 #ifndef NDEBUG
 		std::atomic<size_t> cachecalls, cachehits;
@@ -1911,8 +1927,10 @@ private:
 
 				// Check whether triangle has already been computed
 				auto& optCandidate = t.getCandidate(uuid0, uuid1, uuid2);
+				cachecalls++;
 				if (optCandidate.has_value()) {
 					v.push_back(*optCandidate);
+					cachehits++;
 					continue;
 				}
 
@@ -1967,22 +1985,15 @@ private:
 				}  // ~if minError
 
 			}  // ~for i
-			tbb::parallel_sort(v.begin(), v.end(), CandidateLess);
 			return v;
 
 		};  // ~build_task
 
 
 		auto reduce_task = [&](CandidateContainer a, const CandidateContainer& b) {
-			size_t numCandidates = std::min(
-					a.size() + b.size(),
-					size_t(float(triangles.size()) * 0.1)
-					//size_t(maxCandidateQueueSize)
-			);
-			CandidateContainer r(a.size() + b.size());
-			std::merge(a.begin(), a.end(), b.begin(), b.end(), r.begin(), CandidateLess);
-			r.resize(numCandidates);
-			return r;
+			a.reserve(a.size() + b.size());
+			a.insert(a.end(), b.begin(), b.end());
+			return a;
 		};
 
 		CandidateContainer identity;
@@ -1994,7 +2005,12 @@ private:
 			reduce_task
 		);
 
-		// Take only the n first elements (resize)
+		// Take only the n first elements
+		// Sort and resize
+		tbb::parallel_sort(candidates.begin(), candidates.end(), CandidateLess);
+		size_t numCandidates = std::min(candidates.size(), maxCandidates);
+		candidates.resize(numCandidates);
+
 		//candidates.resize(numCandidates);
 
 		SDL_LOG("Simplify - Selected " << candidates.size() << " candidates");
@@ -2238,7 +2254,8 @@ private:
 			// Check whether incident triangles have not been already deleted
 			bool anyDeletedTriangle =
 				std::any_of(
-					//std::execution::par,
+					// TODO implement with tbb
+					std::execution::par,
 					collapsing.m_deletedTriangles.begin(),
 					collapsing.m_deletedTriangles.end(),
 					[&](size_t i){
@@ -2247,7 +2264,8 @@ private:
 				)
 				or
 				std::any_of(
-					//std::execution::par,
+					// TODO implement with tbb
+					std::execution::par,
 					collapsing.newVertex.getRefs().begin(),
 					collapsing.newVertex.getRefs().end(),
 					[&](const SimplifyRef& r) {
@@ -2294,6 +2312,7 @@ private:
 			}
 
 			// Mark deleted triangles
+			// TODO Implement with tbb
 			std::for_each(
 				std::execution::par,
 				collapsing.m_deletedTriangles.begin(),
@@ -2331,6 +2350,14 @@ private:
 						vertices[t.v[1]].getP(),
 						vertices[t.v[2]].getP()
 					).normalized();
+
+					// Invalidate neighbourhood cache (due to update of normal)
+					for (int8_t i = 0; i < 3; ++i) {
+						for (auto& ref: vertices[t.v[i]].getRefs()) {
+							auto tid = ref.getTid();
+							triangles[tid].clearCandidate();
+						}
+					}
 
 
 				}  // ~for
@@ -2374,13 +2401,15 @@ private:
 
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
-		// TODO (should not be necessary?)
+		// but neighbourhood modifications may invalidate it due to normal
+#ifndef NDEBUG
 		bool flip0, flip1;
 		tbb::parallel_invoke(
 			[&]{ Flipped(p, v0, v1, flip0); },
 			[&]{ Flipped(p, v1, v0, flip1); }
 		);
-		if (flip0 or flip1) return std::nullopt;
+		assert(not flip0 and not flip1);
+#endif
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
@@ -2656,7 +2685,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
