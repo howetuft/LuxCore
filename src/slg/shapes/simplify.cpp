@@ -1938,8 +1938,12 @@ private:
 
 					// Collapse point and flip check
 					auto&& [p, error] = CalculateCollapsePoint(v0, v1);
-					if (Flipped(p, v0, v1)) continue;
-					if (Flipped(p, v1, v0)) continue;
+					bool flip0, flip1;
+					tbb::parallel_invoke(
+						[&]{ Flipped(p, v0, v1, flip0); },
+						[&]{ Flipped(p, v1, v0, flip1); }
+					);
+					if (flip0 or flip1) continue;
 
 					if (t.errors[j] < minError) {
 						minErrorIndex = j;
@@ -2008,10 +2012,11 @@ private:
 
 	// Check if a triangle flips when this edge is removed
 	//inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
-	inline bool Flipped(
+	inline void Flipped(
 		const Point& p,
 		const SimplifyVertex& v0,
-		const SimplifyVertex& v1
+		const SimplifyVertex& v1,
+		bool& res
 	) const {
 
 		auto& refs = v0.getRefs();
@@ -2031,7 +2036,7 @@ private:
 			return a;
 		};
 
-		return tbb::parallel_reduce(br, false, compute, reduce);
+		res = tbb::parallel_reduce(br, false, compute, reduce);
 
 
 	}  // ~Flipped
@@ -2370,8 +2375,12 @@ private:
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
 		// TODO (should not be necessary?)
-		if(Flipped(p, v0, v1)) return std::nullopt;
-		if(Flipped(p, v1, v0)) return std::nullopt;
+		bool flip0, flip1;
+		tbb::parallel_invoke(
+			[&]{ Flipped(p, v0, v1, flip0); },
+			[&]{ Flipped(p, v1, v0, flip1); }
+		);
+		if (flip0 or flip1) return std::nullopt;
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
