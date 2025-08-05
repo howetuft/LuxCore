@@ -1901,14 +1901,14 @@ private:
 				auto uuid1 = vertices[tv1].uuid();
 				auto uuid2 = vertices[tv2].uuid();
 
-				// Check whether triangle has not already been computed
+				// Check whether triangle has already been computed
 				auto& optCandidate = t.getCandidate(uuid0, uuid1, uuid2);
 				if (optCandidate.has_value()) {
 					v.push_back(*optCandidate);
 					continue;
 				}
 
-
+				// Otherwise, do the computation
 				for (int8_t j = 0; j < 3; ++j) {
 					size_t i0, i1;
 					int8_t k;
@@ -1928,6 +1928,7 @@ private:
 						if (v0.getBorder() != v1.getBorder()) continue;
 					}
 
+					// Collapse point and flip check
 					auto [p, error] = CalculateCollapsePoint(v0, v1);
 					if (Flipped(p, v0, v1)) continue;
 					if (Flipped(p, v1, v0)) continue;
@@ -1943,14 +1944,13 @@ private:
 				// Candidate is valid only if it is relinked to a vertex...
 				if (minErrorIndex != UNDEFINED_INDEX) {;
 					size_t tid = i - triangles.begin();
-					Candidate candidate{
+					v.emplace_back(
 						true,  // valid
 						SimplifyRef(tid , minErrorIndex, minError),  // TODO remove minError
 						minP,
 						minError
-					};
-					v.push_back(candidate);
-					t.setCandidate(candidate, uuid0, uuid1, uuid2);
+					);
+					t.setCandidate(v.back(), uuid0, uuid1, uuid2);
 
 				}  // ~if minError
 
