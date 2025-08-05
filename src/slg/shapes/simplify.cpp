@@ -1631,7 +1631,7 @@ private:
 			for (size_t i = 0; i < triangles.size(); ++i) {
 				auto& t = triangles[i];
 				if (t.deleted) continue;
-				newTriangles.push_back(t);
+				newTriangles.emplace_back(t);
 			}
 			triangles = std::move(newTriangles);
 		}
@@ -2034,19 +2034,7 @@ private:
 			const Point& p1(ve1.getP());
 			const Point& p2(ve2.getP());
 
-			ErrorCacheKey key{ p, p1, p2, normal };
-
-			bool hit;
-			bool assertTriangle;
-			{  // Scope for accessor
-				ErrorCacheType::const_accessor a;
-				hit = ErrorCache.find(a, key);
-				if (hit) { assertTriangle = a->second; }
-			}
-			if (not hit) {
-				assertTriangle = AssertTriangle(p, p1, p2, normal);
-				ErrorCache.insert(std::pair(key, assertTriangle));
-			}
+			bool assertTriangle = AssertTriangle(p, p1, p2, normal);
 			if (not assertTriangle) {
 				return true;
 			}
@@ -2055,7 +2043,7 @@ private:
 		return false;
 	}  // ~Flipped
 
-	static bool AssertTriangle(
+	static inline bool AssertTriangle(
 		const Point& p,
 		const Point& p1,
 		const Point& p2,
