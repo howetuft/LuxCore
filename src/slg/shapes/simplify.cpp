@@ -1526,17 +1526,19 @@ public:
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 
 
+		tbb::blocked_range<size_t> br(0, triCount);
 		auto triangle_assign =
-			[](luxrays::Triangle& td, const SimplifyTriangle& ts) {
-			if (not ts.deleted) {
-				td.v[0] = ts.v[0];
-				td.v[1] = ts.v[1];
-				td.v[2] = ts.v[2];
-			}
+		[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+						if (triangles[i].deleted) continue;
+						auto& td = newTris[i];
+						auto& ts = triangles[i];
+						td.v[0] = ts.v[0];
+						td.v[1] = ts.v[1];
+						td.v[2] = ts.v[2];
+				}
 		};
-
-		ForEach(newTris, triangles, triangle_assign).run(triCount);
-
+		tbb::parallel_for(br, triangle_assign);
 		// TODO
 		for (auto& t: triangles) {
 			assert(t.v[0] < vertCount);
