@@ -1128,7 +1128,7 @@ protected:
 
 };
 
-using VertexVector = std::vector<
+using VertexVector = tbb::concurrent_vector<
 	SimplifyVertex,
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
@@ -1344,7 +1344,6 @@ public:
 		edgeScreenSize(p_edgeScreenSize),
 		preserveBorder(p_preserveBorder),
 		vertices(srcMesh.GetTotalVertexCount()),
-		vmutexes(srcMesh.GetTotalVertexCount()),
 		triangles(srcMesh.GetTotalTriangleCount()),
 		deletedTriangles(srcMesh.GetTotalTriangleCount(), false),
 		ErrorCache(size_t(vertices.size() * 2))
@@ -1611,7 +1610,6 @@ private:
 	BoolVector deletedTriangles;
 
 	// Synchronization & multithreading
-	MutexVector vmutexes;
 	bool compacted;
 
 	// General settings
@@ -1690,12 +1688,7 @@ private:
 			v.clearRefs();
 		}
 
-		// Resize mutexes
-		MutexVector newVmutexes(vertices.size());
-		vmutexes = std::move(newVmutexes);
-
 		// Build refs
-		// Possible race condition: we need mutexes (at vertex grain-scale)
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto tid = r.begin(); tid != r.end(); ++tid) {
@@ -1703,7 +1696,6 @@ private:
 				const auto& v = triangles[tid].v;
 				for (size_t tvertex = 0; tvertex < 3; ++tvertex) {
 					auto vid = v[tvertex];
-					std::lock_guard lock(vmutexes[vid]);
 					vertices[vid].emplaceBackRefs(tid, tvertex);
 				}
 			}
@@ -1792,7 +1784,6 @@ private:
 						// If p.first order is 1, it means that the edge (v, p.first)
 						// is referenced by only one triangle, thus it is a border.
 						// So we mark p.first to belong to a border
-						std::lock_guard lock(vmutexes[p.first]);
 						vertices[p.first].setBorder(true);
 					}
 				}
