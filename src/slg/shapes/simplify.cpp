@@ -1408,10 +1408,10 @@ public:
 
 		// Main iteration loop
 		const size_t startTriangleCount = triangles.size();
-		size_t deletedTriangles = 0;
+		size_t totalDeletedTriangles = 0;
 		for (size_t iteration = 0; iteration < 64; ++iteration) {
 
-			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
+			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount) break;
 
 			DBG_SDL_LOG("Simplify - Start iteration #" << iteration);
 
@@ -1430,14 +1430,14 @@ public:
 				);
 			const auto iterationDeletedTriangles = DeleteTriangles2(candidates);
 
-			deletedTriangles += iterationDeletedTriangles;
+			totalDeletedTriangles += iterationDeletedTriangles;
 
 			SDL_LOG(
 				"Simplify - End iteration #" << iteration
 				<< " - Edge candidates: " << candidates.size() << " - "
 				<< " Deleted triangles (current/cumulative/initial): "
 				<< iterationDeletedTriangles << "/"
-				<< deletedTriangles << "/"
+				<< totalDeletedTriangles << "/"
 				<< startTriangleCount
 			);
 
@@ -2399,20 +2399,20 @@ private:
 
 		// Update incident triangles
 		//RefVector newRefs;
-		SizeTVector deletedTriangles;
+		SizeTVector markedForDeletionTriangles;
 		//newRefs.reserve(v0.refs.size() + v1.refs.size());
 		vnew.reserveRefs(v0.getSizeRefs() + v1.getSizeRefs());
 
 		// Record triangles to delete and make list unique
-		deletedTriangles.insert(
-			deletedTriangles.end(), deleted0.begin(), deleted0.end()
+		markedForDeletionTriangles.insert(
+			markedForDeletionTriangles.end(), deleted0.begin(), deleted0.end()
 		);
-		deletedTriangles.insert(
-			deletedTriangles.end(), deleted1.begin(), deleted1.end()
+		markedForDeletionTriangles.insert(
+			markedForDeletionTriangles.end(), deleted1.begin(), deleted1.end()
 		);
-		std::sort(deletedTriangles.begin(), deletedTriangles.end());
-		auto last = std::unique(deletedTriangles.begin(), deletedTriangles.end());
-		deletedTriangles.erase(last, deletedTriangles.end());
+		std::sort(markedForDeletionTriangles.begin(), markedForDeletionTriangles.end());
+		auto last = std::unique(markedForDeletionTriangles.begin(), markedForDeletionTriangles.end());
+		markedForDeletionTriangles.erase(last, markedForDeletionTriangles.end());
 
 		// Add refs to vnew
 		for (size_t j = 0; j < v0.getSizeRefs(); ++j) {
@@ -2434,7 +2434,7 @@ private:
 			vnew,
 			i0,
 			i1,
-			deletedTriangles
+			markedForDeletionTriangles
 		);
 	}
 
