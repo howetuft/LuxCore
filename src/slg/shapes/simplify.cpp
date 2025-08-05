@@ -2014,44 +2014,26 @@ private:
 		const SimplifyVertex& v1
 	) const {
 
-		//const auto& v0 = vertices[i0];
-		bool res = false;
+		auto& refs = v0.getRefs();
 
-		for (auto& ref: v0.getRefs()) {
-			res |= RefFlipped(ref, p, v0, v1);
-			//auto tid = ref.getTid();
+		tbb::blocked_range<size_t> br(0, refs.size());
 
-			//// Deleted? -> pass
-			//if (deletedTriangles[tid]) continue;
+		auto compute = [&](const tbb::blocked_range<size_t>& r, bool b) {
+			for (auto i = r.begin(); i != r.end(); ++i) {
+				auto& ref = refs[i];
+				b |= RefFlipped(ref, p, v0, v1);
+			}
+			return b;
+		};
 
-			//const auto& t = triangles[tid];
-			//auto& normal = t.geometryN;
+		auto reduce = [](bool a, bool b) {
+			a |= b;
+			return a;
+		};
 
-			//const size_t e0 = ref.getTVertex();
-			//int8_t e1, e2;
-			//switch(e0) {
-				//case 0: e1 = 1; e2 = 2; break;
-				//case 1: e1 = 2; e2 = 0; break;
-				//case 2: e1 = 0; e2 = 1; break;
-			//}
-			////const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-			//const SimplifyVertex& ve1 = vertices[t.v[e1]];
-			//const SimplifyVertex& ve2 = vertices[t.v[e2]];
+		return tbb::parallel_reduce(br, false, compute, reduce);
 
-			//// To be deleted? -> pass
-			//if (ve1.uuid() == v1.uuid() || ve2.uuid() == v1.uuid()) { continue; }
 
-			//const Point& p1(ve1.getP());
-			//const Point& p2(ve2.getP());
-
-			//bool assertTriangle = AssertTriangle(p, p1, p2, normal);
-			//if (not assertTriangle) {
-				//return true;
-			//}
-
-		}  // ~for ref
-		//return false;
-		return res;
 	}  // ~Flipped
 
 	bool RefFlipped(
