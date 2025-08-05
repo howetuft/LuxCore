@@ -2348,8 +2348,9 @@ private:
 
 		// Do not collapse edge if it makes a face flip
 		// This should have been checked when building candidate list
-		assert(not Flipped(p, v0, v1));
-		assert(not Flipped(p, v1, v0));
+		// TODO (should not be necessary?)
+		if(Flipped(p, v0, v1)) return std::nullopt;
+		if(Flipped(p, v1, v0)) return std::nullopt;
 
 		// Get deleted incident triangles
 		auto deleted0 = GetDeletedTriangles2(i0, i1);
