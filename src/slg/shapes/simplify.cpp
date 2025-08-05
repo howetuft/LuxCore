@@ -2103,7 +2103,7 @@ private:
 	struct CollapsingResult {
 		SimplifyVertex newVertex;
 		size_t oldVertexIdx0, oldVertexIdx1;  // Collapsed edge
-		SizeTVector deletedTriangles;
+		SizeTVector m_deletedTriangles;
 
 		CollapsingResult(
 
@@ -2115,7 +2115,7 @@ private:
 			newVertex(p_newVertex),
 			oldVertexIdx0(p_oldVertexIdx0),
 			oldVertexIdx1(p_oldVertexIdx1),
-			deletedTriangles(p_deletedTriangles)
+			m_deletedTriangles(p_deletedTriangles)
 		{}
 
 		CollapsingResult() = default;
@@ -2210,8 +2210,8 @@ private:
 			bool anyDeletedTriangle =
 				std::any_of(
 					//std::execution::par,
-					collapsing.deletedTriangles.begin(),
-					collapsing.deletedTriangles.end(),
+					collapsing.m_deletedTriangles.begin(),
+					collapsing.m_deletedTriangles.end(),
 					[&](size_t i){
 						return triangles[i].deleted;
 					}
@@ -2268,8 +2268,8 @@ private:
 			// Mark deleted triangles and erase cache accordingly
 			std::for_each(
 				std::execution::par,
-				collapsing.deletedTriangles.begin(),
-				collapsing.deletedTriangles.end(),
+				collapsing.m_deletedTriangles.begin(),
+				collapsing.m_deletedTriangles.end(),
 				[&](size_t i){
 					auto& t = triangles[i];
 					t.deleted = true;
@@ -2277,7 +2277,7 @@ private:
 			);
 
 			// Update counter
-			numDeletedTriangles += collapsing.deletedTriangles.size();
+			numDeletedTriangles += collapsing.m_deletedTriangles.size();
 
 
 		}  // ~for collapsing
