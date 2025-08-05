@@ -1211,6 +1211,8 @@ SimplifyTriangle {
 	Normal geometryN;
 
 	// Dynamic data
+	bool deleted = false;
+	bool dirty = false;
 	std::array<float, 3> errors{0.f, 0.f, 0.f};
 
 
@@ -1250,7 +1252,6 @@ using TriangleVector = std::vector<
 >;
 
 using TriangleIterator = TriangleVector::iterator;
-
 
 // TODO Rename into CandidateCache
 
@@ -1340,7 +1341,6 @@ public:
 		vertices(srcMesh.GetTotalVertexCount()),
 		vmutexes(srcMesh.GetTotalVertexCount()),
 		triangles(srcMesh.GetTotalTriangleCount()),
-		deadTriangles(srcMesh.GetTotalTriangleCount(), false),
 		ErrorCache(size_t(vertices.size() * 2))
 	{
 		using SV = SimplifyVertex;
@@ -1408,10 +1408,10 @@ public:
 
 		// Main iteration loop
 		const size_t startTriangleCount = triangles.size();
-		size_t totalDeletedTriangles = 0;
+		size_t deletedTriangles = 0;
 		for (size_t iteration = 0; iteration < 64; ++iteration) {
 
-			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount) break;
+			if (startTriangleCount - deletedTriangles <= targetTriangleCount) break;
 
 			DBG_SDL_LOG("Simplify - Start iteration #" << iteration);
 
@@ -1430,14 +1430,14 @@ public:
 				);
 			const auto iterationDeletedTriangles = DeleteTriangles2(candidates);
 
-			totalDeletedTriangles += iterationDeletedTriangles;
+			deletedTriangles += iterationDeletedTriangles;
 
 			SDL_LOG(
 				"Simplify - End iteration #" << iteration
 				<< " - Edge candidates: " << candidates.size() << " - "
 				<< " Deleted triangles (current/cumulative/initial): "
 				<< iterationDeletedTriangles << "/"
-				<< totalDeletedTriangles << "/"
+				<< deletedTriangles << "/"
 				<< startTriangleCount
 			);
 
@@ -1526,29 +1526,16 @@ public:
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 
 
-		//auto triangle_assign =
-			//[&](luxrays::Triangle& td, const SimplifyTriangle& ts) {
-			//if (not deletedTriangles[ts - triangles.begin()]) {
-				//td.v[0] = ts.v[0];
-				//td.v[1] = ts.v[1];
-				//td.v[2] = ts.v[2];
-			//}
-		//};
-		tbb::blocked_range<size_t> br(0, triCount);
 		auto triangle_assign =
-		[&](const tbb::blocked_range<size_t>& r) {
-			for (size_t i = r.begin(); i != r.end(); ++i) {
-				if (deadTriangles[i]) continue;
-				auto& td = newTris[i];
-				auto& ts = triangles[i];
+			[](luxrays::Triangle& td, const SimplifyTriangle& ts) {
+			if (not ts.deleted) {
 				td.v[0] = ts.v[0];
 				td.v[1] = ts.v[1];
 				td.v[2] = ts.v[2];
 			}
 		};
-		tbb::parallel_for(br, triangle_assign);
 
-		//ForEach(newTris, triangles, triangle_assign).run(triCount);
+		ForEach(newTris, triangles, triangle_assign).run(triCount);
 
 		// TODO
 		for (auto& t: triangles) {
@@ -1602,7 +1589,6 @@ private:
 	// Main properties (vertices and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
-	BoolVector deadTriangles;
 
 	// Synchronization & multithreading
 	MutexVector vmutexes;
@@ -1689,7 +1675,8 @@ private:
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto task = [&](tbb::blocked_range<size_t>& r) {
 			for (auto tid = r.begin(); tid != r.end(); ++tid) {
-				if (deadTriangles[tid]) continue;
+				if (triangles[tid].deleted) continue;
+				triangles[tid].dirty = false;  // Clear triangle dirty flags, by the way
 				const auto& v = triangles[tid].v;
 				for (size_t tvertex = 0; tvertex < 3; ++tvertex) {
 					auto vid = v[tvertex];
@@ -1899,7 +1886,7 @@ private:
 			// Loop into triangles
 			for (auto i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = *i;
-				if (deadTriangles[i - triangles.begin()]) continue;
+				if (t.deleted) continue;
 
 				int8_t minErrorIndex = UNDEFINED_INDEX;
 				float minError = FLOAT_INFINITY;
@@ -2023,12 +2010,11 @@ private:
 		bool res = false;
 
 		for (auto& ref: v0.getRefs()) {
-			auto tid = ref.getTid();
+			const auto& t = triangles[ref.getTid()];
 
 			// Deleted? -> pass
-			if (deadTriangles[tid]) continue;
+			if (t.deleted) continue;
 
-			const auto& t = triangles[tid];
 			auto& normal = t.geometryN;
 
 			const size_t e0 = ref.getTVertex();
@@ -2153,7 +2139,7 @@ private:
 				candidates.begin(),
 				candidates.end(),
 				[&](const Candidate& c)
-				{ return not deadTriangles[c.getRef().getTid()]; }
+				{ return not triangles[c.getRef().getTid()].deleted; }
 			)
 		);
 
@@ -2225,7 +2211,7 @@ private:
 					collapsing.deletedTriangles.begin(),
 					collapsing.deletedTriangles.end(),
 					[&](size_t i){
-						return deadTriangles[i];
+						return triangles[i].deleted;
 					}
 				)
 				or
@@ -2234,7 +2220,7 @@ private:
 					collapsing.newVertex.getRefs().begin(),
 					collapsing.newVertex.getRefs().end(),
 					[&](const SimplifyRef& r) {
-						return deadTriangles[r.getTid()];
+						return triangles[r.getTid()].deleted;
 					}
 				);
 			if (anyDeletedTriangle) continue;
@@ -2246,7 +2232,7 @@ private:
 			assert(vertices[inew].getSizeRefs() > 0);
 
 			// Call for triangle updates and remove refs of old vertices
-			// (but don't remove vertices, otherwise it would mess triangle-vertices
+			// (but don't remove them, otherwise it will mess triangle-vertices
 			// correspondance)
 			auto& oldv0 = vertices[collapsing.oldVertexIdx0];
 			auto& oldv1 = vertices[collapsing.oldVertexIdx0];
@@ -2258,7 +2244,8 @@ private:
 
 #ifndef NDEBUG
 			for (auto& ref: collapsing.newVertex.getRefs()) {
-				assert(not deadTriangles[ref.getTid()]);
+				auto& t = triangles[ref.getTid()];
+				assert(not t.deleted);
 			}
 #endif
 
@@ -2266,7 +2253,7 @@ private:
 			// SERIAL
 			for (auto& ref: collapsing.newVertex.getRefs()) {
 				auto& t = triangles[ref.getTid()];
-				assert(not deadTriangles[ref.getTid()]);
+				assert(not t.deleted);
 
 				// Update triangle vertex
 				t.v[ref.getTVertex()] = inew;
@@ -2276,13 +2263,14 @@ private:
 
 			}
 
-			// Mark deleted triangles
+			// Mark deleted triangles and erase cache accordingly
 			std::for_each(
 				std::execution::par,
 				collapsing.deletedTriangles.begin(),
 				collapsing.deletedTriangles.end(),
 				[&](size_t i){
-					deadTriangles[i] = true;
+					auto& t = triangles[i];
+					t.deleted = true;
 				}
 			);
 
@@ -2334,7 +2322,7 @@ private:
 		const size_t triangleIndex = candidate.getRef().getTid();
 		const SimplifyTriangle &t = triangles[triangleIndex];
 
-		assert(not deadTriangles[triangleIndex]);
+		assert(not t.deleted);
 
 		// Get explicit edge to collapse
 		assert(candidate.getRef().getTVertex() >= 0 and candidate.getRef().getTVertex() <= 3);
@@ -2409,31 +2397,33 @@ private:
 
 		// Update incident triangles
 		//RefVector newRefs;
-		SizeTVector trianglesToDelete;
+		SizeTVector deletedTriangles;
 		//newRefs.reserve(v0.refs.size() + v1.refs.size());
 		vnew.reserveRefs(v0.getSizeRefs() + v1.getSizeRefs());
 
 		// Record triangles to delete and make list unique
-		trianglesToDelete.insert(
-			trianglesToDelete.end(), deleted0.begin(), deleted0.end()
+		deletedTriangles.insert(
+			deletedTriangles.end(), deleted0.begin(), deleted0.end()
 		);
-		trianglesToDelete.insert(
-			trianglesToDelete.end(), deleted1.begin(), deleted1.end()
+		deletedTriangles.insert(
+			deletedTriangles.end(), deleted1.begin(), deleted1.end()
 		);
-		std::sort(trianglesToDelete.begin(), trianglesToDelete.end());
-		auto last = std::unique(trianglesToDelete.begin(), trianglesToDelete.end());
-		trianglesToDelete.erase(last, trianglesToDelete.end());
+		std::sort(deletedTriangles.begin(), deletedTriangles.end());
+		auto last = std::unique(deletedTriangles.begin(), deletedTriangles.end());
+		deletedTriangles.erase(last, deletedTriangles.end());
 
 		// Add refs to vnew
 		for (size_t j = 0; j < v0.getSizeRefs(); ++j) {
 			const auto& ref = v0.getRef(j);
-			if (deadTriangles[ref.getTid()]) continue;
+			const auto& t = triangles[ref.getTid()];
+			if (t.deleted) continue;
 			vnew.pushBackRefs(ref);
 		}
 
 		for (size_t j = 0; j < v1.getSizeRefs(); ++j) {
 			const auto& ref = v1.getRef(j);
-			if (deadTriangles[ref.getTid()]) continue;
+			const auto& t = triangles[ref.getTid()];
+			if (t.deleted) continue;
 			vnew.pushBackRefs(ref);
 		}
 
@@ -2442,7 +2432,7 @@ private:
 			vnew,
 			i0,
 			i1,
-			trianglesToDelete
+			deletedTriangles
 		);
 	}
 
@@ -2456,18 +2446,18 @@ private:
 
 		for (size_t k = 0; k < v0.getSizeRefs(); ++k) {
 			auto& ref = v0.getRef(k);
-			auto tid = ref.getTid();
-			if (deadTriangles[tid]) continue;
+			auto& t = triangles[ref.getTid()];
+			if (t.deleted) continue;
 
 			// Compute vertices
 			const size_t e0 = ref.getTVertex();
 			const auto [e1, e2] = EDGES[(e0 + 1) % 3];
 
 			//// Mark for deletion?
-			auto& t = triangles[tid];
+
 			if(t.v[e1] == i1 || t.v[e2] == i1) {
-				assert(tid < triangles.size());
-				result.push_back(tid);
+				assert(ref.getTid() < triangles.size());
+				result.push_back(ref.getTid());
 			}
 		}
 		return result;
@@ -2489,9 +2479,8 @@ private:
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
 		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				if (deadTriangles[i]) continue;
-
 				auto& t = triangles[i];
+				if (t.deleted) continue;
 				newTrianglesETS.local().push_back(t);
 
 				keep[t.v[0]].test_and_set();
