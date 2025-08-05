@@ -1030,9 +1030,8 @@ private:
 	//return left.getError() < right.getError();
 //}
 
-//TODO
-//using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
-using RefVector = tbb::concurrent_vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
+
+using RefVector = std::vector< SimplifyRef, tbb::cache_aligned_allocator<SimplifyRef> >;
 
 
 // Vertex
@@ -1413,18 +1412,18 @@ public:
 
 			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount) break;
 
-			DBG_SDL_LOG("Simplify - Start iteration #" << iteration);
+			SDL_LOG("Simplify - Start iteration #" << iteration);
 
 			// Compute iteration data (including mesh topology)
-			DBG_SDL_LOG("Simplify - Initialize data #" << iteration);
+			SDL_LOG("Simplify - Initialize data #" << iteration);
 			InitIteration(iteration);
 
 			// Build candidate list
-			DBG_SDL_LOG("Simplify - Build candidate list #" << iteration);
+			SDL_LOG("Simplify - Build candidate list #" << iteration);
 			auto candidates = BuildCandidateList(maxCandidateQueueSize);
 
 			// Delete triangles (run batches)
-			DBG_SDL_LOG(
+			SDL_LOG(
 				"Simplify - Delete triangles"
 				<< " #" << iteration
 				);
@@ -1526,11 +1525,11 @@ public:
 			luxrays::ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 
 
+		assert(compacted);  // At this stage, triangles must have been compacted
 		tbb::blocked_range<size_t> br(0, triCount);
 		auto triangle_assign =
 		[&](const tbb::blocked_range<size_t>& r) {
 				for (size_t i = r.begin(); i != r.end(); ++i) {
-						if (deletedTriangles[i]) continue;
 						auto& td = newTris[i];
 						auto& ts = triangles[i];
 						td.v[0] = ts.v[0];
@@ -1539,12 +1538,14 @@ public:
 				}
 		};
 		tbb::parallel_for(br, triangle_assign);
-		// TODO
+
+#ifndef NDEBUG
 		for (auto& t: triangles) {
 			assert(t.v[0] < vertCount);
 			assert(t.v[1] < vertCount);
 			assert(t.v[2] < vertCount);
 		}
+#endif
 
 		meshResult = new luxrays::ExtTriangleMesh(
 				vertCount, triCount, newVertices, newTris,
@@ -1595,6 +1596,7 @@ private:
 
 	// Synchronization & multithreading
 	MutexVector vmutexes;
+	bool compacted;
 
 	// General settings
 	const slg::Camera& camera;
@@ -1653,8 +1655,11 @@ private:
 		//
 		if (iteration == 0) {
 			InitIncidentEdges();
+			SDL_LOG("Incident");
 			InitQuadrics();
+			SDL_LOG("Quadrics");
 			InitBorders();
+			SDL_LOG("Borders");
 		}
 
 	}
@@ -1689,6 +1694,7 @@ private:
 		};
 
 		tbb::parallel_for(range, task);
+
 	}
 
 	// Initialize quadrics on vertices
@@ -1931,7 +1937,7 @@ private:
 					}
 
 					// Collapse point and flip check
-					auto [p, error] = CalculateCollapsePoint(v0, v1);
+					auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 					if (Flipped(p, v0, v1)) continue;
 					if (Flipped(p, v1, v0)) continue;
 
@@ -2012,39 +2018,74 @@ private:
 		bool res = false;
 
 		for (auto& ref: v0.getRefs()) {
-			auto tid = ref.getTid();
+			res |= RefFlipped(ref, p, v0, v1);
+			//auto tid = ref.getTid();
 
-			// Deleted? -> pass
-			if (deletedTriangles[tid]) continue;
+			//// Deleted? -> pass
+			//if (deletedTriangles[tid]) continue;
 
-			const auto& t = triangles[tid];
-			auto& normal = t.geometryN;
+			//const auto& t = triangles[tid];
+			//auto& normal = t.geometryN;
 
-			const size_t e0 = ref.getTVertex();
-			int8_t e1, e2;
-			switch(e0) {
-				case 0: e1 = 1; e2 = 2; break;
-				case 1: e1 = 2; e2 = 0; break;
-				case 2: e1 = 0; e2 = 1; break;
-			}
-			//const auto [e1, e2] = EDGES[(e0 + 1) % 3];
-			const SimplifyVertex& ve1 = vertices[t.v[e1]];
-			const SimplifyVertex& ve2 = vertices[t.v[e2]];
+			//const size_t e0 = ref.getTVertex();
+			//int8_t e1, e2;
+			//switch(e0) {
+				//case 0: e1 = 1; e2 = 2; break;
+				//case 1: e1 = 2; e2 = 0; break;
+				//case 2: e1 = 0; e2 = 1; break;
+			//}
+			////const auto [e1, e2] = EDGES[(e0 + 1) % 3];
+			//const SimplifyVertex& ve1 = vertices[t.v[e1]];
+			//const SimplifyVertex& ve2 = vertices[t.v[e2]];
 
-			// To be deleted? -> pass
-			if (ve1.uuid() == v1.uuid() || ve2.uuid() == v1.uuid()) { continue; }
+			//// To be deleted? -> pass
+			//if (ve1.uuid() == v1.uuid() || ve2.uuid() == v1.uuid()) { continue; }
 
-			const Point& p1(ve1.getP());
-			const Point& p2(ve2.getP());
+			//const Point& p1(ve1.getP());
+			//const Point& p2(ve2.getP());
 
-			bool assertTriangle = AssertTriangle(p, p1, p2, normal);
-			if (not assertTriangle) {
-				return true;
-			}
+			//bool assertTriangle = AssertTriangle(p, p1, p2, normal);
+			//if (not assertTriangle) {
+				//return true;
+			//}
 
 		}  // ~for ref
-		return false;
+		//return false;
+		return res;
 	}  // ~Flipped
+
+	bool RefFlipped(
+		const SimplifyRef& ref,
+		const Point& p,
+		const SimplifyVertex& v0,
+		const SimplifyVertex& v1
+	) const {
+		auto tid = ref.getTid();
+
+		// Deleted? -> pass
+		if (deletedTriangles[tid]) return false;
+
+		const auto& t = triangles[tid];
+		auto& normal = t.geometryN;
+
+		const size_t e0 = ref.getTVertex();
+		int8_t e1, e2;
+		switch(e0) {
+			case 0: e1 = 1; e2 = 2; break;
+			case 1: e1 = 2; e2 = 0; break;
+			case 2: e1 = 0; e2 = 1; break;
+		}
+		const SimplifyVertex& ve1 = vertices[t.v[e1]];
+		const SimplifyVertex& ve2 = vertices[t.v[e2]];
+
+		// To be deleted? -> pass
+		if (ve1.uuid() == v1.uuid() || ve2.uuid() == v1.uuid()) { return false; }
+
+		const Point& p1(ve1.getP());
+		const Point& p2(ve2.getP());
+
+		return not AssertTriangle(p, p1, p2, normal);
+	}
 
 	static inline bool AssertTriangle(
 		const Point& p,
@@ -2309,7 +2350,6 @@ private:
 			}  // ~lambda
 		);
 
-		SDL_LOG("Terminating");
 		return numDeletedTriangles;
 
 	}  // ~DeleteTriangles2
@@ -2551,6 +2591,7 @@ private:
 			assert(t.v[1] < vertices.size());
 			assert(t.v[2] < vertices.size());
 		}
+		compacted = true;
 
 	}
 
@@ -2624,7 +2665,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	//std::exit(0);  // DEBUG - Stop here
+	std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
