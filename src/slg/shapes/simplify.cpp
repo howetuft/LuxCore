@@ -1754,11 +1754,13 @@ private:
 
 
 		constexpr char UNDEFINED_INDEX = -1;
-		CandidateContainer candidates(triangles.size());
+
 		tbb::blocked_range<size_t> tri_range(0, triangles.size());
 
 
-		auto build_task = [&](const decltype(tri_range)& r) {
+		auto build_task = [&](const decltype(tri_range)& r, CandidateContainer candidates) {
+
+			candidates.reserve(r.end() - r.begin());
 			// Main loop
 			for (size_t i = r.begin(); i != r.end(); ++i) {
 				const SimplifyTriangle &t = triangles[i];
@@ -1819,41 +1821,72 @@ private:
 				}
 
 				if (minErrorIndex != UNDEFINED_INDEX) {
-					candidates[i] = std::move(SimplifyRef(i, minErrorIndex, minError));
+					candidates.emplace_back(i, minErrorIndex, minError);
 				}
 			}
+			return candidates;
 
 		};
-		tbb::parallel_for(tri_range, build_task);
-		// Remove unitialized
-		{
-			decltype(candidates) candidates2;
-			candidates2.reserve(candidates.size());
+
+		auto reduce_task = [&](CandidateContainer a, const CandidateContainer& b) {
+			a.reserve(a.size() + b.size());
 			std::copy_if(
-				//std::execution::par,
-				candidates.begin(),
-				candidates.end(),
-				std::back_inserter(candidates2),
+				std::execution::par,
+				b.begin(),
+				b.end(),
+				std::back_inserter(a),
 				[](const SimplifyRef& r){ return r.initialized(); }
 			);
-			candidates = std::move(candidates2);
-		}
+			size_t numCandidates = std::min(
+					a.size(),
+					size_t(maxCandidateQueueSize)
+			);
+
+			std::partial_sort(
+				std::execution::par,
+				a.begin(),
+				a.begin() + numCandidates,
+				a.end(),
+				RefLess
+			);
+			a.resize(numCandidates);
+			return a;
+		};
+
+		CandidateContainer identity;
+
+		auto candidates =
+			tbb::parallel_reduce(tri_range, identity, build_task, reduce_task);
+
+		// Remove unitialized
+		//{
+			//decltype(candidates) candidates2;
+			//candidates2.reserve(candidates.size());
+			//std::copy_if(
+				////std::execution::par,
+				//candidates.begin(),
+				//candidates.end(),
+				//std::back_inserter(candidates2),
+				//[](const SimplifyRef& r){ return r.initialized(); }
+			//);
+			//candidates = std::move(candidates2);
+		//}
 
 		// Sort
-		size_t numCandidates = std::min({
-				candidates.size(),
-				size_t(maxCandidateQueueSize)
-		});
-		std::partial_sort(
-			std::execution::par,
-			candidates.begin(),
-			candidates.begin() + numCandidates,
-			candidates.end(),
-			RefLess
-		);
+		//size_t numCandidates = std::min({
+				//candidates.size(),
+				//size_t(maxCandidateQueueSize)
+		//});
+		//std::partial_sort(
+			//std::execution::par,
+			//candidates.begin(),
+			//candidates.begin() + numCandidates,
+			//candidates.end(),
+			//RefLess
+		//);
 
 		// Take only the n first elements (resize)
-		candidates.resize(numCandidates);
+		//candidates.resize(numCandidates);
 
 		DBG_SDL_LOG(
 			"Cache stats: hits = " << cachehits
