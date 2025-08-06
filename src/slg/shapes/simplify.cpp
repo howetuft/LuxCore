@@ -2030,40 +2030,20 @@ private:
 				Eigen::Matrix3f normals;
 				normals << tv0.norm, tv1.norm, tv2.norm;
 				v0.norm = (normals * bcoords).normalized();
-				// TODO
-				//const auto triNorm0 = tv0.norm;
-				//const auto triNorm1 = tv1.norm;
-				//const auto triNorm2 = tv2.norm;
-				//v0.norm = (b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2).normalized();
 			}
 			if (hasUVs) {
 				Eigen::Matrix<float, 2, 3> uvs;
 				uvs << tv0.uv, tv1.uv, tv2.uv;
 				v0.uv = uvs * bcoords;
-				// TODO
-				//const luxrays::UV triUV0 = tv0.uv;
-				//const luxrays::UV triUV1 = tv1.uv;
-				//const luxrays::UV triUV2 = tv2.uv;
-				//v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
 			}
 			if (hasColors) {
 				Eigen::Matrix3f colors;
 				colors << tv0.col, tv1.col, tv2.col;
 				v0.col = colors * bcoords;
-				// TODO
-				//const luxrays::Spectrum triCol0 = tv0.col;
-				//const luxrays::Spectrum triCol1 = tv1.col;
-				//const luxrays::Spectrum triCol2 = tv2.col;
-				//v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
 			}
 			if (hasAlphas) {
 				Eigen::Vector3f alphas(tv0.alpha, tv1.alpha, tv2.alpha);
 				v0.alpha = alphas.dot(bcoords);
-				//TODO
-				//const float triAlpha0 = tv0.alpha;
-				//const float triAlpha1 = tv1.alpha;
-				//const float triAlpha2 = tv2.alpha;
-				//v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
 			}
 		} else {
 			// Must be a malformed triangle
@@ -2363,7 +2343,7 @@ slg::SimplifyShape::SimplifyShape(
 	const auto endTime = luxrays::WallClockTime();
 	SDL_LOG(std::format("Simplify time: {:3f} secs", endTime - startTime));
 
-	std::exit(0);  // DEBUG - Stop here
+	//std::exit(0);  // DEBUG - Stop here
 }
 
 slg::SimplifyShape::~SimplifyShape() {
