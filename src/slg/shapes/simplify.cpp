@@ -1805,12 +1805,8 @@ private:
 						}
 
 						auto&& [p, error] = CalculateCollapsePoint(v0, v1);
-						bool flip0, flip1;
-						tbb::parallel_invoke(
-							[&]() { Flipped(p, i0, i1, flip0); },
-							[&]() { Flipped(p, i1, i0, flip1); }
-						);
-						if (flip0 or flip1) continue;
+						if (Flipped(p, i0, i1)) continue;
+						if (Flipped(p, i1, i0)) continue;
 
 						if (trierrors[i][j] < minError) {
 							minErrorIndex = j;
@@ -1834,7 +1830,7 @@ private:
 			decltype(candidates) candidates2;
 			candidates2.reserve(candidates.size());
 			std::copy_if(
-				std::execution::par,
+				//std::execution::par,
 				candidates.begin(),
 				candidates.end(),
 				std::back_inserter(candidates2),
@@ -1872,22 +1868,27 @@ private:
 
 	// Lock neighbors and collapse candidate edge
 	// In order to benefit from RAII, this function is recursive
-	size_t inline lock_and_collapse (
+	size_t lock_and_collapse (
 		const SimplifyRef& candidate,
 		SizeTVector& neighbors
 	)
 	{
-		std::list<std::unique_lock<std::mutex>> locks;
-		for (auto& n: neighbors) {
+		if (not neighbors.empty()) {
+			// Get neighbor in the list
+			size_t i0 = neighbors.back();
+			neighbors.pop_back();
+
 			// Lock current neighbor
-			std::unique_lock lock(vmutexes[n], std::try_to_lock);
+			std::unique_lock lock(vmutexes[i0], std::try_to_lock);
 			if (not lock) throw NoLock();
 
-			// Push to list in order to keep it till the end of the function
-			locks.push_back(std::move(lock));
+			// And call recursively for the next
+			size_t res = lock_and_collapse(candidate, neighbors);
+			return res;
+		} else {
+			// Final treatment: collapse
+			return CollapseEdge(candidate);
 		}
-		return CollapseEdge(candidate);
-
 	}
 
 	class NoLock : std::exception {};
@@ -1943,7 +1944,7 @@ private:
 					}
 				}
 				// Compute uniques
-				tbb::parallel_sort(neighbors.begin(), neighbors.end());
+				std::sort(neighbors.begin(), neighbors.end());
 				auto neighbors_it = std::unique(neighbors.begin(), neighbors.end());
 				neighbors.resize(std::distance(neighbors.begin(), neighbors_it));
 
@@ -2001,12 +2002,8 @@ private:
 		// Do not collapse edge if it makes a face flip
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		bool flip0, flip1;
-		tbb::parallel_invoke(
-			[&]() { Flipped(p, i0, i1, flip0); },
-			[&]() { Flipped(p, i1, i0, flip1); }
-		);
-		if (flip0 or flip1) return 0;
+		if (Flipped(p, i0, i1)) return 0;
+		if (Flipped(p, i1, i0)) return 0;
 
 		// At this stage, no triangle flip is to fear anymore,
 		// so we can collapse edge
@@ -2092,11 +2089,10 @@ private:
 	}
 
 	// Check if a triangle flips when this edge is removed
-	inline void Flipped(
-		const Point& p, const size_t i0, const size_t i1, bool& res
-	) const {
+	inline bool Flipped(const Point& p, const size_t i0, const size_t i1) const {
 
 		const auto& v0 = vertices[i0];
+		bool res = false;
 
 		for (auto& ref: v0.refs) {
 			const auto& t = triangles[ref.tid];
@@ -2123,7 +2119,7 @@ private:
 				const float sqrnorms = d1.squaredNorm() * d2.squaredNorm();
 				constexpr float threshold = .999f * .999f;
 
-				if (sqrdot > threshold * sqrnorms) { res = true; return; }
+				if (sqrdot > threshold * sqrnorms) { return true; }
 			}
 
 			// Check if one of the Normals is changing side
@@ -2139,12 +2135,12 @@ private:
 				constexpr float threshold = .2f * .2f;
 
 				if (std::signbit(dot) or sqrdot < threshold * sqrnorms) {
-					res = true; return;
+					return true;
 				}
 			}
 
 		}  // ~for ref
-		res = false; return;
+		return false;
 	}  // ~Flipped
 
 	// Compute error for a given triangle
