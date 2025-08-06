@@ -2251,55 +2251,63 @@ private:
 
 		const auto max_concurrency = tbb::this_task_arena::max_concurrency();
 
-		// Compress triangles and mark vertices to keep
-		std::vector<std::atomic_flag> keep(vertices.size());
+		std::vector<std::atomic_flag, tbb::tbb_allocator<std::atomic_flag>>
+			keep(vertices.size());
 		tbb::parallel_for_each(keep, [](auto& k){ k. clear(); });
-		//for (auto& k: keep) k.clear();
 
-		//auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
-		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
-		for (auto& e: newTrianglesETS) e.reserve(triangles.size() / max_concurrency);
-
+		// Compress triangles and mark vertices to keep
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		auto compress_triangles = [&](tbb::blocked_range<size_t>& r) {
+		auto compress_triangles = [&](
+			const tbb::blocked_range<size_t>& r, TriangleVector v
+		) {
+			v.reserve(r.end() - r.begin());
+
 			for (auto i = r.begin(); i != r.end(); ++i) {
-				auto& t = triangles[i];
 				if (triangles.deleted(i)) continue;
-				newTrianglesETS.local().push_back(t);
+
+				auto& t = triangles[i];
+				v.push_back(t);
 
 				keep[t.v[0]].test_and_set();
 				keep[t.v[1]].test_and_set();
 				keep[t.v[2]].test_and_set();
 			}
+			return v;
 		};
-		tbb::parallel_for(range, compress_triangles);
 
 		TriangleVector newTriangles;
-		newTriangles.reserve(triangles.size());
-		for (auto& l: newTrianglesETS) {
-			newTriangles.insert(
-				newTriangles.end(),
-				std::make_move_iterator(l.begin()),
-				std::make_move_iterator(l.end())
-			);
-		}
-		triangles = std::move(newTriangles);
+
+		auto reduce_triangles = [](TriangleVector a, const TriangleVector& b) {
+			a.reserve(a.size() + b.size());
+			a.insert(a.end(), b.begin(), b.end());
+			return a;
+		};
+
+		triangles = std::move(
+			tbb::parallel_reduce(
+				range, newTriangles, compress_triangles, reduce_triangles
+			)
+		);
 
 		// Compress vertices
-		// This part must be partly sequential
-		std::vector<size_t> newIndex, vertMap;
+		tbb::concurrent_vector<size_t> newIndex, vertMap;
 		newIndex.resize(vertices.size());
 		vertMap.reserve(vertices.size());
 
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			if (not keep[i].test()) {
-				continue;
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>(0, vertices.size()),
+			[&](const tbb::blocked_range<size_t>& r) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					if (not keep[i].test()) {
+						continue;
+					}
+					auto it = vertMap.push_back(i);
+					newIndex[i] = it - vertMap.begin();
+				}
 			}
-			newIndex[i] = vertMap.size();
-			vertMap.push_back(i);
-		}
+		);
 
-		decltype(vertices) newVertices(vertMap.size());
+		VertexVector newVertices(vertMap.size());
 		auto range_vertices = tbb::blocked_range<size_t>(0, vertMap.size());
 		auto vertex_copy = [&](tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i != r.end(); ++i) {
