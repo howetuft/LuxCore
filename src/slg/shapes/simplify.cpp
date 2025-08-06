@@ -908,7 +908,16 @@ private:
 namespace enhanced {
 
 
-using BoolVector = std::vector<bool, tbb::cache_aligned_allocator<bool>>;
+struct alignas(std::hardware_destructive_interference_size) AlignedBool {
+	bool _bool = false;
+	AlignedBool() = default;
+	AlignedBool(const bool& p_bool) : _bool(p_bool) {};
+	AlignedBool(bool&& p_bool) : _bool(p_bool) {};
+	operator bool() const { return _bool; }
+};
+static_assert(sizeof(AlignedBool) == std::hardware_destructive_interference_size);
+
+using BoolVector = std::vector<AlignedBool, tbb::cache_aligned_allocator<AlignedBool>>;
 using SizeTVector = std::vector<size_t, tbb::cache_aligned_allocator<size_t>>;
 
 // Geometry
@@ -1018,6 +1027,7 @@ SimplifyRef {
 
 	bool initialized() const { return tvertex >= 0; }
 };
+static_assert(sizeof(SimplifyRef) % std::hardware_destructive_interference_size == 0);
 
 bool RefLess(const SimplifyRef& left, const SimplifyRef& right) {
 	return left.error < right.error;
@@ -1063,6 +1073,7 @@ protected:
 	size_t m_uuid;
 
 };
+static_assert(sizeof(SimplifyVertex) % std::hardware_destructive_interference_size == 0);
 
 using VertexVector = std::vector<
 	SimplifyVertex,
@@ -1117,6 +1128,8 @@ protected:
 	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
 
 };
+
+static_assert(sizeof(SimplifyTriangle) % std::hardware_destructive_interference_size == 0);
 
 using TriangleVectorBase = std::vector<
 	SimplifyTriangle,
@@ -2045,17 +2058,18 @@ private:
 		const auto&& [p, error] = CalculateCollapsePoint(v0, v1);
 
 		// Do not collapse edge if it makes a face flip
+		// Get deleted incident triangles
 		// deleted0, deleted1: true/false if the triangles referencing the
 		// vertex are deleted
-		if (Flipped(p, i0, i1)) return 0;
-		if (Flipped(p, i1, i0)) return 0;
-
-		// At this stage, no triangle flip is to fear anymore,
-		// so we can collapse edge
-
-		// Get deleted incident triangles
-		auto&& deleted0 = GetDeletedTriangles(p, i0, i1);
-		auto&& deleted1 = GetDeletedTriangles(p, i1, i0);
+		bool flip0, flip1;
+		BoolVector deleted0, deleted1;
+		tbb::parallel_invoke(
+			[&](){ flip0 = Flipped(p, i0, i1); },
+			[&](){ flip1 = Flipped(p, i1, i0); },
+			[&](){ deleted0 = GetDeletedTriangles(p, i0, i1); },
+			[&](){ deleted1 = GetDeletedTriangles(p, i1, i0); }
+		);
+		if (flip0 or flip1) return 0;
 
 		// Assign new vertex' position and quadric
 		v0.setP(p);
@@ -2099,12 +2113,25 @@ private:
 		}
 
 		// Update incident triangles
-		auto&& [newRefs0, deletedTriangles0] = UpdateTriangles(i0, v0, deleted0);
-		auto&& [newRefs1, deletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
+		RefVector newRefs0, newRefs1;
+		size_t numDeletedTriangles0, numDeletedTriangles1;
+		tbb::parallel_invoke(
+			[&]() {
+				std::tie(newRefs0, numDeletedTriangles0) =
+					UpdateTriangles(i0, v0, deleted0);
+			},
+			[&]() {
+				std::tie(newRefs1, numDeletedTriangles1) =
+					UpdateTriangles(i0, v1, deleted1);
+			}
+		);
+
+		//auto&& [newRefs0, numDeletedTriangles0] = 
+		//auto&& [newRefs1, numDeletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
 		newRefs0.reserve(newRefs0.size() + newRefs1.size());
 		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
 		v0.refs = std::move(newRefs0);
-		deletedTriangles = deletedTriangles0 + deletedTriangles1;
+		deletedTriangles = numDeletedTriangles0 + numDeletedTriangles1;
 
 		return deletedTriangles;
 	}
