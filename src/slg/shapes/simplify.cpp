@@ -1147,7 +1147,7 @@ public:
 
 // Error between vertex and Quadric
 inline float VertexError(const Quadric &q, const Point& p) {
-	return p.transpose() * q * p;
+	return fabs(p.transpose() * q * p);
 }
 
 
@@ -1187,9 +1187,13 @@ template <typename D, typename S, typename T> struct ForEach {
 // Cache feature for candidate building
 
 // Key is a triangle, identified by its geometric points
-struct alignas(128) ErrorCacheKey : std::array<size_t, 3>{};
+struct
+alignas(std::hardware_destructive_interference_size)
+ErrorCacheKey : std::array<size_t, 3>{};
 
-struct alignas(128) ErrorCacheEntry {
+struct
+alignas(std::hardware_destructive_interference_size)
+ErrorCacheEntry {
 	// vertex index in triangle and error
 	uint16_t minIndex;  // 16
 	float error; // 32
@@ -1318,14 +1322,14 @@ public:
 
 			// Build candidate list
 			DBG_SDL_LOG("Simplify - Build candidate list #" << iteration);
-			auto candidates = BuildCandidateList(maxCandidateQueueSize);
+			auto candidates{BuildCandidateList(maxCandidateQueueSize)};
 
 			// Delete triangles (run batches)
 			DBG_SDL_LOG(
 				"Simplify - Delete triangles"
 				<< " #" << iteration
 				);
-			const auto iterationDeletedTriangles = DeleteTriangles(candidates);
+			const auto iterationDeletedTriangles{DeleteTriangles(candidates)};
 
 			deletedTriangles += iterationDeletedTriangles;
 
@@ -1657,29 +1661,42 @@ private:
 		const SimplifyVertex& v0, const SimplifyVertex& v1
 	) const {
 		if (edgeScreenSize and not std::signbit(edgeScreenSize)) {
-			const Point& p0 = v0.p();
-			const Point& p1 = v1.p();
+			const Point& p0{v0.p()};
+			const Point& p1{v1.p()};
 			constexpr float notVisibleScale = .5f;
 
-			float p0x, p0y;
-			if (!camera.GetSamplePosition(Eigen2LuxP(p0), &p0x, &p0y) ||
-					!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
+			float p0x, p0y, p1x, p1y;
+			bool notVisibleScale0 = false;
+			bool notVisibleScale1 = false;
+
+			auto p0_task = [&] () {
+				if (!camera.GetSamplePosition(Eigen2LuxP(p0), &p0x, &p0y) ||
+						!luxrays::IsValid(p0x) || !luxrays::IsValid(p0y)) {
+					notVisibleScale0 = true;
+					return;
+				}
+
+				// Normalize
+				p0x /= camera.filmWidth;
+				p0y /= camera.filmHeight;
+			};
+
+			auto p1_task = [&] () {
+				if (!camera.GetSamplePosition(Eigen2LuxP(p1), &p1x, &p1y) ||
+						!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
+					notVisibleScale1 = true;
+					return;
+				}
+
+				// Normalize
+				p1x /= camera.filmWidth;
+				p1y /= camera.filmHeight;
+			};
+
+			tbb::parallel_invoke(p0_task, p1_task);
+			if (notVisibleScale0 or notVisibleScale1) {
 				return notVisibleScale;
 			}
-
-			// Normalize
-			p0x /= camera.filmWidth;
-			p0y /= camera.filmHeight;
-
-			float p1x, p1y;
-			if (!camera.GetSamplePosition(Eigen2LuxP(p1), &p1x, &p1y) ||
-					!luxrays::IsValid(p1x) || !luxrays::IsValid(p1y)) {
-				return notVisibleScale;
-			}
-
-			// Normalize
-			p1x /= camera.filmWidth;
-			p1y /= camera.filmHeight;
 
 			const auto edge = sqrtf(luxrays::Sqr(p0x - p1x) + luxrays::Sqr(p0y - p1y));
 			if (not edge) {
@@ -1698,22 +1715,22 @@ private:
 		const SimplifyVertex& v0, const SimplifyVertex& v1
 	) const {
 		// Compute resulting quadric
-		const Quadric q = v0.quad + v1.quad;
+		const Quadric q{v0.quad + v1.quad};
 
 		// Compute interpolated vertex
 		const Point &p0 = v0.p();
 		const Point &p1 = v1.p();
-		const Point p2 = (v0.p() + v1.p()) / 2.f;
+		const Point p2{(v0.p() + v1.p()) / 2.f};
 
 		// Compute error and associated point
 
 		float error;
 		Point pResult;
 		if (preserveBorder && v0.border) {
-			error = VertexError(q, p0) + 1.f;
+			error = VertexError(q, p0);
 			pResult = p0;
 		} else if (preserveBorder && v1.border) {
-			error = VertexError(q, p1) + 1.f;
+			error = VertexError(q, p1);
 			pResult = p1;
 		} else {
 			Eigen::Vector3f errors{
@@ -1721,9 +1738,6 @@ private:
 				VertexError(q, p1),
 				VertexError(q, p2)
 			};
-			// Error can be negative, I add 1 to have screenErrorScale to work as
-			// expected
-			errors += Eigen::Vector3f::Ones();
 			int minIndex;
 			error = errors.array().minCoeff(&minIndex);
 			switch(minIndex) {
@@ -1734,8 +1748,6 @@ private:
 			}
 		}
 
-	// Adding 1.0 because error have negative values
-	error = std::max(error + 1.f, 0.f);
 	return std::tuple(std::move(pResult), error);
 }
 
@@ -2179,14 +2191,20 @@ private:
 	// Compute error for a given triangle
 	inline std::array<float, 3> ComputeTriangleError(const SimplifyTriangle& t) const {
 		std::array<float, 3> res;
-		for (auto [i, edge]: enumerate(EDGES)) {
-			const auto [e1, e2] = edge;
-			const auto& v0 = vertices[t.v[e1]];
-			const auto& v1 = vertices[t.v[e2]];
-			auto collapseError = std::get<float>(CalculateCollapsePoint(v0, v1));
-			auto screenErrorScale = CalculateCollapseScreenErrorScale(v0, v1);
-			res[i] = collapseError * screenErrorScale;
-		}
+		tbb::parallel_for(
+			tbb::blocked_range<uint8_t>(0, 3),
+			[&](const tbb::blocked_range<uint8_t>& r) {
+				for (auto i = r.begin() ; i != r.end(); ++i) {
+					const auto& edge{EDGES[i]};
+					const auto [e1, e2] = edge;
+					const auto& v0 = vertices[t.v[e1]];
+					const auto& v1 = vertices[t.v[e2]];
+					auto collapseError = std::get<float>(CalculateCollapsePoint(v0, v1));
+					auto screenErrorScale = CalculateCollapseScreenErrorScale(v0, v1);
+					res[i] = collapseError * screenErrorScale;
+				}
+			}
+		);
 		return res;
 	}
 
@@ -2235,7 +2253,8 @@ private:
 
 		// Compress triangles and mark vertices to keep
 		std::vector<std::atomic_flag> keep(vertices.size());
-		for (auto& k: keep) k.clear();
+		tbb::parallel_for_each(keep, [](auto& k){ k. clear(); });
+		//for (auto& k: keep) k.clear();
 
 		//auto not_deleted = [](const SimplifyTriangle& t){ return !t.deleted(); };
 		tbb::enumerable_thread_specific<decltype(triangles)> newTrianglesETS;
