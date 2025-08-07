@@ -1150,6 +1150,7 @@ public:
 	using TriangleVectorBase::begin;
 	using TriangleVectorBase::end;
 
+	// Triangle accessors have been encapsulated to prevent some bugs
 	inline bool deleted(size_t i) const { return (*this)[i].deleted(); }
 	inline bool dirty(size_t i) const { return (*this)[i].dirty(); }
 	inline void set_deleted(size_t i) { (*this)[i].set_deleted(); }
@@ -1559,26 +1560,49 @@ private:
 	void InitIncidentEdges() {
 
 		// Clear previous data
-		for (auto& v: vertices) {
-			v.refs.clear();
-		}
+		auto clear_refs = [&](){
+			tbb::parallel_for(
+				size_t(0), vertices.size(), [&](size_t i){ vertices[i].refs.clear(); }
+			);
+		};
+
+		// Clear triangle dirty flags
+		auto clear_dirty = [&](){
+			tbb::parallel_for(
+				size_t(0), triangles.size(), [&](size_t i){ triangles.clear_dirty(i); }
+			);
+		};
+
+		tbb::parallel_invoke(clear_refs, clear_dirty);
 
 		// Build refs
 		// Possible race condition: we need mutexes (at vertex grain-scale)
-		auto range = tbb::blocked_range<size_t>(0, triangles.size());
-		auto task = [&](tbb::blocked_range<size_t>& r) {
-			for (auto i = r.begin(); i != r.end(); ++i) {
-				triangles.clear_dirty(i);  // Clear triangle dirty flags, by the way
+		auto trirange = tbb::blocked_range2d<size_t, size_t>(0, triangles.size(), 0, 3);
+		auto build_vertices = [&](tbb::blocked_range2d<size_t, size_t>& r) {
+			for (size_t i = r.rows().begin(); i != r.rows().end(); ++i) {
 				const auto& v = triangles[i].v;
-				for (size_t j = 0; j < 3; ++j) {
+				for (size_t j = r.cols().begin(); j != r.cols().end(); ++j) {
 					auto vid = v[j];
 					std::lock_guard lock(vmutexes[vid]);
 					vertices[vid].refs.emplace_back(i, j);
 				}
 			}
 		};
+		tbb::parallel_for(trirange, build_vertices);
 
-		tbb::parallel_for(range, task);
+		//auto range = tbb::blocked_range<size_t>(0, triangles.size());
+		//auto task = [&](tbb::blocked_range<size_t>& r) {
+			//for (auto i = r.begin(); i != r.end(); ++i) {
+				//const auto& v = triangles[i].v;
+				//for (size_t j = 0; j < 3; ++j) {
+					//auto vid = v[j];
+					//std::lock_guard lock(vmutexes[vid]);
+					//vertices[vid].refs.emplace_back(i, j);
+				//}
+			//}
+		//};
+
+		//tbb::parallel_for(range, task);
 	}
 
 	// Initialize quadrics on vertices
@@ -1610,6 +1634,7 @@ private:
 				);
 				const Quadric sm(p * p.transpose());
 
+#pragma omp simd
 				for (size_t j = 0; j < 3; ++j) {
 					auto vertex_index = t.v[j];
 					std::scoped_lock lock(v_mtx[vertex_index]);
@@ -1813,6 +1838,7 @@ private:
 					auto& tv1 = t.v[1];
 					auto& tv2 = t.v[2];
 
+#pragma omp simd
 					for (size_t j = 0; j < 3; ++j) {
 						size_t i0, i1;
 						switch(j) {
@@ -2349,8 +2375,8 @@ private:
 		auto range2d = tbb::blocked_range2d<size_t, size_t>(0, triangles.size(), 0, 3);
 		auto copy_indices = [&](tbb::blocked_range2d<size_t, size_t>& r) {
 			for (size_t i = r.rows().begin(); i != r.rows().end(); ++i) {
+				auto& t = triangles[i];
 				for (size_t j = r.cols().begin(); j != r.cols().end(); ++j) {
-					auto& t = triangles[i];
 					t.v[j] = newIndex[t.v[j]];
 					assert(t.v[j] < vertices.size());
 				}
