@@ -1109,23 +1109,47 @@ SimplifyTriangle {
 	//using enhanced::TriangleVector;
 	friend class TriangleVector;
 
-protected:
-	// Dynamic data
-	TriangleStatus status;
+	// Constructors
+	SimplifyTriangle() = default;
 
-	void clear_flag(TriangleStatus flag) {
-		using T = uint8_t;
-		T mask = !static_cast<T>(flag);
-		status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
+	SimplifyTriangle(SimplifyTriangle&& other) :
+	v(other.v), geometryN(other.geometryN) {
+		m_deleted = other.m_deleted ? true : false;
+		m_dirty = other.m_dirty ? true : false;
 	}
 
+	SimplifyTriangle(const SimplifyTriangle& other) :
+	v(other.v), geometryN(other.geometryN) {
+		m_deleted = other.m_deleted ? true : false;
+		m_dirty = other.m_dirty ? true : false;
+	}
+
+
+	SimplifyTriangle& operator=(const SimplifyTriangle& other) {
+		v = other.v;
+		geometryN = other.geometryN;
+		m_deleted = other.m_deleted ? true : false;
+		m_dirty = other.m_dirty ? true : false;
+	}
+
+protected:
+	// Dynamic data
+	std::atomic<bool> m_deleted = false;
+	std::atomic<bool> m_dirty = false;
+
+	//void clear_flag(TriangleStatus flag) {
+		//using T = uint8_t;
+		//T mask = !static_cast<T>(flag);
+		//status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
+	//}
+
 	// Status handling
-	inline bool deleted() const { return bool(status & TriangleStatus::DELETED); }
-	inline bool dirty() const { return bool(status & TriangleStatus::DIRTY); }
-	inline void set_deleted() { status = status | TriangleStatus::DELETED; }
-	inline void set_dirty() { status = status | TriangleStatus::DIRTY; }
-	inline void clear_deleted() { clear_flag(TriangleStatus::DELETED); }
-	inline void clear_dirty() { clear_flag(TriangleStatus::DIRTY); }
+	inline bool deleted() const { return m_deleted; }
+	inline bool dirty() const { return m_dirty; }
+	inline void set_deleted() { m_deleted = true; }
+	inline void set_dirty() { m_dirty = true; }
+	inline void clear_deleted() { m_deleted = false; }
+	inline void clear_dirty() { m_dirty = false; }
 
 };
 
@@ -1530,8 +1554,8 @@ private:
 				auto& t = triangles[i];
 				if (triangles.deleted(i)) continue;
 				auto& e = trierrors[i];
-				newTriangles.push_back(t);
-				newTriErrors.push_back(e);
+				newTriangles.push_back(std::move(t));
+				newTriErrors.push_back(std::move(e));
 			}
 			triangles = std::move(newTriangles);
 			trierrors = std::move(newTriErrors);
@@ -2319,7 +2343,7 @@ private:
 				if (triangles.deleted(i)) continue;
 
 				auto& t = triangles[i];
-				v.push_back(t);
+				v.push_back(std::move(t));
 
 				keep[t.v[0]].test_and_set();
 				keep[t.v[1]].test_and_set();
