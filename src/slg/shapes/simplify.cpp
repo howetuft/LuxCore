@@ -1130,6 +1130,7 @@ SimplifyTriangle {
 		geometryN = other.geometryN;
 		m_deleted = other.m_deleted ? true : false;
 		m_dirty = other.m_dirty ? true : false;
+		return *this;
 	}
 
 protected:
@@ -1261,6 +1262,39 @@ using ErrorCacheType = tbb::concurrent_hash_map<
 	tbb::cache_aligned_allocator<ErrorCachePair>
 >;
 
+class AtomicErrors {
+private:
+	static constexpr float DEFAULT_VALUE = std::numeric_limits<float>::infinity();
+	std::array<std::atomic<float>, 3> m_values{
+		DEFAULT_VALUE, DEFAULT_VALUE, DEFAULT_VALUE
+	};
+public:
+	AtomicErrors() = default;
+	AtomicErrors(AtomicErrors&& other) {
+		for (int i = 0; i < 3; ++i) {
+			m_values[i] = float(other.m_values[i]);
+		}
+	}
+	AtomicErrors(const AtomicErrors& other) {
+		for (int i = 0; i < 3; ++i) {
+			m_values[i] = float(other.m_values[i]);
+		}
+	}
+	AtomicErrors& operator=(const AtomicErrors& other) {
+		for (int i = 0; i < 3; ++i) {
+			m_values[i] = float(other.m_values[i]);
+		}
+		return *this;
+	}
+	AtomicErrors& operator=(const std::array<float, 3>& other) {
+		for (int i = 0; i < 3; ++i) {
+			m_values[i] = other[i];
+		}
+		return *this;
+	}
+	float operator[](size_t i) const { return float(m_values[i]); }
+};
+
 
 // The main class
 class Simplify {
@@ -1287,7 +1321,7 @@ public:
 		size_t triCount = srcMesh.GetTotalTriangleCount();
 		vertices.resize(vertCount);
 		triangles.resize(triCount);
-		trierrors.resize(triCount, {.0f, .0f, .0f});
+		trierrors.resize(triCount);
 
 		auto init_vertex = [](SV& vd, const luxrays::Point& vs){
 			vd.setP(Lux2EigenP(vs));
@@ -1496,10 +1530,11 @@ private:
 	// Main properties (vertices and triangles)
 	VertexVector vertices;
 	TriangleVector triangles;
-	std::vector<
-		std::array<float, 3>,
-		tbb::cache_aligned_allocator<std::array<float, 3>>
-	> trierrors;
+
+
+
+
+	std::vector< AtomicErrors, tbb::cache_aligned_allocator<AtomicErrors> > trierrors;
 	std::vector<
 		TriangleStatus,
 		tbb::cache_aligned_allocator<TriangleStatus>
