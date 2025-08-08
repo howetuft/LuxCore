@@ -1968,35 +1968,6 @@ private:
 		auto candidates =
 			tbb::parallel_reduce(tri_range, identity, build_task, reduce_task);
 
-		// Remove unitialized
-		//{
-			//decltype(candidates) candidates2;
-			//candidates2.reserve(candidates.size());
-			//std::copy_if(
-				////std::execution::par,
-				//candidates.begin(),
-				//candidates.end(),
-				//std::back_inserter(candidates2),
-				//[](const SimplifyRef& r){ return r.initialized(); }
-			//);
-			//candidates = std::move(candidates2);
-		//}
-
-		// Sort
-		//size_t numCandidates = std::min({
-				//candidates.size(),
-				//size_t(maxCandidateQueueSize)
-		//});
-		//std::partial_sort(
-			//std::execution::par,
-			//candidates.begin(),
-			//candidates.begin() + numCandidates,
-			//candidates.end(),
-			//RefLess
-		//);
-
-		// Take only the n first elements (resize)
-		//candidates.resize(numCandidates);
 
 		DBG_SDL_LOG(
 			"Cache stats: hits = " << cachehits
@@ -2008,33 +1979,6 @@ private:
 
 	}  // ~BuildCandidateList
 
-
-	// Lock neighbors and collapse candidate edge
-	// In order to benefit from RAII, this function is recursive
-	size_t lock_and_collapse (
-		const SimplifyRef& candidate,
-		SizeTVector& neighbors
-	)
-	{
-		if (not neighbors.empty()) {
-			// Get neighbor in the list
-			size_t i0 = neighbors.back();
-			neighbors.pop_back();
-
-			// Lock current neighbor
-			std::unique_lock lock(vmutexes[i0], std::try_to_lock);
-			if (not lock) throw NoLock();
-
-			// And call recursively for the next
-			size_t res = lock_and_collapse(candidate, neighbors);
-			return res;
-		} else {
-			// Final treatment: collapse
-			return CollapseEdge(candidate);
-		}
-	}
-
-	class NoLock : std::exception {};
 
 	// Delete triangles
 	//
@@ -2112,6 +2056,35 @@ private:
 		return deletedTriangles;
 	}
 
+	// An exception to be raised when we cannot lock the neighborhood
+	class NoLock : std::exception {};
+
+	// Lock neighbors and collapse candidate edge
+	// In order to benefit from RAII, this function is recursive
+	size_t lock_and_collapse (
+		const SimplifyRef& candidate,
+		SizeTVector& neighbors
+	)
+	{
+		if (not neighbors.empty()) {
+			// Get neighbor in the list
+			size_t i0 = neighbors.back();
+			neighbors.pop_back();
+
+			// Lock current neighbor
+			std::unique_lock lock(vmutexes[i0], std::try_to_lock);
+			if (not lock) throw NoLock();
+
+			// And call recursively for the next
+			size_t res = lock_and_collapse(candidate, neighbors);
+			return res;
+		} else {
+			// Final treatment: collapse
+			return CollapseEdge(candidate);
+		}
+	}
+
+
 
 	// Collapse an edge
 	// Returns: number of deleted triangles
@@ -2160,11 +2133,40 @@ private:
 		v0.setP(p);
 		v0.quad += v1.quad;
 
-		// Interpolate other vertex attributes
-		const auto& tv0 = vertices[t.v[0]];
-		const auto& tv1 = vertices[t.v[1]];
-		const auto& tv2 = vertices[t.v[2]];
+		// Update LuxCore data
+		UpdateLuxData(
+			v0, p, vertices[t.v[0]], vertices[t.v[1]], vertices[t.v[2]]
+		);
 
+		// Update incident triangles
+		RefVector newRefs0, newRefs1;
+		size_t numDeletedTriangles0, numDeletedTriangles1;
+		tbb::parallel_invoke(
+			[&]() {
+				std::tie(newRefs0, numDeletedTriangles0) =
+					UpdateTriangles(i0, v0, deleted0);
+			},
+			[&]() {
+				std::tie(newRefs1, numDeletedTriangles1) =
+					UpdateTriangles(i0, v1, deleted1);
+			}
+		);
+
+		newRefs0.reserve(newRefs0.size() + newRefs1.size());
+		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
+		v0.refs = std::move(newRefs0);
+		deletedTriangles = numDeletedTriangles0 + numDeletedTriangles1;
+
+		return deletedTriangles;
+	}
+
+	inline void UpdateLuxData(
+		SimplifyVertex& v0,
+		const Point& p,
+		const SimplifyVertex& tv0,
+		const SimplifyVertex& tv1,
+		const SimplifyVertex& tv2
+	) {
 		// Get barycentric coordinates
 		auto&& [bcoords_ok, bcoords] = BaryCoords(p, tv0.p(), tv1.p(), tv2.p());
 
@@ -2196,29 +2198,6 @@ private:
 			if (hasColors) { v0.col = tv0.col; }
 			if (hasAlphas) { v0.alpha = tv0.alpha; }
 		}
-
-		// Update incident triangles
-		RefVector newRefs0, newRefs1;
-		size_t numDeletedTriangles0, numDeletedTriangles1;
-		tbb::parallel_invoke(
-			[&]() {
-				std::tie(newRefs0, numDeletedTriangles0) =
-					UpdateTriangles(i0, v0, deleted0);
-			},
-			[&]() {
-				std::tie(newRefs1, numDeletedTriangles1) =
-					UpdateTriangles(i0, v1, deleted1);
-			}
-		);
-
-		//auto&& [newRefs0, numDeletedTriangles0] = 
-		//auto&& [newRefs1, numDeletedTriangles1] = UpdateTriangles(i0, v1, deleted1);
-		newRefs0.reserve(newRefs0.size() + newRefs1.size());
-		newRefs0.insert(newRefs0.end(), newRefs1.begin(), newRefs1.end());
-		v0.refs = std::move(newRefs0);
-		deletedTriangles = numDeletedTriangles0 + numDeletedTriangles1;
-
-		return deletedTriangles;
 	}
 
 	// Identify triangles referencing the vertex that have been deleted
