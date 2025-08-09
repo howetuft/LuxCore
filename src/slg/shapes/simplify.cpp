@@ -904,7 +904,7 @@ private:
 
 }
 
-// Namespace containing the rewriting of the algo
+// Namespace containing the rewriting of the algo, with parallelization
 namespace enhanced {
 
 
@@ -989,31 +989,12 @@ inline std::tuple<bool, Vector> BaryCoords(
 
 	return std::tuple(true, res);
 }
-// Enumerate helper (à la 'Python enumerate')
-template <typename T,
-          typename TIter = decltype(std::begin(std::declval<T>())),
-          typename = decltype(std::end(std::declval<T>()))>
-constexpr auto enumerate(T && iterable) {
-    struct iterator {
-        size_t i;
-        TIter iter;
-        bool operator != (const iterator & other) const { return iter != other.iter; }
-        void operator ++ () { ++i; ++iter; }
-        auto operator * () const { return std::tie(i, *iter); }
-    };
-    struct iterable_wrapper {
-        T iterable;
-        auto begin() { return iterator{ 0, std::begin(iterable) }; }
-        auto end() { return iterator{ 0, std::end(iterable) }; }
-    };
-    return iterable_wrapper{ std::forward<T>(iterable) };
-}
 
 
-// Quadric and References
+// Quadric
 using Quadric = Eigen::Matrix4f;
-const auto Upper = Eigen::UpLoType::Upper;
 
+// References (aka edges)
 struct
 alignas(std::hardware_destructive_interference_size)
 SimplifyRef {
@@ -1069,7 +1050,7 @@ protected:
 	// Position in space
 	Point m_p;			  // Position in geometry
 
-	// Unique identifier
+	// Unique identifier (for caching)
 	size_t m_uuid;
 
 };
@@ -1080,20 +1061,6 @@ using VertexVector = std::vector<
 	tbb::cache_aligned_allocator<SimplifyVertex>
 >;
 
-// Triangle status
-enum struct TriangleStatus : uint8_t {
-	DIRTY = 1 << 0, DELETED = 1 << 1
-};
-inline TriangleStatus operator&(TriangleStatus a, TriangleStatus b) {
-	return static_cast<TriangleStatus>(
-		static_cast<uint8_t>(a) & static_cast<uint8_t>(b)
-	);
-}
-inline TriangleStatus operator|(TriangleStatus a, TriangleStatus b) {
-	return static_cast<TriangleStatus>(
-		static_cast<uint8_t>(a) | static_cast<uint8_t>(b)
-	);
-}
 
 class TriangleVector;
 
@@ -1106,10 +1073,11 @@ SimplifyTriangle {
 	std::array<size_t, 3> v;  // Vertex indices
 	Normal geometryN;
 
-	//using enhanced::TriangleVector;
 	friend class TriangleVector;
 
 	// Constructors
+	// The redefinition of the 4-pack is necessary, due to atomics being not
+	// movable
 	SimplifyTriangle() = default;
 
 	SimplifyTriangle(SimplifyTriangle&& other) :
@@ -1135,16 +1103,16 @@ SimplifyTriangle {
 
 protected:
 	// Dynamic data
+	//
+	// Triangle dynamic data have been encapsulated to prevent some bugs
 	std::atomic<bool> m_deleted = false;
 	std::atomic<bool> m_dirty = false;
 
-	//void clear_flag(TriangleStatus flag) {
-		//using T = uint8_t;
-		//T mask = !static_cast<T>(flag);
-		//status = static_cast<TriangleStatus>(static_cast<T>(status) & mask);
-	//}
 
 	// Status handling
+	//
+	// Triangle accessors have been encapsulated to prevent some bugs.
+	// They are only accessible via triangle container (see TriangleVector)
 	inline bool deleted() const { return m_deleted; }
 	inline bool dirty() const { return m_dirty; }
 	inline void set_deleted() { m_deleted = true; }
@@ -1184,8 +1152,8 @@ public:
 	inline void clear_dirty(size_t i) { (*this)[i].clear_dirty(); }
 };
 
-// Error between vertex and Quadric
-inline float VertexError(const Quadric &q, const Point& p) {
+// Error between point and Quadric
+inline float PointError(const Quadric &q, const Point& p) {
 	return fabs(p.transpose() * q * p);
 }
 
@@ -1223,7 +1191,7 @@ template <typename D, typename S, typename T> struct ForEach {
 #define DBG_SDL_LOG(X) {}
 #endif
 
-// Cache feature for candidate building
+// Cache feature for candidate list building
 
 // Key is a triangle, identified by its geometric points
 struct
@@ -1252,7 +1220,6 @@ struct ErrorCacheHash {
 	}
 };
 
-//struct alignas(128) ErrorCachePair : public std::pair<const ErrorCacheKey, ErrorCacheEntry> {};
 using ErrorCachePair = std::pair<const ErrorCacheKey, ErrorCacheEntry>;
 
 using ErrorCacheType = tbb::concurrent_hash_map<
@@ -1262,6 +1229,8 @@ using ErrorCacheType = tbb::concurrent_hash_map<
 	tbb::cache_aligned_allocator<ErrorCachePair>
 >;
 
+// Objects to handle triangle errors in a thread-safe way
+//
 class AtomicErrors {
 private:
 	static constexpr float DEFAULT_VALUE = std::numeric_limits<float>::infinity();
@@ -1294,6 +1263,10 @@ public:
 	}
 	float operator[](size_t i) const { return float(m_values[i]); }
 };
+using TriangleErrorVector = std::vector<
+	AtomicErrors,
+	tbb::cache_aligned_allocator<AtomicErrors>
+>;
 
 
 // The main class
@@ -1531,16 +1504,9 @@ private:
 	VertexVector vertices;
 	TriangleVector triangles;
 
+	TriangleErrorVector trierrors;
 
-
-
-	std::vector< AtomicErrors, tbb::cache_aligned_allocator<AtomicErrors> > trierrors;
-	std::vector<
-		TriangleStatus,
-		tbb::cache_aligned_allocator<TriangleStatus>
-	> tristatus;
-
-	// Synchronization & multithreading
+	// Synchronization for vertices
 	MutexVector vmutexes;
 
 	// General settings
@@ -1824,16 +1790,16 @@ private:
 		float error;
 		Point pResult;
 		if (preserveBorder && v0.border) {
-			error = VertexError(q, p0);
+			error = PointError(q, p0);
 			pResult = p0;
 		} else if (preserveBorder && v1.border) {
-			error = VertexError(q, p1);
+			error = PointError(q, p1);
 			pResult = p1;
 		} else {
 			Eigen::Vector3f errors{
-				VertexError(q, p0),
-				VertexError(q, p1),
-				VertexError(q, p2)
+				PointError(q, p0),
+				PointError(q, p1),
+				PointError(q, p2)
 			};
 			int minIndex;
 			error = errors.array().minCoeff(&minIndex);
@@ -2309,13 +2275,15 @@ private:
 		size_t deletedTriangles = 0;
 		RefVector refs;
 		refs.reserve(v.refs.size());
-		for (const auto& [k, r]: enumerate(v.refs)) {
+		for (size_t i = 0; i < v.refs.size(); ++i) {
+			auto& r = v.refs[i];
 			SimplifyTriangle &t = triangles[r.tid];
 
-			if (triangles.deleted(r.tid))
+			if (triangles.deleted(r.tid)) {
 				continue;
+			}
 
-			if (deleted[k]) {
+			if (deleted[i]) {
 				triangles.set_deleted(r.tid);
 				deletedTriangles++;
 				// Update cache (remove triangle)
@@ -2328,6 +2296,8 @@ private:
 			auto cachekey = makeErrorCacheKey(t);
 			ErrorCache.erase(cachekey);
 
+			// We could nearly consider that, as we have locked every vertex
+			// in the neigborhood, the triangles are de facto locked too
 			t.v[r.tvertex] = i0;
 			triangles.set_dirty(r.tid);
 			trierrors[r.tid] = ComputeTriangleError(t);
@@ -2340,11 +2310,14 @@ private:
 	// Compact mesh before exiting
 	void CompactMesh() {
 
-		const auto max_concurrency = tbb::this_task_arena::max_concurrency();
 
 		std::vector<std::atomic_flag, tbb::tbb_allocator<std::atomic_flag>>
 			keep(vertices.size());
-		tbb::parallel_for_each(keep, [](auto& k){ k. clear(); });
+		tbb::parallel_for(
+			size_t(0),
+			keep.size(),
+			[&keep](size_t i){ keep[i].clear(); }
+		);
 
 		// Compress triangles and mark vertices to keep
 		auto range = tbb::blocked_range<size_t>(0, triangles.size());
