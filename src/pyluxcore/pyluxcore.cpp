@@ -1364,6 +1364,7 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
 
 
 // TODO make template and move to anonymous namespace
+using triangle_underlying_type = std::remove_all_extents<decltype(luxrays::Triangle::v)>::type;
 luxrays::Normal* AllocNormalsBuffer(unsigned int n) {
 	return (new luxrays::Normal[n]);
 }
@@ -1375,6 +1376,9 @@ luxrays::Spectrum* AllocRGBBuffer(unsigned int n) {
 }
 float* AllocAlphaBuffer(unsigned int n) {
 	return (new float[n]);
+}
+triangle_underlying_type* AllocVertexGroupBuffer(unsigned int n) {
+	return (new triangle_underlying_type[n]);
 }
 
 // Helper for DefineMeshExt3
@@ -1439,9 +1443,9 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopyOptional(
 }
 
 
-using triangle_underlying_type = std::remove_all_extents<decltype(luxrays::Triangle::v)>::type;
 
 using py_float_array= py::array_t<float, py::array::c_style>;
+using py_index_array= py::array_t<triangle_underlying_type, py::array::c_style>;
 
 // Define Mesh from Numpy arrays
 static void Scene_DefineMeshExt3(
@@ -1453,6 +1457,7 @@ static void Scene_DefineMeshExt3(
     const std::optional<std::vector<py_float_array>> uv_layers,
     const std::optional<std::vector<py_float_array>> color_layers,
     const std::optional<std::vector<py_float_array>> alpha_layers,
+    const std::optional<py_index_array> vertex_groups,
     const std::optional<py_float_array> transformation
 ) {
 	// TODO Release GIL when possible
@@ -1542,6 +1547,29 @@ static void Scene_DefineMeshExt3(
 		}
 	}
 
+	// Vertex groups
+	//
+	// This is the map between our points and the original vertices.
+	// Points can be duplicated to handle sharp edges, this map will allow to
+	// identify duplicatas. These data are necessary for subdiv
+	//
+	// In caller's logic, vertex_groups shape must be (N,), but in
+	// DataCopy logic, it must be (N,1), so we reshape
+	std::unique_ptr<u_int> meshVertexGroups;
+	if (vertex_groups.has_value()) {
+		auto vertex_groups_value = vertex_groups.value();
+		pybind11::array::ShapeContainer new_shape({vertex_groups_value.shape(0), 1,});
+		auto reshaped_vertex_groups_value = vertex_groups_value.reshape(new_shape);
+		auto [tmpMeshVertexGroups, numVerts] = dataCopy<
+			triangle_underlying_type,
+			triangle_underlying_type,
+			&AllocVertexGroupBuffer,
+			1
+		> (reshaped_vertex_groups_value, meshName, "VertexGroups");
+		meshVertexGroups = std::move(tmpMeshVertexGroups);
+	}
+
+
 	// Create Mesh
 	auto* newMesh =  new luxrays::ExtTriangleMesh(
 		u_int(numPoints),
@@ -1551,7 +1579,8 @@ static void Scene_DefineMeshExt3(
 		normals.release(),
 		&meshUVs,
 		&meshCols,
-		&meshAlphas
+		&meshAlphas,
+		meshVertexGroups.release()
 	);
 	newMesh->SetName(meshName);
 
@@ -2453,6 +2482,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("uvs") = py::none(),
 		py::arg("colors") = py::none(),
 		py::arg("alphas") = py::none(),
+		py::arg("vertgroups") = py::none(),
 		py::arg("transformation") = py::none()
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)

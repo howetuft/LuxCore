@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -77,6 +77,7 @@ public:
 	}
 
 	virtual bool HasNormals() const = 0;
+	virtual bool HasVertexGroups() const = 0;
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
 	virtual bool HasColors(const u_int dataIndex) const = 0;
 	virtual bool HasAlphas(const u_int dataIndex) const = 0;
@@ -132,16 +133,30 @@ private:
 
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
-			const float bRadius = 0.f);
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals = nullptr,
+		UV *meshUVs = nullptr,
+		Spectrum *meshCols = nullptr,
+		float *meshAlphas = nullptr,
+		u_int *meshVertexMap = nullptr,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+		u_int *meshVertexMap = nullptr,
+		const float bRadius = 0.f
+	);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
@@ -165,6 +180,8 @@ public:
 
 	Normal *GetNormals() const { return normals; }
 	Normal *GetTriNormals() const { return triNormals; }
+
+	u_int * GetVertexGroups() const { return vertexGroups; }
 
 	void SetUVs(const u_int dataIndex, UV *data) {
 		uvs[dataIndex] = data;
@@ -202,6 +219,7 @@ public:
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
 	virtual bool HasNormals() const { return normals != nullptr; }
+	virtual bool HasVertexGroups() const { return vertexGroups != nullptr; }
 	virtual bool HasUVs(const u_int dataIndex) const { return uvs[dataIndex] != nullptr; }
 	virtual bool HasColors(const u_int dataIndex) const { return cols[dataIndex] != nullptr; }
 	virtual bool HasAlphas(const u_int dataIndex) const { return alphas[dataIndex] != nullptr; }
@@ -300,16 +318,28 @@ public:
 	virtual void Save(const std::string &fileName) const;
 
 	void CopyAOV(ExtTriangleMesh *destMesh) const;
-	ExtTriangleMesh *CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f) const;
-	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
-			const float bRadius = 0.f) const;
+	ExtTriangleMesh *CopyExt(
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+		u_int *meshVertexGroup,
+		const float bRadius = 0.f
+	) const;
+	ExtTriangleMesh *Copy(
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		UV *meshUVs,
+		Spectrum *meshCols,
+		float *meshAlphas,
+		u_int * meshVertexGroups,
+		const float bRadius = 0.f
+	) const;
 	ExtTriangleMesh *Copy(const float bRadius = 0.f) const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
+		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
@@ -367,10 +397,13 @@ public:
 	ExtTriangleMesh() {
 	}
 
-	void Init(Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+	void Init(
+		Normal *meshNormals,
+		u_int * meshVertexGroups,
+		std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas
+	);
 
 	void Preprocess();
 	void PreprocessBevel();
@@ -489,6 +522,7 @@ public:
 
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
+	u_int * vertexGroups;  // Vertex groups (for subdiv)
 
 	BevelCylinder *bevelCylinders;
 	BevelBoundingCylinder *bevelBoundingCylinders;
@@ -497,20 +531,21 @@ public:
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) : 
+	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :
 		InstanceTriangleMesh(m, t) { }
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
-	
+
 	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
+	virtual bool HasVertexGroups() const { return static_cast<ExtTriangleMesh *>(mesh)->HasVertexGroups(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }
 	virtual bool HasColors(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasColors(dataIndex); }
 	virtual bool HasAlphas(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasAlphas(dataIndex); }
-	
+
 	virtual bool HasVertexAOV(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasVertexAOV(dataIndex); }
 	virtual bool HasTriAOV(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasTriAOV(dataIndex); }
 
@@ -623,6 +658,7 @@ public:
 	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
+	virtual bool HasVertexGroups() const { return static_cast<ExtTriangleMesh *>(mesh)->HasVertexGroups(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }
 	virtual bool HasColors(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasColors(dataIndex); }
 	virtual bool HasAlphas(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasAlphas(dataIndex); }
