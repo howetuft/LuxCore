@@ -1353,11 +1353,42 @@ SubdivShape::SubdivShape(
 	}
 
 	if (maxLevel > 0) {
+		// Reconstruct mesh
+		if (srcMesh->HasVertexGroups()) {
+			SDL_LOG("VertexGroups");
+			auto oldPoints = srcMesh->GetVertices();
+			auto vertexGroups = srcMesh->GetVertexGroups();
+			u_int maxVertexGroup = 0;
+			for (u_int i = 0; i < srcMesh->GetTotalVertexCount(); ++i) {
+				if (vertexGroups[i] > maxVertexGroup) {
+					maxVertexGroup = vertexGroups[i];
+				}
+			}
+
+			// Points
+			Point * newPoints = TriangleMesh::AllocVerticesBuffer(maxVertexGroup + 1);
+			for (u_int i = 0; i < srcMesh->GetTotalVertexCount(); ++i) {
+				newPoints[vertexGroups[i]] = oldPoints[i];
+			}
+
+			// Triangles
+			u_int triangleCount = srcMesh->GetTotalTriangleCount();
+			Triangle * newTriangles = TriangleMesh::AllocTrianglesBuffer(triangleCount);
+			auto oldTriangles = srcMesh->GetTriangles();
+			for (u_int i = 0; i < triangleCount; ++i) {
+				for (u_int j = 0; j < 3; ++j) {
+					newTriangles[i].v[j] = vertexGroups[oldTriangles[i].v[j]];
+				}
+			}
+
+			mesh = srcMesh->Copy(newPoints, newTriangles, nullptr, nullptr, nullptr, nullptr, nullptr);
+		} else {
+			mesh = srcMesh->Copy();
+		}
+
 		if (camera && (maxEdgeScreenSize > 0.f)) {
 			SDL_LOG("Subdividing shape " << srcMesh->GetName()
 					<< " - Adaptive subdivision");
-
-			mesh = srcMesh->Copy();
 
 			for (u_int i = 0; i < maxLevel; ++i) {
 				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
