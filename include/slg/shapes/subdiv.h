@@ -50,7 +50,7 @@ public:
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
 
-	luxrays::ExtTriangleMesh *mesh;
+	luxrays::ExtTriangleMesh *mesh = nullptr;
 };
 
 }

@@ -36,6 +36,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
+#include "slg/shapes/merge_on_distance.h"
 #include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 
@@ -1353,6 +1354,7 @@ SubdivShape::SubdivShape(
 	}
 
 	if (maxLevel > 0) {
+
 		if (camera && (maxEdgeScreenSize > 0.f)) {
 			SDL_LOG("Subdividing shape " << srcMesh->GetName()
 					<< " - Adaptive subdivision");
