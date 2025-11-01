@@ -64,12 +64,18 @@ endif()
 
 SET(LUXCORE_VERSION "${_DEFAULT_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
 
+# Check whether LUXCOREDEPS_VERSION has been provided
+if("${LUXCOREDEPS_VERSION}" STREQUAL "")
+  message(FATAL_ERROR "Error: LUXCOREDEPS_VERSION (aka LuxCore dependencies version) is empty.
+Are you building LuxCore in the recommended way (make deps && make)?")
+endif()
+
 # Dependencies check
 STRING(JSON REQUIRED_LUXCOREDEPS_VERSION GET "${settings_json}" Dependencies release)
-MESSAGE(STATUS "LuxCore Dependencies - Required version: ${REQUIRED_LUXCOREDEPS_VERSION}")
-IF(NOT ${REQUIRED_LUXCOREDEPS_VERSION} VERSION_EQUAL ${LUXCOREDEPS_VERSION})
-  MESSAGE(WARNING "LuxCore Dependencies - Provided version: ${LUXCOREDEPS_VERSION}")
-  MESSAGE(WARNING "\
+MESSAGE(STATUS "LuxCore Dependencies - Required version: \"${REQUIRED_LUXCOREDEPS_VERSION}\"")
+IF(NOT ${REQUIRED_LUXCOREDEPS_VERSION} VERSION_EQUAL "${LUXCOREDEPS_VERSION}")
+  MESSAGE(SEND_ERROR "LuxCore Dependencies - Provided version: \"${LUXCOREDEPS_VERSION}\"")
+  MESSAGE(FATAL_ERROR "\
 LuxCore Dependencies - Provided version does not match required version!\n\
 This may result in build errors or undefined behavior.\n\
 You should try to update dependencies ('make deps').\
