@@ -1,0 +1,3 @@
+#!/bin/bash
+# This is a simple shorcut, but it avoids to type all exclude options
+grep -rIn --color --exclude-dir=".ccache" --exclude-dir=".git" --exclude-dir=".conan2" --exclude-dir="out" "$1" .

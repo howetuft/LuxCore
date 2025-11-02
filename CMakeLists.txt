@@ -38,51 +38,18 @@ MESSAGE(STATUS "C++ compiler version is ${CMAKE_CXX_COMPILER_VERSION}")
 MESSAGE(STATUS "C compiler identifier is ${CMAKE_C_COMPILER_ID}")
 MESSAGE(STATUS "C compiler version is ${CMAKE_C_COMPILER_VERSION}")
 
-# Version computation
-#
-# Version number can be set by external caller (for instance, Github action)
-# by setting LUXCORE_VERSION.
-# Otherwise (like in a plain make build), we'll fallback to build-settings
-# default version
-#
-# Versioning should comply to semver standard: https://semver.org
-#
-FILE(READ "${CMAKE_CURRENT_LIST_DIR}/build-system/build-settings.json" settings_json)
-STRING(JSON _DEFAULT_VERSION_MAJOR GET "${settings_json}" DefaultVersion major)
-STRING(JSON _DEFAULT_VERSION_MINOR GET "${settings_json}" DefaultVersion minor)
-STRING(JSON _DEFAULT_VERSION_PATCH GET "${settings_json}" DefaultVersion patch)
-SET(
-  _DEFAULT_VERSION_BASE
-  "${_DEFAULT_VERSION_MAJOR}.${_DEFAULT_VERSION_MINOR}.${_DEFAULT_VERSION_PATCH}"
+# Set path to modules (keep this statement after project declaration)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/build-system/cmake")
+
+OPTION(
+  LUX_USE_DISTRO_PACKAGES
+  "Enable to build against distro packages (warning: not recommended)"
+  OFF
 )
-STRING(JSON _DEFAULT_VERSION_PRERELEASE GET "${settings_json}" DefaultVersion prerelease)
-if (NOT "${_DEFAULT_VERSION_PRERELEASE}" STREQUAL "")
-  SET(_DEFAULT_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}-${_DEFAULT_VERSION_PRERELEASE}")
-else()
-  SET(_DEFAULT_LUXCORE_VERSION "${_DEFAULT_VERSION_BASE}")
-endif()
+MARK_AS_ADVANCED(LUX_USE_DISTRO_PACKAGES)
 
-SET(LUXCORE_VERSION "${_DEFAULT_LUXCORE_VERSION}" CACHE STRING "LuxCore version")
-
-# Check whether LUXCOREDEPS_VERSION has been provided
-if("${LUXCOREDEPS_VERSION}" STREQUAL "")
-  message(FATAL_ERROR "Error: LUXCOREDEPS_VERSION (aka LuxCore dependencies version) is empty.
-Are you building LuxCore in the recommended way (make deps && make)?")
-endif()
-
-# Dependencies check
-STRING(JSON REQUIRED_LUXCOREDEPS_VERSION GET "${settings_json}" Dependencies release)
-MESSAGE(STATUS "LuxCore Dependencies - Required version: \"${REQUIRED_LUXCOREDEPS_VERSION}\"")
-IF(NOT ${REQUIRED_LUXCOREDEPS_VERSION} VERSION_EQUAL "${LUXCOREDEPS_VERSION}")
-  MESSAGE(SEND_ERROR "LuxCore Dependencies - Provided version: \"${LUXCOREDEPS_VERSION}\"")
-  MESSAGE(FATAL_ERROR "\
-LuxCore Dependencies - Provided version does not match required version!\n\
-This may result in build errors or undefined behavior.\n\
-You should try to update dependencies ('make deps').\
-  ")
-ELSE()
-  MESSAGE(STATUS "LuxCore Dependencies - Provided version: ${LUXCOREDEPS_VERSION} - OK")
-ENDIF()
+# Check dependencies
+include(CheckDependencies)
 
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
@@ -155,9 +122,6 @@ endif()
 
 include(GNUInstallDirs)
 
-# Set path to modules (keep it after project declaration)
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/build-system/cmake")
-
 ################################################################################
 #
 # Include necessary dependencies
@@ -169,46 +133,11 @@ INCLUDE(CheckCompilerVersion)
 
 # Nota: please keep all 'find_package' gathered here (for maintenance reasons)
 message(STATUS "LuxCore - Add dependency targets")
-find_package(TBB REQUIRED)
-find_package(minizip REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(OpenImageIO REQUIRED)
-find_package(PNG REQUIRED)
-find_package(OpenColorIO REQUIRED)
-find_package(OpenEXR REQUIRED)
-find_package(embree REQUIRED)
-find_package(c-blosc REQUIRED)
-find_package(oidn REQUIRED)
-find_package(Boost REQUIRED)
-find_package(OpenVDB REQUIRED)
-find_package(Imath REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(OpenSubdiv REQUIRED)
-find_package(nlohmann_json REQUIRED)
-find_package(robin_hood REQUIRED)
-find_package(OpenMP REQUIRED)
-find_package(OpenJPEG REQUIRED)
-find_package(openjph REQUIRED)
-if (WIN32 OR LINUX)
-  find_package(nvrtc REQUIRED)
+if (NOT ${LUX_USE_DISTRO_PACKAGES})
+  include(FindConanPackages)
+else()
+  include(FindDistroPackages)
 endif()
-
-# Bison/Flex
-find_package(BISON REQUIRED)
-find_package(FLEX REQUIRED)
-
-# Additional dependencies for pyluxcore
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
-
-# Additional dependencies for luxcoreui
-find_package(imgui)
-find_package(glfw3)
-find_package(imguifiledialog)
-
-# Documentation
-find_package(Doxygen)
-
 
 ################################################################################
 #
