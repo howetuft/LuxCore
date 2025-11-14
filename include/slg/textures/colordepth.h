@@ -30,7 +30,7 @@ namespace slg {
 
 class ColorDepthTexture : public Texture {
 public:
-	ColorDepthTexture(const float depth, const Texture *t) :
+	ColorDepthTexture(const float depth, TextureConstPtr t) :
 		d(-luxrays::Max(1e-3f, depth)), kt(t) { }
 	virtual ~ColorDepthTexture() { }
 
@@ -49,19 +49,19 @@ public:
 		kt->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (kt == oldTex)
 			kt = newTex;
 	}
 
 	float GetD() const { return d; }
-	const Texture *GetKt() const { return kt; }
+	TextureConstPtr GetKt() const { return kt; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	float d;
-	const Texture *kt;
+	TextureConstPtr kt;
 };
 
 }

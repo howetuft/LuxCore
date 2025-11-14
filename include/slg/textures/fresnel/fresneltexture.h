@@ -52,6 +52,8 @@ private:
 			const float eta);
 };
 
+using FresnelTextureConstPtr = std::shared_ptr<const FresnelTexture>;
+
 }
 
 #endif	/* _SLG_FRESNELTEXTURE_H */

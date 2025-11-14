@@ -40,23 +40,22 @@ public:
 		return objs.IsObjDefined(name);
 	}
 	void DefineSceneObject(SceneObject *m);
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const Material *newMat) const;
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, MaterialConstPtr newMat) const;
 	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
 
-	const SceneObject *GetSceneObject(const std::string &name) const {
-		return static_cast<const SceneObject *>(objs.GetObj(name));
+	SceneObjectConstPtr GetSceneObject(const std::string &name) const {
+		return dynamic_pointer_cast<const SceneObject>(objs.GetObj(name));
 	}
-	SceneObject *GetSceneObject(const std::string &name) {
-		std::vector<luxrays::NamedObject *> &v = objs.GetObjs();
-		return static_cast<SceneObject *>(v[objs.GetIndex(name)]);
+	SceneObjectPtr GetSceneObject(const std::string &name) {
+		return dynamic_pointer_cast<SceneObject>(objs.GetObj(name));
 	}
-	const SceneObject *GetSceneObject(const u_int index) const {
-		return static_cast<const SceneObject *>(objs.GetObj(index));
+	SceneObjectConstPtr GetSceneObject(const u_int index) const {
+		return dynamic_pointer_cast<const SceneObject>(objs.GetObj(index));
 	}
 	u_int GetSceneObjectIndex(const std::string &name) const {
 		return objs.GetIndex(name);
 	}
-	u_int GetSceneObjectIndex(const SceneObject *so) const {
+	u_int GetSceneObjectIndex(SceneObjectConstPtr so) const {
 		return objs.GetIndex(so);
 	}
 
@@ -68,11 +67,11 @@ public:
 	}
 
 	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
+	void UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialPtr newMat);
 	// Update any reference to oldMesh with newMesh. It returns also the
 	// list of modified objects
 	void UpdateMeshReferences(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh,
-		std::unordered_set<SceneObject *> &modifiedObjsList);
+		std::unordered_set<const SceneObject *> &modifiedObjsList);
 
 	void DeleteSceneObject(const std::string &name) {
 		objs.DeleteObj(name);

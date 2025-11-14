@@ -142,7 +142,7 @@ void BombingTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *>
 	bulletMaskTex->AddReferencedImageMaps(referencedImgMaps);
 }
 
-void BombingTexture::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void BombingTexture::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	if (backgroundTex == oldTex)
 		backgroundTex = newTex;
 	if (bulletTex == oldTex)

@@ -31,11 +31,12 @@ namespace ocl {
 }
 
 class BSDF;
-	
+
 class Volume : public Material {
 public:
-	Volume(const Texture *ior, const Texture *emission) : Material(NULL, NULL, NULL, NULL),
-			iorTex(ior), volumeEmissionTex(emission), volumeLightID(0), priority(0) { }
+	Volume(TextureConstPtr ior, TextureConstPtr emission) :
+		Material(NULL, NULL, NULL, NULL),
+		iorTex(ior), volumeEmissionTex(emission), volumeLightID(0), priority(0) { }
 	virtual ~Volume() { }
 
 	void SetVolumeLightID(const u_int id) { volumeLightID = id; }
@@ -43,8 +44,8 @@ public:
 	void SetPriority(const int p) { priority = p; }
 	int GetPriority() const { return priority; }
 
-	const Texture *GetIORTexture() const { return iorTex; }
-	const Texture *GetVolumeEmissionTexture() const { return volumeEmissionTex; }
+	TextureConstPtr GetIORTexture() const { return iorTex; }
+	TextureConstPtr GetVolumeEmissionTexture() const { return volumeEmissionTex; }
 
 	float GetIOR(const HitPoint &hitPoint) const { return iorTex->GetFloatValue(hitPoint); }
 
@@ -55,7 +56,7 @@ public:
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const = 0;
 
 	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -71,18 +72,22 @@ protected:
 		return (volumeEmissionTex) ? volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp() : luxrays::Spectrum(0.f);
 	}
 
-	const Texture *iorTex;
+	TextureConstPtr iorTex;
 	// This is a different kind of emission texture from the one in
 	// Material class (i.e. is not sampled by direct light).
-	const Texture *volumeEmissionTex;
+	TextureConstPtr volumeEmissionTex;
 	u_int volumeLightID;
 	int priority;
 };
 
+using VolumePtr = std::shared_ptr<Volume>;
+using VolumeConstPtr = std::shared_ptr<const Volume>;
+using VolumeRef = Volume&;
+
 // An utility class
 class SchlickScatter {
 public:
-	SchlickScatter(const Volume *volume, const Texture *g);
+	SchlickScatter(VolumeConstPtr volume, TextureConstPtr g);
 
 	luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 
@@ -97,12 +102,13 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	const Volume *volume;
-	const Texture *g;
+	VolumeConstPtr volume;
+	TextureConstPtr g;
 
 private:
 	luxrays::Spectrum GetColor(const HitPoint &hitPoint) const;
 };
+
 
 }
 

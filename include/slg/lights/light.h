@@ -32,6 +32,7 @@
 #include "slg/textures/texture.h"
 #include "slg/textures/mapping/mapping.h"
 #include "slg/materials/material.h"
+#include "slg/volumes/volume.h"
 
 namespace slg {
 
@@ -106,16 +107,16 @@ public:
 			const luxrays::Point &p, const luxrays::Normal &n) const {
 		return false;
 	}
-	
+
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const { }
-	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
+	virtual void UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol);
 
 	static std::string LightSourceType2String(const LightSourceType type);
 
 	u_int lightSceneIndex;
-	const Volume *volume;
+	std::shared_ptr<const Volume> volume;
 };
 
 //------------------------------------------------------------------------------
@@ -142,7 +143,7 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const = 0;
 
-	const Material *lightMaterial;
+	MaterialConstPtr lightMaterial;
 };
 
 //------------------------------------------------------------------------------

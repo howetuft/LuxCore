@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void TextureDefinitions::DefineTexture(Texture *newTex) {
-	const Texture *oldTex = static_cast<const Texture *>(texs.DefineObj(newTex));
+	TextureConstPtr oldTex = static_cast<TextureConstPtr >(texs.DefineObj(newTex));
 
 	if (oldTex) {
 		// Update all references
@@ -43,13 +43,13 @@ void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const
 	std::unordered_set<string> doneNames;
 
 	for (u_int i = 0; i < GetSize(); ++i) {
-		const Texture *tex = GetTexture(i);
+		TextureConstPtr tex = GetTexture(i);
 		
 		GetTextureSortedNamesImpl(tex, names, doneNames);
 	}
 }
 
-void TextureDefinitions::GetTextureSortedNamesImpl(const Texture *tex,
+void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstPtr tex,
 		vector<std::string> &names, std::unordered_set<string> &doneNames) const {
 	// Check it has not been already added
 	const string &texName = tex->GetName();

@@ -162,7 +162,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 			lastPrint = WallClockTime();
 		}
 
-		const SceneObject *scnObj = renderConfig->scene->objDefs.GetSceneObject(i);
+		auto scnObj = renderConfig->scene->objDefs.GetSceneObject(i);
 		const ExtMesh *mesh = scnObj->GetExtMesh();
 		// TODO: other mesh types
 		if (mesh->GetType() != TYPE_EXT_TRIANGLE)

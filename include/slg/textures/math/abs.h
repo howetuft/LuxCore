@@ -29,7 +29,7 @@ namespace slg {
 
 class AbsTexture : public Texture {
 public:
-	AbsTexture(const Texture *t) : tex(t) { }
+	AbsTexture(TextureConstPtr t) : tex(t) { }
 	virtual ~AbsTexture() { }
 
 	virtual TextureType GetType() const { return ABS_TEX; }
@@ -47,17 +47,17 @@ public:
 		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	const Texture *GetTexture() const { return tex; }
+	TextureConstPtr GetTexture() const { return tex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex;
+	TextureConstPtr tex;
 };
 
 }

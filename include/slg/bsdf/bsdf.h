@@ -76,7 +76,7 @@ public:
 	// A BSDF initialized with a volume scattering point
 	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const luxrays::Ray &ray,
-		const Volume &volume, const float t, const float passThroughEvent) {
+		VolumeConstPtr volume, const float t, const float passThroughEvent) {
 		Init(fixedFromLight, throughShadowTransparency,
 				scene, ray, volume, t, passThroughEvent);
 	}
@@ -96,7 +96,7 @@ public:
 	// Used when hitting a volume scatter point
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const luxrays::Ray &ray,
-		const Volume &volume, const float t, const float passThroughEvent);
+		VolumeConstPtr volume, const float t, const float passThroughEvent);
 
 	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);
 	
@@ -109,7 +109,7 @@ public:
 	bool IsShadowCatcher() const { return material->IsShadowCatcher(); }
 	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsCameraInvisible() const;
-	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
+	bool IsVolume() const { return dynamic_pointer_cast<const Volume>(material) != NULL; }
 	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsHoldout() const { return material->IsHoldout(); }
 	bool IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
@@ -118,10 +118,10 @@ public:
 	const std::string &GetMaterialName() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
-	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
-	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
+	VolumeConstPtr GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
+	VolumeConstPtr GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	float GetGlossiness() const { return material->GetGlossiness(); }
-	const SceneObject *GetSceneObject() const { return sceneObject; }
+	SceneObjectConstPtr GetSceneObject() const { return sceneObject; }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 	MaterialType GetMaterialType() const { return material->GetType(); }
@@ -146,7 +146,7 @@ public:
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
 	const LightSource *GetLightSource() const { return triangleLightSource; }
-	
+
 	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
 		if (IsVolume())
 			return hitPoint.p;
@@ -164,12 +164,12 @@ public:
 	HitPoint hitPoint;
 
 private:
-	const SceneObject *sceneObject;
-	const Material *material;
+	SceneObjectConstPtr sceneObject;
+	MaterialConstPtr material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;
 };
-	
+
 }
 
 #endif	/* _SLG_BSDF_H */

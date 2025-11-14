@@ -29,9 +29,9 @@ namespace slg {
 
 class MirrorMaterial : public Material {
 public:
-	MirrorMaterial(const Texture *frontTransp, const Texture *backTransp,
-			const Texture *emitted, const Texture *bump,
-			const Texture *refl);
+	MirrorMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+			TextureConstPtr emitted, TextureConstPtr bump,
+			TextureConstPtr refl);
 
 	virtual MaterialType GetType() const { return MIRROR; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
@@ -55,14 +55,14 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	const Texture *GetKr() const { return Kr; }
+	TextureConstPtr GetKr() const { return Kr; }
 
 private:
-	const Texture *Kr;
+	TextureConstPtr Kr;
 };
 
 }

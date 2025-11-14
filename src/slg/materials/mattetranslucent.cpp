@@ -26,9 +26,9 @@ using namespace slg;
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-MatteTranslucentMaterial::MatteTranslucentMaterial(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *refl, const Texture *trans) :
+MatteTranslucentMaterial::MatteTranslucentMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr refl, TextureConstPtr trans) :
 			Material(frontTransp, backTransp, emitted, bump),
 			Kr(refl), Kt(trans) {
 }
@@ -191,7 +191,7 @@ void MatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Te
 	Kt->AddReferencedTextures(referencedTexs);
 }
 
-void MatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void MatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

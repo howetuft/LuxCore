@@ -29,7 +29,7 @@ namespace slg {
 
 class SplitFloat3Texture : public Texture {
 public:
-	SplitFloat3Texture(const Texture *t, const u_int ch) : tex(t), channel(ch) { }
+	SplitFloat3Texture(TextureConstPtr t, const u_int ch) : tex(t), channel(ch) { }
 	virtual ~SplitFloat3Texture() { }
 
 	virtual TextureType GetType() const { return SPLIT_FLOAT3; }
@@ -49,18 +49,18 @@ public:
 		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	const Texture *GetTexture() const { return tex; }
+	TextureConstPtr GetTexture() const { return tex; }
 	u_int GetChannel() const { return channel; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex;
+	TextureConstPtr tex;
 	u_int channel;
 };
 

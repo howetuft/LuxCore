@@ -28,11 +28,11 @@ using namespace slg;
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-ArchGlassMaterial::ArchGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *refl, const Texture *trans,
-		const Texture *exteriorIorFact, const Texture *interiorIorFact,
-		const Texture *filmThickness, const Texture *filmIor) :
+ArchGlassMaterial::ArchGlassMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr refl, TextureConstPtr trans,
+		TextureConstPtr exteriorIorFact, TextureConstPtr interiorIorFact,
+		TextureConstPtr filmThickness, TextureConstPtr filmIor) :
 			Material(frontTransp, backTransp, emitted, bump),
 			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
 			filmThickness(filmThickness), filmIor(filmIor) {
@@ -228,7 +228,7 @@ void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *
 		filmIor->AddReferencedTextures(referencedTexs);
 }
 
-void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void ArchGlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

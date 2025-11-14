@@ -29,7 +29,7 @@ namespace slg {
 
 class FresnelColorTexture : public FresnelTexture {
 public:
-	FresnelColorTexture(const Texture *c) : kr(c) { }
+	FresnelColorTexture(TextureConstPtr c) : kr(c) { }
 	virtual ~FresnelColorTexture() { }
 
 	virtual TextureType GetType() const { return FRESNELCOLOR_TEX; }
@@ -46,17 +46,17 @@ public:
 		kr->AddReferencedTextures(referencedTexs);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (kr == oldTex)
 			kr = newTex;
 	}
 
-	const Texture *GetKr() const { return kr; };
+	TextureConstPtr GetKr() const { return kr; };
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *kr;
+	TextureConstPtr kr;
 };
 
 }

@@ -156,7 +156,7 @@ public:
 	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
-	void GenerateEyeRay(const Camera *camera, const Film *film,
+	void GenerateEyeRay(CameraConstPtr camera, const Film *film,
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler *sampler, SampleResult &sampleResult) const;
 

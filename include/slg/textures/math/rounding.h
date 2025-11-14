@@ -29,7 +29,7 @@ namespace slg {
 
 class RoundingTexture : public Texture {
 public:
-    RoundingTexture(const Texture *t, const Texture *i) : texture(t), increment(i) { }
+    RoundingTexture(TextureConstPtr t, TextureConstPtr i) : texture(t), increment(i) { }
     virtual ~RoundingTexture() { }
 
     virtual TextureType GetType(void) const { return ROUNDING_TEX; }
@@ -51,7 +51,7 @@ public:
         increment->AddReferencedImageMaps(referencedImgMaps);
     }
 
-    virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+    virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
         if(texture == oldTex) {
             texture = newTex;
         }
@@ -60,14 +60,14 @@ public:
         }
     }
 
-    const Texture *GetTexture() const { return texture; }
-    const Texture *GetIncrement() const { return increment; }
+    TextureConstPtr GetTexture() const { return texture; }
+    TextureConstPtr GetIncrement() const { return increment; }
 
     virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-    const Texture *texture;
-    const Texture *increment;
+    TextureConstPtr texture;
+    TextureConstPtr increment;
 
     float round(float value, float increment) const;
 };

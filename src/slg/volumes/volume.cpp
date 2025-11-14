@@ -38,7 +38,7 @@ void Volume::AddReferencedTextures(std::unordered_set<const Texture *> &referenc
 		volumeEmissionTex->AddReferencedTextures(referencedTexs);
 }
 
-void Volume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void Volume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (iorTex == oldTex)
@@ -68,7 +68,7 @@ Properties Volume::ToProperties() const {
 // SchlickScatter
 //------------------------------------------------------------------------------
 
-SchlickScatter::SchlickScatter(const Volume *vol, const Texture *gTex) :
+SchlickScatter::SchlickScatter(VolumeConstPtr vol, TextureConstPtr gTex) :
 	volume(vol), g(gTex) {
 }
 

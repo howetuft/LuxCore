@@ -30,7 +30,7 @@ namespace slg {
 	
 class DensityGridTexture : public Texture {
 public:
-	DensityGridTexture(const TextureMapping3D *mp, const u_int nx, const u_int ny, const u_int nz,
+	DensityGridTexture(TextureMapping3DConstPtr mp, const u_int nx, const u_int ny, const u_int nz,
             const ImageMap *imageMap);
 	virtual ~DensityGridTexture() { }
 
@@ -50,7 +50,7 @@ public:
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	TextureMapping3DConstPtr GetTextureMapping() const { return mapping; }
 
 	static ImageMap *ParseData(const luxrays::Property &Property,
 			const bool isRGB,
@@ -65,7 +65,7 @@ public:
 private:
 	luxrays::Spectrum D(int x, int y, int z) const;
 
-	const TextureMapping3D *mapping;
+	TextureMapping3DConstPtr mapping;
     const int nx, ny, nz;
 
 	const ImageMap *imageMap;

@@ -29,7 +29,7 @@ namespace slg {
 
 class MixTexture : public Texture {
 public:
-	MixTexture(const Texture *amnt, const Texture *t1, const Texture *t2) :
+	MixTexture(TextureConstPtr amnt, TextureConstPtr t1, TextureConstPtr t2) :
 		amount(amnt), tex1(t1), tex2(t2) { }
 	virtual ~MixTexture() { }
 
@@ -53,7 +53,7 @@ public:
 		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (amount == oldTex)
 			amount = newTex;
 		if (tex1 == oldTex)
@@ -62,16 +62,16 @@ public:
 			tex2 = newTex;
 	}
 
-	const Texture *GetAmountTexture() const { return amount; }
-	const Texture *GetTexture1() const { return tex1; }
-	const Texture *GetTexture2() const { return tex2; }
+	TextureConstPtr GetAmountTexture() const { return amount; }
+	TextureConstPtr GetTexture1() const { return tex1; }
+	TextureConstPtr GetTexture2() const { return tex2; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *amount;
-	const Texture *tex1;
-	const Texture *tex2;
+	TextureConstPtr amount;
+	TextureConstPtr tex1;
+	TextureConstPtr tex2;
 };
 
 }

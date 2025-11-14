@@ -29,9 +29,8 @@ namespace slg {
 
 class DotsTexture : public Texture {
 public:
-	DotsTexture(const TextureMapping2D *mp, const Texture *insideTx, const Texture *outsideTx) :
+	DotsTexture(TextureMapping2DConstPtr mp, TextureConstPtr insideTx, TextureConstPtr outsideTx) :
 		mapping(mp), insideTex(insideTx), outsideTex(outsideTx) { }
-	virtual ~DotsTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return DOTS; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
@@ -54,25 +53,25 @@ public:
 		outsideTex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (insideTex == oldTex)
 			insideTex = newTex;
 		if (outsideTex == oldTex)
 			outsideTex = newTex;
 	}
 
-	const TextureMapping2D *GetTextureMapping() const { return mapping; }
-	const Texture *GetInsideTex() const { return insideTex; }
-	const Texture *GetOutsideTex() const { return outsideTex; }
+	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
+	TextureConstPtr GetInsideTex() const { return insideTex; }
+	TextureConstPtr GetOutsideTex() const { return outsideTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	bool Evaluate(const HitPoint &hitPoint) const;
 
-	const TextureMapping2D *mapping;
-	const Texture *insideTex;
-	const Texture *outsideTex;
+	TextureMapping2DConstPtr mapping;
+	TextureConstPtr insideTex;
+	TextureConstPtr outsideTex;
 };
 
 }

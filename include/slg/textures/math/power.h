@@ -29,7 +29,7 @@ namespace slg {
 
 class PowerTexture : public Texture {
 public:
-	PowerTexture(const Texture *base, const Texture *exponent) : base(base), exponent(exponent) { }
+	PowerTexture(TextureConstPtr base, TextureConstPtr exponent) : base(base), exponent(exponent) { }
 	virtual ~PowerTexture() { }
 
 	virtual TextureType GetType() const { return POWER_TEX; }
@@ -53,21 +53,21 @@ public:
 		exponent->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (base == oldTex)
 			base = newTex;
 		if (exponent == oldTex)
 			exponent = newTex;
 	}
 
-	const Texture *GetBase() const { return base; }
-	const Texture *GetExponent() const { return exponent; }
+	TextureConstPtr GetBase() const { return base; }
+	TextureConstPtr GetExponent() const { return exponent; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *base;
-	const Texture *exponent;
+	TextureConstPtr base;
+	TextureConstPtr exponent;
 
 	inline float SafePow(const float base, const float exponent) const {
 		if (base < 0.f && exponent != static_cast<int>(exponent))

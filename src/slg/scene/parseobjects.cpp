@@ -44,7 +44,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 		if (objDefs.IsSceneObjectDefined(objName)) {
 			// A replacement for an existing object
-			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+			auto oldObj = objDefs.GetSceneObject(objName);
 			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
 
 			// Check if the old object was a light source
@@ -61,11 +61,11 @@ void Scene::ParseObjects(const Properties &props) {
 		const u_int objID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
 				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
 				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
-		SceneObject *obj = CreateObject(objID, objName, props);
+		auto obj = CreateObject(objID, objName, props);
 		objDefs.DefineSceneObject(obj);
 
 		// Check if it is a light source
-		const Material *mat = obj->GetMaterial();
+		MaterialConstPtr mat = obj->GetMaterial();
 		if (mat->IsLightSource()) {
 			SDL_LOG("The " << objName << " object is a light sources with " << obj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
@@ -85,7 +85,7 @@ void Scene::ParseObjects(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
-SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName, const Properties &props) {
+SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objName, const Properties &props) {
 	const string propName = "scene.objects." + objName;
 
 	// Extract the material name
@@ -96,7 +96,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))
 		throw runtime_error("Unknown material: " + matName);
-	const Material *mat = matDefs.GetMaterial(matName);
+	MaterialConstPtr mat = matDefs.GetMaterial(matName);
 
 	// Get the mesh
 	string shapeName;
@@ -208,7 +208,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const luxrays::Transform &trans, const u_int dstObjID) {
-	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
+	auto srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
 	ExtMesh *newMesh;
@@ -259,7 +259,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	objDefs.DefineSceneObject(dstObj);
 
 	// Check if it is a light source
-	const Material *mat = dstObj->GetMaterial();
+	MaterialConstPtr mat = dstObj->GetMaterial();
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << dstObjName << " object is a light sources with " << dstObj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
@@ -271,7 +271,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const MotionSystem &ms, const u_int dstObjID) {
-	const SceneObject *srcObj = objDefs.GetSceneObject(srcObjName);
+	auto srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
 	ExtMesh *newMesh;
@@ -322,7 +322,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	objDefs.DefineSceneObject(dstObj);
 
 	// Check if it is a light source
-	const Material *mat = dstObj->GetMaterial();
+	MaterialConstPtr mat = dstObj->GetMaterial();
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << dstObjName << " object is a light sources with " << dstObj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 

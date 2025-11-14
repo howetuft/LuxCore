@@ -29,7 +29,7 @@ namespace slg {
 
 class LessThanTexture : public Texture {
 public:
-	LessThanTexture(const Texture *t1, const Texture *t2) : tex1(t1), tex2(t2) { }
+	LessThanTexture(TextureConstPtr t1, TextureConstPtr t2) : tex1(t1), tex2(t2) { }
 	virtual ~LessThanTexture() { }
 
 	virtual TextureType GetType() const { return LESS_THAN_TEX; }
@@ -55,21 +55,21 @@ public:
 		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
 			tex2 = newTex;
 	}
 
-	const Texture *GetTexture1() const { return tex1; }
-	const Texture *GetTexture2() const { return tex2; }
+	TextureConstPtr GetTexture1() const { return tex1; }
+	TextureConstPtr GetTexture2() const { return tex2; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex1;
-	const Texture *tex2;
+	TextureConstPtr tex1;
+	TextureConstPtr tex2;
 };
 
 }

@@ -53,7 +53,7 @@ typedef enum {
 	UVMAPPING2D, UVRANDOMMAPPING2D
 } TextureMapping2DType;
 
-class TextureMapping2D {
+class TextureMapping2D{
 public:
 	TextureMapping2D(const u_int index) : dataIndex(index) { }
 	virtual ~TextureMapping2D() { }
@@ -248,6 +248,11 @@ public:
 
 	const bool uniformScale;
 };
+
+using TextureMapping2DPtr = std::shared_ptr<TextureMapping2D>;
+using TextureMapping3DPtr = std::shared_ptr<TextureMapping3D>;
+using TextureMapping2DConstPtr = std::shared_ptr<const TextureMapping2D>;
+using TextureMapping3DConstPtr = std::shared_ptr<const TextureMapping3D>;
 
 }
 

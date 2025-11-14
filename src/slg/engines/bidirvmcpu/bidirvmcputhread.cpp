@@ -52,7 +52,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	Camera *camera = scene->camera;
+	auto camera = scene->camera;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);

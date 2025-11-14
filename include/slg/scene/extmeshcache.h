@@ -39,7 +39,7 @@ public:
 	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
 
 	// This method can be safely called only from Scene::DefineMesh()
-	void DefineExtMesh(luxrays::ExtMesh *mesh);
+	void DefineExtMesh(std::unique_ptr<luxrays::ExtMesh>&& mesh);
 	void SetMeshVertexAOV(const std::string &meshName,
 		const unsigned int index, float *data);
 	void SetMeshTriangleAOV(const std::string &meshName,

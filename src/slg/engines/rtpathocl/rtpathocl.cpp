@@ -87,7 +87,7 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	updateActions.Reset();
 	useFastCameraEditPath = false;
 	cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
-			(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
+			(dynamic_pointer_cast<PerspectiveCamera>(renderConfig->scene->camera))->bokehDistributionImageMap;
 
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
@@ -115,7 +115,7 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	if (editActions.HasOnly(CAMERA_EDIT) &&
 			(renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
 			// Camera is not using custom bokeh
-			!(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap &&
+			!(dynamic_pointer_cast<PerspectiveCamera>(renderConfig->scene->camera))->bokehDistributionImageMap &&
 			// Camera was not using custom bokeh
 			!cameraIsUsingCustomBokeh) {
 		TilePathOCLRenderEngine::EndSceneEdit(editActions);
@@ -124,10 +124,10 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
 		updateActions.AddActions(editActions.GetActions());
 		syncBarrier->arrive_and_wait();
-		
+
 		TilePathOCLRenderEngine::EndSceneEdit(editActions);
 		cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
-				(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
+				(dynamic_pointer_cast<PerspectiveCamera>(renderConfig->scene->camera))->bokehDistributionImageMap;
 		syncBarrier->arrive_and_wait();
 		
 		// Here, rendering thread 0 will update all OpenCL buffers here

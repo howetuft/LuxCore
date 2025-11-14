@@ -39,7 +39,7 @@ public:
 	virtual float Filter() const { return gain * imageMap->GetSpectrumMean(); }
 
 	const ImageMap *GetImageMap() const { return imageMap; }
-	const TextureMapping2D *GetTextureMapping() const { return mapping; }
+	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
 	bool HasRandomizedTiling() const { return randomizedTiling; }
@@ -50,23 +50,26 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	static ImageMapTexture *AllocImageMapTexture(const std::string &texName,
-			ImageMapCache &imgMapCache, const ImageMap *img,
-			const TextureMapping2D *mp, const float g, const bool rt);
+	static std::shared_ptr<ImageMapTexture> AllocImageMapTexture(const std::string &texName,
+		ImageMapCache &imgMapCache, const ImageMap *img,
+		TextureMapping2DConstPtr mp, const float g, const bool rt);
 
 	static std::unique_ptr<ImageMap> randomImageMap;
 
 private:
-	ImageMapTexture(const std::string &texName, const ImageMap *img,
-			const TextureMapping2D *mp, const float g,
-			const bool rt);
+	ImageMapTexture(
+		const std::string &texName,
+		const ImageMap *img,
+		TextureMapping2DConstPtr mp,
+		const float g,
+		const bool rt);
 	virtual ~ImageMapTexture();
 
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
 	luxrays::Spectrum RandomizedTilingGetSpectrumValue(const luxrays::UV &pos) const;
 
 	const ImageMap *imageMap;
-	const TextureMapping2D *mapping;
+	TextureMapping2DConstPtr mapping;
 	float gain;
 
 	// Used for randomized tiling

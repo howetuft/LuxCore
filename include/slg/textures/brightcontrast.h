@@ -29,7 +29,7 @@ namespace slg {
 
 class BrightContrastTexture : public Texture {
 public:
-	BrightContrastTexture(const Texture *tex, const Texture *brightnessTex, const Texture *contrastTex) :
+	BrightContrastTexture(TextureConstPtr tex, TextureConstPtr brightnessTex, TextureConstPtr contrastTex) :
 		tex(tex), brightnessTex(brightnessTex), contrastTex(contrastTex) { }
 	virtual ~BrightContrastTexture() { }
 
@@ -56,7 +56,7 @@ public:
 		contrastTex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 		if (brightnessTex == oldTex)
@@ -65,16 +65,16 @@ public:
 			contrastTex = newTex;
 	}
 
-	const Texture *GetTex() const { return tex; }
-	const Texture *GetBrightnessTex() const { return brightnessTex; }
-	const Texture *GetContrastTex() const { return contrastTex; }
+	TextureConstPtr GetTex() const { return tex; }
+	TextureConstPtr GetBrightnessTex() const { return brightnessTex; }
+	TextureConstPtr GetContrastTex() const { return contrastTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex;
-	const Texture *brightnessTex;
-	const Texture *contrastTex;
+	TextureConstPtr tex;
+	TextureConstPtr brightnessTex;
+	TextureConstPtr contrastTex;
 };
 
 }

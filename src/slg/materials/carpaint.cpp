@@ -29,10 +29,10 @@ using namespace slg;
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-CarPaintMaterial::CarPaintMaterial(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
-		const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
+CarPaintMaterial::CarPaintMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr kd, TextureConstPtr ks1, TextureConstPtr ks2, TextureConstPtr ks3, TextureConstPtr m1, TextureConstPtr m2, TextureConstPtr m3,
+		TextureConstPtr r1, TextureConstPtr r2, TextureConstPtr r3, TextureConstPtr ka, TextureConstPtr d) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
 			R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
 	ComputeGlossiness(M1, M2, M3);
@@ -399,7 +399,7 @@ void CarPaintMaterial::AddReferencedTextures(std::unordered_set<const Texture *>
 	depth->AddReferencedTextures(referencedTexs);
 }
 
-void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void CarPaintMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

@@ -29,7 +29,7 @@ namespace slg {
 
 class BevelTexture : public Texture {
 public:
-	BevelTexture(const Texture *t, const float radius);
+	BevelTexture(TextureConstPtr t, const float radius);
 	virtual ~BevelTexture();
 
 	virtual TextureType GetType() const { return BEVEL_TEX; }
@@ -51,18 +51,18 @@ public:
 			tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	const Texture *GetTexture() const { return tex; }
+	TextureConstPtr GetTexture() const { return tex; }
 	const float GetRadius() const { return radius; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex;
+	TextureConstPtr tex;
 	const float radius;
 };
 

@@ -30,7 +30,7 @@
 
 OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+	__global MaterialConstPtr material = &mats[matIndex];
 
 	return material->eventTypes;
 }
@@ -41,7 +41,7 @@ OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
 
 OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+	__global MaterialConstPtr material = &mats[matIndex];
 
 	return material->isDelta;
 }
@@ -52,7 +52,7 @@ OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 
 OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+	__global MaterialConstPtr material = &mats[matIndex];
 
 	return material->emittedCosThetaMax;
 }
@@ -63,7 +63,7 @@ OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 
 OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
 	MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+	__global MaterialConstPtr material = &mats[matIndex];
 
 	uint bumpTexIndex;
 	

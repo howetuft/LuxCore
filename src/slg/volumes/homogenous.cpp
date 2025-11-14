@@ -29,8 +29,8 @@ using namespace slg;
 // HomogeneousVolume
 //------------------------------------------------------------------------------
 
-HomogeneousVolume::HomogeneousVolume(const Texture *iorTex, const Texture *emiTex,
-		const Texture *a, const Texture *s, const Texture *g, const bool multiScat) :
+HomogeneousVolume::HomogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
+		TextureConstPtr a, TextureConstPtr s, TextureConstPtr g, const bool multiScat) :
 		Volume(iorTex, emiTex), schlickScatter(this, g), multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
@@ -162,7 +162,7 @@ void HomogeneousVolume::AddReferencedTextures(std::unordered_set<const Texture *
 	schlickScatter.g->AddReferencedTextures(referencedTexs);
 }
 
-void HomogeneousVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void HomogeneousVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)

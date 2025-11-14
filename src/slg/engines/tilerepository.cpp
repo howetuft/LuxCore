@@ -23,6 +23,7 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
+#include "slg/volumes/volume.h"
 
 using namespace std;
 using namespace luxrays;

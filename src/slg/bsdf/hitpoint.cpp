@@ -43,9 +43,9 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	fixedDir = dir;
 
 	// Get the scene object
-	const SceneObject *sceneObject = scene.objDefs.GetSceneObject(meshIndex);
+	SceneObjectConstPtr sceneObject = scene.objDefs.GetSceneObject(meshIndex);
 	objectID = sceneObject->GetID();
-	
+
 	// Mesh information
 	mesh = sceneObject->GetExtMesh();
 	triangleIndex = triIndex;

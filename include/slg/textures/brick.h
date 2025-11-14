@@ -33,11 +33,11 @@ typedef enum {
 
 class BrickTexture : public Texture {
 public:
-	BrickTexture(const TextureMapping3D *mp, const Texture *t1,
-			const Texture *t2, const Texture *t3,
+	BrickTexture(TextureMapping3DConstPtr mp, TextureConstPtr t1,
+			TextureConstPtr t2, TextureConstPtr t3,
 			float brickw, float brickh, float brickd, float mortar,
 			float r, const std::string &b, const float modulationBias);
-	virtual ~BrickTexture() { delete mapping; }
+	virtual ~BrickTexture() {  }
 
 	virtual TextureType GetType() const { return BRICK; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
@@ -64,7 +64,7 @@ public:
 		tex3->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
@@ -73,10 +73,10 @@ public:
 			tex3 = newTex;
 	}
 
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	const Texture *GetTexture1() const { return tex1; }
-	const Texture *GetTexture2() const { return tex2; }
-	const Texture *GetTexture3() const { return tex3; }
+	TextureMapping3DConstPtr GetTextureMapping() const { return mapping; }
+	TextureConstPtr GetTexture1() const { return tex1; }
+	TextureConstPtr GetTexture2() const { return tex2; }
+	TextureConstPtr GetTexture3() const { return tex3; }
 	MasonryBond GetBond() const { return bond; }
 	const luxrays::Point &GetOffset() const { return offset; }
 	float GetInitialBrickWidth() const { return initialbrickwidth; }
@@ -104,8 +104,8 @@ private:
 	bool English(const luxrays::Point &p, luxrays::Point &i, luxrays::Point &b) const;
 	float BrickNoise(u_int n) const;
 
-	const TextureMapping3D *mapping;
-	const Texture *tex1, *tex2, *tex3;
+	TextureMapping3DConstPtr mapping;
+	TextureConstPtr tex1, tex2, tex3;
 
 	MasonryBond bond;
 	luxrays::Point offset;

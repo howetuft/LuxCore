@@ -30,8 +30,8 @@ using namespace slg;
 // HeterogeneousVolume
 //------------------------------------------------------------------------------
 
-HeterogeneousVolume::HeterogeneousVolume(const Texture *iorTex, const Texture *emiTex,
-		const Texture *a, const Texture *s, const Texture *g,
+HeterogeneousVolume::HeterogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
+		TextureConstPtr a, TextureConstPtr s, TextureConstPtr g,
 		const float ss, const u_int maxStepC,
 		const bool multiScat) : Volume(iorTex, emiTex),
 		schlickScatter(this, g), stepSize(ss), maxStepsCount(maxStepC),
@@ -143,7 +143,7 @@ void HeterogeneousVolume::AddReferencedTextures(std::unordered_set<const Texture
 	schlickScatter.g->AddReferencedTextures(referencedTexs);
 }
 
-void HeterogeneousVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void HeterogeneousVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)

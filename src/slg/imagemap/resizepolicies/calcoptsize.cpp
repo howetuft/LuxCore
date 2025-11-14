@@ -33,7 +33,7 @@ using namespace slg;
 // Optimal resize preprocess rendering thread
 //------------------------------------------------------------------------------
 
-static void GenerateEyeRay(const Camera *camera, const UV &sampleOffestUV, Ray &eyeRay,
+static void GenerateEyeRay(CameraConstPtr camera, const UV &sampleOffestUV, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) {
 	const u_int *subRegion = camera->filmSubRegion;
 	// Removed the +1 from region width to have room for sampleOffestUV
@@ -72,21 +72,21 @@ void ImageMapResizePolicy::RenderFunc(std::stop_token stop_token, const u_int th
 	// Setup thread image maps instrumentation
 	for (auto i : *imgMapsIndices)
 		imc->maps[i]->instrumentationInfo->ThreadSetUp();
-	
+
 	threadsSyncBarrier->arrive_and_wait();
 
-	const Camera *camera = scene->camera;
+	CameraConstPtr camera = scene->camera;
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
 	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			sobolSharedData);
-	
+
 	// Request the samples
 	const u_int sampleBootSize = 5;
 	const u_int sampleStepSize = 3;
-	const u_int sampleSize = 
+	const u_int sampleSize =
 		sampleBootSize + // To generate eye ray
 		maxPathDepth * sampleStepSize; // For each path vertex
 	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);

@@ -69,7 +69,7 @@ typedef struct HitPoint_t {
 	luxrays::Transform localToWorld;
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
-	const Volume *interiorVolume, *exteriorVolume;
+	std::shared_ptr<const Volume> interiorVolume, exteriorVolume;
 	u_int objectID;
 	bool fromLight, intoObject;
 	// If I got here going trough a shadow transparency. It can be used to disable MIS.
@@ -109,7 +109,7 @@ typedef struct HitPoint_t {
 			return mesh->InterpolateTriColor(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
 		else
 			return luxrays::Spectrum(1.f);
-	}	
+	}
 
 	const float GetAlpha(const u_int dataIndex) const {
 		if (mesh)

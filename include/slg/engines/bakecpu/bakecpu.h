@@ -121,7 +121,7 @@ protected:
 	SamplerSharedData *lightSamplerSharedData;
 
 	Film *mapFilm;
-	std::vector<const SceneObject *> currentSceneObjsToBake;
+	std::vector<SceneObjectConstPtr> currentSceneObjsToBake;
 	std::vector<float> currentSceneObjsToBakeArea;
 	luxrays::Distribution1D *currentSceneObjsDist;
 	std::vector<luxrays::Distribution1D *> currentSceneObjDist;

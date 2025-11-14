@@ -450,7 +450,7 @@ void StrendsShape::TessellateRibbon(const Scene *scene,
 
 	const Point cameraPosition =
 		(useCameraPosition && (scene->camera->GetType() == Camera::PERSPECTIVE)) ?
-		((PerspectiveCamera *)scene->camera)->orig :
+		(dynamic_pointer_cast<PerspectiveCamera>(scene->camera))->orig :
 		Point();
 
 	Vector previousDir;

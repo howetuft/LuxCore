@@ -458,13 +458,13 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 	}
 
 	if (props.IsDefined(propName + ".volume")) {
-		const Material *vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
-		if (dynamic_cast<const Volume *>(vol))
-			lightSource->volume = static_cast<const Volume *>(vol);
+		auto vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
+		if (dynamic_pointer_cast<const Volume>(vol))
+			lightSource->volume = dynamic_pointer_cast<const Volume>(vol);
 		else
 			throw runtime_error("\"" + lightName + "\" light volume is a material: " + vol->GetName());
 	}
-	
+
 	lightSource->Preprocess();
 
 	return lightSource;

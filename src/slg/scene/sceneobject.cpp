@@ -36,10 +36,10 @@ void SceneObject::AddReferencedMeshes(std::unordered_set<const luxrays::ExtMesh 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 		referencedMesh.insert(imesh->GetExtTriangleMesh());
-	}	
+	}
 }
 
-void SceneObject::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
+void SceneObject::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat) {
 	if (mat == oldMat)
 		mat = newMat;
 }
@@ -127,7 +127,10 @@ void SceneObject::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &r
 		referencedImgMaps.insert(bakeMap);
 }
 
-void SceneObject::AddReferencedMaterials(std::unordered_set<const Material *> &referencedMats) const {
-	mat->AddReferencedMaterials(referencedMats);
+void SceneObject::AddReferencedMaterials(
+	std::unordered_set<MaterialConstPtr> &referencedMats,
+	MaterialConstPtr self
+) const {
+	mat->AddReferencedMaterials(referencedMats, self);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

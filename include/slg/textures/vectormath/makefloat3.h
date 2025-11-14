@@ -29,7 +29,7 @@ namespace slg {
 
 class MakeFloat3Texture : public Texture {
 public:
-	MakeFloat3Texture(const Texture *tex1, const Texture *tex2, const Texture *tex3) 
+	MakeFloat3Texture(TextureConstPtr tex1, TextureConstPtr tex2, TextureConstPtr tex3) 
 		: tex1(tex1), tex2(tex2), tex3(tex3) { }
 	virtual ~MakeFloat3Texture() { }
 
@@ -54,7 +54,7 @@ public:
 		tex3->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
@@ -63,16 +63,16 @@ public:
 			tex3 = newTex;
 	}
 
-	const Texture *GetTexture1() const { return tex1; }
-	const Texture *GetTexture2() const { return tex2; }
-	const Texture *GetTexture3() const { return tex3; }
+	TextureConstPtr GetTexture1() const { return tex1; }
+	TextureConstPtr GetTexture2() const { return tex2; }
+	TextureConstPtr GetTexture3() const { return tex3; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex1;
-	const Texture *tex2;
-	const Texture *tex3;
+	TextureConstPtr tex1;
+	TextureConstPtr tex2;
+	TextureConstPtr tex3;
 };
 
 }

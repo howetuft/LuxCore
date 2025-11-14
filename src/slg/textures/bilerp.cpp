@@ -85,7 +85,7 @@ void BilerpTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> 
 	t11->AddReferencedImageMaps(referencedImgMaps);
 }
 
-void BilerpTexture::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex)
+void BilerpTexture::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex)
 {
 	if (t00 == oldTex)
 		t00 = newTex;

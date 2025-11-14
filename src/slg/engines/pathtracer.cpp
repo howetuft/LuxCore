@@ -334,7 +334,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 	}	
 }
 
-void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay,
+void PathTracer::GenerateEyeRay(CameraConstPtr camera, const Film *film, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
 	const float filmX = sampler->GetSample(0);
 	const float filmY = sampler->GetSample(1);

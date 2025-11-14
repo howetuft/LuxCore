@@ -26,9 +26,9 @@ using namespace slg;
 // Matte material
 //------------------------------------------------------------------------------
 
-MatteMaterial::MatteMaterial(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *col) : Material(frontTransp, backTransp, emitted, bump), Kd(col) {
+MatteMaterial::MatteMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr col) : Material(frontTransp, backTransp, emitted, bump), Kd(col) {
 }
 
 Spectrum MatteMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -86,7 +86,7 @@ void MatteMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &r
 	Kd->AddReferencedTextures(referencedTexs);
 }
 
-void MatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void MatteMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kd == oldTex)

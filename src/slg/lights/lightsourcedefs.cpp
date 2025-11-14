@@ -130,7 +130,7 @@ void LightSourceDefinitions::DeleteLightSourceStartWith(const string &namePrefix
 		DeleteLightSource(name);
 }
 
-void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
+void LightSourceDefinitions::DeleteLightSourceByMaterial(MaterialConstPtr mat) {
 	// Build the list of lights to delete
 	vector<string> nameList;
 	for (auto const &e : lightsByName) {
@@ -162,7 +162,7 @@ void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) 
 	}
 }
 
-void LightSourceDefinitions::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+void LightSourceDefinitions::UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol) {
 	for (auto const &e : lightsByName) {
 		LightSource *l = e.second;
 		
@@ -240,7 +240,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	
 	const u_int meshCount = scene->objDefs.GetSize();
 	for (u_int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
-		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
+		SceneObjectConstPtr so = scene->objDefs.GetSceneObject(meshIndex);
 
 		if (so->GetMaterial()->IsLightSource()) {
 			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
@@ -253,7 +253,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 
 	// Step #2: initializelightIndexByTriIndex in parallel (to speed up the
 	// execution in case of large number of light sources)
-	
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -261,7 +261,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 			unsigned
 #endif
 			int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
-		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
+		SceneObjectConstPtr so = scene->objDefs.GetSceneObject(meshIndex);
 
 		if (so->GetMaterial()->IsLightSource()) {
 			const ExtMesh *mesh = so->GetExtMesh();
@@ -280,9 +280,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 
 	// I need to check all volume definitions for radiance group usage too
 	for (u_int i = 0; i < scene->matDefs.GetSize(); ++i) {
-		const Material *mat = scene->matDefs.GetMaterial(i);
+		MaterialConstPtr mat = scene->matDefs.GetMaterial(i);
 
-		const Volume *vol = dynamic_cast<const Volume *>(mat);
+		auto vol = dynamic_pointer_cast<const Volume>(mat);
 		if (vol && vol->GetVolumeEmissionTexture()) {
 			// Update the light group count
 			lightGroupCount = Max(lightGroupCount, vol->GetVolumeLightID() + 1);

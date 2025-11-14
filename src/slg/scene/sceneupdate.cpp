@@ -68,7 +68,7 @@ void Scene::UpdateObjectMaterial(const string &objName, const string &matName) {
 	}
 	
 	// Get the material
-	const Material *mat = matDefs.GetMaterial(matName);
+	MaterialConstPtr mat = matDefs.GetMaterial(matName);
 	obj->SetMaterial(mat);
 	
 	// Check if the object is now a light source

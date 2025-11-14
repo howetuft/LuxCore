@@ -96,13 +96,13 @@ void Camera::UpdateAuto(const Scene *scene) {
 				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
 
 			// Get the scene object
-			const SceneObject *sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
+			SceneObjectConstPtr sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
 			const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 			// Get the material
-			const Material *material = sceneObject->GetMaterial();
+			auto material = sceneObject->GetMaterial();
 
 			// Interpolate face normal
 			Transform local2world;
@@ -136,8 +136,8 @@ Properties Camera::ToProperties(const ImageMapCache &imgMapCache, const bool use
 	return props;
 }
 
-void Camera::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+void Camera::UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol) {
 	if (volume == oldVol)
-		volume = (const Volume *)newVol;
+		volume = newVol;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

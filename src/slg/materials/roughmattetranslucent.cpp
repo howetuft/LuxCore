@@ -27,9 +27,9 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RoughMatteTranslucentMaterial::RoughMatteTranslucentMaterial(
-		const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *refl, const Texture *trans, const Texture *s) :
+		TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr refl, TextureConstPtr trans, TextureConstPtr s) :
 			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans), sigma(s) {
 }
 
@@ -222,7 +222,7 @@ void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<con
 	sigma->AddReferencedTextures(referencedTexs);
 }
 
-void RoughMatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void RoughMatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

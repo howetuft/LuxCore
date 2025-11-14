@@ -60,7 +60,7 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 		
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	Camera *camera = scene->camera;
+	auto camera = scene->camera;
 
 	SobolSampler sampler(rndGen, engine->film, engine->sampleSplatter, true, 0.f, 0.f,
 		16, 16, 1, 1,
@@ -560,7 +560,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 }
 
 bool BiDirCPURenderThread::TraceLightPath(const float time,
-		Sampler *sampler, Camera *camera,
+		Sampler *sampler, CameraPtr camera,
 		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
@@ -755,7 +755,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	Camera *camera = scene->camera;
+	auto camera = scene->camera;
 	PhotonGICache *photonGICache = engine->photonGICache;
 
 	// Albedo and Normal AOV warm up

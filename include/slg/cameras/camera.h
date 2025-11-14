@@ -23,6 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
+#include "slg/volumes/volume.h"
 
 #include "slg/imagemap/imagemapcache.h"
 
@@ -104,7 +105,7 @@ public:
 		float *pdfW, float *fluxToRadianceFactor) const = 0;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
-	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
+	virtual void UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol);
 
 	static Camera *AllocCamera(const luxrays::Properties &props);
 
@@ -112,11 +113,11 @@ public:
 	float clipHither, clipYon, shutterOpen, shutterClose;
 
 	bool autoVolume;
-	const Volume *volume;
+	VolumeConstPtr volume;
 
 	// For motion blur
 	const luxrays::MotionSystem *motionSystem;
-	
+
 	// A copy of Film values
 	u_int filmWidth, filmHeight;
 	u_int filmSubRegion[4];
@@ -127,6 +128,11 @@ protected:
 
 	const CameraType type;
 };
+
+using CameraPtr = std::shared_ptr<Camera>;
+using CameraConstPtr = std::shared_ptr<const Camera>;
+using CameraRef = Camera&;
+
 
 }
 

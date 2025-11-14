@@ -33,7 +33,7 @@ using namespace slg;
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-DensityGridTexture::DensityGridTexture(const TextureMapping3D *mp,
+DensityGridTexture::DensityGridTexture(TextureMapping3DConstPtr mp,
 		const u_int nx, const u_int ny, const u_int nz,
         const ImageMap *map) : mapping(mp),
 		nx(nx), ny(ny), nz(nz), imageMap(map) {

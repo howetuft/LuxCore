@@ -25,24 +25,24 @@ using namespace luxrays;
 using namespace slg;
 
 DisneyMaterial::DisneyMaterial(
-	const Texture *frontTransp,
-	const Texture *backTransp,
-	const Texture *emitted,
-	const Texture *bump,
-	const Texture *baseColor,
-	const Texture *subsurface,
-	const Texture *roughness,
-	const Texture *metallic,
-	const Texture *specular,
-	const Texture *specularTint,
-	const Texture *clearcoat,
-	const Texture *clearcoatGloss,
-	const Texture *anisotropic,
-	const Texture *sheen,
-	const Texture *sheenTint,
-	const Texture *filmAmount,
-	const Texture *filmThickness,
-	const Texture *filmIor
+	TextureConstPtr frontTransp,
+	TextureConstPtr backTransp,
+	TextureConstPtr emitted,
+	TextureConstPtr bump,
+	TextureConstPtr baseColor,
+	TextureConstPtr subsurface,
+	TextureConstPtr roughness,
+	TextureConstPtr metallic,
+	TextureConstPtr specular,
+	TextureConstPtr specularTint,
+	TextureConstPtr clearcoat,
+	TextureConstPtr clearcoatGloss,
+	TextureConstPtr anisotropic,
+	TextureConstPtr sheen,
+	TextureConstPtr sheenTint,
+	TextureConstPtr filmAmount,
+	TextureConstPtr filmThickness,
+	TextureConstPtr filmIor
 ) : Material(frontTransp, backTransp, emitted, bump), 
 	BaseColor(baseColor), 
 	Subsurface(subsurface),
@@ -559,7 +559,7 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 	return props;
 }
 
-void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void DisneyMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

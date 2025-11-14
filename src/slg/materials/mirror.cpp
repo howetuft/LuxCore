@@ -26,9 +26,9 @@ using namespace slg;
 // Mirror material
 //------------------------------------------------------------------------------
 
-MirrorMaterial::MirrorMaterial(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *refl) : Material(frontTransp, backTransp, emitted, bump), Kr(refl) {
+MirrorMaterial::MirrorMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr refl) : Material(frontTransp, backTransp, emitted, bump), Kr(refl) {
 }
 
 Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
@@ -55,7 +55,7 @@ void MirrorMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &
 	Kr->AddReferencedTextures(referencedTexs);
 }
 
-void MirrorMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void MirrorMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

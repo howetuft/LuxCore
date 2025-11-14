@@ -266,7 +266,7 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 //------------------------------------------------------------------------------
 
 ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
-		ImageMapCache &imgMapCache, const ImageMap *img, const TextureMapping2D *mp,
+		ImageMapCache &imgMapCache, const ImageMap *img, TextureMapping2DConstPtr mp,
 		const float g, const bool rt) {
 	ImageMapTexture *imt = new ImageMapTexture(texName, img, mp, g, rt);
 
@@ -280,7 +280,7 @@ ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
 }
 
 ImageMapTexture::ImageMapTexture(const string &texName,
-		const ImageMap *img, const TextureMapping2D *mp,
+		const ImageMap *img, TextureMapping2DConstPtr mp,
 		const float g, const bool rt) :
 		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
 		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
@@ -350,7 +350,9 @@ ImageMapTexture::ImageMapTexture(const string &texName,
 }
 
 ImageMapTexture::~ImageMapTexture() {
-	delete mapping;
+	// TODO
+	//
+	//mapping = nullptr;
 	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 

@@ -28,17 +28,17 @@ using namespace slg;
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-Metal2Material::Metal2Material(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
+Metal2Material::Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr nn, TextureConstPtr kk, TextureConstPtr u, TextureConstPtr v) :
 			Material(frontTransp, backTransp, emitted, bump),
 			fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) {
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
-Metal2Material::Metal2Material(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const FresnelTexture *ft, const Texture *u, const Texture *v) :
+Metal2Material::Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		FresnelTextureConstPtr ft, TextureConstPtr u, TextureConstPtr v) :
 			Material(frontTransp, backTransp, emitted, bump),
 			fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) {
 	glossiness = ComputeGlossiness(nu, nv);
@@ -181,7 +181,7 @@ void Metal2Material::AddReferencedTextures(std::unordered_set<const Texture *> &
 	nv->AddReferencedTextures(referencedTexs);
 }
 
-void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void Metal2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

@@ -29,8 +29,8 @@ using namespace slg;
 // ClearVolume
 //------------------------------------------------------------------------------
 
-ClearVolume::ClearVolume(const Texture *iorTex, const Texture *emiTex,
-		const Texture *a) : Volume(iorTex, emiTex) {
+ClearVolume::ClearVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
+		TextureConstPtr a) : Volume(iorTex, emiTex) {
 	sigmaA = a;
 }
 
@@ -101,7 +101,7 @@ void ClearVolume::AddReferencedTextures(std::unordered_set<const Texture *> &ref
 	sigmaA->AddReferencedTextures(referencedTexs);
 }
 
-void ClearVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void ClearVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)

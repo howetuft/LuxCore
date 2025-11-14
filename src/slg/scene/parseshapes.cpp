@@ -284,7 +284,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
 		
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
+		TextureConstPtr tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
 		
 		DisplacementShape::Params params;
 

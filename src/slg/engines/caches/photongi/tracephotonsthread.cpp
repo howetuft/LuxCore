@@ -115,7 +115,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	vector<u_int> allNearEntryIndices;
 	
 	const Scene *scene = pgic.scene;
-	const Camera *camera = scene->camera;
+	auto camera = scene->camera;
 
 	bool usefulPath = false;
 	

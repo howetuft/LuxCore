@@ -77,8 +77,6 @@ void Scene::Init(const luxrays::Properties *resizePolicyProps) {
 }
 
 Scene::~Scene() {
-	delete camera;
-
 	delete dataSet;
 }
 
@@ -108,7 +106,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 			if (texName.starts_with("Implicit-ConstFloatTexture"))
 				continue;
 
-			const Texture *tex = texDefs.GetTexture(texName);
+			TextureConstPtr tex = texDefs.GetTexture(texName);
 			props.Set(tex->ToProperties(imgMapCache, useRealFileName));
 		}
 
@@ -118,9 +116,9 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 
 		// Write the volumes information
 		for (auto const &matName : matNames) {
-			const Material *mat = matDefs.GetMaterial(matName);
+			MaterialConstPtr mat = matDefs.GetMaterial(matName);
 			// Check if it is a volume
-			const Volume *vol = dynamic_cast<const Volume *>(mat);
+			VolumeConstPtr vol = dynamic_pointer_cast<const Volume>(mat);
 			if (vol)
 				props.Set(vol->ToProperties());
 		}
@@ -133,16 +131,16 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 
 		// Write the materials information
 		for (auto const &matName : matNames) {
-			const Material *mat = matDefs.GetMaterial(matName);
+			MaterialConstPtr mat = matDefs.GetMaterial(matName);
 			// Check if it is not a volume
-			const Volume *vol = dynamic_cast<const Volume *>(mat);
+			VolumeConstPtr vol = dynamic_pointer_cast<const Volume>(mat);
 			if (!vol)
 				props.Set(mat->ToProperties(imgMapCache, useRealFileName));
 		}
 
 		// Write the object information
 		for (u_int i = 0; i < objDefs.GetSize(); ++i) {
-			const SceneObject *obj = objDefs.GetSceneObject(i);
+			auto obj = objDefs.GetSceneObject(i);
 			props.Set(obj->ToProperties(extMeshCache, useRealFileName));
 		}
 
@@ -182,7 +180,7 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 
 		// Replace old mesh direct references with new one and get the list
 		// of scene objects referencing the old mesh
-		std::unordered_set<SceneObject *> modifiedObjsList;
+		std::unordered_set<const SceneObject *> modifiedObjsList;
 		objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
 
 		// For each scene object
@@ -413,7 +411,7 @@ void Scene::RemoveUnusedTextures() {
 	texDefs.GetTextureNames(definedTexs);
 	bool deleted = false;
 	for(const string &texName: definedTexs) {
-		const Texture *t = texDefs.GetTexture(texName);
+		TextureConstPtr t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
 			SDL_LOG("Deleting unreferenced texture: " << texName);
@@ -440,15 +438,17 @@ void Scene::RemoveUnusedMaterials() {
 	if (defaultWorldVolume)
 		referencedMats.insert(defaultWorldVolume);
 
-	for (u_int i = 0; i < objDefs.GetSize(); ++i)
-		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
+	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
+		auto obj = objDefs.GetSceneObject(i);
+		obj->AddReferencedMaterials(referencedMats, obj);
+	}
 
 	// Get the list of all defined materials
 	vector<string> definedMats;
 	matDefs.GetMaterialNames(definedMats);
 	bool deleted = false;
 	for(const string  &matName: definedMats) {
-		const Material *m = matDefs.GetMaterial(matName);
+		MaterialConstPtr m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
 			SDL_LOG("Deleting unreferenced material: " << matName);
@@ -489,7 +489,7 @@ void Scene::RemoveUnusedMeshes() {
 
 void Scene::DeleteObject(const string &objName) {
 	if (objDefs.IsSceneObjectDefined(objName)) {
-		const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+		auto oldObj = objDefs.GetSceneObject(objName);
 		const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
 
 		// Check if the old object was a light source
@@ -513,7 +513,7 @@ void Scene::DeleteObjects(vector<string> &objNames) {
 	// Delete the light sources
 	for(const string &objName: objNames) {
 		if (objDefs.IsSceneObjectDefined(objName)) {
-			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+			auto oldObj = objDefs.GetSceneObject(objName);
 			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
 
 			// Check if the old object was a light source
@@ -578,7 +578,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 		bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
 		bool bevelContinueToTrace = !hit;
-		const Volume *rayVolume = volInfo->GetCurrentVolume();
+		VolumeConstPtr rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {		
 			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;

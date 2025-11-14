@@ -29,7 +29,7 @@ namespace slg {
 
 class RandomTexture : public Texture {
 public:
-	RandomTexture(const Texture *t, const u_int o) : tex(t), seedOffset(o) { }
+	RandomTexture(TextureConstPtr t, const u_int o) : tex(t), seedOffset(o) { }
 	virtual ~RandomTexture() { }
 
 	virtual TextureType GetType() const { return RANDOM_TEX; }
@@ -47,17 +47,17 @@ public:
 		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	const Texture *GetTexture() const { return tex; }
+	TextureConstPtr GetTexture() const { return tex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const Texture *tex;
+	TextureConstPtr tex;
 	const u_int seedOffset;
 };
 

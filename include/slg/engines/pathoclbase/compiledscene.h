@@ -155,8 +155,14 @@ private:
 			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
 	void CompileMaterialOps();
 	void CompileMaterials();
-	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
-	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
+	void CompileTextureMapping2D(
+		slg::ocl::TextureMapping2D *mapping,
+		std::shared_ptr<const TextureMapping2D> m
+	);
+	void CompileTextureMapping3D(
+		slg::ocl::TextureMapping3D *mapping,
+		std::shared_ptr<const TextureMapping3D> m
+	);
 	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex);
 	u_int CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType);
 	void CompileTextureOps();

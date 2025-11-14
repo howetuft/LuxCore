@@ -20,6 +20,7 @@
 #define	_SLG_TRIANGLELIGHT_H
 
 #include "slg/lights/light.h"
+#include "slg/scene/sceneobject.h"
 
 namespace slg {
 
@@ -27,8 +28,6 @@ namespace slg {
 // TriangleLight implementation
 //------------------------------------------------------------------------------
 
-class SceneObject;
-	
 class TriangleLight : public IntersectableLightSource {
 public:
 	TriangleLight();
@@ -42,7 +41,7 @@ public:
 
 	float GetTriangleArea() const { return triangleArea; }
 	float GetMeshArea() const { return meshArea; }
-	
+
 	virtual float GetArea() const { return triangleArea; }
 	virtual float GetPower(const Scene &scene) const;
 
@@ -64,7 +63,7 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-	const SceneObject *sceneObject;
+	SceneObjectConstPtr sceneObject;
 	// Note: meshIndex is initialized in LightSourceDefinitions::Preprocess()
 	u_int meshIndex, triangleIndex;
 	

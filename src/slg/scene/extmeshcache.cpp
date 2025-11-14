@@ -33,11 +33,11 @@ ExtMeshCache::ExtMeshCache() {
 }
 
 ExtMeshCache::~ExtMeshCache() {
-	for(NamedObject *no: meshes.GetObjs()) {
-		ExtMesh *mesh = static_cast<ExtMesh *>(no);
+	for(auto& no: meshes.GetObjs()) {
+		ExtMesh& mesh = static_cast<ExtMesh &>(*no);
 
 		if (deleteMeshData)
-			mesh->Delete();
+			mesh.Delete();
 
 		// Mesh are deleted by NameObjectVector destructor
 	}
@@ -47,7 +47,7 @@ bool ExtMeshCache::IsExtMeshDefined(const std::string &meshName) const {
 	return meshes.IsObjDefined(meshName);
 }
 
-void ExtMeshCache::DefineExtMesh(ExtMesh *mesh) {
+void ExtMeshCache::DefineExtMesh(std::unique_ptr<ExtMesh>&& mesh) {
 	const string &meshName = mesh->GetName();
 
 	if (!meshes.IsObjDefined(meshName)) {
@@ -55,13 +55,16 @@ void ExtMeshCache::DefineExtMesh(ExtMesh *mesh) {
 		meshes.DefineObj(mesh);
 	} else {
 		// Check if the meshes are of the same type
-		const ExtMesh *meshToReplace = static_cast<const ExtMesh *>(meshes.GetObj(meshName));
-		if (meshToReplace->GetType() != mesh->GetType())
-			throw runtime_error("Mesh " + meshName + " of type " + ToString(mesh->GetType()) +
-					" can not replace a mesh of type " + ToString(meshToReplace->GetType()) + ". Delete the old mesh first.");
+		auto meshToReplace = static_cast<const ExtMesh& >(meshes.GetObj(meshName));
+		if (meshToReplace.GetType() != mesh->GetType()) {
+			throw runtime_error(
+				"Mesh " + meshName + " of type " + ToString(mesh->GetType()) +
+				" can not replace a mesh of type " + ToString(meshToReplace.GetType())
+				+ ". Delete the old mesh first.");
+		}
 
 		// Replace an old mesh
-		ExtMesh *oldMesh = static_cast<ExtMesh *>(meshes.DefineObj(mesh));
+		auto oldMesh = static_cast<ExtMesh *>(meshes.DefineObj(std::move(mesh)).get());
 
 		if (oldMesh->GetType() == TYPE_EXT_TRIANGLE) {
 			// I have also to check/update all instances and motion blur meshes for

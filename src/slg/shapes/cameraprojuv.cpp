@@ -41,7 +41,7 @@ ExtTriangleMesh *CameraProjUVShape::RefineImpl(const Scene *scene) {
 	const u_int vertCount = mesh->GetTotalVertexCount();
 	SDL_LOG("CameraProjUV shape has " << vertCount << " vertices");
 
-	const Camera *camera = scene->camera;
+	auto camera = scene->camera;
 
 	UV *uvs = new UV[vertCount];
 	const float invFilmWidth = 1.f / camera->filmWidth;

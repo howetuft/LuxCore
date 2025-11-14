@@ -29,10 +29,10 @@ using namespace slg;
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-Glossy2Material::Glossy2Material(const Texture *frontTransp, const Texture *backTransp,
-		const Texture *emitted, const Texture *bump,
-		const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
-		const Texture *ka, const Texture *d, const Texture *i, const bool mbounce, const bool doublesided) :
+Glossy2Material::Glossy2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
+		TextureConstPtr emitted, TextureConstPtr bump,
+		TextureConstPtr kd, TextureConstPtr ks, TextureConstPtr u, TextureConstPtr v,
+		TextureConstPtr ka, TextureConstPtr d, TextureConstPtr i, const bool mbounce, const bool doublesided) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce), doublesided (doublesided) {
 	glossiness = ComputeGlossiness(nu, nv);
@@ -292,7 +292,7 @@ void Glossy2Material::AddReferencedTextures(std::unordered_set<const Texture *> 
 	index->AddReferencedTextures(referencedTexs);
 }
 
-void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void Glossy2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

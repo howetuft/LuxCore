@@ -166,9 +166,9 @@ public:
 	//--------------------------------------------------------------------------
 
 	// This volume is applied to rays hitting nothing
-	const Volume *defaultWorldVolume;
+	VolumeConstPtr defaultWorldVolume;
 
-	Camera *camera;
+	CameraPtr camera;
 
 	ExtMeshCache extMeshCache; // Mesh objects cache
 	ImageMapCache imgMapCache; // Image maps cache
@@ -202,16 +202,19 @@ private:
 	void ParseLights(const luxrays::Properties &props);
 
 	luxrays::Spectrum GetColor(const luxrays::Property &prop);
-	const Texture *GetTexture(const luxrays::Property &prop);
+	TextureConstPtr GetTexture(const luxrays::Property &prop);
 
-	Camera *CreateCamera(const luxrays::Properties &props);
-	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
-	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
-	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
-	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
-	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
+	CameraPtr CreateCamera(const luxrays::Properties &props);
+	TextureMapping2DPtr CreateTextureMapping2D (
+		const std::string &prefixName,
+		const luxrays::Properties &props
+	);
+	TextureMapping3DPtr CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
+	TexturePtr CreateTexture(const std::string &texName, const luxrays::Properties &props);
+	VolumePtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
+	MaterialPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	luxrays::ExtTriangleMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
-	SceneObject *CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
+	SceneObjectPtr CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 

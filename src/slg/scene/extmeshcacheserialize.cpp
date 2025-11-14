@@ -39,7 +39,8 @@ template<class Archive> void ExtMeshCache::load(Archive &ar, const u_int version
 		ar & m;
 		SDL_LOG("Loading serialized mesh: " << m->GetName());
 
-		meshes.DefineObj(m);
+		std::unique_ptr<luxrays::ExtMesh> m_ptr(m);
+		meshes.DefineObj(std::move(m_ptr));
 	}
 
 	ar & deleteMeshData;

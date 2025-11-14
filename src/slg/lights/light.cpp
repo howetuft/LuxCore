@@ -37,9 +37,9 @@ Properties LightSource::ToProperties(const ImageMapCache &imgMapCache, const boo
 	return props;
 }
 
-void LightSource::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+void LightSource::UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol) {
 	if (volume == oldVol)
-		volume = (const Volume *)newVol;
+		volume = newVol;
 }
 
 string LightSource::LightSourceType2String(const LightSourceType type) {
