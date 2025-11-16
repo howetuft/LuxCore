@@ -40,13 +40,13 @@ public:
 
     virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+		Texture::AddReferencedTextures(referencedTexs, self);
 
 		if (tex)
-			tex->AddReferencedTextures(referencedTexs);
+			tex->AddReferencedTextures(referencedTexs, tex);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		if (tex)
 			tex->AddReferencedImageMaps(referencedImgMaps);
 	}

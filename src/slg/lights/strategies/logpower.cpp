@@ -27,7 +27,7 @@ using namespace slg;
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask taskType,
+void LightStrategyLogPower::Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	// Delete old lightsDistribution
 	delete lightsDistribution;
@@ -35,16 +35,16 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 
 	DistributionLightStrategy::Preprocess(scn, taskType);
 
-	const u_int lightCount = scene->lightDefs.GetSize();
+	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
-	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	auto &lights = scene.lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = lights[i];
+		auto l = lights[i];
 		const float power = logf(1.f + l->GetPower(*scene)) * l->GetImportance();
 
 		switch (taskType) {
@@ -82,8 +82,8 @@ Properties LightStrategyLogPower::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
 }
 
-LightStrategy *LightStrategyLogPower::FromProperties(const Properties &cfg) {
-	return new LightStrategyLogPower();
+LightStrategyPtr LightStrategyLogPower::FromProperties(const Properties &cfg) {
+	return std::make_shared<LightStrategyLogPower>();
 }
 
 const Properties &LightStrategyLogPower::GetDefaultProps() {

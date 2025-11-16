@@ -113,7 +113,7 @@ void RenderEngine::Start(Film *flm, std::mutex *flmMutex) {
 	MachineEpsilon::SetMax(epsilonMax);
 
 	// Force a complete preprocessing
-	Scene *scene = renderConfig->scene;
+	ScenePtr scene = renderConfig->scene;
 	scene->editActions.AddAllAction();
 	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());

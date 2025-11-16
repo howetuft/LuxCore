@@ -223,7 +223,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	return result;
 }
 
-void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+void InfiniteLight::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
 	delete visibilityMapCache;
 	visibilityMapCache = nullptr;
 
@@ -232,13 +232,13 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode
 
 	if (useVisibilityMapCache) {
 		// Scale the infinitelight image map to the requested size
-		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
+		ImageMapPtr luminanceMapImage(imageMap->Copy());
 		// Select the image luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 		luminanceMapImage->Preprocess();
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
-				luminanceMapImage.get(), visibilityMapCacheParams);		
+				luminanceMapImage, visibilityMapCacheParams);		
 		visibilityMapCache->Build();
 	}
 }

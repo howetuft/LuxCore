@@ -72,7 +72,7 @@ void Material::SetEmittedTheta(const float theta) {
 	}
 }
 
-void Material::SetEmissionMap(const ImageMap *map) {
+void Material::SetEmissionMap(ImageMapConstPtr map) {
 	emissionMap = map;
 	delete emissionFunc;
 	if (emissionMap)
@@ -275,18 +275,18 @@ void Material::AddReferencedMaterials(
 		referencedMats.insert(exteriorVolume);
 }
 
-void Material::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	if (frontTransparencyTex)
-		frontTransparencyTex->AddReferencedTextures(referencedTexs);
+		frontTransparencyTex->AddReferencedTextures(referencedTexs, frontTransparencyTex);
 	if (backTransparencyTex)
-		backTransparencyTex->AddReferencedTextures(referencedTexs);
+		backTransparencyTex->AddReferencedTextures(referencedTexs, backTransparencyTex);
 	if (emittedTex)
-		emittedTex->AddReferencedTextures(referencedTexs);
+		emittedTex->AddReferencedTextures(referencedTexs, emittedTex);
 	if (bumpTex)
-		bumpTex->AddReferencedTextures(referencedTexs);
+		bumpTex->AddReferencedTextures(referencedTexs, bumpTex);
 }
 
-void Material::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void Material::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 	if (emissionMap)
 		referencedImgMaps.insert(emissionMap);
 }

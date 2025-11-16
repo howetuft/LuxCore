@@ -44,13 +44,13 @@ public:
 		return (borderTex->Filter() + insideTex->Filter()) * .5f;
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+		Texture::AddReferencedTextures(referencedTexs, self);
 
-		borderTex->AddReferencedTextures(referencedTexs);
-		insideTex->AddReferencedTextures(referencedTexs);
+		borderTex->AddReferencedTextures(referencedTexs, borderTex);
+		insideTex->AddReferencedTextures(referencedTexs, insideTex);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		borderTex->AddReferencedImageMaps(referencedImgMaps);
 		insideTex->AddReferencedImageMaps(referencedImgMaps);
 	}

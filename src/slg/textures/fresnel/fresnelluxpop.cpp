@@ -33,7 +33,7 @@ using namespace slg;
 // Fresnel LuxPop texture
 //------------------------------------------------------------------------------
 
-FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
+std::shared_ptr<FresnelTexture> slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
 	const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".file")("luxpop.nk")).Get<string>());
 
 	ifstream fs;

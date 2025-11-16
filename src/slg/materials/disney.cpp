@@ -585,25 +585,25 @@ void DisneyMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureCons
 		UpdateGlossiness();
 }
 
-void DisneyMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void DisneyMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	BaseColor->AddReferencedTextures(referencedTexs);
-	Subsurface->AddReferencedTextures(referencedTexs);
-	Roughness->AddReferencedTextures(referencedTexs);
-	Metallic->AddReferencedTextures(referencedTexs);
-	Specular->AddReferencedTextures(referencedTexs);
-	SpecularTint->AddReferencedTextures(referencedTexs);
-	Clearcoat->AddReferencedTextures(referencedTexs);
-	ClearcoatGloss->AddReferencedTextures(referencedTexs);
-	Anisotropic->AddReferencedTextures(referencedTexs);
-	Sheen->AddReferencedTextures(referencedTexs);
-	SheenTint->AddReferencedTextures(referencedTexs);
+	BaseColor->AddReferencedTextures(referencedTexs, BaseColor);
+	Subsurface->AddReferencedTextures(referencedTexs, Subsurface);
+	Roughness->AddReferencedTextures(referencedTexs, Roughness);
+	Metallic->AddReferencedTextures(referencedTexs, Metallic);
+	Specular->AddReferencedTextures(referencedTexs, Specular);
+	SpecularTint->AddReferencedTextures(referencedTexs, SpecularTint);
+	Clearcoat->AddReferencedTextures(referencedTexs, Clearcoat);
+	ClearcoatGloss->AddReferencedTextures(referencedTexs, ClearcoatGloss);
+	Anisotropic->AddReferencedTextures(referencedTexs, Anisotropic);
+	Sheen->AddReferencedTextures(referencedTexs, Sheen);
+	SheenTint->AddReferencedTextures(referencedTexs, SheenTint);
 	if (filmAmount)
-		filmAmount->AddReferencedTextures(referencedTexs);
+		filmAmount->AddReferencedTextures(referencedTexs, filmAmount);
 	if (filmThickness)
-		filmThickness->AddReferencedTextures(referencedTexs);
+		filmThickness->AddReferencedTextures(referencedTexs, filmThickness);
 	if (filmIor)
-		filmIor->AddReferencedTextures(referencedTexs);
+		filmIor->AddReferencedTextures(referencedTexs, filmIor);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

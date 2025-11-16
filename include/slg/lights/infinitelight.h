@@ -37,7 +37,7 @@ public:
 	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution,
 		const EnvLightVisibilityCache **visibilityMapCache) const;
 
-	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode);
+	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode);
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 	virtual float GetPower(const Scene &scene) const;
@@ -58,13 +58,13 @@ public:
 		float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	const ImageMap *imageMap;
+	ImageMapConstPtr imageMap;
 	bool sampleUpperHemisphereOnly;
 
 	// Visibility map cache options

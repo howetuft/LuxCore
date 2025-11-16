@@ -75,6 +75,12 @@ typedef int SceneRayType;
 
 class SampleResult;
 
+class Scene;
+using SceneConstPtr = std::shared_ptr<const Scene>;
+using ScenePtr = std::shared_ptr<Scene>;
+using SceneConstRef = const Scene&;
+
+
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
@@ -99,7 +105,7 @@ public:
 	// Methods to build and edit scene
 	//--------------------------------------------------------------------------
 
-	void DefineImageMap(ImageMap *im);
+	void DefineImageMap(ImageMapPtr im);
 	void DefineImageMap(const std::string &name, void *pixels,
 		const u_int channels, const u_int width, const u_int height,
 		const ImageMapConfig &cfg);
@@ -108,7 +114,7 @@ public:
 
 	// Mesh shape
 	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
-	void DefineMesh(luxrays::ExtMesh *mesh);
+	void DefineMesh(luxrays::ExtMeshPtr mesh);
 	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
@@ -159,7 +165,7 @@ public:
 	void RemoveUnusedMeshes();
 
 	static Scene *LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, const Scene *scene);
+	static void SaveSerialized(const std::string &fileName, SceneConstPtr scene);
 	
 	static std::string EncodeTriangleLightNamePrefix(const std::string &objectName);
 
@@ -213,12 +219,12 @@ private:
 	TexturePtr CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	VolumePtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	MaterialPtr CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
-	luxrays::ExtTriangleMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
+	luxrays::ExtTriangleMeshPtr CreateShape(const std::string &shapeName, const luxrays::Properties &props);
 	SceneObjectPtr CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
-	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
-	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
+	ImageMapPtr CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
+	LightSourcePtr CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
-	luxrays::ExtTriangleMesh *CreateInlinedMesh(const std::string &shapeName,
+	luxrays::ExtTriangleMeshPtr CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);
 
 	template<class Archive> void save(Archive &ar, const u_int version) const;

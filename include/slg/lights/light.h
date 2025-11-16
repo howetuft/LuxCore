@@ -53,6 +53,10 @@ typedef enum {
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
+class LightSource;
+using LightSourceConstPtr = std::shared_ptr<const LightSource>;
+using LightSourcePtr = std::shared_ptr<LightSource>;
+
 //------------------------------------------------------------------------------
 // Generic LightSource interface
 //------------------------------------------------------------------------------
@@ -110,7 +114,7 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const { }
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const { }
 	virtual void UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol);
 
 	static std::string LightSourceType2String(const LightSourceType type);
@@ -219,6 +223,10 @@ protected:
 // Env. LightSource interface
 //------------------------------------------------------------------------------
 
+class EnvLightSource;
+using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
+using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
+
 class EnvLightSource : public InfiniteLightSource {
 public:
 	EnvLightSource() { }
@@ -229,7 +237,7 @@ public:
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const {
 		throw std::runtime_error("Internal error: called EnvLightSource::GetEnvUV()");
 	}
-	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode) { }
+	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) { }
 
 	// Note: bsdf parameter can be NULL if it is a camera ray
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,

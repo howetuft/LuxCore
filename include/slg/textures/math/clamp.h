@@ -39,12 +39,12 @@ public:
 	virtual float Y() const { return luxrays::Clamp(tex->Y(), minVal, maxVal); } // This can be not correct
 	virtual float Filter() const { return luxrays::Clamp(tex->Filter(), minVal, maxVal); } // This can be not correct
 
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+		Texture::AddReferencedTextures(referencedTexs, self);
 
-		tex->AddReferencedTextures(referencedTexs);
+		tex->AddReferencedTextures(referencedTexs, tex);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 

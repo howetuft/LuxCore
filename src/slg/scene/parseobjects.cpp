@@ -106,7 +106,7 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			ExtTriangleMesh *mesh = ExtTriangleMesh::Load(SLG_FileNameResolver.ResolveFile(shapeName));
+			auto mesh = ExtTriangleMesh::Load(SLG_FileNameResolver.ResolveFile(shapeName));
 			mesh->SetName(shapeName);
 
 			const Matrix4x4 mat = props.Get(Property(propName +
@@ -121,7 +121,7 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 
 		if (!extMeshCache.IsExtMeshDefined(shapeName)) {
 			// It is a mesh to define
-			ExtMesh *mesh = CreateInlinedMesh(shapeName, propName, props);
+			auto mesh = CreateInlinedMesh(shapeName, propName, props);
 			mesh->SetName(shapeName);
 			DefineMesh(mesh);
 		}
@@ -134,7 +134,7 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 		throw runtime_error("Missing shape in object definition: " + objName);
 
 	// Check if I have to use a motion mesh, instance mesh or normal mesh
-	ExtMesh *mesh;
+	ExtMeshPtr mesh;
 	if (props.IsDefined(propName + ".motion.0.time")) {
 		// Build the motion system
 		vector<float> times;
@@ -176,11 +176,11 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 	const bool cameraInvisible = props.Get(Property(propName + ".camerainvisible")(false)).Get<bool>();
 
 	// Build the scene object
-	SceneObject *scnObj = new SceneObject(mesh, mat, objID, cameraInvisible);
+	auto scnObj = std::make_shared<SceneObject>(mesh, mat, objID, cameraInvisible);
 	scnObj->SetName(objName);
 
 	if (props.IsDefined(propName + ".bake.combined.file")) {
-		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
+		ImageMapPtr imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
 
 		// Add the image map to the cache
 		const string name ="LUXCORE_BAKEMAP_COMBINED_" + propName;
@@ -191,7 +191,7 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 
 		scnObj->SetBakeMap(imgMap, COMBINED, uvIndex);
 	} else if (props.IsDefined(propName + ".bake.lightmap.file")) {
-		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.lightmap");
+		ImageMapPtr imgMap = ImageMap::FromProperties(props, propName + ".bake.lightmap");
 
 		// Add the image map to the cache
 		const string name ="LUXCORE_BAKEMAP_LIGHTMAP_" + propName;
@@ -211,8 +211,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	auto srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
-	ExtMesh *newMesh;
-	const ExtMesh *srcMesh = srcObj->GetExtMesh();
+	ExtMeshPtr newMesh;
+	auto srcMesh = srcObj->GetExtMesh();
 	switch (srcMesh->GetType()) {
 		case TYPE_EXT_TRIANGLE: {
 			// Create an instance of the mesh
@@ -224,8 +224,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 		}
 		case TYPE_EXT_TRIANGLE_INSTANCE: {
 			// Get the instanced mesh
-			const ExtInstanceTriangleMesh *srcInstanceMesh = static_cast<const ExtInstanceTriangleMesh *>(srcMesh);
-			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcInstanceMesh->GetTriangleMesh());
+			auto srcInstanceMesh = static_pointer_cast<const ExtInstanceTriangleMesh>(srcMesh);
+			auto baseMesh = static_pointer_cast<const ExtTriangleMesh>(srcInstanceMesh->GetTriangleMesh());
 
 			// Create the new instance of the base mesh
 			const string instanceShapeName = "InstanceMesh-" + dstObjName;
@@ -236,8 +236,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 		}
 		case TYPE_EXT_TRIANGLE_MOTION: {
 			// Get the motion mesh
-			const ExtMotionTriangleMesh *srcMotionMesh = static_cast<const ExtMotionTriangleMesh *>(srcMesh);
-			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcMotionMesh->GetTriangleMesh());
+			auto srcMotionMesh = static_pointer_cast<const ExtMotionTriangleMesh>(srcMesh);
+			auto baseMesh = static_pointer_cast<const ExtTriangleMesh>(srcMotionMesh->GetTriangleMesh());
 
 			// Create the new instance of the base mesh
 			const string instanceShapeName = "InstanceMesh-" + dstObjName;
@@ -253,13 +253,13 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	// If the Null index was passed as ID, copy the ID of the source object
 	const u_int objID = (dstObjID == 0xffffffff) ? srcObj->GetID() : dstObjID;
 
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), objID,
+	auto dstObj = std::make_shared<SceneObject>(newMesh, srcObj->GetMaterial(), objID,
 			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);
 
 	// Check if it is a light source
-	MaterialConstPtr mat = dstObj->GetMaterial();
+	auto mat = dstObj->GetMaterial();
 	if (mat->IsLightSource()) {
 		SDL_LOG("The " << dstObjName << " object is a light sources with " << dstObj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
@@ -274,8 +274,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	auto srcObj = objDefs.GetSceneObject(srcObjName);
 
 	// Check the type of mesh
-	ExtMesh *newMesh;
-	const ExtMesh *srcMesh = srcObj->GetExtMesh();
+	ExtMeshPtr newMesh;
+	auto srcMesh = srcObj->GetExtMesh();
 	switch (srcMesh->GetType()) {
 		case TYPE_EXT_TRIANGLE: {
 			// Create an instance of the mesh
@@ -287,8 +287,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 		}
 		case TYPE_EXT_TRIANGLE_INSTANCE: {
 			// Get the instanced mesh
-			const ExtInstanceTriangleMesh *srcInstanceMesh = static_cast<const ExtInstanceTriangleMesh *>(srcMesh);
-			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcInstanceMesh->GetTriangleMesh());
+			auto srcInstanceMesh = static_pointer_cast<const ExtInstanceTriangleMesh>(srcMesh);
+			auto baseMesh = static_pointer_cast<const ExtTriangleMesh>(srcInstanceMesh->GetTriangleMesh());
 
 			// Create the new instance of the base mesh
 			const string motionShapeName = "MotionMesh-" + dstObjName;
@@ -299,8 +299,8 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 		}
 		case TYPE_EXT_TRIANGLE_MOTION: {
 			// Get the motion mesh
-			const ExtMotionTriangleMesh *srcMotionMesh = static_cast<const ExtMotionTriangleMesh *>(srcMesh);
-			const ExtTriangleMesh *baseMesh = static_cast<const ExtTriangleMesh *>(srcMotionMesh->GetTriangleMesh());
+			auto srcMotionMesh = static_pointer_cast<const ExtMotionTriangleMesh>(srcMesh);
+			auto baseMesh = static_pointer_cast<const ExtTriangleMesh>(srcMotionMesh->GetTriangleMesh());
 
 			// Create the new instance of the base mesh
 			const string motionShapeName = "MotionMesh-" + dstObjName;
@@ -316,7 +316,7 @@ void Scene::DuplicateObject(const std::string &srcObjName, const std::string &ds
 	// If the Null index was passed as ID, copy the ID of the source object
 	const u_int objID = (dstObjID == 0xffffffff) ? srcObj->GetID() : dstObjID;
 
-	SceneObject *dstObj = new SceneObject(newMesh, srcObj->GetMaterial(), objID,
+	auto dstObj = std::make_shared<SceneObject>(newMesh, srcObj->GetMaterial(), objID,
 			srcObj->IsCameraInvisible());
 	dstObj->SetName(dstObjName);
 	objDefs.DefineSceneObject(dstObj);

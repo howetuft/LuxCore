@@ -163,12 +163,12 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 		}
 
 		auto scnObj = renderConfig->scene->objDefs.GetSceneObject(i);
-		const ExtMesh *mesh = scnObj->GetExtMesh();
+		auto mesh = scnObj->GetExtMesh();
 		// TODO: other mesh types
 		if (mesh->GetType() != TYPE_EXT_TRIANGLE)
 			continue;
 
-		const ExtTriangleMesh *triMesh = (const ExtTriangleMesh *)mesh;
+		auto triMesh = static_pointer_cast<const ExtTriangleMesh>(mesh);
 
 		//----------------------------------------------------------------------
 		// Add vertices buffer
@@ -323,7 +323,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
 			// Write the image to file
 
-			const ImageMap *imgMap = scnObj->GetBakeMap();
+			auto imgMap = scnObj->GetBakeMap();
 			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".png";
 			SDL_LOG("  Saving image map: " << imgMapFileName << " (channels: " << imgMap->GetChannelCount() << ")");
 			imgMap->WriteImage(imgMapFileName);
@@ -464,11 +464,11 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 	{
 		// Write the image map information
 		SDL_LOG("Saving image maps information:");
-		vector<const ImageMap *> ims;
+		vector<ImageMapConstPtr > ims;
 		renderConfig->scene->imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
 			// Avoid to save ImageMapTexture::randomImageMap
-			if (ims[i] != ImageMapTexture::randomImageMap.get()) {
+			if (ims[i] != ImageMapTexture::randomImageMap) {
 				const string fileName = (dirPath / renderConfig->scene->imgMapCache.GetSequenceFileName(ims[i])).generic_string();
 				SDL_LOG("  " + fileName);
 				ims[i]->WriteImage(fileName);
@@ -485,7 +485,7 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 				lastPrint = WallClockTime();
 			}
 
-			const ExtMesh *mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
+			auto mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
 			// The only meshes I need to save are the real one. The others (instances, etc.)
 			// will reference only true one.
 			if (mesh->GetType() != TYPE_EXT_TRIANGLE)

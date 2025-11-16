@@ -32,7 +32,7 @@ using namespace slg;
 
 PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		Sampler *eSampler, Sampler *lSampler,
-		const Scene *scn, Film *flm,
+		SceneConstPtr scn, Film *flm,
 		const VarianceClamping *varClamping,
 		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
@@ -129,7 +129,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 //------------------------------------------------------------------------------
 
 PathTracer::DirectLightResult PathTracer::DirectLightSampling(
-		luxrays::IntersectionDevice *device, const Scene *scene,
+		luxrays::IntersectionDevice *device, SceneConstPtr scene,
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
@@ -138,7 +138,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		const bool useBSDFEVal) const {
 	if (!bsdf.IsDelta()) {
 		// Select the light strategy to use
-		const LightStrategy *lightStrategy;
+		LightStrategyConstPtr lightStrategy;
 		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
 			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
 		else
@@ -147,7 +147,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		// Pick a light source to sample
 		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		float lightPickPdf;
-		const LightSource *light = lightStrategy->SampleLights(u0,
+		auto light = lightStrategy->SampleLights(u0,
 				bsdf.hitPoint.p, landingNormal, bsdf.IsVolume(), &lightPickPdf);
 
 		if (light) {
@@ -247,7 +247,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 	return NOT_VISIBLE;
 }
 
-bool PathTracer::CheckDirectHitVisibilityFlags(const LightSource *lightSource, const PathDepthInfo &depthInfo,
+bool PathTracer::CheckDirectHitVisibilityFlags(LightSourceConstPtr lightSource, const PathDepthInfo &depthInfo,
 		const BSDFEvent lastBSDFEvent) const {
 	if (depthInfo.depth == 0)
 		return true;
@@ -262,12 +262,12 @@ bool PathTracer::CheckDirectHitVisibilityFlags(const LightSource *lightSource, c
 	return false;
 }
 
-void PathTracer::DirectHitFiniteLight(const Scene *scene,
+void PathTracer::DirectHitFiniteLight(SceneConstPtr scene,
 		const EyePathInfo &pathInfo,
 		const Spectrum &pathThroughput, const Ray &ray,
 		const float distance, const BSDF &bsdf,
 		SampleResult *sampleResult) const {
-	const LightSource *lightSource = bsdf.GetLightSource();
+	auto lightSource = bsdf.GetLightSource();
 
 	// Check if the light source is visible according the settings
 	if (!CheckDirectHitVisibilityFlags(lightSource, pathInfo.depth, pathInfo.lastBSDFEvent) ||
@@ -282,7 +282,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
-			const LightStrategy *lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
+			auto lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 			const float lightPickProb = lightStrategy->SampleLightPdf(lightSource,
 					ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
@@ -303,7 +303,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,
 	}
 }
 
-void PathTracer::DirectHitInfiniteLight(const Scene *scene,
+void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
 		const EyePathInfo &pathInfo, const Spectrum &pathThroughput,
 		const Ray &ray, const BSDF *bsdf, SampleResult *sampleResult) const {
 	// If the material is shadow transparent, Direct Light sampling
@@ -311,7 +311,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
 		return;
 
-	for(EnvLightSource *envLight: scene->lightDefs.GetEnvLightSources()) {
+	for(auto envLight: scene->lightDefs.GetEnvLightSources()) {
 		// Check if the light source is visible according the settings
 		if (!CheckDirectHitVisibilityFlags(envLight, pathInfo.depth, pathInfo.lastBSDFEvent))
 			continue;
@@ -371,7 +371,7 @@ void PathTracer::GenerateEyeRay(CameraConstPtr camera, const Film *film, Ray &ey
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyePath(IntersectionDevice *device,
-		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
+		SceneConstPtr scene, Sampler *sampler, EyePathInfo &pathInfo,
 		Ray &eyeRay,  const luxrays::Spectrum &eyeTroughput,
 		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
@@ -661,7 +661,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyeSample(IntersectionDevice *device,
-		const Scene *scene, const Film *film,
+		SceneConstPtr scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
 	ResetEyeSampleResults(sampleResults);
 
@@ -688,7 +688,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device,
-		const Scene *scene,
+		SceneConstPtr scene,
 		const Film *film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
@@ -788,7 +788,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderLightSample(IntersectionDevice *device,
-		const Scene *scene, const Film *film,
+		SceneConstPtr scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
 	sampleResults.clear();
@@ -800,7 +800,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
+	LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->
 			SampleLights(sampler->GetSample(0), &lightPickPdf);
 
 	if (light) {

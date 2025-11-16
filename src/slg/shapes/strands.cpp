@@ -284,7 +284,7 @@ private:
 // StrendsShape methods
 //------------------------------------------------------------------------------
 
-StrendsShape::StrendsShape(const Scene *scene,
+StrendsShape::StrendsShape(SceneConstRef scene,
 		const cyHairFile *hairFile, const TessellationType tesselType,
 		const u_int aMaxDepth, const float aError, const u_int sSideCount,
 		const bool sCapBottom, const bool sCapTop, const bool useCamPos) : mesh(NULL) {
@@ -438,7 +438,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 	SLG_LOG("Refining time: " << std::setprecision(3) << dt << " secs");
 }
 
-void StrendsShape::TessellateRibbon(const Scene *scene,
+void StrendsShape::TessellateRibbon(SceneConstRef scene,
 		const vector<Point> &hairPoints,
 		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
 		const vector<UV> &hairUVs, const vector<float> &hairTransps,
@@ -541,7 +541,7 @@ void StrendsShape::TessellateRibbon(const Scene *scene,
 	}
 }
 
-void StrendsShape::TessellateAdaptive(const Scene *scene,
+void StrendsShape::TessellateAdaptive(SceneConstRef scene,
 		const bool solid, const vector<Point> &hairPoints,
 		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
 		const vector<UV> &hairUVs, const vector<float> &hairTransps,
@@ -580,7 +580,7 @@ void StrendsShape::TessellateAdaptive(const Scene *scene,
 			meshVerts, meshNorms, meshTris, meshUVs, meshCols, meshTransps);
 }
 
-void StrendsShape::TessellateSolid(const Scene *scene,
+void StrendsShape::TessellateSolid(SceneConstRef scene,
 		const vector<Point> &hairPoints,
 		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
 		const vector<UV> &hairUVs, const vector<float> &hairTransps,
@@ -735,11 +735,9 @@ void StrendsShape::TessellateSolid(const Scene *scene,
 }
 
 StrendsShape::~StrendsShape() {
-	if (!refined)
-		delete mesh;
 }
 
-ExtTriangleMesh *StrendsShape::RefineImpl(const Scene *scene) {
+ExtTriangleMeshPtr StrendsShape::RefineImpl(SceneConstRef scene) {
 	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

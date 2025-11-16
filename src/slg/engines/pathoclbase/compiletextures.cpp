@@ -1192,7 +1192,7 @@ void CompiledScene::CompileTextures() {
 				auto imt = dynamic_pointer_cast<const ImageMapTexture>(t);
 
 				tex->type = slg::ocl::IMAGEMAP;
-				const ImageMap *im = imt->GetImageMap();
+				auto im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
@@ -1202,7 +1202,7 @@ void CompiledScene::CompileTextures() {
 
 					tex->imageMapTex.randomizedTilingLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingLUT());
 					tex->imageMapTex.randomizedTilingInvLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingInvLUT());
-					tex->imageMapTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap.get());
+					tex->imageMapTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap);
 				} else {
 					tex->imageMapTex.randomizedTiling = false;
 					tex->imageMapTex.randomizedTilingLUTIndex = NULL_INDEX;
@@ -2297,7 +2297,7 @@ void CompiledScene::CompileTextures() {
 				auto bulletMaskTexIndex = bt->GetBulletMaskTex();
 				tex->bombingTex.bulletMaskTexIndex = scene->texDefs.GetTextureIndex(bulletMaskTexIndex);
 
-				tex->bombingTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap.get());
+				tex->bombingTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap);
 				break;
 			}
 			default:

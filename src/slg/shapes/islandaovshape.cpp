@@ -29,7 +29,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-IslandAOVShape::IslandAOVShape(ExtTriangleMesh *srcMesh, const u_int dataIndex) {
+IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex) {
 	SDL_LOG("IslandAOV shape " << srcMesh->GetName());
 
 	const double startTime = WallClockTime();
@@ -42,7 +42,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMesh *srcMesh, const u_int dataIndex) 
 
 	// Built a mapping to have all very near vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		const ExtTriangleMesh *triMesh = dynamic_cast<const ExtTriangleMesh *>(&mesh);
+		auto triMesh = dynamic_pointer_cast<const ExtTriangleMesh>(&mesh);
 		assert (triMesh);
 
 		const Point v1 = triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex1);
@@ -121,7 +121,7 @@ IslandAOVShape::~IslandAOVShape() {
 		delete mesh;
 }
 
-ExtTriangleMesh *IslandAOVShape::RefineImpl(const Scene *scene) {
+ExtTriangleMeshPtr IslandAOVShape::RefineImpl(SceneConstRef scene) {
 	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

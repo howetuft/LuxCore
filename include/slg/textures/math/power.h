@@ -42,13 +42,13 @@ public:
 		return SafePow(base->Filter(), exponent->Filter()); 
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+		Texture::AddReferencedTextures(referencedTexs, self);
 
-		base->AddReferencedTextures(referencedTexs);
-		exponent->AddReferencedTextures(referencedTexs);
+		base->AddReferencedTextures(referencedTexs, base);
+		exponent->AddReferencedTextures(referencedTexs, exponent);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		base->AddReferencedImageMaps(referencedImgMaps);
 		exponent->AddReferencedImageMaps(referencedImgMaps);
 	}

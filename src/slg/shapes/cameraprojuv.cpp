@@ -25,17 +25,15 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CameraProjUVShape::CameraProjUVShape(ExtTriangleMesh *m, const u_int index) :
+CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshPtrm, const u_int index) :
 		uvIndex(index) {
 	mesh = m->Copy();
 }
 
 CameraProjUVShape::~CameraProjUVShape() {
-	if (!refined)
-		delete mesh;
 }
 
-ExtTriangleMesh *CameraProjUVShape::RefineImpl(const Scene *scene) {
+ExtTriangleMeshPtrCameraProjUVShape::RefineImpl(SceneConstRef scene) {
 	SDL_LOG("CameraProjUV shape " << mesh->GetName());
 
 	const u_int vertCount = mesh->GetTotalVertexCount();

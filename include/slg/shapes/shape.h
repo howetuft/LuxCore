@@ -29,6 +29,13 @@ namespace slg {
 
 class Scene;
 
+class Shape;
+using ShapeConstPtr = std::shared_ptr<const Shape>;
+using ShapePtr = std::shared_ptr<Shape>;
+
+class Scene;
+using SceneConstRef = const Scene&;
+
 class Shape {
 public:
 	typedef enum {
@@ -55,11 +62,11 @@ public:
 
 	// Note: this method can be called only once and the object is not usable
 	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtTriangleMesh *Refine(const Scene *scene);
+	luxrays::ExtTriangleMeshPtr Refine(SceneConstRef scene);
 
 protected:
-	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene) = 0;
-	
+	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene) = 0;
+
 	bool refined;
 };
 

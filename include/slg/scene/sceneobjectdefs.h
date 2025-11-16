@@ -39,9 +39,9 @@ public:
 	bool IsSceneObjectDefined(const std::string &name) const {
 		return objs.IsObjDefined(name);
 	}
-	void DefineSceneObject(SceneObject *m);
+	void DefineSceneObject(SceneObjectPtr m);
 	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, MaterialConstPtr newMat) const;
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, SceneObjectConstPtr obj) const;
 
 	SceneObjectConstPtr GetSceneObject(const std::string &name) const {
 		return dynamic_pointer_cast<const SceneObject>(objs.GetObj(name));
@@ -70,8 +70,11 @@ public:
 	void UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialPtr newMat);
 	// Update any reference to oldMesh with newMesh. It returns also the
 	// list of modified objects
-	void UpdateMeshReferences(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh,
-		std::unordered_set<const SceneObject *> &modifiedObjsList);
+	void UpdateMeshReferences(
+		luxrays::ExtMeshConstPtr oldMesh,
+		luxrays::ExtMeshPtr newMesh,
+		std::unordered_set<SceneObjectConstPtr> &modifiedObjsList
+	);
 
 	void DeleteSceneObject(const std::string &name) {
 		objs.DeleteObj(name);

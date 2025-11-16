@@ -24,6 +24,11 @@
 
 namespace slg {
 
+class TriangleLight;
+using TriangleLightConstPtr = std::shared_ptr<const TriangleLight>;
+using TriangleLightPtr = std::shared_ptr<TriangleLight>;
+
+
 //------------------------------------------------------------------------------
 // TriangleLight implementation
 //------------------------------------------------------------------------------

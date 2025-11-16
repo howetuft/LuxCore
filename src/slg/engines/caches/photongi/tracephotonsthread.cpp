@@ -114,7 +114,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	newCausticPhotons.clear();
 	vector<u_int> allNearEntryIndices;
 	
-	const Scene *scene = pgic.scene;
+	SceneConstPtr scene = pgic.scene;
 	auto camera = scene->camera;
 
 	bool usefulPath = false;
@@ -128,7 +128,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
+	auto light = scene->lightDefs.GetEmitLightStrategy()->
 			SampleLights(samples[1], &lightPickPdf);
 
 	if (light) {

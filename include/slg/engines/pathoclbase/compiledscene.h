@@ -36,7 +36,7 @@ namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(Scene *scn, const PathTracer *pt);
+	CompiledScene(ScenePtr scn, const PathTracer *pt);
 	~CompiledScene();
 	
 	void SetMaxMemPageSize(const size_t maxSize);
@@ -138,7 +138,7 @@ public:
 
 private:
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
-	u_int CompileImageMap(const ImageMap *im);
+	u_int CompileImageMap(ImageMapConstPtr im);
 
 	void CompileCamera();
 	void CompileSceneObjects();
@@ -170,14 +170,14 @@ private:
 	void CompileImageMaps();
 	void CompileLights();
 
-	void CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy);
+	void CompileDLSC(std::shared_ptr<const LightStrategyDLSCache> dlscLightStrategy);
 	void CompileELVC(const EnvLightVisibilityCache *visibilityMapCache);
 	void CompileLightStrategy();
 	
 	void CompilePhotonGI();
 	void CompilePathTracer();
 
-	Scene *scene;
+	ScenePtr scene;
 	const PathTracer *pathTracer;
 
 	size_t maxMemPageSize;

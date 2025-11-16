@@ -463,7 +463,7 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+void SkyLight2::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
 	delete visibilityMapCache;
 	visibilityMapCache = nullptr;
 
@@ -475,7 +475,7 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
 		visibilityMapCache = nullptr;
 
 		// Build a luminance map of the sky
-		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap(1,
+		ImageMapPtr luminanceMapImage(ImageMap::AllocImageMap(1,
 				EnvLightVisibilityCache::defaultLuminanceMapWidth, EnvLightVisibilityCache::defaultLuminanceMapHeight,
 				ImageMapConfig()));
 
@@ -488,7 +488,7 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
 		}
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
-				luminanceMapImage.get(), visibilityMapCacheParams);		
+				luminanceMapImage, visibilityMapCacheParams);		
 		visibilityMapCache->Build();
 	}
 }

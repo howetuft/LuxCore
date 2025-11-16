@@ -39,13 +39,13 @@ public:
 	virtual float Filter() const { return tex1->Filter() * tex2->Filter(); }
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+		Texture::AddReferencedTextures(referencedTexs, self);
 
-		tex1->AddReferencedTextures(referencedTexs);
-		tex2->AddReferencedTextures(referencedTexs);
+		tex1->AddReferencedTextures(referencedTexs, tex1);
+		tex2->AddReferencedTextures(referencedTexs, tex2);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		tex1->AddReferencedImageMaps(referencedImgMaps);
 		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}

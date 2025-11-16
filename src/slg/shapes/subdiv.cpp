@@ -134,19 +134,19 @@ BuildBuffer(
 static Far::TopologyRefiner * createFarTopologyRefiner(const ExtTriangleMesh*);
 
 // TODO
-static ExtTriangleMesh *ApplySubdivAdaptive(
-	ExtTriangleMesh *srcMesh,
+static ExtTriangleMeshPtr ApplySubdivAdaptive(
+	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel
 );
 
-static ExtTriangleMesh *ApplyAdaptiveSubdiv(
-	ExtTriangleMesh *srcMesh,
+static ExtTriangleMeshPtr ApplyAdaptiveSubdiv(
+	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel
 );
 
 
 
-ExtTriangleMesh *ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
+ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel) {
 	//--------------------------------------------------------------------------
 	// Refine topology
 	//--------------------------------------------------------------------------
@@ -380,7 +380,7 @@ nRefinedVerts
 	}
 
 	// Allocate the new mesh
-	ExtTriangleMesh *newMesh =  new ExtTriangleMesh(
+	ExtTriangleMeshPtr newMesh =  new ExtTriangleMesh(
 		nRefinedVerts, nRefinedFaces,
 		newVerts, newTris, newNorms,
 		&newUVs, &newCols, &newAlphas
@@ -639,7 +639,7 @@ struct Surface {
 	/// Constructor
 	///
 	/// @param srcMesh The mesh to be subdivided
-	Surface(const ExtTriangleMesh * srcMesh)
+	Surface(ExtTriangleMeshConstPtr srcMesh)
 	{
 		SDL_LOG("Subdivision (enhanced) - Computing patches");
 
@@ -1233,8 +1233,8 @@ struct MultiLayerDataEvaluator{
 
 
 // Entry point for enhanced subdivision
-ExtTriangleMesh *ApplySubdiv(
-	ExtTriangleMesh *srcMesh,
+ExtTriangleMeshPtr ApplySubdiv(
+	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel
 ) {
 	// Remarks:
@@ -1310,8 +1310,9 @@ ExtTriangleMesh *ApplySubdiv(
 		<< numTriangles << " triangles"
 	);
 
-	ExtTriangleMesh *newMesh =  new ExtTriangleMesh(
-		u_int(numPoints), u_int(numTriangles),
+	auto newMesh =  new ExtTriangleMesh(
+		u_int(numPoints),
+		u_int(numTriangles),
 		tessPoints.release(),
 		tessTriangles.release(),
 		tessNormals.release(),
@@ -1342,7 +1343,7 @@ ExtTriangleMesh *ApplySubdiv(
 
 SubdivShape::SubdivShape(
 	const Camera *camera,
-	ExtTriangleMesh *srcMesh,
+	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
 	const bool enhanced
@@ -1383,7 +1384,7 @@ SubdivShape::SubdivShape(
 				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
 
 				// Subdivide and re-try
-				ExtTriangleMesh *newMesh = ApplySubdiv(mesh, optimizedLevel, enhanced);
+				auto newMesh = ApplySubdiv(mesh, optimizedLevel, enhanced);
 				SDL_LOG(
 					"Done step #" << i
 					<< " from " << mesh->GetTotalTriangleCount()
@@ -1419,7 +1420,7 @@ SubdivShape::SubdivShape(
 
 
 
-float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcMesh) {
+float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMeshPtr srcMesh) {
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 	const Point *verts = srcMesh->GetVertices();
 	const Triangle *tris = srcMesh->GetTriangles();
@@ -1471,8 +1472,8 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 }
 
 
-ExtTriangleMesh *SubdivShape::ApplySubdiv(
-	ExtTriangleMesh *srcMesh,
+ExtTriangleMeshPtr SubdivShape::ApplySubdiv(
+	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel,
 	const bool enhanced
 ) {
@@ -1509,7 +1510,7 @@ SubdivShape::~SubdivShape() {
 		delete mesh;
 }
 
-ExtTriangleMesh *SubdivShape::RefineImpl(const Scene *scene) {
+ExtTriangleMeshPtr SubdivShape::RefineImpl(SceneConstPtr scene) {
 	return mesh;
 }
 

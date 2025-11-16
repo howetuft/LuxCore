@@ -52,13 +52,13 @@ public:
         luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	const ImageMap *imageMap;
+	ImageMapConstPtr imageMap;
 
 private:
 	SampleableSphericalFunction *func;

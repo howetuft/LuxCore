@@ -63,7 +63,7 @@ public:
 	luxrays::Point localPos, localTarget;
 
 	float fov;
-	const ImageMap *imageMap;
+	ImageMapConstPtr imageMap;
 
 protected:
 	luxrays::Spectrum emittedFactor;

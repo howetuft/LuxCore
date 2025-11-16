@@ -60,7 +60,7 @@ typedef struct HitPoint_t {
 	luxrays::Normal dndu, dndv;
 
 	// Mesh information
-	const luxrays::ExtMesh *mesh;
+	luxrays::ExtMeshConstPtr mesh;
 	u_int triangleIndex;
 	float triangleBariCoord1, triangleBariCoord2;
 	

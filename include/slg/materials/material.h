@@ -139,8 +139,8 @@ public:
 	TextureConstPtr GetEmitTexture() const { return emittedTex; }
 	TextureConstPtr GetBumpTexture() const { return bumpTex; }
 
-	void SetEmissionMap(const ImageMap *map);
-	const ImageMap *GetEmissionMap() const { return emissionMap; }
+	void SetEmissionMap(ImageMapConstPtr map);
+	ImageMapConstPtr GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
 	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
@@ -207,8 +207,8 @@ public:
 		std::unordered_set<std::shared_ptr<const Material>> &referencedMats,
 		std::shared_ptr<const Material> self
 	) const;
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;
 	// Update any reference to oldTex with newTex
 	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
@@ -242,7 +242,7 @@ protected:
 	TextureConstPtr bumpTex;
     float bumpSampleDistance;
 
-	const ImageMap *emissionMap;
+	ImageMapConstPtr emissionMap;
 	SampleableSphericalFunction *emissionFunc;
 
 	std::shared_ptr<const Volume> interiorVolume, exteriorVolume;

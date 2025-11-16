@@ -41,7 +41,7 @@ BakeCPURenderThread::BakeCPURenderThread(BakeCPURenderEngine *engine,
 
 void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
-	Scene *scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig->scene;
 
 	// Lock the main film
 	std::unique_lock<std::mutex> lock(*engine->filmMutex);
@@ -97,7 +97,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 #endif
 			int sceneObjIndex = 0; sceneObjIndex < engine->currentSceneObjDist.size(); ++sceneObjIndex) {
 		auto sceneObj = engine->currentSceneObjsToBake[sceneObjIndex];
-		const ExtMesh *mesh = sceneObj->GetExtMesh();
+		auto mesh = sceneObj->GetExtMesh();
 
 		Transform localToWorld;
 		sceneObj->GetExtMesh()->GetLocal2World(0.f, localToWorld);
@@ -147,7 +147,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	float sceneObjPickPdf;
 	const u_int currentSceneObjIndex = engine->currentSceneObjsDist->SampleDiscrete(state.eyeSampler->GetSample(0), &sceneObjPickPdf);
 	auto sceneObj = engine->currentSceneObjsToBake[currentSceneObjIndex];
-	const ExtMesh *mesh = sceneObj->GetExtMesh();
+	auto mesh = sceneObj->GetExtMesh();
 
 	// Pick a triangle to sample
 	float triPickPdf;

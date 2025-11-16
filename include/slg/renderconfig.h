@@ -64,7 +64,7 @@ public:
 		const luxrays::Properties &additionalCfg);
 
 	luxrays::Properties cfg;
-	Scene *scene;
+	ScenePtr scene;
 
 	friend class boost::serialization::access;
 

@@ -42,6 +42,11 @@ class Scene;
 class Volume;
 class PathVolumeInfo;
 
+class Camera;
+using CameraPtr = std::shared_ptr<Camera>;
+using CameraConstPtr = std::shared_ptr<const Camera>;
+using CameraRef = Camera&;
+
 class Camera {
 public:
 	typedef enum {
@@ -83,7 +88,7 @@ public:
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
 		const u_int *filmSubRegion);
-	virtual void UpdateAuto(const Scene *scene);
+	virtual void UpdateAuto(SceneConstRef scene);
 
 	// Rendering methods
 	float GenerateRayTime(const float u) const { return luxrays::Lerp(u, shutterOpen, shutterClose); }
@@ -107,7 +112,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	virtual void UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol);
 
-	static Camera *AllocCamera(const luxrays::Properties &props);
+	static CameraPtr AllocCamera(const luxrays::Properties &props);
 
 	// User defined values
 	float clipHither, clipYon, shutterOpen, shutterClose;
@@ -128,10 +133,6 @@ protected:
 
 	const CameraType type;
 };
-
-using CameraPtr = std::shared_ptr<Camera>;
-using CameraConstPtr = std::shared_ptr<const Camera>;
-using CameraRef = Camera&;
 
 
 }

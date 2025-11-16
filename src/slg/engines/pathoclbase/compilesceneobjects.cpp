@@ -42,7 +42,7 @@ void CompiledScene::CompileSceneObjects() {
 		auto m = scnObj->GetMaterial();
 		oclScnObj.materialIndex = scene->matDefs.GetMaterialIndex(m);
 
-		const ImageMap *bakeMap = scnObj->GetBakeMap();
+		auto bakeMap = scnObj->GetBakeMap();
 		if (bakeMap) {
 			oclScnObj.bakeMapIndex = scene->imgMapCache.GetImageMapIndex(bakeMap);
 			switch (scnObj->GetBakeMapType()) {

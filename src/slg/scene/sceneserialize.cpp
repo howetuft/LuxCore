@@ -36,7 +36,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::Scene)
 Scene *Scene::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	Scene *scene;
+	auto scene;
 	sif.GetArchive() >> scene;
 
 	if (!sif.IsGood())
@@ -45,7 +45,7 @@ Scene *Scene::LoadSerialized(const std::string &fileName) {
 	return scene;
 }
 
-void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
+void Scene::SaveSerialized(const std::string &fileName, SceneConstPtr scene) {
 	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << scene;

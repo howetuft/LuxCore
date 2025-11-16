@@ -66,7 +66,7 @@ float TriangleLight::GetPower(const Scene &scene) const {
 }
 
 void TriangleLight::Preprocess() {
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 
 	Transform localToWorld;
 	mesh->GetLocal2World(0.f, localToWorld);
@@ -112,7 +112,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		return Spectrum();
 	emissionPdfW *= invTriangleArea;
 
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 
 	// Build a temporary HitPoint
 	HitPoint tmpHitPoint;
@@ -166,7 +166,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	// Compute the sample point and direction
 	//--------------------------------------------------------------------------
 
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 
 	HitPoint tmpHitPoint;
 	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
@@ -256,7 +256,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 
 	// This would be the correct code but BlendLuxCore is currently always
 	// exporting the normals so I resort to the following trick

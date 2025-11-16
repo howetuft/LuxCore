@@ -716,8 +716,8 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 			const float appliedTransMat[16]) {
 	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(appliedTransMat, 16));
 
-	ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
-	ExtTriangleMesh *extTriMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	auto mesh = scene->extMeshCache.GetExtMesh(meshName);
+	auto extTriMesh = dynamic_pointer_cast<ExtTriangleMesh>(mesh);
 	if (!extTriMesh)
 		throw runtime_error("Applied transformation can be set only for normal meshes: " + meshName);
 
@@ -820,7 +820,7 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(fileName));
 
-	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
+	auto mesh = scene->extMeshCache.GetExtMesh(meshName);
 	mesh->Save(fileName);
 
 	API_END();

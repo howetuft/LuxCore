@@ -95,10 +95,10 @@ void ClearVolume::Pdf(const HitPoint &hitPoint,
 	throw runtime_error("Internal error: called ClearVolume::Pdf()");
 }
 
-void ClearVolume::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-	Volume::AddReferencedTextures(referencedTexs);
+void ClearVolume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+	Volume::AddReferencedTextures(referencedTexs, self);
 
-	sigmaA->AddReferencedTextures(referencedTexs);
+	sigmaA->AddReferencedTextures(referencedTexs, sigmaA);
 }
 
 void ClearVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

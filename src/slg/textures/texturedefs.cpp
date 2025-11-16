@@ -57,8 +57,8 @@ void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstPtr tex,
 		return;
 
 	// Get the list of reference textures by this one
-	std::unordered_set<const Texture *> referencedTexs;
-	tex->AddReferencedTextures(referencedTexs);
+	 referencedTexs;
+	tex->AddReferencedTextures(referencedTexs, tex);
 
 	// Add all referenced texture names
 	for (auto refTex : referencedTexs) {

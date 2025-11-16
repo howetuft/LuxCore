@@ -32,7 +32,7 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
 
 	// Get the mesh
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 	mesh->GetLocal2World(ray.time, hitPoint.localToWorld);
 
 	hitPoint.Init(fixedFromLight, throughShadowTransparency,
@@ -74,7 +74,7 @@ void BSDF::Init(const Scene &scene,
 	sceneObject = scene.objDefs.GetSceneObject(meshIndex);
 
 	// Get the mesh
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	auto mesh = sceneObject->GetExtMesh();
 	mesh->GetLocal2World(time, hitPoint.localToWorld);
 
 	const Vector fixedDir = Vector(mesh->GetGeometryNormal(hitPoint.localToWorld, triangleIndex));

@@ -944,7 +944,7 @@ luxrays::ExtTriangleMesh* RecreateMesh(
 namespace slg {
 
 MergeOnDistanceShape::MergeOnDistanceShape(
-	luxrays::ExtTriangleMesh * srcMesh,
+	luxrays::ExtTriangleMeshPtr  srcMesh,
 	u_int tolerance
 ) {
 
@@ -963,13 +963,11 @@ MergeOnDistanceShape::MergeOnDistanceShape(
 }
 
 MergeOnDistanceShape::~MergeOnDistanceShape() {
-	if (!refined)
-		delete mesh;
 }
 
-luxrays::ExtTriangleMesh*
+luxrays::ExtTriangleMeshPtr
 MergeOnDistanceShape::ApplyMergeOnDistance(
-	luxrays::ExtTriangleMesh * srcMesh,
+	luxrays::ExtTriangleMeshPtr  srcMesh,
 	u_int tolerance
 ) {
 
@@ -995,8 +993,8 @@ MergeOnDistanceShape::ApplyMergeOnDistance(
 	return dstMesh;
 }
 
-luxrays::ExtTriangleMesh *
-MergeOnDistanceShape::RefineImpl(const slg::Scene *scene) {
+luxrays::ExtTriangleMeshPtr 
+MergeOnDistanceShape::RefineImpl(const slg::auto scene) {
 	return mesh;
 }
 

@@ -85,7 +85,7 @@ public:
 				const u_int tmpLeftVertCount = pageVertCount - tmpVertIndex;
 
 				// Check if there is enough space in the temporary buffer for all vertices
-				const Mesh *currentMesh = mbvh.uniqueLeafs[currentLeafIndex]->meshes[currentMeshIndex];
+				auto currentMesh = mbvh.uniqueLeafs[currentLeafIndex]->meshes[currentMeshIndex];
 				const u_int toCopy = currentMesh->GetTotalVertexCount() - currentMeshVertIndex;
 				if (tmpLeftVertCount >= toCopy) {
 					// There is enough space for all mesh vertices

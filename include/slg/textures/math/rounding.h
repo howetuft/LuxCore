@@ -39,14 +39,14 @@ public:
     virtual float Y() const { return 1.f; }
     virtual float Filter() const { return 1.f; }
 
-    virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-        Texture::AddReferencedTextures(referencedTexs);
+    virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+        Texture::AddReferencedTextures(referencedTexs, self);
 
-        texture->AddReferencedTextures(referencedTexs);
-        increment->AddReferencedTextures(referencedTexs);
+        texture->AddReferencedTextures(referencedTexs, texture);
+        increment->AddReferencedTextures(referencedTexs, increment);
     }
 
-    virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> referencedImgMaps) const {
+    virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > referencedImgMaps) const {
         texture->AddReferencedImageMaps(referencedImgMaps);
         increment->AddReferencedImageMaps(referencedImgMaps);
     }

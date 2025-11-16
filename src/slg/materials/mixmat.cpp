@@ -379,12 +379,12 @@ void MixMaterial::AddReferencedMaterials(
 	matB->AddReferencedMaterials(referencedMats, matB);
 }
 
-void MixMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void MixMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matA->AddReferencedTextures(referencedTexs);
 	matB->AddReferencedTextures(referencedTexs);
-	mixFactor->AddReferencedTextures(referencedTexs);
+	mixFactor->AddReferencedTextures(referencedTexs, mixFactor);
 }
 
 void MixMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

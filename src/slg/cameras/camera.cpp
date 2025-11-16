@@ -75,7 +75,7 @@ void Camera::Update(const u_int width, const u_int height, const u_int *subRegio
 	}
 }
 
-void Camera::UpdateAuto(const Scene *scene) {
+void Camera::UpdateAuto(SceneConstRef scene) {
 	if (autoVolume) {
 		// Trace a ray in the middle of the screen
 		Ray ray;
@@ -85,7 +85,7 @@ void Camera::UpdateAuto(const Scene *scene) {
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
-		if (scene->dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit)) {
+		if (scene.dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit)) {
 			/* I can not use BSDF::Init() here because Camera::UpdateAuto()
 			 * can be called before light preprocessing
 
@@ -96,10 +96,10 @@ void Camera::UpdateAuto(const Scene *scene) {
 				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
 
 			// Get the scene object
-			SceneObjectConstPtr sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
+			auto sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
-			const ExtMesh *mesh = sceneObject->GetExtMesh();
+			auto mesh = sceneObject->GetExtMesh();
 
 			// Get the material
 			auto material = sceneObject->GetMaterial();
@@ -114,7 +114,7 @@ void Camera::UpdateAuto(const Scene *scene) {
 				material->GetExteriorVolume() :
 				material->GetInteriorVolume();
 			if (!volume)
-				volume = scene->defaultWorldVolume;
+				volume = scene.defaultWorldVolume;
 		}
 	}
 }

@@ -154,12 +154,12 @@ void HomogeneousVolume::Pdf(const HitPoint &hitPoint,
 	schlickScatter.Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-void HomogeneousVolume::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
-	Volume::AddReferencedTextures(referencedTexs);
+void HomogeneousVolume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+	Volume::AddReferencedTextures(referencedTexs, self);
 
-	sigmaA->AddReferencedTextures(referencedTexs);
-	sigmaS->AddReferencedTextures(referencedTexs);
-	schlickScatter.g->AddReferencedTextures(referencedTexs);
+	sigmaA->AddReferencedTextures(referencedTexs, sigmaA);
+	sigmaS->AddReferencedTextures(referencedTexs, sigmaS);
+	schlickScatter.g->AddReferencedTextures(referencedTexs, schlickScatter.g);
 }
 
 void HomogeneousVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

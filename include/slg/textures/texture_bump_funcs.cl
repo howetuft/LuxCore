@@ -76,7 +76,7 @@ OPENCL_FORCE_INLINE float3 ImageMapTexture_Bump(__global const Texture* restrict
 		TEXTURES_PARAM_DECL) {
 	float2 du, dv;
 	const float2 uv = TextureMapping2D_MapDuv(&tex->imageMapTex.mapping, hitPoint, &du, &dv TEXTURES_PARAM);
-	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
+	__global ImageMapConstPtr imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	const float2 dst = ImageMap_GetDuv(imageMap, uv.x, uv.y IMAGEMAPS_PARAM);
 
 	const float2 duv = tex->imageMapTex.gain * MAKE_FLOAT2(dot(dst, du), dot(dst, dv));

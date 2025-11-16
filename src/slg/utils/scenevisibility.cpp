@@ -110,7 +110,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 	// This is really used only by Windows for 64+ threads support
 	SetThreadGroupAffinity(threadIndex);
 
-	const Scene *scene = sv.scene;
+	SceneConstPtr scene = sv.scene;
 	const Camera *camera = scene->camera;
 
 	// Initialize the sampler
@@ -329,7 +329,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 //------------------------------------------------------------------------------
 
 template <class T>
-SceneVisibility<T>::SceneVisibility(const Scene *scn, vector<T> &parts,
+SceneVisibility<T>::SceneVisibility(SceneConstPtr scn, vector<T> &parts,
 		const u_int maxDepth,  const u_int sampleCount,
 		const float hitRate, const float r, const float ang,
 		const float t0, const float t1) :

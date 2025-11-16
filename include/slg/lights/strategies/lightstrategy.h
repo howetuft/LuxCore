@@ -20,6 +20,7 @@
 #define	_SLG_LIGHTSTRATEGY_H
 
 #include "slg/lights/light.h"
+#include "slg/scene/scene.h"
 
 namespace slg {
 
@@ -28,6 +29,9 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 class Scene;
+using SceneConstPtr = std::shared_ptr<const Scene>;
+using ScenePtr = std::shared_ptr<Scene>;
+using SceneConstRef = const Scene&;
 
 typedef enum {
 	TASK_EMIT, TASK_ILLUMINATE, TASK_INFINITE_ONLY,
@@ -39,6 +43,11 @@ typedef enum {
 	LIGHT_STRATEGY_TYPE_COUNT
 } LightStrategyType;
 
+
+class LightStrategy;
+using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
+using LightStrategyPtr = std::shared_ptr<LightStrategy>;
+
 class LightStrategy {
 public:
 	virtual ~LightStrategy() { }
@@ -46,20 +55,20 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
 			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
-	virtual LightSource *SampleLights(const float u,
+	virtual LightSourcePtr SampleLights(const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			float *pdf) const = 0;
-	virtual float SampleLightPdf(const LightSource *light,
+	virtual float SampleLightPdf(LightSourceConstPtr light,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const = 0;
 
 	// Used for light emission
-	virtual LightSource *SampleLights(const float u, float *pdf) const = 0;
+	virtual LightSourcePtr SampleLights(const float u, float *pdf) const = 0;
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const = 0;
@@ -73,7 +82,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
+	static LightStrategyPtr FromProperties(const luxrays::Properties &cfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -85,7 +94,7 @@ protected:
 
 	LightStrategy(const LightStrategyType t) : scene(NULL), type(t) { }
 
-	const Scene *scene;
+	SceneConstPtr scene;
 
 private:
 	const LightStrategyType type;

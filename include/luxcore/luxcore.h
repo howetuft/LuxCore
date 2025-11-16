@@ -61,6 +61,9 @@
  */
 namespace luxcore {
 
+class Scene;
+using ScenePtr = std::shared_ptr<Scene>;
+
 #define LC_MESH_MAX_DATA_COUNT 8
 
 // This is mostly for compatibility with the past
@@ -1192,7 +1195,7 @@ public:
 	 * read from the file specified in the "scene.file" Property and deleted by
 	 * the destructor.
 	 */
-	static RenderConfig *Create(const luxrays::Properties &props, Scene *scene = NULL);
+	static RenderConfig *Create(const luxrays::Properties &props, ScenePtr scene = NULL);
 	/*!
 	 * \brief Create a new RenderConfig using the provided binary file.
 	 *

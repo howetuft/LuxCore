@@ -63,7 +63,7 @@ DataSet::~DataSet() {
 		delete it->second;
 }
 
-TriangleMeshID DataSet::Add(const Mesh *mesh) {
+TriangleMeshID DataSet::Add(MeshConstPtr mesh) {
 	assert (!preprocessed);
 
 	const TriangleMeshID id = meshes.size();
@@ -98,7 +98,7 @@ void DataSet::UpdateBBoxes() {
 		// Just initialize with some default value to avoid problems
 		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
 	} else {
-		for(const Mesh *m: meshes)
+		for(MeshConstPtr m: meshes)
 			bbox = Union(bbox, m->GetBBox());
 	}
 	bsphere = bbox.BoundingSphere();

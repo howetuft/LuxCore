@@ -116,7 +116,7 @@ void Scene::ParseTextures(const Properties &props) {
 
 		if (texDefs.IsTextureDefined(texName)) {
 			// A replacement for an existing texture
-			TextureConstPtr oldTex = texDefs.GetTexture(texName);
+			auto oldTex = texDefs.GetTexture(texName);
 
 			// FresnelTexture can be replaced only with other FresnelTexture
 			if (dynamic_pointer_cast<const FresnelTexture>(oldTex) && !dynamic_pointer_cast<FresnelTexture>(tex))
@@ -141,7 +141,7 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 
-		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
+		ImageMapPtr im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
@@ -169,24 +169,24 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 
 		tex = std::make_shared<ConstFloat3Texture>(c);
 	} else if (texType == "scale") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		tex = std::make_shared<ScaleTexture>(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
 		tex = std::make_shared<FresnelApproxNTexture>(tex1);
 	} else if (texType == "fresnelapproxk") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
 		tex = std::make_shared<FresnelApproxKTexture>(tex1);
 	} else if (texType == "checkerboard2d") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 		tex = std::make_shared<CheckerBoard2DTexture>(
 			CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2
 		);
 	} else if (texType == "checkerboard3d") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		tex = std::make_shared<CheckerBoard3DTexture>(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "densitygrid") {
@@ -201,7 +201,7 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
 				props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
-		ImageMap *imgMap;
+		ImageMapPtr imgMap;
 		if (props.IsDefined(propName + ".data")) {
 			const Property &dataProp = props.Get(Property(propName + ".data"));
 
@@ -240,9 +240,9 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 		tex = std::make_shared<DensityGridTexture>(CreateTextureMapping3D(propName + ".mapping", props),
 				nx, ny, nz, imgMap);
 	} else if (texType == "mix") {
-		TextureConstPtr amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 
 		tex = std::make_shared<MixTexture>(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
@@ -364,14 +364,14 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 
 		tex = std::make_shared<BlenderVoronoiTexture>(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, distmetric, noisesize, bright, contrast);
 	} else if (texType == "dots") {
-		TextureConstPtr insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
-		TextureConstPtr outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
+		auto insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
+		auto outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
 
 		tex = std::make_shared<DotsTexture>(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".bricktex")(1.f, 1.f, 1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
-		TextureConstPtr tex3 = GetTexture(props.Get(Property(propName + ".brickmodtex")(1.f, 1.f, 1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".bricktex")(1.f, 1.f, 1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
+		auto tex3 = GetTexture(props.Get(Property(propName + ".brickmodtex")(1.f, 1.f, 1.f)));
 
 		const float modulationBias = Clamp(props.Get(Property(propName + ".brickmodbias")(0.0)).Get<double>(), -1.0, 1.0);
 		const string brickbond = props.Get(Property(propName + ".brickbond")("running")).Get<string>();
@@ -384,12 +384,12 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 		tex = std::make_shared<BrickTexture>(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbond, modulationBias);
 	} else if (texType == "add") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		tex = std::make_shared<AddTexture>(tex1, tex2);
 	} else if (texType == "subtract") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		tex = std::make_shared<SubtractTexture>(tex1, tex2);
 	} else if (texType == "windy") {
 		tex = std::make_shared<WindyTexture>(CreateTextureMapping3D(propName + ".mapping", props));
@@ -404,7 +404,7 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 		const string interpTypeString = props.Get(Property(propName + ".interpolation")("linear")).Get<string>();
 		const BandTexture::InterpolationType interpType = BandTexture::String2InterpolationType(interpTypeString);
 
-		TextureConstPtr amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
+		auto amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		vector<float> offsets;
 		vector<Spectrum> values;
@@ -490,7 +490,7 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 	} else if (texType == "fresnelcauchy") {
 		tex = AllocFresnelCauchyTex(props, propName);
 	} else if (texType == "fresnelcolor") {
-		TextureConstPtr col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
+		auto col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
 		tex = std::make_shared<FresnelColorTexture>(col);
 	} else if (texType == "fresnelconst") {
@@ -505,138 +505,138 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 	} else if (texType == "fresnelsopra") {
 		tex = AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
 		tex = std::make_shared<AbsTexture>(tex1);
 	} else if (texType == "clamp") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const float minVal = props.Get(Property(propName + ".min")(0.0)).Get<double>();
 		const float maxVal = props.Get(Property(propName + ".max")(0.0)).Get<double>();
 
 		tex = std::make_shared<ClampTexture>(tex1, minVal, maxVal);
 	} else if (texType == "colordepth") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
 		const float depth = props.Get(Property(propName + ".depth")(1.00)).Get<double>();
 
 		tex = std::make_shared<ColorDepthTexture>(depth, tex1);
 	} else if (texType == "normalmap") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const float scale = Max(0.0, props.Get(Property(propName + ".scale")(1.0)).Get<double>());
 
 		tex = std::make_shared<NormalMapTexture>(tex1, scale);
 	} else if (texType == "bilerp") {
-		TextureConstPtr t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
-		TextureConstPtr t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
-		TextureConstPtr t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
-		TextureConstPtr t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
+		auto t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
+		auto t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
+		auto t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
+		auto t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
 
 		tex = std::make_shared<BilerpTexture>(t00, t01, t10, t11);
 	} else if (texType == "hsv") {
-		TextureConstPtr t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-		TextureConstPtr h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
-		TextureConstPtr s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
-		TextureConstPtr v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
+		auto t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto h = GetTexture(props.Get(Property(propName + ".hue")(0.5f)));
+		auto s = GetTexture(props.Get(Property(propName + ".saturation")(1.f)));
+		auto v = GetTexture(props.Get(Property(propName + ".value")(1.f)));
 
 		tex = std::make_shared<HsvTexture>(t, h, s, v);
 	} else if (texType == "divide") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		tex = std::make_shared<DivideTexture(tex1, tex2);
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = std::make_shared<DivideTexture>(tex1, tex2);
 	} else if (texType == "remap") {
-		TextureConstPtr value = GetTexture(props.Get(Property(propName + ".value")(0.5f)));
-		TextureConstPtr sourceMin = GetTexture(props.Get(Property(propName + ".sourcemin")(0.f)));
-		TextureConstPtr sourceMax = GetTexture(props.Get(Property(propName + ".sourcemax")(1.f)));
-		TextureConstPtr targetMin = GetTexture(props.Get(Property(propName + ".targetmin")(0.f)));
-		TextureConstPtr targetMax = GetTexture(props.Get(Property(propName + ".targetmax")(1.f)));
+		auto value = GetTexture(props.Get(Property(propName + ".value")(0.5f)));
+		auto sourceMin = GetTexture(props.Get(Property(propName + ".sourcemin")(0.f)));
+		auto sourceMax = GetTexture(props.Get(Property(propName + ".sourcemax")(1.f)));
+		auto targetMin = GetTexture(props.Get(Property(propName + ".targetmin")(0.f)));
+		auto targetMax = GetTexture(props.Get(Property(propName + ".targetmax")(1.f)));
 		tex = std::make_shared<RemapTexture>(value, sourceMin, sourceMax, targetMin, targetMax);
 	} else if (texType == "objectid") {
-		tex = std::make_shared<ObjectIDTexture();
+		tex = std::make_shared<ObjectIDTexture>();
 	} else if (texType == "objectidcolor") {
-		tex = std::make_shared<ObjectIDColorTexture();
+		tex = std::make_shared<ObjectIDColorTexture>();
 	} else if (texType == "objectidnormalized") {
-		tex = std::make_shared<ObjectIDNormalizedTexture();
+		tex = std::make_shared<ObjectIDNormalizedTexture>();
 	} else if (texType == "dotproduct") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		tex = std::make_shared<DotProductTexture(tex1, tex2);
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = std::make_shared<DotProductTexture>(tex1, tex2);
 	} else if (texType == "power") {
-		TextureConstPtr base = GetTexture(props.Get(Property(propName + ".base")(1.f)));
-		TextureConstPtr exponent = GetTexture(props.Get(Property(propName + ".exponent")(1.f)));
-		tex = std::make_shared<PowerTexture(base, exponent);
+		auto base = GetTexture(props.Get(Property(propName + ".base")(1.f)));
+		auto exponent = GetTexture(props.Get(Property(propName + ".exponent")(1.f)));
+		tex = std::make_shared<PowerTexture>(base, exponent);
 	} else if (texType == "lessthan") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		tex = std::make_shared<LessThanTexture(tex1, tex2);
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = std::make_shared<LessThanTexture>(tex1, tex2);
 	} else if (texType == "greaterthan") {
-		TextureConstPtr tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		tex = std::make_shared<GreaterThanTexture(tex1, tex2);
+		auto tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		tex = std::make_shared<GreaterThanTexture>(tex1, tex2);
 	} else if (texType == "shadingnormal") {
-		tex = std::make_shared<ShadingNormalTexture();
+		tex = std::make_shared<ShadingNormalTexture>();
 	} else if (texType == "position") {
-		tex = std::make_shared<PositionTexture();
+		tex = std::make_shared<PositionTexture>();
 	} else if (texType == "splitfloat3") {
-		TextureConstPtr t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto t = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const int channel = Min(2, Max(0, props.Get(Property(propName + ".channel")(0)).Get<int>()));
-		tex = std::make_shared<SplitFloat3Texture(t, static_cast<u_int>(channel));
+		tex = std::make_shared<SplitFloat3Texture>(t, static_cast<u_int>(channel));
 	} else if (texType == "makefloat3") {
-		TextureConstPtr t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		TextureConstPtr t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
+		auto t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
 		tex = std::make_shared<MakeFloat3Texture>(t1, t2, t3);
     } else if (texType == "rounding") {
-        TextureConstPtr texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-        TextureConstPtr increment = GetTexture(props.Get(Property(propName + ".increment")(0.5f)));
+        auto texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+        auto increment = GetTexture(props.Get(Property(propName + ".increment")(0.5f)));
         tex = std::make_shared<RoundingTexture>(texture, increment);
     } else if (texType == "modulo") {
-		TextureConstPtr texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-		TextureConstPtr modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
+		auto texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
 		tex = std::make_shared<ModuloTexture>(texture, modulo);
 	} else if (texType == "brightcontrast") {
-		TextureConstPtr texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-		TextureConstPtr brightnessTex = GetTexture(props.Get(Property(propName + ".brightness")(0.f)));
-		TextureConstPtr contrastTex = GetTexture(props.Get(Property(propName + ".contrast")(0.f)));
+		auto texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto brightnessTex = GetTexture(props.Get(Property(propName + ".brightness")(0.f)));
+		auto contrastTex = GetTexture(props.Get(Property(propName + ".contrast")(0.f)));
 		tex = std::make_shared<BrightContrastTexture>(texture, brightnessTex, contrastTex);
 	} else if (texType == "triplanar") {
-		TextureConstPtr t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
-		TextureConstPtr t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
-		TextureConstPtr t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
+		auto t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		auto t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		auto t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
 		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
 		tex = std::make_shared<TriplanarTexture>(CreateTextureMapping3D(propName + ".mapping", props),
 				t1, t2, t3, enableUVlessBumpMap);
     } else if (texType == "random") {
-		TextureConstPtr texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		auto texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
 		tex = std::make_shared<RandomTexture>(texture, seedOffset);
 	} else if (texType == "wireframe") {
-		TextureConstPtr borderTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
-		TextureConstPtr insideTex = GetTexture(props.Get(Property(propName + ".inside")(0.f)));
+		auto borderTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
+		auto insideTex = GetTexture(props.Get(Property(propName + ".inside")(0.f)));
 		const float width = props.Get(Property(propName + ".width")(0.0)).Get<double>();
 
 		tex = std::make_shared<WireFrameTexture>(width, borderTex, insideTex);
 	/*} else if (texType == "bevel") {
-		TextureConstPtr bumpTex = props.IsDefined(propName + ".bumptex") ?
+		auto bumpTex = props.IsDefined(propName + ".bumptex") ?
 			GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : nullptr;
 		
 		const float radius = props.Get(Property(propName + ".radius")(.0250)).Get<double>();
 
 		tex = std::make_shared<BevelTexture(bumpTex, radius);*/
 	} else if (texType == "distort") {
-		TextureConstPtr texture = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
-		TextureConstPtr offset = GetTexture(props.Get(Property(propName + ".offset")(0.f)));
+		auto texture = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
+		auto offset = GetTexture(props.Get(Property(propName + ".offset")(0.f)));
 		const float strength = props.Get(Property(propName + ".strength")(1.0)).Get<double>();
 
 		tex = std::make_shared<DistortTexture>(texture, offset, strength);
 	} else if (texType == "bombing") {
-		TextureConstPtr background = GetTexture(props.Get(Property(propName + ".background")(1.f)));
-		TextureConstPtr bullet = GetTexture(props.Get(Property(propName + ".bullet")(1.f)));
-		TextureConstPtr bulletMask = GetTexture(props.Get(Property(propName + ".bullet.mask")(0.f)));
+		auto background = GetTexture(props.Get(Property(propName + ".background")(1.f)));
+		auto bullet = GetTexture(props.Get(Property(propName + ".bullet")(1.f)));
+		auto bulletMask = GetTexture(props.Get(Property(propName + ".bullet.mask")(0.f)));
 		
 		const float randomScaleFactor = Max(props.Get(Property(propName + ".bullet.randomscale.range")(.250)).Get<double>(), 0.0);
 		const bool useRandomRotation = props.Get(Property(propName + ".bullet.randomrotation.enable")(true)).Get<bool>();
 		const u_int multiBulletCount = Max(props.Get(Property(propName + ".bullet.count")(1u)).Get<u_int>(), 1u);
 
-		tex = std::make_shared<BombingTexture>(CreateTextureMapping(propName + ".mapping", props),
+		tex = std::make_shared<BombingTexture>(CreateTextureMapping2D(propName + ".mapping", props),
 				background, bullet, bulletMask, randomScaleFactor, useRandomRotation,
 				multiBulletCount);
 	} else
@@ -804,7 +804,7 @@ TextureConstPtr Scene::GetTexture(const luxrays::Property &prop) {
 
 //------------------------------------------------------------------------------
 
-TextureMapping2DConstPtr Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {
+TextureMapping2DPtr Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {

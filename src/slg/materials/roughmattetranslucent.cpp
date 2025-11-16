@@ -214,12 +214,12 @@ void RoughMatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 }
 
-void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs);
-	Kt->AddReferencedTextures(referencedTexs);
-	sigma->AddReferencedTextures(referencedTexs);
+	Kr->AddReferencedTextures(referencedTexs, Kr);
+	Kt->AddReferencedTextures(referencedTexs, Kt);
+	sigma->AddReferencedTextures(referencedTexs, sigma);
 }
 
 void RoughMatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

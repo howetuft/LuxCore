@@ -333,21 +333,21 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs);
-	Kt->AddReferencedTextures(referencedTexs);
+	Kr->AddReferencedTextures(referencedTexs, Kr);
+	Kt->AddReferencedTextures(referencedTexs, Kt);
 	if (exteriorIor)
-		exteriorIor->AddReferencedTextures(referencedTexs);
+		exteriorIor->AddReferencedTextures(referencedTexs, exteriorIor);
 	if (interiorIor)
-		interiorIor->AddReferencedTextures(referencedTexs);
-	nu->AddReferencedTextures(referencedTexs);
-	nv->AddReferencedTextures(referencedTexs);
+		interiorIor->AddReferencedTextures(referencedTexs, interiorIor);
+	nu->AddReferencedTextures(referencedTexs, nu);
+	nv->AddReferencedTextures(referencedTexs, nv);
 	if (filmThickness)
-		filmThickness->AddReferencedTextures(referencedTexs);
+		filmThickness->AddReferencedTextures(referencedTexs, filmThickness);
 	if (filmIor)
-		filmIor->AddReferencedTextures(referencedTexs);
+		filmIor->AddReferencedTextures(referencedTexs, filmIor);
 }
 
 void RoughGlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

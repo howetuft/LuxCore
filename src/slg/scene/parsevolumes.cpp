@@ -53,14 +53,14 @@ void Scene::ParseVolumes(const Properties &props) {
 				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
 		// Volumes are just a special kind of materials so they are stored
 		// in matDefs too.
-		Material *newMat = CreateVolume(volID, volName, props);
+		auto newMat = CreateVolume(volID, volName, props);
 
 		if (matDefs.IsMaterialDefined(volName)) {
 			// A replacement for an existing material
 			MaterialConstPtr oldMat = matDefs.GetMaterial(volName);
 
 			// Check if it is not a volume
-			if (!dynamic_cast<VolumeConstPtr >(oldMat))
+			if (!dynamic_pointer_cast<const Volume>(oldMat))
 				throw runtime_error("You can not replace a volume with the material: " + volName);
 
 			// Volumes can not be a (directly sampled) light source
@@ -74,13 +74,16 @@ void Scene::ParseVolumes(const Properties &props) {
 
 			// Check also the camera volume
 			if (camera)
-				camera->UpdateVolumeReferences(static_cast<VolumeConstPtr >(oldMat), static_cast<VolumeConstPtr >(newMat));
+				camera->UpdateVolumeReferences(
+					static_pointer_cast<const Volume>(oldMat),
+					static_pointer_cast<const Volume>(newMat)
+				);
 			// Check also the light source volumes
-			lightDefs.UpdateVolumeReferences(static_cast<VolumeConstPtr >(oldMat), static_cast<VolumeConstPtr >(newMat));
+			lightDefs.UpdateVolumeReferences(static_pointer_cast<const Volume>(oldMat), static_pointer_cast<const Volume>(newMat));
 
 			// Check also the world default volume
 			if (defaultWorldVolume == oldMat)
-				defaultWorldVolume = static_cast<VolumeConstPtr >(newMat);
+				defaultWorldVolume = static_pointer_cast<const Volume>(newMat);
 
 			// Check if the old material was or the new material is a light source
 			//if (wasLightSource || newMat->IsLightSource())
@@ -94,7 +97,7 @@ void Scene::ParseVolumes(const Properties &props) {
 	if (props.IsDefined("scene.world.volume.default")) {
 		const string volName = props.Get("scene.world.volume.default").Get<string>();
 		MaterialConstPtr m = matDefs.GetMaterial(volName);
-		VolumeConstPtr v = dynamic_cast<VolumeConstPtr >(m);
+		VolumeConstPtr v = dynamic_pointer_cast<const Volume>(m);
 		if (!v)
 			throw runtime_error(volName + " is not a volume and can not be used for default world volume");
 		defaultWorldVolume = v;
@@ -106,40 +109,50 @@ void Scene::ParseVolumes(const Properties &props) {
 		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
-Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, const Properties &props) {
+VolumePtr Scene::CreateVolume(const u_int defaultVolID, const string &volName, const Properties &props) {
 	const string propName = "scene.volumes." + volName;
 	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
 
-	TextureConstPtr iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
-	TextureConstPtr emissionTex = props.IsDefined(propName + ".emission") ?
+	auto iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
+	auto emissionTex = props.IsDefined(propName + ".emission") ?
 		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
 	// Required to remove light source while editing the scene
-	if (emissionTex && (
-			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
-			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
+	if (
+		emissionTex &&
+		(
+			(
+				(emissionTex->GetType() == CONST_FLOAT) &&
+				(static_pointer_cast<const ConstFloatTexture>(emissionTex)->GetValue() == 0.f)
+			) ||
+			(
+				(emissionTex->GetType() == CONST_FLOAT3) &&
+				(static_pointer_cast<const ConstFloat3Texture>(emissionTex)->GetColor().Black())
+			)
+		)
+	)
 		emissionTex = NULL;
 
-	Volume *vol;
+	VolumePtr vol;
 	if (volType == "clear") {
-		TextureConstPtr absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+		auto absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 
-		vol = new ClearVolume(iorTex, emissionTex, absorption);
+		vol = std::make_shared<ClearVolume>(iorTex, emissionTex, absorption);
 	} else if (volType == "homogeneous") {
-		TextureConstPtr absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
-		TextureConstPtr scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
-		TextureConstPtr asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
+		auto absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+		auto scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
+		auto asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HomogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, multiScattering);
+		vol = std::make_shared<HomogeneousVolume>(iorTex, emissionTex, absorption, scattering, asymmetry, multiScattering);
 	} else if (volType == "heterogeneous") {
-		TextureConstPtr absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
-		TextureConstPtr scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
-		TextureConstPtr asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
+		auto absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+		auto scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
+		auto asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
 		const float stepSize =  props.Get(Property(propName + ".steps.size")(1.f)).Get<double>();
 		const u_int maxStepsCount =  props.Get(Property(propName + ".steps.maxcount")(32u)).Get<u_int>();
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HeterogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
+		vol = std::make_shared<HeterogeneousVolume>(iorTex, emissionTex, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 

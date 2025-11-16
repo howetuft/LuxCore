@@ -67,7 +67,7 @@ protected:
 	const Point *verts_;
 };
 
-PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIndex) {
+PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOVIndex) {
 	SDL_LOG("Pointiness shape " << srcMesh->GetName());
 
 	const double startTime = WallClockTime();
@@ -79,7 +79,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 
 	// Find duplicate vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		const ExtTriangleMesh *triMesh = dynamic_cast<const ExtTriangleMesh *>(&mesh);
+		auto triMesh = dynamic_pointer_cast<const ExtTriangleMesh>(mesh);
 		assert (triMesh);
 
 		return (DistanceSquared(
@@ -185,11 +185,9 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 }
 
 PointinessShape::~PointinessShape() {
-	if (!refined)
-		delete mesh;
 }
 
-ExtTriangleMesh *PointinessShape::RefineImpl(const Scene *scene) {
+ExtTriangleMeshPtr PointinessShape::RefineImpl(SceneConstRef scene) {
 	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

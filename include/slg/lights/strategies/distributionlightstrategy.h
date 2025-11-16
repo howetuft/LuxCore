@@ -31,19 +31,19 @@ class DistributionLightStrategy : public LightStrategy {
 public:
 	virtual ~DistributionLightStrategy() { delete lightsDistribution; }
 
-	virtual void Preprocess(const Scene *scn, const LightStrategyTask taskType) { scene = scn; }
+	virtual void Preprocess(SceneConstPtr scn, const LightStrategyTask taskType) { scene = scn; }
 
 	// Used for direct light sampling
-	virtual LightSource *SampleLights(const float u,
+	virtual LightSourcePtr SampleLights(const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			float *pdf) const;
-	virtual float SampleLightPdf(const LightSource *light,
+	virtual float SampleLightPdf(LightSourceConstPtr light,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 
 	// Used for light emission
-	virtual LightSource *SampleLights(const float u, float *pdf) const;
+	virtual LightSourcePtr SampleLights(const float u, float *pdf) const;
 	
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;

@@ -445,16 +445,16 @@ void GlossyCoatingMaterial::AddReferencedMaterials(
 	matBase->AddReferencedMaterials(referencedMats, matBase);
 }
 
-void GlossyCoatingMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void GlossyCoatingMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matBase->AddReferencedTextures(referencedTexs);
-	Ks->AddReferencedTextures(referencedTexs);
-	nu->AddReferencedTextures(referencedTexs);
-	nv->AddReferencedTextures(referencedTexs);
-	Ka->AddReferencedTextures(referencedTexs);
-	depth->AddReferencedTextures(referencedTexs);
-	index->AddReferencedTextures(referencedTexs);
+	Ks->AddReferencedTextures(referencedTexs, Ks);
+	nu->AddReferencedTextures(referencedTexs, nu);
+	nv->AddReferencedTextures(referencedTexs, nv);
+	Ka->AddReferencedTextures(referencedTexs, Ka);
+	depth->AddReferencedTextures(referencedTexs, depth);
+	index->AddReferencedTextures(referencedTexs, index);
 }
 
 void GlossyCoatingMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

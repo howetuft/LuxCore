@@ -219,7 +219,7 @@ void BakeCPURenderEngine::StartLockLess() {
 		for (auto const &objName : mapInfo.objectNames) {
 			auto sceneObj = renderConfig->scene->objDefs.GetSceneObject(objName);
 			if (sceneObj) {
-				const ExtMesh *mesh = sceneObj->GetExtMesh();
+				auto mesh = sceneObj->GetExtMesh();
 
 				Transform localToWorld;
 				sceneObj->GetExtMesh()->GetLocal2World(0.f, localToWorld);

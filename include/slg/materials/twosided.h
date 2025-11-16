@@ -74,7 +74,7 @@ public:
 		std::unordered_set<MaterialConstPtr> &referencedMats,
 		MaterialConstPtr self
 	) const;
-	virtual void AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

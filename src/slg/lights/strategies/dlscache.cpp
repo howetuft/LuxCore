@@ -34,7 +34,7 @@ LightStrategyDLSCache::LightStrategyDLSCache(const DLSCParams &params) :
 LightStrategyDLSCache::~LightStrategyDLSCache() {
 }
 
-void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask type,
+void LightStrategyDLSCache::Preprocess(SceneConstPtr scn, const LightStrategyTask type,
 			const bool rtMode) {
 	scene = scn;
 	taskType = type;
@@ -46,7 +46,7 @@ void LightStrategyDLSCache::Preprocess(const Scene *scn, const LightStrategyTask
 		DLSCache.Build(scn);
 }
 
-LightSource *LightStrategyDLSCache::SampleLights(const float u,
+LightSourcePtr LightStrategyDLSCache::SampleLights(const float u,
 			const Point &p, const Normal &n,
 			const bool isVolume,
 			float *pdf) const {
@@ -58,7 +58,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 
 			if (*pdf > 0.f)
-				return scene->lightDefs.GetLightSources()[lightIndex];
+				return scene.lightDefs.GetLightSources()[lightIndex];
 			else
 				return nullptr;
 		} else
@@ -67,7 +67,7 @@ LightSource *LightStrategyDLSCache::SampleLights(const float u,
 		return distributionStrategy.SampleLights(u, p, n, isVolume, pdf);
 }
 
-float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
+float LightStrategyDLSCache::SampleLightPdf(LightSourceConstPtr light,
 		const Point &p, const Normal &n, const bool isVolume) const {
 	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
@@ -81,7 +81,7 @@ float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 		return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 }
 
-LightSource *LightStrategyDLSCache::SampleLights(const float u,
+LightSourcePtr LightStrategyDLSCache::SampleLights(const float u,
 			float *pdf) const {
 	return distributionStrategy.SampleLights(u, pdf);
 }
@@ -120,7 +120,7 @@ Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave"));
 }
 
-LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
+LightStrategyPtr LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	DLSCParams params;
 
 	params.entry.maxPasses = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")).Get<u_int>();
@@ -136,7 +136,7 @@ LightStrategy *LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	params.persistent.fileName = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")).Get<string>();
 	params.persistent.safeSave = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave")).Get<bool>();
 
-	return new LightStrategyDLSCache(params);
+	return std::make_shared<LightStrategyDLSCache>(params);
 }
 
 const Properties &LightStrategyDLSCache::GetDefaultProps() {

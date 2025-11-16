@@ -92,7 +92,7 @@ float DirectLightSamplingCache::EvaluateBestRadius() {
 	DLSCFilm2SceneRadiusValidator validator(*this);
 
 	return Film2SceneRadius(scene,  imagePlaneRadius, defaultRadius, params.visibility.maxPathDepth,
-		scene->camera->shutterOpen, scene->camera->shutterClose,
+		scene.camera->shutterOpen, scene.camera->shutterClose,
 		&validator);
 }
 
@@ -116,7 +116,7 @@ public:
 	
 protected:
 	virtual IndexOctree<DLSCVisibilityParticle> *AllocOctree() const {
-		return new DLSCOctree(visibilityParticles, scene->dataSet->GetBBox(),
+		return new DLSCOctree(visibilityParticles, scene.dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
@@ -185,8 +185,11 @@ void DirectLightSamplingCache::InitCacheEntry(const u_int entryIndex) {
 	cacheEntries[entryIndex] = DLSCacheEntry(visibilityParticles[entryIndex].bsdfList[0]);
 }
 
-float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibilityParticle,
-		const LightSource *light, const u_int pass) const {
+float DirectLightSamplingCache::SampleLight(
+	const DLSCVisibilityParticle &visibilityParticle,
+	LightSourceConstPtr light,
+	const u_int pass
+) const {
 	const float u1 = RadicalInverse(pass, 3);
 	const float u2 = RadicalInverse(pass, 5);
 	const float u3 = RadicalInverse(pass, 7);
@@ -216,7 +219,7 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 
 		// Check if the light source is visible
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[bsdfListIndexIndex];
-		if (!scene->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u5, &shadowRay,
+		if (!scene.Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u5, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 				nullptr, true)) {
 			// It is
@@ -227,13 +230,13 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 			return incomingRadiance.Y();
 		}
 	}
-	
+
 	return 0.f;
 }
 
 void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int entryIndex) {
 	const DLSCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
-	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	auto& lights = scene.lightDefs.GetLightSources();
 
 	//--------------------------------------------------------------------------
 	// Build the list of luminance received from each light source
@@ -245,8 +248,8 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 	//SLG_LOG("DLSC entry #" << entryIndex);
 
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		const LightSource *light = lights[lightIndex];
-	
+		auto light = lights[lightIndex];
+
 		// Check if the light source uses direct light sampling
 		if (!light->IsDirectLightSamplingEnabled()) {
 			// This light source is excluded from direct light sampling
@@ -266,7 +269,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 			// It is always in shadow
 			continue;
 		}
-		
+
 		// Most env. light sources are hard to sample and can lead to wrong cache
 		// entries. Use not less than 512 samples for them.
 		const u_int currentWarmUpSamples = (light->IsEnvironmental() && (light->GetType() != TYPE_SUN)) ?
@@ -312,11 +315,11 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 }
 
 void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh) {
-	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	auto& lights = scene.lightDefs.GetLightSources();
 
 	DLSCacheEntry &entry = cacheEntries[entryIndex];
 	vector<float> entryReceivedLuminance(lights.size(), 0.f);
-	
+
 	// Look for all neighbor particles
 	vector<u_int> allNearEntryIndices;
 	bvh.GetAllNearEntries(allNearEntryIndices, entry.p, entry.n, entry.isVolume);
@@ -357,11 +360,11 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 	// Print the number of light with enabled direct light sampling
 	//--------------------------------------------------------------------------
 
-	const vector<LightSource *> &lights = scene->lightDefs.GetLightSources();
+	auto& lights = scene.lightDefs.GetLightSources();
 	u_int dlsLightCount = 0;
 	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		const LightSource *light = lights[lightIndex];
-	
+		auto light = lights[lightIndex];
+
 		// Check if the light source uses direct light sampling
 		if (light->IsDirectLightSamplingEnabled())
 			++dlsLightCount;
@@ -466,10 +469,10 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 // Build
 //------------------------------------------------------------------------------
 
-void DirectLightSamplingCache::Build(const Scene *scn) {
+void DirectLightSamplingCache::Build(SceneConstPtr scn) {
 	scene = scn;
 
-	if (scene->lightDefs.GetSize() == 0)
+	if (scene.lightDefs.GetSize() == 0)
 		return;
 
 	SLG_LOG("Building DirectLightSamplingCache");

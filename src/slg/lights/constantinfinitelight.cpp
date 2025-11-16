@@ -172,7 +172,7 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+void ConstantInfiniteLight::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
 	delete visibilityMapCache;
 	visibilityMapCache = nullptr;
 	

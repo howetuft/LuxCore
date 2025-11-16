@@ -96,7 +96,7 @@ public:
 		TextureConstPtr  newTex
 	);
 
-	void AddReferencedTextures(std::unordered_set<const Texture*>& referencedTexs) const;
+	void AddReferencedTextures(std::unordered_set<TextureConstPtr>& referencedTexs) const;
 
 	TextureConstPtr GetBaseColor() const { return BaseColor; };
 	TextureConstPtr GetSubsurface() const { return Subsurface; };

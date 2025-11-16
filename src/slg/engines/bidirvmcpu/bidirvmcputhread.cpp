@@ -51,7 +51,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	Scene *scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig->scene;
 	auto camera = scene->camera;
 
 	// Setup the samplers

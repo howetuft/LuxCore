@@ -30,7 +30,7 @@ namespace slg {
 template <class T>
 class SceneVisibility {
 public:
-	SceneVisibility(const Scene *scene, std::vector<T> &visibilityParticles,
+	SceneVisibility(SceneConstPtr scene, std::vector<T> &visibilityParticles,
 			const u_int maxPathDepth, const u_int maxSampleCount,
 			const float targetHitRate,
 			const float lookUpRadius, const float lookUpNormalAngle,
@@ -54,7 +54,7 @@ protected:
 		void Join();
 
 	private:
-		void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
+		void GenerateEyeRay(CameraConstPtr camera, luxrays::Ray &eyeRay,
 				PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
 
 		void RenderFunc(std::stop_token stop_token);
@@ -79,7 +79,7 @@ protected:
 	virtual bool ProcessVisibilityParticle(const T &visibilityParticle, std::vector<T> &visibilityParticles,
 			IndexOctree<T> *particlesOctree, const float maxDistance2) const = 0;
 
-	const Scene *scene;
+	SceneConstPtr scene;
 	std::vector<T> &visibilityParticles;
 	const u_int maxPathDepth, maxSampleCount;	
 	const float targetHitRate, lookUpRadius, lookUpNormalAngle, timeStart, timeEnd;

@@ -29,7 +29,7 @@ using namespace slg;
 // Static random image map used by some texture
 //------------------------------------------------------------------------------
 
-static ImageMap *AllocRandomImageMap(const u_int size) {
+static std::shared_ptr<ImageMap> AllocRandomImageMap(const u_int size) {
 	unique_ptr<ImageMap> randomImageMap(ImageMap::AllocImageMap(3, size, size,
 			ImageMapConfig())
 	);

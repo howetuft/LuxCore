@@ -145,7 +145,7 @@ public:
 
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
-	const LightSource *GetLightSource() const { return triangleLightSource; }
+	LightSourceConstPtr GetLightSource() const { return triangleLightSource; }
 
 	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
 		if (IsVolume())
@@ -166,7 +166,7 @@ public:
 private:
 	SceneObjectConstPtr sceneObject;
 	MaterialConstPtr material;
-	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
+	TriangleLightConstPtr triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;
 };
 

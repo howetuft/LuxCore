@@ -184,11 +184,11 @@ void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 }
 
-void MatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void MatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs);
-	Kt->AddReferencedTextures(referencedTexs);
+	Kr->AddReferencedTextures(referencedTexs, Kr);
+	Kt->AddReferencedTextures(referencedTexs, Kt);
 }
 
 void MatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

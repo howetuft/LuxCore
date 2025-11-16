@@ -213,19 +213,19 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	}
 }
 
-void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *> &referencedTexs) const {
+void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs);
-	Kt->AddReferencedTextures(referencedTexs);
+	Kr->AddReferencedTextures(referencedTexs, Kr);
+	Kt->AddReferencedTextures(referencedTexs, Kt);
 	if (exteriorIor)
-		exteriorIor->AddReferencedTextures(referencedTexs);
+		exteriorIor->AddReferencedTextures(referencedTexs, exteriorIor);
 	if (interiorIor)
-		interiorIor->AddReferencedTextures(referencedTexs);
+		interiorIor->AddReferencedTextures(referencedTexs, interiorIor);
 	if (filmThickness)
-		filmThickness->AddReferencedTextures(referencedTexs);
+		filmThickness->AddReferencedTextures(referencedTexs, filmThickness);
 	if (filmIor)
-		filmIor->AddReferencedTextures(referencedTexs);
+		filmIor->AddReferencedTextures(referencedTexs, filmIor);
 }
 
 void ArchGlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

@@ -38,28 +38,28 @@ public:
 	virtual float Y() const { return gain * imageMap->GetSpectrumMeanY(); }
 	virtual float Filter() const { return gain * imageMap->GetSpectrumMean(); }
 
-	const ImageMap *GetImageMap() const { return imageMap; }
+	ImageMapConstPtr GetImageMap() const { return imageMap; }
 	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
 	bool HasRandomizedTiling() const { return randomizedTiling; }
-	const ImageMap *GetRandomizedTilingLUT() const { return randomizedTilingLUT; }
-	const ImageMap *GetRandomizedTilingInvLUT() const { return randomizedTilingInvLUT; }
+	ImageMapConstPtr GetRandomizedTilingLUT() const { return randomizedTilingLUT; }
+	ImageMapConstPtr GetRandomizedTilingInvLUT() const { return randomizedTilingInvLUT; }
 
-	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
+	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr> &referencedImgMaps) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static std::shared_ptr<ImageMapTexture> AllocImageMapTexture(const std::string &texName,
-		ImageMapCache &imgMapCache, const ImageMap *img,
+		ImageMapCache &imgMapCache, ImageMapConstPtr img,
 		TextureMapping2DConstPtr mp, const float g, const bool rt);
 
-	static std::unique_ptr<ImageMap> randomImageMap;
+	static std::shared_ptr<ImageMap> randomImageMap;
 
 private:
 	ImageMapTexture(
 		const std::string &texName,
-		const ImageMap *img,
+		ImageMapConstPtr img,
 		TextureMapping2DConstPtr mp,
 		const float g,
 		const bool rt);
@@ -68,14 +68,14 @@ private:
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
 	luxrays::Spectrum RandomizedTilingGetSpectrumValue(const luxrays::UV &pos) const;
 
-	const ImageMap *imageMap;
+	ImageMapConstPtr imageMap;
 	TextureMapping2DConstPtr mapping;
 	float gain;
 
 	// Used for randomized tiling
 	bool randomizedTiling;
-	ImageMap *randomizedTilingLUT;
-	ImageMap *randomizedTilingInvLUT;
+	ImageMapPtr randomizedTilingLUT;
+	ImageMapPtr randomizedTilingInvLUT;
 };
 
 }

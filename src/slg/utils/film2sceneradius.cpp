@@ -104,7 +104,7 @@ typedef struct Film2SceneRadiusThreadParams {
 
 	u_int threadIndex;
 	u_int workSize;
-	const Scene *scene;
+	SceneConstPtr scene;
 	float imagePlaneRadius;
 	u_int maxPathDepth;
 	float timeStart, timeEnd;
@@ -264,7 +264,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	}
 }
 
-float Film2SceneRadius(const Scene *scene, 
+float Film2SceneRadius(SceneConstPtr scene, 
 		const float imagePlaneRadius, const float defaultRadius,
 		const u_int maxPathDepth, const float timeStart, const float timeEnd,
 		const Film2SceneRadiusValidator *validator) {

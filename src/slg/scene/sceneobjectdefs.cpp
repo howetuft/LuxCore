@@ -43,7 +43,7 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	const u_int size = objs.GetSize();
 
 	for (u_int i = 0; i < size; ++i) {
-		const SceneObject *so = static_cast<const SceneObject *>(objs.GetObj(i));
+		auto so = static_pointer_cast<const SceneObject>(objs.GetObj(i));
 
 		if (so->GetMaterial() == mat)
 			DefineIntersectableLights(lightDefs, so);
@@ -52,13 +52,13 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 
 void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &lightDefs,
 		SceneObjectConstPtr obj) const {
-	const ExtMesh *mesh = obj->GetExtMesh();
+	auto mesh = obj->GetExtMesh();
 
 	// Add all new triangle lights
 
 	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-		TriangleLight *tl = new TriangleLight();
+		auto tl = std::make_shared<TriangleLight>();
 
 		// I use here boost::lexical_cast instead of ToString() because it is a
 		// lot faster and there can not be locale related problems with integers
@@ -77,14 +77,17 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	}
 }
 
-void SceneObjectDefinitions::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat) {
+void SceneObjectDefinitions::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialPtr newMat) {
 	// Replace old material direct references with new ones
 	for (auto o : objs.GetObjs())
-		static_cast<SceneObject *>(o)->UpdateMaterialReferences(oldMat, newMat);
+		static_pointer_cast<SceneObject>(o)->UpdateMaterialReferences(oldMat, newMat);
 }
 
-void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh* oldMesh, ExtMesh* newMesh,
-	std::unordered_set<SceneObject*>& modifiedObjsList) {
+void SceneObjectDefinitions::UpdateMeshReferences(
+	ExtMeshConstPtr oldMesh,
+	ExtMeshPtr newMesh,
+	std::unordered_set<SceneObjectConstPtr>& modifiedObjsList
+) {
 
 	auto p = meshToSceneObjects.equal_range(oldMesh->GetName());
 	auto it = p.first;
@@ -95,7 +98,7 @@ void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh* oldMesh, ExtMes
 		std::string soName = it->second;
 		if (objs.IsObjDefined(soName))
 		{
-			SceneObject* so = static_cast<SceneObject*>(objs.GetObj(soName));
+			auto so = static_pointer_cast<SceneObject>(objs.GetObj(soName));
 			if (so->UpdateMeshReference(oldMesh, newMesh))
 			{
 				updated = true;
