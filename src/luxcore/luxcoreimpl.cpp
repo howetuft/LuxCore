@@ -632,19 +632,19 @@ void CameraImpl::RotateDown(const float angle) const {
 //------------------------------------------------------------------------------
 
 SceneImpl::SceneImpl(const luxrays::Properties *resizePolicyProps) {
-	camera = new CameraImpl(*this);
-	scene = new slg::Scene(resizePolicyProps);
+	camera = std::make_shared<CameraImpl>(*this);
+	scene = std::make_shared<slg::Scene>(resizePolicyProps);
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
-	camera = new CameraImpl(*this);
-	scene = new slg::Scene(props, resizePolicyProps);
+	camera = std::make_shared<CameraImpl>(*this);
+	scene = std::make_shared<slg::Scene>(props, resizePolicyProps);
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePolicyProps) {
-	camera = new CameraImpl(*this);
+	camera = std::make_shared<CameraImpl>(*this);
 
 	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
@@ -652,23 +652,20 @@ SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePo
 		scene = slg::Scene::LoadSerialized(fileName);
 	} else if (ext == ".scn") {
 		// The file is in a text format
-		scene = new slg::Scene(Properties(fileName), resizePolicyProps);
+		scene = std::make_shared<slg::Scene>(Properties(fileName), resizePolicyProps);
 	} else
 		throw runtime_error("Unknown scene file extension: " + fileName);
 
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(slg::Scene *scn) {
-	camera = new CameraImpl(*this);
+SceneImpl::SceneImpl(std::make_shared<slg::Scene> scn) {
+	camera = std::shared_ptr<CameraImpl>(*this);
 	scene = scn;
 	allocatedScene = false;
 }
 
 SceneImpl::~SceneImpl() {
-	if (allocatedScene)
-		delete scene;
-	delete camera;
 }
 
 void SceneImpl::GetBBox(float min[3], float max[3]) const {
@@ -689,7 +686,7 @@ void SceneImpl::GetBBox(float min[3], float max[3]) const {
 
 const Camera &SceneImpl::GetCamera() const {
 	API_BEGIN_NOARGS();
-	API_RETURN("{}", (void *)camera);
+	API_RETURN("{}", (void *)camera.get());
 
 	return *camera;
 }
@@ -1212,8 +1209,8 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 }
 
 // Note: this method is not part of LuxCore API and it is used only internally
-void SceneImpl::DefineMesh(ExtTriangleMesh *mesh) {
-	API_BEGIN("{}", (void *)mesh);
+void SceneImpl::DefineMesh(std::shared_ptr<ExtTriangleMesh> mesh) {
+	API_BEGIN("{}", (void *)mesh.get());
 
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
@@ -1267,21 +1264,24 @@ Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfigImpl
 //------------------------------------------------------------------------------
 
-RenderConfigImpl::RenderConfigImpl(const Properties &props, SceneImpl *scn) {
+RenderConfigImpl::RenderConfigImpl(
+	const Properties &props,
+	std::shared_ptr<SceneImpl> scn
+) {
 	if (scn) {
 		scene = scn;
 		allocatedScene = false;
-		renderConfig = new slg::RenderConfig(props, scene->scene);
+		renderConfig = std::make_shared<slg::RenderConfig>(props, scene->scene);
 	} else {
-		renderConfig = new slg::RenderConfig(props);
-		scene = new SceneImpl(renderConfig->scene);
+		renderConfig = std::make_shared<slg::RenderConfig>(props);
+		scene = std::make_shared<SceneImpl>(renderConfig->scene);
 		allocatedScene = true;
 	}
 }
 
 RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
-	scene = new SceneImpl(renderConfig->scene);
+	scene = std::make_shared<SceneImpl>(renderConfig->scene);
 	allocatedScene = true;
 }
 
@@ -1291,18 +1291,18 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl 
 
 	// Read the render configuration and the scene
 	sif.GetArchive() >> renderConfig;
-	scene = new SceneImpl(renderConfig->scene);
+	scene = std::make_shared<SceneImpl>(renderConfig->scene);
 	allocatedScene = true;
 
 	// Read the render state
 	slg::RenderState *st;
 	sif.GetArchive() >> st;
-	*startState = new RenderStateImpl(st);
+	*startState = std::make_shared<RenderStateImpl>(st);
 
 	// Save the film
 	slg::Film *sf;
 	sif.GetArchive() >> sf;
-	*startFilm = new FilmImpl(sf);
+	*startFilm = std::make_shared<FilmImpl>(sf);
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized render session: " + fileName);
@@ -1466,9 +1466,9 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 
 RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, RenderStateImpl *startState, FilmImpl *startFilm) :
 		renderConfig(config) {
-	film = new FilmImpl(*this);
+	film = std::make_shared<FilmImpl>(*this);
 
-	renderSession = new slg::RenderSession(config->renderConfig,
+	renderSession = std::make_shared<slg::RenderSession>(config->renderConfig,
 			startState ? startState->renderState : NULL,
 			startFilm ? startFilm->standAloneFilm : NULL);
 
@@ -1490,12 +1490,12 @@ RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, RenderState
 RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, const std::string &startStateFileName,
 		const std::string &startFilmFileName) :
 		renderConfig(config) {
-	film = new FilmImpl(*this);
+	film = std::make_shared<FilmImpl>(*this);
 
 	unique_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
 	unique_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
 
-	renderSession = new slg::RenderSession(config->renderConfig,
+	renderSession = std::make_shared<slg::RenderSession>(config->renderConfig,
 			startState.release(), startFilm.release());
 }
 
@@ -1516,7 +1516,7 @@ const RenderConfig &RenderSessionImpl::GetRenderConfig() const {
 RenderState *RenderSessionImpl::GetRenderState() {
 	API_BEGIN_NOARGS();
 
-	RenderState *result = new RenderStateImpl(renderSession->GetRenderState());
+	RenderState *result = std::make_shared<RenderStateImpl>(renderSession->GetRenderState());
 
 	API_RETURN("{}", (void *)result);
 

@@ -105,10 +105,10 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	slg::Film *GetSLGFilm() const;
+	std::shared_ptr<slg::Film> GetSLGFilm() const;
 
-	const RenderSessionImpl *renderSession;
-	slg::Film *standAloneFilm;
+	std::shared_ptr<const RenderSessionImpl> renderSession;
+	std::shared_ptr<slg::Film> standAloneFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -246,8 +246,8 @@ public:
 private:
 	mutable luxrays::Properties scenePropertiesCache;
 
-	slg::Scene *scene;
-	CameraImpl *camera;
+	std::shared_ptr<slg::Scene> scene;
+	std::shared_ptr<CameraImpl> camera;
 	bool allocatedScene;
 };
 
@@ -260,10 +260,13 @@ class RenderSessionImpl;
 
 class RenderConfigImpl : public RenderConfig {
 public:
-	RenderConfigImpl(const luxrays::Properties &props, SceneImpl *scene = NULL);
+	RenderConfigImpl(const luxrays::Properties &props, std::shared_ptr<SceneImpl> scene = NULL);
 	RenderConfigImpl(const std::string &fileName);
-	RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,
-			FilmImpl **startFilm);
+	RenderConfigImpl(
+		const std::string &fileName,
+		std::shared_ptr<RenderStateImpl> * startState,
+		std::shared_ptr<FilmImpl> * startFilm
+	);
 	~RenderConfigImpl();
 
 	const luxrays::Properties &GetProperties() const;
@@ -292,9 +295,9 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	slg::RenderConfig *renderConfig;
+	std::shared_ptr<slg::RenderConfig> renderConfig;
 
-	SceneImpl *scene;
+	std::shared_ptr<SceneImpl> scene;
 	bool allocatedScene;
 };
 
@@ -305,7 +308,7 @@ private:
 class RenderStateImpl : public RenderState {
 public:
 	RenderStateImpl(const std::string &fileName);
-	RenderStateImpl(slg::RenderState *state);
+	RenderStateImpl(std::shared_ptr<slg::RenderState> state);
 	~RenderStateImpl();
 
 	void Save(const std::string &fileName) const;
@@ -313,7 +316,7 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	slg::RenderState *renderState;
+	std::shared_ptr<slg::RenderState> renderState;
 };
 
 //------------------------------------------------------------------------------
@@ -322,13 +325,21 @@ private:
 
 class RenderSessionImpl : public RenderSession {
 public:
-	RenderSessionImpl(const RenderConfigImpl *config, RenderStateImpl *startState = NULL, FilmImpl *startFilm = NULL);
-	RenderSessionImpl(const RenderConfigImpl *config, const std::string &startStateFileName, const std::string &startFilmFileName);
+	RenderSessionImpl(
+		std::shared_ptr<const RenderConfigImpl> config,
+		std::shared_ptr<RenderStateImpl> startState = nullptr,
+		std::shared_ptr<FilmImpl> startFilm = nullptr
+	);
+	RenderSessionImpl(
+		std::shared_ptr<const RenderConfigImpl> config,
+		const std::string &startStateFileName,
+		const std::string &startFilmFileName
+	);
 
 	~RenderSessionImpl();
 
 	const RenderConfig &GetRenderConfig() const;
-	RenderState *GetRenderState();
+	std::shared_ptr<RenderState> GetRenderState();
 
 	void Start();
 	void Stop();
@@ -359,10 +370,10 @@ public:
 	friend class FilmImpl;
 
 private:
-	const RenderConfigImpl *renderConfig;
-	FilmImpl *film;
+	std::shared_ptr<const RenderConfigImpl> renderConfig;
+	std::shared_ptr<FilmImpl> film;
 
-	slg::RenderSession *renderSession;
+	std::shared_ptr<slg::RenderSession> renderSession;
 	luxrays::Properties stats;
 };
 

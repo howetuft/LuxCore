@@ -272,25 +272,25 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 // Film
 //------------------------------------------------------------------------------
 
-Film *Film::Create(const std::string &fileName) {
+std::shared_ptr<Film> Film::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	Film *result = new luxcore::detail::FilmImpl(fileName);
-	
-	API_RETURN("{}", (void *)result);
-	
+	auto result = std::make_shared<luxcore::detail::FilmImpl>(fileName);
+
+	API_RETURN("{}", (void *)result.get());
+
 	return result;
 }
 
-Film *Film::Create(const luxrays::Properties &props,
+std::shared_ptr<Film> Film::Create(const luxrays::Properties &props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel) {
 	API_BEGIN("{}, {}, {}", ToArgString(props), hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 
-	Film *result = new luxcore::detail::FilmImpl(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
+	auto result = std::make_shared<luxcore::detail::FilmImpl>(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)result.get());
+
 	return result;
 }
 
@@ -313,7 +313,7 @@ template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigne
 	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
 
 	GetOutputUInt(type, buffer, index, executeImagePipeline);
-	
+
 	API_END();
 }
 
@@ -322,7 +322,7 @@ template<> void Film::UpdateOutput<float>(const FilmOutputType type, const float
 	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
 
 	UpdateOutputFloat(type, buffer, index, executeImagePipeline);
-	
+
 	API_END();
 }
 
@@ -353,7 +353,7 @@ template<> const unsigned int *Film::GetChannel(const FilmChannelType type,
 	const unsigned int *result =  GetChannelUInt(type, index, executeImagePipeline);
 
 	API_RETURN("{}", (void *)result);
-	
+
 	return result;
 }
 
@@ -370,32 +370,32 @@ Camera::~Camera() {
 // Scene
 //------------------------------------------------------------------------------
 
-Scene *Scene::Create(const luxrays::Properties *resizePolicyProps) {
+std::shared_ptr<Scene> Scene::Create(const luxrays::Properties *resizePolicyProps) {
 	API_BEGIN("{}", (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
+	auto result = std::make_shared<luxcore::detail::SceneImpl>(resizePolicyProps);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-Scene *Scene::Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
+std::shared_ptr<Scene> Scene::Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
+	auto result = std::make_shared<luxcore::detail::SceneImpl>(resizePolicyProps);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-Scene *Scene::Create(const string &fileName, const luxrays::Properties *resizePolicyProps) {
+std::shared_ptr<Scene> Scene::Create(const string &fileName, const luxrays::Properties *resizePolicyProps) {
 	API_BEGIN("{}, {}", ToArgString(fileName), (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(fileName, resizePolicyProps);
+	auto result = std::make_shared<luxcore::detail::SceneImpl>(fileName, resizePolicyProps);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.get());
 	
 	return result;
 }
@@ -440,7 +440,7 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 
 	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height,
 			selectionType, wrapType);
-	
+
 	API_END();
 }
 
@@ -448,9 +448,9 @@ float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
 	float *result = (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
-	
+
 	API_RETURN("{}", (void *)result);
-	
+
 	return result;
 }
 
@@ -468,42 +468,44 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig *RenderConfig::Create(const Properties &props, ScenePtr scn) {
+std::shared_ptr<RenderConfig> RenderConfig::Create(const Properties &props, ScenePtr scn) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)scn.get());
 
-	// TODO Use smart pointer in luxcore
-	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn.get());
+	auto scnImpl = dynamic_pointer_cast<luxcore::detail::SceneImpl>(scn);
 
-	RenderConfig *result = new luxcore::detail::RenderConfigImpl(props, scnImpl);
+	auto result = std::make_shared<luxcore::detail::RenderConfigImpl>(props, scnImpl);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)result.get());
+
 	return result;
 }
 
-RenderConfig *RenderConfig::Create(const std::string &fileName) {
+std::shared_ptr<RenderConfig> RenderConfig::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	RenderConfig *result = new luxcore::detail::RenderConfigImpl(fileName);
+	auto result = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)result.get());
+
 	return result;
 }
 
-RenderConfig *RenderConfig::Create(const std::string &fileName, RenderState **startState,
-		Film **startFilm) {
-	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState, (void *)startFilm);
+std::shared_ptr<RenderConfig> RenderConfig::Create(
+	const std::string &fileName,
+	std::shared_ptr<RenderState> * startState,
+	std::shared_ptr<Film> * startFilm
+) {
+	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState->get(), (void *)startFilm->get());
 
-	luxcore::detail::RenderStateImpl *ss;
-	luxcore::detail::FilmImpl *sf;
-	RenderConfig *rcfg = new luxcore::detail::RenderConfigImpl(fileName, &ss, &sf);
-	
-	*startState = ss;
-	*startFilm = sf;
+	std::shared_ptr<luxcore::detail::RenderStateImpl> ss;
+	std::shared_ptr<luxcore::detail::FilmImpl> sf;
+	auto rcfg = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, &ss, &sf);
 
-	API_RETURN("{}", (void *)rcfg);
-	
+	*startState = static_pointer_cast<luxcore::RenderState>(ss);
+	*startFilm = static_pointer_cast<luxcore::Film>(sf);
+
+	API_RETURN("{}", (void *)rcfg.get());
+
 	return rcfg;
 }
 
@@ -518,7 +520,7 @@ const Properties &RenderConfig::GetDefaultProperties() {
 	const Properties &result = luxcore::detail::RenderConfigImpl::GetDefaultProperties();
 	
 	API_RETURN("{}", ToArgString(result));
-	
+
 	return result;
 }
 
@@ -526,13 +528,13 @@ const Properties &RenderConfig::GetDefaultProperties() {
 // RenderState
 //------------------------------------------------------------------------------
 
-RenderState *RenderState::Create(const std::string &fileName) {
+std::shared_ptr<RenderState> RenderState::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	RenderState *result = new luxcore::detail::RenderStateImpl(fileName);
+	std::shared_ptr<RenderState> result = std::make_shared<luxcore::detail::RenderStateImpl>(fileName);
 
 	API_RETURN("{}", ToArgString(result));
-	
+
 	return result;
 }
 
@@ -545,27 +547,34 @@ RenderState::~RenderState() {
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession *RenderSession::Create(const RenderConfig *config, RenderState *startState, Film *startFilm) {
-	API_BEGIN("{}, {}, {}", (void *)config, (void *)startState, (void *)startFilm);
+std::shared_ptr<RenderSession> RenderSession::Create(
+	std::shared_ptr<const RenderConfig> config,
+	std::shared_ptr<RenderState> * startState,
+	std::shared_ptr<Film> * startFilm
+) {
+	API_BEGIN("{}, {}, {}", (void *)config.get(), (void *)startState->get(), (void *)startFilm->get());
 
-	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
-	luxcore::detail::RenderStateImpl *startStateImpl = dynamic_cast<luxcore::detail::RenderStateImpl *>(startState);
-	luxcore::detail::FilmImpl *startFilmImpl = dynamic_cast<luxcore::detail::FilmImpl *>(startFilm);
+	auto configImpl = dynamic_pointer_cast<const luxcore::detail::RenderConfigImpl>(config);
+	auto startStateImpl = dynamic_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
+	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImpl>(*startFilm);
 
-	RenderSession *result = new luxcore::detail::RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
+	auto result = std::make_shared<luxcore::detail::RenderSessionImpl>(configImpl, startStateImpl, startFilmImpl);
 
 	API_RETURN("{}", ToArgString(result));
-	
+
 	return result;
 }
 
-RenderSession *RenderSession::Create(const RenderConfig *config, const std::string &startStateFileName,
-		const std::string &startFilmFileName) {
-	API_BEGIN("{}, {}, {}", (void *)config, ToArgString(startStateFileName), ToArgString(startFilmFileName));
+std::shared_ptr<RenderSession> RenderSession::Create(
+		std::shared_ptr<const RenderConfig> config,
+		const std::string &startStateFileName,
+		const std::string &startFilmFileName
+) {
+	API_BEGIN("{}, {}, {}", (void *)config.get(), ToArgString(startStateFileName), ToArgString(startFilmFileName));
 
-	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
+	auto configImpl = dynamic_pointer_cast<const luxcore::detail::RenderConfigImpl>(config);
 
-	RenderSession *result = new luxcore::detail::RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
+	auto result = std::make_shared<luxcore::detail::RenderSessionImpl>(configImpl, startStateFileName, startFilmFileName);
 
 	API_RETURN("{}", ToArgString(result));
 	
