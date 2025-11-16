@@ -136,7 +136,7 @@ void BombingTexture::AddReferencedTextures(std::unordered_set<TextureConstPtr>  
 	bulletMaskTex->AddReferencedTextures(referencedTexs, bulletMaskTex);
 }
 
-void BombingTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void BombingTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 	backgroundTex->AddReferencedImageMaps(referencedImgMaps);
 	bulletTex->AddReferencedImageMaps(referencedImgMaps);
 	bulletMaskTex->AddReferencedImageMaps(referencedImgMaps);

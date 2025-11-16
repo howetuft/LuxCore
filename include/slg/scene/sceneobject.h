@@ -54,7 +54,7 @@ public:
 	u_int GetID() const { return objID; }
 	bool IsCameraInvisible() const { return cameraInvisible; }
 
-	void SetMaterial(MaterialPtr newMat) { mat = newMat; }
+	void SetMaterial(MaterialConstPtr newMat) { mat = newMat; }
 
 	bool HasBakeMap(const BakeMapType type) const { return (bakeMap != nullptr) && (bakeMapType == type); }
 	BakeMapType GetBakeMapType() const { return bakeMapType; }

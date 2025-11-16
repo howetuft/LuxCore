@@ -26,6 +26,7 @@
 namespace slg {
 
 class Camera;
+using CameraConstPtr = std::shared_ptr<const Camera>;
 
 class SubdivShape : public Shape {
 public:

@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 static std::shared_ptr<ImageMap> AllocRandomImageMap(const u_int size) {
-	unique_ptr<ImageMap> randomImageMap(ImageMap::AllocImageMap(3, size, size,
+	ImageMapPtr randomImageMap(ImageMap::AllocImageMap(3, size, size,
 			ImageMapConfig())
 	);
 
@@ -41,10 +41,10 @@ static std::shared_ptr<ImageMap> AllocRandomImageMap(const u_int size) {
 	for (u_int i = 0; i < 3 * size * size; ++i)
 		randomMapData[i] = rndGen.floatValue();
 	
-	return randomImageMap.release();
+	return randomImageMap;
 }
 
-unique_ptr<ImageMap> ImageMapTexture::randomImageMap(AllocRandomImageMap(512));
+ImageMapPtr ImageMapTexture::randomImageMap(AllocRandomImageMap(512));
 
 //------------------------------------------------------------------------------
 // Histogram-preserving Blending for Randomized Texture Tiling functions
@@ -265,10 +265,11 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
-		ImageMapCache &imgMapCache, const ImageMap *img, TextureMapping2DConstPtr mp,
+std::shared_ptr<ImageMapTexture>
+ImageMapTexture::AllocImageMapTexture(const string &texName,
+		ImageMapCache &imgMapCache, ImageMapConstPtr img, TextureMapping2DConstPtr mp,
 		const float g, const bool rt) {
-	ImageMapTexture *imt = new ImageMapTexture(texName, img, mp, g, rt);
+	auto imt = std::make_shared<ImageMapTexture>(texName, img, mp, g, rt);
 
 	if (rt) {
 		// I need to add the LUTs to the ImageMapCache
@@ -280,7 +281,7 @@ ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
 }
 
 ImageMapTexture::ImageMapTexture(const string &texName,
-		const ImageMap *img, TextureMapping2DConstPtr mp,
+		ImageMapConstPtr img, TextureMapping2DConstPtr mp,
 		const float g, const bool rt) :
 		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
 		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
@@ -356,7 +357,7 @@ ImageMapTexture::~ImageMapTexture() {
 	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 
-void ImageMapTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+void ImageMapTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 	referencedImgMaps.insert(imageMap);
 	if (randomizedTilingLUT)
 		referencedImgMaps.insert(randomizedTilingLUT);

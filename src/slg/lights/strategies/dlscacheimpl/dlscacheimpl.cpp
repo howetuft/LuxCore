@@ -80,7 +80,7 @@ private:
 
 }
 
-float DirectLightSamplingCache::EvaluateBestRadius() {
+float DirectLightSamplingCache::EvaluateBestRadius(SceneConstRef scene) {
 	SLG_LOG("DirectLightSamplingCache evaluating best radius");
 
 	// The percentage of image plane to cover with the radius
@@ -91,9 +91,11 @@ float DirectLightSamplingCache::EvaluateBestRadius() {
 
 	DLSCFilm2SceneRadiusValidator validator(*this);
 
-	return Film2SceneRadius(scene,  imagePlaneRadius, defaultRadius, params.visibility.maxPathDepth,
+	return Film2SceneRadius(
+		scene,  imagePlaneRadius, defaultRadius, params.visibility.maxPathDepth,
 		scene.camera->shutterOpen, scene.camera->shutterClose,
-		&validator);
+		&validator
+	);
 }
 
 //------------------------------------------------------------------------------
@@ -104,12 +106,16 @@ namespace slg {
 
 class DLSCSceneVisibility : public SceneVisibility<DLSCVisibilityParticle> {
 public:
-	DLSCSceneVisibility(DirectLightSamplingCache &cache) :
-		SceneVisibility(cache.scene, cache.visibilityParticles,
-				cache.params.visibility.maxPathDepth, cache.params.visibility.maxSampleCount,
-				cache.params.visibility.targetHitRate,
-				cache.params.visibility.lookUpRadius, cache.params.visibility.lookUpNormalAngle,
-				0.f, 1.f),
+	DLSCSceneVisibility(DirectLightSamplingCache &cache, SceneConstRef scene) :
+		//SceneVisibility(cache.scene, cache.visibilityParticles,
+		SceneVisibility(
+			scene, cache.visibilityParticles,
+			cache.params.visibility.maxPathDepth,
+			cache.params.visibility.maxSampleCount,
+			cache.params.visibility.targetHitRate,
+			cache.params.visibility.lookUpRadius,
+			cache.params.visibility.lookUpNormalAngle,
+			0.f, 1.f),
 		dslc(cache) {
 	}
 	virtual ~DLSCSceneVisibility() { }
@@ -166,8 +172,8 @@ protected:
 
 }
 
-void DirectLightSamplingCache::TraceVisibilityParticles() {
-	DLSCSceneVisibility dlscVisibility(*this);
+void DirectLightSamplingCache::TraceVisibilityParticles(SceneConstRef scene) {
+	DLSCSceneVisibility dlscVisibility(*this, scene);
 	
 	dlscVisibility.Build();
 
@@ -188,7 +194,8 @@ void DirectLightSamplingCache::InitCacheEntry(const u_int entryIndex) {
 float DirectLightSamplingCache::SampleLight(
 	const DLSCVisibilityParticle &visibilityParticle,
 	LightSourceConstPtr light,
-	const u_int pass
+	const u_int pass,
+	SceneConstRef scene
 ) const {
 	const float u1 = RadicalInverse(pass, 3);
 	const float u2 = RadicalInverse(pass, 5);
@@ -203,7 +210,7 @@ float DirectLightSamplingCache::SampleLight(
 
 	Ray shadowRay;
 	float directPdfW;
-	Spectrum lightRadiance = light->Illuminate(*scene, samplingBSDF,
+	Spectrum lightRadiance = light->Illuminate(scene, samplingBSDF,
 			time, u1, u2, u3, shadowRay, directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
@@ -234,7 +241,7 @@ float DirectLightSamplingCache::SampleLight(
 	return 0.f;
 }
 
-void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int entryIndex) {
+void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int entryIndex, SceneConstRef scene) {
 	const DLSCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
 	auto& lights = scene.lightDefs.GetLightSources();
 
@@ -259,7 +266,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 		// Check if I can avoid to trace all shadow rays
 		bool isAlwaysInShadow = true;
 		for (const BSDF &bsdf : visibilityParticle.bsdfList) {
-			if (!light->IsAlwaysInShadow(*scene, bsdf.hitPoint.p, bsdf.hitPoint.GetLandingShadeN())) {
+			if (!light->IsAlwaysInShadow(scene, bsdf.hitPoint.p, bsdf.hitPoint.GetLandingShadeN())) {
 				isAlwaysInShadow = false;
 				break;
 			}
@@ -280,7 +287,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 
 		u_int pass = 0;
 		for (; pass < params.entry.maxPasses; ++pass) {
-			receivedLuminance += SampleLight(visibilityParticle, light, pass);
+			receivedLuminance += SampleLight(visibilityParticle, light, pass, scene);
 
 			const float currentStepValue = receivedLuminance / pass;
 
@@ -314,7 +321,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(const u_int en
 	}
 }
 
-void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh) {
+void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstRef scene) {
 	auto& lights = scene.lightDefs.GetLightSources();
 
 	DLSCacheEntry &entry = cacheEntries[entryIndex];
@@ -355,7 +362,7 @@ void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entr
 	}
 }
 
-void DirectLightSamplingCache::BuildCacheEntries() {
+void DirectLightSamplingCache::BuildCacheEntries(SceneConstRef scene) {
 	//--------------------------------------------------------------------------
 	// Print the number of light with enabled direct light sampling
 	//--------------------------------------------------------------------------
@@ -415,7 +422,7 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 			}
 
 			InitCacheEntry(i);
-			ComputeCacheEntryReceivedLuminance(i);
+			ComputeCacheEntryReceivedLuminance(i, scene);
 
 			++counter;
 		}
@@ -458,7 +465,7 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 				}
 			}
 
-			BuildCacheEntryLightDistribution(i, bvh);
+			BuildCacheEntryLightDistribution(i, bvh, scene);
 
 			++counter;
 		}
@@ -469,10 +476,10 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 // Build
 //------------------------------------------------------------------------------
 
-void DirectLightSamplingCache::Build(SceneConstPtr scn) {
-	scene = scn;
+void DirectLightSamplingCache::Build(SceneConstRef scn) {
+	//scene = scn;
 
-	if (scene.lightDefs.GetSize() == 0)
+	if (scn.lightDefs.GetSize() == 0)
 		return;
 
 	SLG_LOG("Building DirectLightSamplingCache");
@@ -498,7 +505,7 @@ void DirectLightSamplingCache::Build(SceneConstPtr scn) {
 	//--------------------------------------------------------------------------
 
 	if (params.visibility.lookUpRadius == 0.f) {
-		params.visibility.lookUpRadius = EvaluateBestRadius();
+		params.visibility.lookUpRadius = EvaluateBestRadius(scn);
 		SLG_LOG("DirectLightSamplingCache best radius: " << params.visibility.lookUpRadius);
 	}
 
@@ -506,14 +513,14 @@ void DirectLightSamplingCache::Build(SceneConstPtr scn) {
 	// Build the list of visible points (i.e. the cache points)
 	//--------------------------------------------------------------------------
 	
-	TraceVisibilityParticles();
+	TraceVisibilityParticles(scn);
 
 	//--------------------------------------------------------------------------
 	// Build cache entries
 	//--------------------------------------------------------------------------
 
 	if (visibilityParticles.size() > 0)
-		BuildCacheEntries();
+		BuildCacheEntries(scn);
 
 	//--------------------------------------------------------------------------
 	// Free memory
@@ -562,22 +569,22 @@ void DirectLightSamplingCache::DebugExport(const string &fileName, const float s
 	Properties prop;
 
 	prop <<
-			Property("scene.materials.dlsc_material.type")("matte") <<
-			Property("scene.materials.dlsc_material.kd")("0.75 0.75 0.75") <<
-			Property("scene.materials.dlsc_material_red.type")("matte") <<
-			Property("scene.materials.dlsc_material_red.kd")("0.75 0.0 0.0") <<
-			Property("scene.materials.dlsc_material_red.emission")("0.25 0.0 0.0");
+			Property("scene->materials.dlsc_material.type")("matte") <<
+			Property("scene->materials.dlsc_material.kd")("0.75 0.75 0.75") <<
+			Property("scene->materials.dlsc_material_red.type")("matte") <<
+			Property("scene->materials.dlsc_material_red.kd")("0.75 0.0 0.0") <<
+			Property("scene->materials.dlsc_material_red.emission")("0.25 0.0 0.0");
 
 	for (u_int i = 0; i < cacheEntries.size(); ++i) {
 		const DLSCacheEntry &entry = cacheEntries[i];
 		if (entry.lightsDistribution)
-			prop << Property("scene.objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material_red");
+			prop << Property("scene->objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material_red");
 		else
-			prop << Property("scene.objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material");
+			prop << Property("scene->objects.dlsc_entry_" + ToString(i) + ".material")("dlsc_material");
 
 		prop <<
-			Property("scene.objects.dlsc_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
-			Property("scene.objects.dlsc_entry_" + ToString(i) + ".transformation")(Matrix4x4(
+			Property("scene->objects.dlsc_entry_" + ToString(i) + ".ply")("scenes/simple/sphere.ply") <<
+			Property("scene->objects.dlsc_entry_" + ToString(i) + ".transformation")(Matrix4x4(
 				sphereRadius, 0.f, 0.f, entry.p.x,
 				0.f, sphereRadius, 0.f, entry.p.y,
 				0.f, 0.f, sphereRadius, entry.p.z,

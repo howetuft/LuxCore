@@ -31,7 +31,7 @@ class LightStrategyLogPower : public DistributionLightStrategy {
 public:
 	LightStrategyLogPower() : DistributionLightStrategy(TYPE_LOG_POWER) { }
 
-	virtual void Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }

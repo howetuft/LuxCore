@@ -25,7 +25,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshPtrm, const u_int index) :
+CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshPtr m, const u_int index) :
 		uvIndex(index) {
 	mesh = m->Copy();
 }
@@ -33,13 +33,13 @@ CameraProjUVShape::CameraProjUVShape(ExtTriangleMeshPtrm, const u_int index) :
 CameraProjUVShape::~CameraProjUVShape() {
 }
 
-ExtTriangleMeshPtrCameraProjUVShape::RefineImpl(SceneConstRef scene) {
+ExtTriangleMeshPtr CameraProjUVShape::RefineImpl(SceneConstRef scene) {
 	SDL_LOG("CameraProjUV shape " << mesh->GetName());
 
 	const u_int vertCount = mesh->GetTotalVertexCount();
 	SDL_LOG("CameraProjUV shape has " << vertCount << " vertices");
 
-	auto camera = scene->camera;
+	auto camera = scene.camera;
 
 	UV *uvs = new UV[vertCount];
 	const float invFilmWidth = 1.f / camera->filmWidth;

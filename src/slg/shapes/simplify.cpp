@@ -241,11 +241,11 @@ public:
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 		
-		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
+		return std::make_shared<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
 				newUVs, newCols, newAlphas);
 	}
 
-	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
+	void Decimate(const float targetTriangleCount, CameraConstPtr scnCamera,
 			const float screenSize, const bool border) {
 		preserveBorder = border;
 		camera = scnCamera;
@@ -326,7 +326,7 @@ private:
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
 
-	const Camera *camera;
+	CameraConstPtr camera;
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;

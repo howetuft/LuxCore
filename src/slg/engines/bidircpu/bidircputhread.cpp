@@ -437,7 +437,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		// Pick a light source to sample
 		const Normal landingNormal = eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN;
 		float lightPickPdf;
-		LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(u0,
+		LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->SampleLights(*scene, u0,
 				eyeVertex.bsdf.hitPoint.p,
 				landingNormal,
 				eyeVertex.bsdf.IsVolume(),
@@ -570,7 +570,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	// BiDir can use only a single strategy, emit in this case
 	float lightPickPdf;
 	LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->
-			SampleLights(sampler->GetSample(2), &lightPickPdf);
+			SampleLights(*scene, sampler->GetSample(2), &lightPickPdf);
 	if (!light)
 		return false;
 

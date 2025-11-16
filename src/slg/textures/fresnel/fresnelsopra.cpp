@@ -136,6 +136,6 @@ std::shared_ptr<FresnelTexture> slg::AllocFresnelSopraTex(const Properties &prop
 	const RGBColor Nrgb = colorSpace.ToRGBConstrained(N.ToNormalizedXYZ());
 	const RGBColor Krgb = colorSpace.ToRGBConstrained(K.ToNormalizedXYZ());
 
-	return new FresnelConstTexture(Nrgb, Krgb);
+	return std::make_shared<FresnelConstTexture>(Nrgb, Krgb);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -34,9 +34,8 @@ LightStrategyDLSCache::LightStrategyDLSCache(const DLSCParams &params) :
 LightStrategyDLSCache::~LightStrategyDLSCache() {
 }
 
-void LightStrategyDLSCache::Preprocess(SceneConstPtr scn, const LightStrategyTask type,
+void LightStrategyDLSCache::Preprocess(SceneConstRef scn, const LightStrategyTask type,
 			const bool rtMode) {
-	scene = scn;
 	taskType = type;
 	useRTMode = rtMode;
 
@@ -46,10 +45,13 @@ void LightStrategyDLSCache::Preprocess(SceneConstPtr scn, const LightStrategyTas
 		DLSCache.Build(scn);
 }
 
-LightSourcePtr LightStrategyDLSCache::SampleLights(const float u,
-			const Point &p, const Normal &n,
-			const bool isVolume,
-			float *pdf) const {
+LightSourcePtr LightStrategyDLSCache::SampleLights(
+	SceneConstRef scene,
+	const float u,
+	const Point &p, const Normal &n,
+	const bool isVolume,
+	float *pdf
+	) const {
 	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
 		const Distribution1D *lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
@@ -62,9 +64,9 @@ LightSourcePtr LightStrategyDLSCache::SampleLights(const float u,
 			else
 				return nullptr;
 		} else
-			return distributionStrategy.SampleLights(u, p, n, isVolume, pdf);
+			return distributionStrategy.SampleLights(scene, u, p, n, isVolume, pdf);
 	} else
-		return distributionStrategy.SampleLights(u, p, n, isVolume, pdf);
+		return distributionStrategy.SampleLights(scene, u, p, n, isVolume, pdf);
 }
 
 float LightStrategyDLSCache::SampleLightPdf(LightSourceConstPtr light,
@@ -81,9 +83,9 @@ float LightStrategyDLSCache::SampleLightPdf(LightSourceConstPtr light,
 		return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 }
 
-LightSourcePtr LightStrategyDLSCache::SampleLights(const float u,
+LightSourcePtr LightStrategyDLSCache::SampleLights(SceneConstRef scene, const float u,
 			float *pdf) const {
-	return distributionStrategy.SampleLights(u, pdf);
+	return distributionStrategy.SampleLights(scene, u, pdf);
 }
 
 Properties LightStrategyDLSCache::ToProperties() const {

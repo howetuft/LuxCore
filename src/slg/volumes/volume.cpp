@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void Volume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-	Material::AddReferencedTextures(referencedTexs, self);
+	Material::AddReferencedTextures(referencedTexs);
 
 	if (iorTex)
 		iorTex->AddReferencedTextures(referencedTexs, iorTex);
@@ -68,13 +68,13 @@ Properties Volume::ToProperties() const {
 // SchlickScatter
 //------------------------------------------------------------------------------
 
-SchlickScatter::SchlickScatter(VolumeConstPtr vol, TextureConstPtr gTex) :
+SchlickScatter::SchlickScatter(VolumeConstRef vol, TextureConstPtr gTex) :
 	volume(vol), g(gTex) {
 }
 
 Spectrum SchlickScatter::GetColor(const HitPoint &hitPoint) const {
-	Spectrum r = volume->SigmaS(hitPoint);
-	const Spectrum sigmaA = volume->SigmaA(hitPoint);
+	Spectrum r = volume.SigmaS(hitPoint);
+	const Spectrum sigmaA = volume.SigmaA(hitPoint);
 	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
 		if (r.c[i] > 0.f)
 			r.c[i] /= r.c[i] + sigmaA.c[i];

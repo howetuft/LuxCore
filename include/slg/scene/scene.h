@@ -164,7 +164,7 @@ public:
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
 
-	static Scene *LoadSerialized(const std::string &fileName);
+	static ScenePtr LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, SceneConstPtr scene);
 	
 	static std::string EncodeTriangleLightNamePrefix(const std::string &objectName);

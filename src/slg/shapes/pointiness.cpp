@@ -79,15 +79,14 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 
 	// Find duplicate vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		auto triMesh = dynamic_pointer_cast<const ExtTriangleMesh>(mesh);
-		assert (triMesh);
+		auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
 
 		return (DistanceSquared(
-					triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
-					triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC) &&
-				(triMesh->HasNormals() && Dot(
-					triMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex1),
-					triMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex2)));
+					triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
+					triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC) &&
+				(triMesh.HasNormals() && Dot(
+					triMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex1),
+					triMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex2)));
 	};
 	vector<u_int> uniqueVertices;
 	const u_int uniqueVertCount = srcMesh->GetUniqueVerticesMapping(uniqueVertices, compareVerts);

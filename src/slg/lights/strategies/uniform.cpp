@@ -27,9 +27,9 @@ using namespace slg;
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-void LightStrategyUniform::Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
+void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
-	DistributionLightStrategy::Preprocess(scn, taskType);
+	DistributionLightStrategy::Preprocess(scene, taskType);
 	
 	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)

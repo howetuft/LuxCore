@@ -31,7 +31,7 @@ using namespace slg;
 
 HomogeneousVolume::HomogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
 		TextureConstPtr a, TextureConstPtr s, TextureConstPtr g, const bool multiScat) :
-		Volume(iorTex, emiTex), schlickScatter(this, g), multiScattering(multiScat) {
+		Volume(iorTex, emiTex), schlickScatter(*this, g), multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
 }

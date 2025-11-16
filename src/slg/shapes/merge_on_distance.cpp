@@ -670,7 +670,7 @@ ClusterMap mergePoints(const Point * points, u_int numPoints, u_int tolerance) {
 
 // Recreate a mesh, based on a source mesh and a clusterisation
 // Replace each variable with interpolated value
-luxrays::ExtTriangleMesh* RecreateMesh(
+luxrays::ExtTriangleMeshPtr RecreateMesh(
 	const luxrays::ExtTriangleMesh& srcMesh,
 	const ClusterMap& clustermap
 ) {
@@ -914,7 +914,7 @@ luxrays::ExtTriangleMesh* RecreateMesh(
 	}
 
 	// Create new mesh
-	auto newMesh = new luxrays::ExtTriangleMesh(
+	auto newMesh = std::make_shared<luxrays::ExtTriangleMesh>(
 		numNewPoints,
 		numTriangles,
 		newPoints.release(),
@@ -994,7 +994,7 @@ MergeOnDistanceShape::ApplyMergeOnDistance(
 }
 
 luxrays::ExtTriangleMeshPtr 
-MergeOnDistanceShape::RefineImpl(const slg::auto scene) {
+MergeOnDistanceShape::RefineImpl(SceneConstRef scene) {
 	return mesh;
 }
 

@@ -28,15 +28,15 @@ using namespace slg;
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
+void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
-	DistributionLightStrategy::Preprocess(scn, taskType);
+	DistributionLightStrategy::Preprocess(scene, taskType);
 
 	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
-	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
+	const float envRadius = InfiniteLightSource::GetEnvRadius(scene);
 	const float invEnvRadius2 = 1.f / (envRadius * envRadius);
 
 	vector<float> lightPower;
@@ -45,7 +45,7 @@ void LightStrategyPower::Preprocess(SceneConstPtr scn, const LightStrategyTask t
 	auto &lights = scene.lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto& l = lights[i];
-		float power = l->GetPower(*scene) * l->GetImportance();
+		float power = l->GetPower(scene) * l->GetImportance();
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())
 			power *= invEnvRadius2;

@@ -658,7 +658,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
 			} else if (type == "BACKGROUND_IMG") {
-				ImageMap *im = ImageMap::FromProperties(props, prefix);
+				auto im = ImageMap::FromProperties(props, prefix);
 
 				imagePipeline->AddPlugin(new BackgroundImgPlugin(im));
 			} else if (type == "BLOOM") {

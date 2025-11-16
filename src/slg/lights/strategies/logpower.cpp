@@ -27,13 +27,13 @@ using namespace slg;
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyLogPower::Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
+void LightStrategyLogPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	// Delete old lightsDistribution
 	delete lightsDistribution;
 	lightsDistribution = nullptr;
 
-	DistributionLightStrategy::Preprocess(scn, taskType);
+	DistributionLightStrategy::Preprocess(scene, taskType);
 
 	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
@@ -45,7 +45,7 @@ void LightStrategyLogPower::Preprocess(SceneConstPtr scn, const LightStrategyTas
 	auto &lights = scene.lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto l = lights[i];
-		const float power = logf(1.f + l->GetPower(*scene)) * l->GetImportance();
+		const float power = logf(1.f + l->GetPower(scene)) * l->GetImportance();
 
 		switch (taskType) {
 			case TASK_EMIT: {

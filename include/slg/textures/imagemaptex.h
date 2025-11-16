@@ -31,6 +31,13 @@ namespace slg {
 
 class ImageMapTexture : public Texture {
 public:
+	ImageMapTexture(
+		const std::string &texName,
+		ImageMapConstPtr img,
+		TextureMapping2DConstPtr mp,
+		const float g,
+		const bool rt);
+
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -56,15 +63,9 @@ public:
 
 	static std::shared_ptr<ImageMap> randomImageMap;
 
-private:
-	ImageMapTexture(
-		const std::string &texName,
-		ImageMapConstPtr img,
-		TextureMapping2DConstPtr mp,
-		const float g,
-		const bool rt);
 	virtual ~ImageMapTexture();
 
+private:
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
 	luxrays::Spectrum RandomizedTilingGetSpectrumValue(const luxrays::UV &pos) const;
 

@@ -57,20 +57,18 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshPtr srcMesh) {
 		newVertices[newTri.v[2]] = vertices[tri.v[2]];
 		newVertCols[newTri.v[2]] = col;
 	}
-	
-	mesh = new ExtTriangleMesh(triCount * 3, triCount, newVertices, newTris,
+
+	mesh = std::make_shared<ExtTriangleMesh>(triCount * 3, triCount, newVertices, newTris,
 			nullptr, nullptr, newVertCols);
-	
+
 	// For some debugging
 	//mesh->Save("debug.ply");
-	
+
 	const double endTime = WallClockTime();
 	SDL_LOG("Harlequin time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
 HarlequinShape::~HarlequinShape() {
-	if (!refined)
-		delete mesh;
 }
 
 ExtTriangleMeshPtr HarlequinShape::RefineImpl(SceneConstRef scene) {

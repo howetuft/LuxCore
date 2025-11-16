@@ -298,7 +298,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 	const cyHairFileHeader &header = hairFile->GetHeader();
 	if (header.hair_count == 0)
 		throw runtime_error("Empty strands shape are not supported");
-	if (useCameraPosition && !scene->camera)
+	if (useCameraPosition && !scene.camera)
 		throw runtime_error("The scene camera must be defined in order to enable strands useCameraPosition flag");
 
 	SLG_LOG("Refining " << header.hair_count << " strands");
@@ -428,7 +428,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 			}
 		}
 
-		mesh = new ExtTriangleMesh(meshVerts.size(), meshTris.size(),
+		mesh = std::make_shared<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
 				newMeshVerts, newMeshTris, newMeshNorms, newMeshUVs,
 				newMeshCols, newMeshTransps);
 	} else
@@ -449,8 +449,8 @@ void StrendsShape::TessellateRibbon(SceneConstRef scene,
 	const u_int baseOffset = meshVerts.size();
 
 	const Point cameraPosition =
-		(useCameraPosition && (scene->camera->GetType() == Camera::PERSPECTIVE)) ?
-		(dynamic_pointer_cast<PerspectiveCamera>(scene->camera))->orig :
+		(useCameraPosition && (scene.camera->GetType() == Camera::PERSPECTIVE)) ?
+		(dynamic_pointer_cast<PerspectiveCamera>(scene.camera))->orig :
 		Point();
 
 	Vector previousDir;

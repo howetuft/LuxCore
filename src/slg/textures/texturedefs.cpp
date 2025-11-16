@@ -26,16 +26,13 @@ using namespace slg;
 // TextureDefinitions
 //------------------------------------------------------------------------------
 
-void TextureDefinitions::DefineTexture(Texture *newTex) {
-	TextureConstPtr oldTex = static_cast<TextureConstPtr >(texs.DefineObj(newTex));
+void TextureDefinitions::DefineTexture(TexturePtr newTex) {
+	auto oldTex = static_pointer_cast<const Texture>(texs.DefineObj(newTex));
 
 	if (oldTex) {
 		// Update all references
-		for(NamedObject *tex: texs.GetObjs())
-			static_cast<Texture *>(tex)->UpdateTextureReferences(oldTex, newTex);
-
-		// Delete the old texture definition
-		delete oldTex;
+		for(auto& tex: texs.GetObjs())
+			static_pointer_cast<Texture>(tex)->UpdateTextureReferences(oldTex, newTex);
 	}
 }
 
@@ -57,7 +54,7 @@ void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstPtr tex,
 		return;
 
 	// Get the list of reference textures by this one
-	 referencedTexs;
+	std::unordered_set<TextureConstPtr> referencedTexs;
 	tex->AddReferencedTextures(referencedTexs, tex);
 
 	// Add all referenced texture names

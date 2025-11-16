@@ -169,8 +169,6 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 }
 
 DisplacementShape::~DisplacementShape() {
-	if (!refined)
-		delete mesh;
 }
 
 ExtTriangleMeshPtr DisplacementShape::RefineImpl(SceneConstRef scene) {

@@ -104,7 +104,7 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 // Env. light visibility cache builder
 //------------------------------------------------------------------------------
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
+EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
 		ImageMapPtr li, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(li), params(p),
 		cacheEntriesBVH(nullptr) {
@@ -114,7 +114,7 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLig
 	mapHeight = luminanceMapImage->GetHeight();
 }
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
+EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
 		const u_int width, const u_int height, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(nullptr), params(p),
 		cacheEntriesBVH(nullptr), mapWidth(width), mapHeight(height) {

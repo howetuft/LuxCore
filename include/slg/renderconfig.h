@@ -30,7 +30,7 @@ namespace slg {
 
 class RenderConfig {
 public:
-	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
+	RenderConfig(const luxrays::Properties &props, ScenePtr scene = nullptr);
 	~RenderConfig();
 
 	bool HasCachedKernels();

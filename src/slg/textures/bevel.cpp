@@ -35,7 +35,7 @@ BevelTexture::~BevelTexture() {
 }
 
 Normal BevelTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const ExtMesh *mesh = hitPoint.mesh;
+	auto mesh = hitPoint.mesh;
 	if (!mesh)
 		return hitPoint.shadeN;
 

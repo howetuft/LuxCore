@@ -131,7 +131,7 @@ BuildBuffer(
 }
 
 
-static Far::TopologyRefiner * createFarTopologyRefiner(const ExtTriangleMesh*);
+static Far::TopologyRefiner * createFarTopologyRefiner(ExtTriangleMeshConstPtr);
 
 // TODO
 static ExtTriangleMeshPtr ApplySubdivAdaptive(
@@ -380,7 +380,7 @@ nRefinedVerts
 	}
 
 	// Allocate the new mesh
-	ExtTriangleMeshPtr newMesh =  new ExtTriangleMesh(
+	ExtTriangleMeshPtr newMesh =  std::make_shared<ExtTriangleMesh>(
 		nRefinedVerts, nRefinedFaces,
 		newVerts, newTris, newNorms,
 		&newUVs, &newCols, &newAlphas
@@ -393,7 +393,7 @@ nRefinedVerts
 	return newMesh;
 }
 
-static Far::TopologyRefiner* createFarTopologyRefiner(const ExtTriangleMesh* srcMesh)
+static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstPtr srcMesh)
 {
 	// Set topology descriptor
 	Far::TopologyDescriptor desc;
@@ -1310,7 +1310,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 		<< numTriangles << " triangles"
 	);
 
-	auto newMesh =  new ExtTriangleMesh(
+	auto newMesh =  std::make_shared<ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
 		tessPoints.release(),
@@ -1342,7 +1342,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 
 
 SubdivShape::SubdivShape(
-	const Camera *camera,
+	CameraConstPtr camera,
 	ExtTriangleMeshPtr srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
@@ -1393,7 +1393,6 @@ SubdivShape::SubdivShape(
 				);
 
 				// Replace old mesh with new one
-				delete mesh;
 				mesh = newMesh;
 			}
 		} else {
@@ -1420,7 +1419,7 @@ SubdivShape::SubdivShape(
 
 
 
-float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMeshPtr srcMesh) {
+float SubdivShape::MaxEdgeScreenSize(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh) {
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 	const Point *verts = srcMesh->GetVertices();
 	const Triangle *tris = srcMesh->GetTriangles();
@@ -1506,11 +1505,9 @@ ExtTriangleMeshPtr SubdivShape::ApplySubdiv(
 
 
 SubdivShape::~SubdivShape() {
-	if (!refined)
-		delete mesh;
 }
 
-ExtTriangleMeshPtr SubdivShape::RefineImpl(SceneConstPtr scene) {
+ExtTriangleMeshPtr SubdivShape::RefineImpl(SceneConstRef scene) {
 	return mesh;
 }
 

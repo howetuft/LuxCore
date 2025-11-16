@@ -41,6 +41,7 @@
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <memory>
 
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>

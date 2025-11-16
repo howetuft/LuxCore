@@ -83,11 +83,12 @@ protected:
 using VolumePtr = std::shared_ptr<Volume>;
 using VolumeConstPtr = std::shared_ptr<const Volume>;
 using VolumeRef = Volume&;
+using VolumeConstRef = const Volume&;
 
 // An utility class
 class SchlickScatter {
 public:
-	SchlickScatter(VolumeConstPtr volume, TextureConstPtr g);
+	SchlickScatter(VolumeConstRef volume, TextureConstPtr g);
 
 	luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 
@@ -102,7 +103,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	VolumeConstPtr volume;
+	VolumeConstRef volume;
 	TextureConstPtr g;
 
 private:

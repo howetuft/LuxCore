@@ -77,7 +77,7 @@ void BilerpTexture::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &
 	t10->AddReferencedTextures(referencedTexs, t10);
 	t11->AddReferencedTextures(referencedTexs, t11);
 }
-void BilerpTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const
+void BilerpTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const
 {
 	t00->AddReferencedImageMaps(referencedImgMaps);
 	t01->AddReferencedImageMaps(referencedImgMaps);

@@ -468,10 +468,11 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
-	API_BEGIN("{}, {}", ToArgString(props), (void *)scn);
+RenderConfig *RenderConfig::Create(const Properties &props, ScenePtr scn) {
+	API_BEGIN("{}, {}", ToArgString(props), (void *)scn.get());
 
-	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn);
+	// TODO Use smart pointer in luxcore
+	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn.get());
 
 	RenderConfig *result = new luxcore::detail::RenderConfigImpl(props, scnImpl);
 

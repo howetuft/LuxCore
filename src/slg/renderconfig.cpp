@@ -23,6 +23,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/renderconfig.h"
@@ -82,7 +83,7 @@ const Properties &RenderConfig::GetDefaultProperties() {
 	return *defaultProperties;
 }
 
-RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
+RenderConfig::RenderConfig(const Properties &props, ScenePtr scn) : scene(scn) {
 	InitDefaultProperties();
 
 	SLG_LOG("Configuration: ");
@@ -91,7 +92,7 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		SLG_LOG("  " << props.Get(*i));
 
 	SLG_FileNameResolver.Print();
-	
+
 	// Set the Scene
 	if (scn) {
 		scene = scn;
@@ -100,9 +101,9 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		// Create the Scene
 		const string defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
 		const string sceneFileName = SLG_FileNameResolver.ResolveFile(props.Get(Property("scene.file")(defaultSceneName)).Get<string>());
-				
+
 		SDL_LOG("Reading scene: " << sceneFileName);
-		scene = new Scene(sceneFileName, &props);
+		scene = std::make_shared<Scene>(sceneFileName, &props);
 		allocatedScene = true;
 	}
 
@@ -114,9 +115,6 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 }
 
 RenderConfig::~RenderConfig() {
-	// Check if the scene was allocated by me
-	if (allocatedScene)
-		delete scene;
 }
 
 bool RenderConfig::HasCachedKernels() {

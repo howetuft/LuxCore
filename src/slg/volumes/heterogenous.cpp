@@ -34,7 +34,7 @@ HeterogeneousVolume::HeterogeneousVolume(TextureConstPtr iorTex, TextureConstPtr
 		TextureConstPtr a, TextureConstPtr s, TextureConstPtr g,
 		const float ss, const u_int maxStepC,
 		const bool multiScat) : Volume(iorTex, emiTex),
-		schlickScatter(this, g), stepSize(ss), maxStepsCount(maxStepC),
+		schlickScatter(*this, g), stepSize(ss), maxStepsCount(maxStepC),
 		multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
@@ -140,7 +140,7 @@ void HeterogeneousVolume::AddReferencedTextures(std::unordered_set<TextureConstP
 
 	sigmaA->AddReferencedTextures(referencedTexs, sigmaA);
 	sigmaS->AddReferencedTextures(referencedTexs, sigmaS);
-	schlickScatter.g->AddReferencedTextures(referencedTexs, g);
+	schlickScatter.g->AddReferencedTextures(referencedTexs, schlickScatter.g);
 }
 
 void HeterogeneousVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

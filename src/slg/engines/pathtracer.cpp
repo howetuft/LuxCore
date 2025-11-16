@@ -147,8 +147,14 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		// Pick a light source to sample
 		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		float lightPickPdf;
-		auto light = lightStrategy->SampleLights(u0,
-				bsdf.hitPoint.p, landingNormal, bsdf.IsVolume(), &lightPickPdf);
+		auto light = lightStrategy->SampleLights(
+			*scene,
+			u0,
+			bsdf.hitPoint.p,
+			landingNormal,
+			bsdf.IsVolume(),
+			&lightPickPdf
+		);
 
 		if (light) {
 			Ray shadowRay;
@@ -801,7 +807,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 	// Select one light source
 	float lightPickPdf;
 	LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->
-			SampleLights(sampler->GetSample(0), &lightPickPdf);
+			SampleLights(*scene, sampler->GetSample(0), &lightPickPdf);
 
 	if (light) {
 		// Initialize the light path
