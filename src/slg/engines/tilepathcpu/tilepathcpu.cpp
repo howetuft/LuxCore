@@ -32,7 +32,7 @@ using namespace slg;
 // TilePathCPURenderEngine
 //------------------------------------------------------------------------------
 
-TilePathCPURenderEngine::TilePathCPURenderEngine(const RenderConfig *rcfg) :
+TilePathCPURenderEngine::TilePathCPURenderEngine(RenderConfigConstPtr rcfg) :
 		CPUTileRenderEngine(rcfg), photonGICache(nullptr) {
 }
 
@@ -154,7 +154,7 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *TilePathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new TilePathCPURenderEngine(rcfg);
 }
 

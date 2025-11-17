@@ -44,6 +44,12 @@
 
 namespace slg {
 
+class Film;
+using FilmPtr = std::shared_ptr<Film>;
+using FilmConstPtr = std::shared_ptr<const Film>;
+using FilmConstRef = const Film&;
+using FilmRef = Film&;
+
 // OpenCL data types
 namespace ocl {
 #include "slg/film/film_types.cl"
@@ -98,7 +104,7 @@ private:
 class SampleResult;
 class ImagePipeline;
 
-class Film {
+class Film : public std::enable_shared_from_this<Film> {
 public:
 	typedef enum {
 		RADIANCE_PER_PIXEL_NORMALIZED,
@@ -148,7 +154,7 @@ public:
 	
 	typedef std::unordered_set<FilmChannelType, std::hash<int> > FilmChannels;
 
-	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
+	Film(const u_int width, const u_int height, const u_int *subRegion = nullptr);
 	~Film();
 
 	void SetThreadCount(const u_int threadCount);
@@ -241,8 +247,12 @@ public:
 	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
 
 	void Output();
-	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
-			const luxrays::Properties *props = NULL, const bool executeImagePipeline = true);
+	void Output(
+		const std::string &fileName,
+		const FilmOutputs::FilmOutputType type,
+		const luxrays::Properties *props = nullptr,
+		const bool executeImagePipeline = true
+	);
 
 	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer,
 			const u_int index = 0, const bool executeImagePipeline = true) {
@@ -441,23 +451,23 @@ public:
 	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
 	luxrays::HardwareDeviceBuffer *hw_ALBEDO;
 	luxrays::HardwareDeviceBuffer *hw_AVG_SHADING_NORMAL;
-	
+
 	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
-	
+
 	luxrays::HardwareDeviceKernel *mergeInitializeKernel;
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
 
-	static Film *LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, const Film *film);
+	static FilmPtr LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, FilmConstPtr film);
 
 	static bool GetFilmSize(const luxrays::Properties &cfg,
 		u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static Film *FromProperties(const luxrays::Properties &cfg);
+	static FilmPtr FromProperties(const luxrays::Properties &cfg);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);

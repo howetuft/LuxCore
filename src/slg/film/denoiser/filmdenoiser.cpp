@@ -22,6 +22,7 @@
 #include <mutex>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
@@ -43,21 +44,21 @@ FilmDenoiser::FilmDenoiser() {
 	Init();
 }
 
-FilmDenoiser::FilmDenoiser(const Film *f) {
+FilmDenoiser::FilmDenoiser(FilmConstPtr f) {
 	Init();
 
 	film = f;
 }
 
 void FilmDenoiser::Init() {
-	film = NULL;
-	samplesAccumulatorPixelNormalized = NULL;
-	samplesAccumulatorScreenNormalized = NULL;
+	film = nullptr;
+	samplesAccumulatorPixelNormalized = nullptr;
+	samplesAccumulatorScreenNormalized = nullptr;
 	sampleScale = 1.f;
 	warmUpSPP = -1.f;
 	warmUpDone = false;
 
-	referenceFilm = NULL;
+	referenceFilm = nullptr;
 	referenceFilmWidth = 0;
 	referenceFilmHeight = 0;
 	referenceFilmOffsetX = 0;
@@ -130,7 +131,7 @@ void FilmDenoiser::CheckReferenceFilm() {
 	}
 }
 
-void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
+void FilmDenoiser::SetReferenceFilm(FilmConstPtr refFilm,
 		const u_int offsetX, const u_int offsetY) {
 	referenceFilm = refFilm;
 	
@@ -144,7 +145,7 @@ void FilmDenoiser::SetReferenceFilm(const Film *refFilm,
 	}
 }
 
-void FilmDenoiser::CopyReferenceFilm(const Film *refFilm) {
+void FilmDenoiser::CopyReferenceFilm(FilmConstPtr refFilm) {
 	if (!warmUpDone && refFilm->filmDenoiser.warmUpDone) {
 		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 

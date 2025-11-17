@@ -63,10 +63,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	}
 
 	// Initialize the map Film
-	delete engine->mapFilm;
-	engine->mapFilm = nullptr;
-
-	engine->mapFilm = new Film(mapInfo.width, mapInfo.height, nullptr);
+	engine->mapFilm = std::make_shared<Film>(mapInfo.width, mapInfo.height, nullptr);
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
 	// Copy the halt conditions too
 	engine->mapFilm->CopyHaltSettings(*engine->film);
@@ -544,9 +541,14 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			// Save the rendered map
 			Properties props;
 			props << Property("index")(mapInfo.imagePipelineIndex);
-			engine->mapFilm->Output(mapInfo.fileName,
-					engine->mapFilm->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_IMAGEPIPELINE : FilmOutputs::RGB_IMAGEPIPELINE,
-					&props, false);
+			engine->mapFilm->Output(
+				mapInfo.fileName,
+				engine->mapFilm->HasChannel(Film::ALPHA) ?
+					FilmOutputs::RGBA_IMAGEPIPELINE :
+					FilmOutputs::RGB_IMAGEPIPELINE,
+				&props,
+				false
+			);
 		}
 
 		engine->threadsSyncBarrier->arrive_and_wait();

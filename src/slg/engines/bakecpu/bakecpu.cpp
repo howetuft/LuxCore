@@ -33,7 +33,7 @@ using namespace slg;
 // BakeCPURenderEngine
 //------------------------------------------------------------------------------
 
-BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
+BakeCPURenderEngine::BakeCPURenderEngine(RenderConfigConstPtr rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
 		lightSamplerSharedData(nullptr), mapFilm(nullptr), currentSceneObjsDist(nullptr),
 		threadsSyncBarrier(nullptr) {
@@ -101,7 +101,6 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 	delete photonGICache;
 	delete lightSamplerSharedData;
 	delete sampleSplatter;
-	delete mapFilm;
 	delete threadsSyncBarrier;
 }
 
@@ -291,9 +290,6 @@ void BakeCPURenderEngine::StopLockLess() {
 	delete sampleSplatter;
 	sampleSplatter = nullptr;
 
-	delete mapFilm;
-	mapFilm = nullptr;
-
 	delete threadsSyncBarrier;
 	threadsSyncBarrier = nullptr;
 }
@@ -336,7 +332,7 @@ Properties BakeCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *BakeCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *BakeCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new BakeCPURenderEngine(rcfg);
 }
 

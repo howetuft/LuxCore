@@ -55,11 +55,11 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(const RenderConfig *cfg);
+	RenderEngine(RenderConfigConstPtr cfg);
 	virtual ~RenderEngine();
 
 	bool IsStarted() const { return started; }
-	virtual void Start(Film *film, std::mutex *flmMutex);
+	virtual void Start(FilmPtr film, std::mutex *flmMutex);
 	virtual void Stop();
 
 	bool IsInSceneEdit() const { return editMode; }
@@ -67,7 +67,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(Film *film, std::mutex *flmMutex);
+	virtual void EndFilmEdit(FilmPtr film, std::mutex *flmMutex);
 
 	bool IsInPause() const { return pauseMode; }
 	virtual void Pause();
@@ -88,7 +88,7 @@ public:
 	virtual RenderState *GetRenderState() {
 		throw std::runtime_error("RenderEngine::GetRenderState() not implemented for render engine: " + GetTag());
 	}
-	virtual void SetRenderState(RenderState *state, Film *startFilm);
+	virtual void SetRenderState(RenderState *state, FilmPtr startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -149,7 +149,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static RenderEngine *FromProperties(const RenderConfig *rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -175,9 +175,9 @@ protected:
 	std::vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
-	const RenderConfig *renderConfig;
+	RenderConfigConstPtr renderConfig;
 	Filter *pixelFilter;
-	Film *film;
+	FilmPtr film;
 	std::mutex *filmMutex;
 
 	// bootStrapSeed is the "father" of all other seeds. Using the same seed should leads
@@ -189,7 +189,7 @@ protected:
 	double raysCount;
 
 	RenderState *startRenderState;
-	Film *startFilm;
+	FilmPtr startFilm;
 
 	bool started, editMode, pauseMode;
 };

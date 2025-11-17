@@ -275,8 +275,8 @@ Filter *RenderConfig::AllocPixelFilter() const {
 	return Filter::FromProperties(cfg);
 }
 
-Film *RenderConfig::AllocFilm() const {
-	Film *film = Film::FromProperties(cfg);
+FilmPtr RenderConfig::AllocFilm() const {
+	FilmPtr film = Film::FromProperties(cfg);
 
 	// Add the channels required by the Sampler
 	Film::FilmChannels channels;
@@ -287,11 +287,11 @@ Film *RenderConfig::AllocFilm() const {
 	return film;
 }
 
-SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, Film *film) const {
+SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen, FilmPtr film) const {
 	return SamplerSharedData::FromProperties(cfg, rndGen, film);
 }
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
+Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, FilmPtr film, const FilmSampleSplatter *flmSplatter,
 		SamplerSharedData *sharedData, const Properties &additionalProps) const {
 	Properties props = cfg;
 	props << additionalProps;
@@ -310,7 +310,7 @@ RenderEngine *RenderConfig::AllocRenderEngine() const {
 		throw runtime_error(type + " render engine is not supported by OpenCL-less version of the binaries. Download the OpenCL-enabled version or change the render engine used.");
 #endif
 
-	return RenderEngine::FromProperties(this);
+	return RenderEngine::FromProperties(shared_from_this());
 }
 
 const Properties &RenderConfig::ToProperties() const {
@@ -388,10 +388,10 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 // Serialization methods
 //------------------------------------------------------------------------------
 
-RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
+RenderConfigPtr RenderConfig::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	RenderConfig *renderConfig;
+	RenderConfigPtr renderConfig;
 	sif.GetArchive() >> renderConfig;
 
 	if (!sif.IsGood())
@@ -400,13 +400,19 @@ RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
 	return renderConfig;
 }
 
-void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig) {
+void RenderConfig::SaveSerialized(
+	const std::string &fileName,
+	RenderConfigConstPtr renderConfig
+) {
 	Properties emptyProps;
 	SaveSerialized(fileName, renderConfig, emptyProps);
 }
 
-void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig,
-		const luxrays::Properties &additionalCfg) {
+void RenderConfig::SaveSerialized(
+	const std::string &fileName,
+	RenderConfigConstPtr renderConfig,
+	const luxrays::Properties &additionalCfg
+) {
 	SerializationOutputFile sof(fileName);
 
 	// This is quite a trick

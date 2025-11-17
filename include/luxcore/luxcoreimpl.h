@@ -44,7 +44,7 @@ public:
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel);
 	FilmImpl(const RenderSessionImpl &session);
-	FilmImpl(slg::Film *film);
+	FilmImpl(slg::FilmPtr film);
 	~FilmImpl();
 
 	unsigned int GetWidth() const;
@@ -53,11 +53,13 @@ public:
 	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
-	void AddFilm(const Film &film);
-	void AddFilm(const Film &film,
+	void AddFilm(std::shared_ptr<const Film> film);
+	void AddFilm(
+		std::shared_ptr<const Film> film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
-		const unsigned int dstOffsetX, const unsigned int dstOffsetY);
+		const unsigned int dstOffsetX, const unsigned int dstOffsetY
+	);
 
 	void SaveOutputs() const;
 	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
@@ -148,7 +150,7 @@ private:
 
 class SceneImpl : public Scene {
 public:
-	SceneImpl(slg::Scene *scn);
+	SceneImpl(std::shared_ptr<slg::Scene> scn);
 	SceneImpl(const luxrays::Properties *resizePolicyProps = nullptr);
 	SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps = nullptr);
 	SceneImpl(const std::string &fileName,  const luxrays::Properties *resizePolicyProps = nullptr);
@@ -234,7 +236,7 @@ public:
 	void Save(const std::string &fileName) const;
 
 	// Note: this method is not part of LuxCore API and it is used only internally
-	void DefineMesh(luxrays::ExtTriangleMesh *mesh);
+	void DefineMesh(std::shared_ptr<luxrays::ExtTriangleMesh> mesh);
 
 	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);

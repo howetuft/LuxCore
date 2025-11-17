@@ -52,7 +52,6 @@ PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
 }
 
 PathOCLNativeRenderThread::~PathOCLNativeRenderThread() {
-	delete threadFilm; 
 }
 
 void PathOCLNativeRenderThread::Start() {
@@ -65,9 +64,7 @@ void PathOCLNativeRenderThread::Start() {
 		const u_int filmHeight = engine->film->GetHeight();
 		const u_int *filmSubRegion = engine->film->GetSubRegion();
 
-		delete threadFilm;
-
-		threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
+		threadFilm = std::make_shared<Film>(filmWidth, filmHeight, filmSubRegion);
 		threadFilm->CopyDynamicSettings(*(engine->film));
 		// I'm not removing the pipeline and disabling the film denoiser
 		// in order to support BCD denoiser.
@@ -104,7 +101,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
 	// All threads use the film allocated by the first thread
-	Film *film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
+	FilmPtr film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
 	
 	// Setup the sampler(s)
 

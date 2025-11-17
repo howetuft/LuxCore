@@ -41,14 +41,16 @@ TilePathNativeRenderThread::TilePathNativeRenderThread(const u_int index,
 }
 
 TilePathNativeRenderThread::~TilePathNativeRenderThread() {
-	delete tileFilm;
 }
 
 void TilePathNativeRenderThread::StartRenderThread() {
-	delete tileFilm;
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
-	tileFilm = new Film(engine->tileRepository->tileWidth, engine->tileRepository->tileHeight, NULL);
+	tileFilm = std::make_shared<Film>(
+			engine->tileRepository->tileWidth,
+			engine->tileRepository->tileHeight,
+			nullptr
+	);
 	tileFilm->CopyDynamicSettings(*(engine->film));
 	tileFilm->Init();
 

@@ -383,7 +383,7 @@ public:
 	 * \param film the film to add.
 	 *
 	 */
-	virtual void AddFilm(const Film &film) = 0;
+	virtual void AddFilm(std::shared_ptr<const Film> film) = 0;
 	/*!
 	 * \brief Add a film.
 	 *
@@ -396,7 +396,8 @@ public:
 	 * \param dstOffsetY the Y offset of the destination film.
 	 *
 	 */
-	virtual void AddFilm(const Film &film,
+	virtual void AddFilm(
+		std::shared_ptr<const Film> film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY) = 0;

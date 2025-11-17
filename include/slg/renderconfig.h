@@ -28,7 +28,11 @@
 
 namespace slg {
 
-class RenderConfig {
+class RenderConfig;
+using RenderConfigConstPtr = std::shared_ptr<const RenderConfig>;
+using RenderConfigPtr = std::shared_ptr<RenderConfig>;
+
+class RenderConfig : public std::enable_shared_from_this<RenderConfig> {
 public:
 	RenderConfig(const luxrays::Properties &props, ScenePtr scene = nullptr);
 	~RenderConfig();
@@ -43,10 +47,10 @@ public:
 	void Delete(const std::string &prefix);
 
 	Filter *AllocPixelFilter() const;
-	Film *AllocFilm() const;
+	FilmPtr AllocFilm() const;
 
-	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film) const;
-	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
+	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen, FilmPtr film) const;
+	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, FilmPtr film,
 		const FilmSampleSplatter *flmSplatter,
 		SamplerSharedData *sharedData,
 		const luxrays::Properties &additionalProps) const;
@@ -58,10 +62,13 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProperties();
 
-	static RenderConfig *LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig);
-	static void SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig,
-		const luxrays::Properties &additionalCfg);
+	static RenderConfigPtr LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, RenderConfigConstPtr renderConfig);
+	static void SaveSerialized(
+		const std::string &fileName,
+		RenderConfigConstPtr renderConfig,
+		const luxrays::Properties &additionalCfg
+	);
 
 	luxrays::Properties cfg;
 	ScenePtr scene;

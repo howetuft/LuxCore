@@ -25,7 +25,7 @@ using namespace slg;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(const RenderConfig *rcfg) :
+BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfigConstPtr rcfg) :
 		BiDirCPURenderEngine(rcfg) {
 }
 
@@ -55,7 +55,7 @@ Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
 }
 
-RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *BiDirVMCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new BiDirVMCPURenderEngine(rcfg);
 }
 

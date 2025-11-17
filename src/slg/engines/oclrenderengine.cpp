@@ -34,7 +34,7 @@ using namespace slg;
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
-OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
+OCLRenderEngine::OCLRenderEngine(RenderConfigConstPtr rcfg,
 		const bool supportsNativeThreads) : RenderEngine(rcfg) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;

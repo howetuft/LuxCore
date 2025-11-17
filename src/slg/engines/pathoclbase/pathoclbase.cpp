@@ -51,7 +51,7 @@ using namespace std;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigConstPtr rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {

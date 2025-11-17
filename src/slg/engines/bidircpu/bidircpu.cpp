@@ -28,7 +28,7 @@ using namespace std;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg) :
+BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigConstPtr rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr),
 		photonGICache(nullptr) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
@@ -176,7 +176,7 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			PhotonGICache::ToProperties(cfg);
 }
 
-RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new BiDirCPURenderEngine(rcfg);
 }
 

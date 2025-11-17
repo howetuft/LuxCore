@@ -56,7 +56,7 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
+PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigConstPtr rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
 	lightSampleSplatter = nullptr; 
 	eyeSamplerSharedData = nullptr;
@@ -250,7 +250,7 @@ u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 			if (renderOCLThreads[i]) {
 				const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
-				const Film *film = thread->threadFilms[0]->film;
+				FilmConstPtr film = thread->threadFilms[0]->film;
 				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
 			}
 		}
@@ -259,7 +259,7 @@ u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 			// All threads use the film of the first one
 			if (renderNativeThreads[0]) {
 				const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
-				const Film *film = thread->threadFilm;
+				FilmConstPtr film = thread->threadFilm;
 				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
 			}
 		}
@@ -287,7 +287,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new PathOCLRenderEngine(rcfg);
 }
 

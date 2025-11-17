@@ -49,7 +49,7 @@ class PathTracerThreadState {
 public:
 	PathTracerThreadState(luxrays::IntersectionDevice *device,
 			Sampler *eyeSampler, Sampler *lightSampler,
-			SceneConstPtr scene, Film *film,
+			SceneConstPtr scene, FilmPtr film,
 			const VarianceClamping *varianceClamping,
 			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
@@ -58,7 +58,7 @@ public:
 
 	Sampler *eyeSampler, *lightSampler;
 	SceneConstPtr scene;
-	Film *film;
+	FilmPtr film;
 	const VarianceClamping *varianceClamping;
 	
 	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
@@ -104,15 +104,15 @@ public:
 			luxrays::Ray &eyeRay, const luxrays::Spectrum &eyeTroughput,
 			std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(luxrays::IntersectionDevice *device,
-			SceneConstPtr scene, const Film *film, Sampler *sampler,
+			SceneConstPtr scene, FilmConstPtr film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
 
 	void RenderLightSample(luxrays::IntersectionDevice *device,
-			SceneConstPtr scene, const Film *film, Sampler *sampler,
+			SceneConstPtr scene, FilmConstPtr film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults,
 			const ConnectToEyeCallBackType &ConnectToEyeCallBack) const;
 	void RenderLightSample(luxrays::IntersectionDevice *device,
-			SceneConstPtr scene, const Film *film, Sampler *sampler,
+			SceneConstPtr scene, FilmConstPtr film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const {
 		static const ConnectToEyeCallBackType noCallback;
 		RenderLightSample(device, scene, film, sampler, sampleResults, noCallback);
@@ -123,11 +123,11 @@ public:
 			std::vector<SampleResult> &sampleResults) const;
 	void RenderSample(PathTracerThreadState &state) const;
 
-	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults,
+	static void InitEyeSampleResults(FilmConstPtr film, std::vector<SampleResult> &sampleResults,
 			const bool useFilmSplat = false);
 	static void ResetEyeSampleResults(std::vector<SampleResult> &sampleResults);
 	static SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
-			const Film *film);
+			FilmConstPtr film);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -156,7 +156,7 @@ public:
 	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
-	void GenerateEyeRay(CameraConstPtr camera, const Film *film,
+	void GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film,
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler *sampler, SampleResult &sampleResult) const;
 
@@ -176,7 +176,7 @@ private:
 
 	void ConnectToEye(luxrays::IntersectionDevice *device,
 			SceneConstPtr scene,
-			const Film *film, const float time,
+			FilmConstPtr film, const float time,
 			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,
 			const luxrays::Spectrum &flux, const LightPathInfo &pathInfo,

@@ -66,7 +66,7 @@ protected:
 	
 	// Only the first thread allocate a film. It is than used by all
 	// other threads too.
-	Film *threadFilm;
+	FilmPtr threadFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ protected:
 
 class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(const RenderConfig *cfg);
+	PathOCLRenderEngine(RenderConfigConstPtr cfg);
 	virtual ~PathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -90,7 +90,7 @@ public:
 	static RenderEngineType GetObjectType() { return PATHOCL; }
 	static std::string GetObjectTag() { return "PATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
 
 	friend class PathOCLOpenCLRenderThread;
 	friend class PathOCLNativeRenderThread;

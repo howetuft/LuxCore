@@ -891,7 +891,7 @@ void Film::Parse(const Properties &props) {
 			haltNoiseThresholdTestStep = props.Get(Property("batch.haltnoisethreshold.step")(
 						props.Get(Property("batch.haltthreshold.step")(64)).Get<u_int>()
 					)).Get<u_int>();
-					
+
 			haltNoiseThresholdUseFilter = props.Get(Property("batch.haltnoisethreshold.filter.enable")(
 						props.Get(Property("batch.haltthreshold.filter.enable")(true)).Get<bool>()
 					)).Get<bool>();
@@ -899,7 +899,7 @@ void Film::Parse(const Properties &props) {
 			haltNoiseThresholdStopRendering = props.Get(Property("batch.haltnoisethreshold.stoprendering.enable")(
 						props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>()
 					)).Get<bool>();
-				
+
 			haltNoiseThresholdImagePipelineIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
 
 			if (haltNoiseThresholdImagePipelineIndex >= GetImagePipelineCount()) {
@@ -907,9 +907,10 @@ void Film::Parse(const Properties &props) {
 				haltNoiseThresholdImagePipelineIndex = 0;
 			}
 
-			convTest = new FilmConvTest(this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
-					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
-					haltNoiseThresholdImagePipelineIndex);
+			convTest = new FilmConvTest(
+				shared_from_this(), haltNoiseThreshold, haltNoiseThresholdWarmUp,
+				haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
+				haltNoiseThresholdImagePipelineIndex);
 		}
 	}
 
@@ -954,8 +955,11 @@ void Film::Parse(const Properties &props) {
 			noiseEstimationImagePipelineIndex = 0;
 		}
 
-		noiseEstimation = new FilmNoiseEstimation(this, noiseEstimationWarmUp,
-				noiseEstimationTestStep, noiseEstimationFilterScale, noiseEstimationImagePipelineIndex);
+		noiseEstimation = new FilmNoiseEstimation(
+			shared_from_this(), noiseEstimationWarmUp,
+			noiseEstimationTestStep, noiseEstimationFilterScale,
+			noiseEstimationImagePipelineIndex
+		);
 	}
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

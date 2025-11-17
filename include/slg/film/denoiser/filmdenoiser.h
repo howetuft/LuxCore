@@ -34,10 +34,11 @@ namespace slg {
 
 class Film;
 class SampleResult;
+using FilmConstRef = const Film&;
 
 class FilmDenoiser {
 public:
-	FilmDenoiser(const Film *film);
+	FilmDenoiser(FilmConstPtr film);
 	~FilmDenoiser();
 
 	void Reset();
@@ -50,9 +51,9 @@ public:
 	bool IsWarmUpDone() const { return warmUpDone; }
 	void WarmUpDone();
 
-	void SetReferenceFilm(const Film *refFilm,
+	void SetReferenceFilm(FilmConstPtr refFilm,
 			const u_int offsetX = 0, const u_int offsetY = 0);
-	void CopyReferenceFilm(const Film *refFilm);
+	void CopyReferenceFilm(FilmConstPtr refFilm);
 
 	bool HasReferenceFilm() const { return (referenceFilm != NULL); }
 
@@ -105,7 +106,7 @@ private:
 		ar & enabled;
 	}
 
-	const Film *film;
+	FilmConstPtr film;
 
 	SamplesAccumulator *samplesAccumulatorPixelNormalized;
 	SamplesAccumulator *samplesAccumulatorScreenNormalized;
@@ -120,10 +121,10 @@ private:
 	bool warmUpDone;
 	// The reference film is used by local thread films to share command
 	// bcd::SamplesAccumulator parameters
-	const Film *referenceFilm;
+	FilmConstPtr referenceFilm;
 	u_int referenceFilmWidth, referenceFilmHeight;
 	u_int referenceFilmOffsetX, referenceFilmOffsetY;
-	
+
 	bool enabled;
 };
 

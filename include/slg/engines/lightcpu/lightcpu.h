@@ -50,7 +50,7 @@ private:
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	LightCPURenderEngine(const RenderConfig *cfg);
+	LightCPURenderEngine(RenderConfigConstPtr cfg);
 	~LightCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -65,7 +65,7 @@ public:
 	static RenderEngineType GetObjectType() { return LIGHTCPU; }
 	static std::string GetObjectTag() { return "LIGHTCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(const RenderConfig *rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
 
 	friend class LightCPURenderThread;
 

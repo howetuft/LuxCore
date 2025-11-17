@@ -30,7 +30,7 @@ using namespace slg;
 // RTPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg) :
+RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfigConstPtr rcfg) :
 		TilePathOCLRenderEngine(rcfg, false) {
 	if (nativeRenderThreadCount > 0)
 		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
@@ -155,7 +155,7 @@ void RTPathOCLRenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
+void RTPathOCLRenderEngine::EndFilmEdit(FilmPtr flm, std::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
 	filmMutex = flmMutex;
@@ -217,7 +217,7 @@ Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
 }
 
-RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *RTPathOCLRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new RTPathOCLRenderEngine(rcfg);
 }
 

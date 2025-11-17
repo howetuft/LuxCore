@@ -26,7 +26,7 @@ using namespace slg;
 // LightCPURenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg) :
+LightCPURenderEngine::LightCPURenderEngine(RenderConfigConstPtr rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
@@ -113,7 +113,7 @@ Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new LightCPURenderEngine(rcfg);
 }
 

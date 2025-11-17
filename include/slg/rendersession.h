@@ -29,9 +29,13 @@
 
 namespace slg {
 
+class RenderSession;
+using RenderSessionConstPtr = std::shared_ptr<const RenderSession>;
+using RenderSessionPtr = std::shared_ptr<RenderSession>;
+
 class RenderSession {
 public:
-	RenderSession(RenderConfig *cfg, RenderState *startState = NULL, Film *startFilm = NULL);
+	RenderSession(RenderConfig *cfg, RenderState *startState = NULL, FilmPtr startFilm = NULL);
 	~RenderSession();
 
 	bool IsStarted() const { return renderEngine->IsStarted(); }
@@ -60,7 +64,7 @@ public:
 	RenderEngine *renderEngine;
 
 	std::mutex filmMutex;
-	Film *film;
+	FilmPtr film;
 
 protected:
 	bool HasPeriodicFilmOutputsSave();

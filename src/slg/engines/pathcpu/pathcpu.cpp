@@ -30,7 +30,7 @@ using namespace slg;
 // PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
+PathCPURenderEngine::PathCPURenderEngine(RenderConfigConstPtr rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr),
 		lightSampleSplatter(nullptr), lightSamplerSharedData(nullptr) {
 }
@@ -185,7 +185,7 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *PathCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new PathCPURenderEngine(rcfg);
 }
 

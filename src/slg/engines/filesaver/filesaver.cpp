@@ -43,7 +43,7 @@ using namespace nlohmann;
 // Scene FileSaver render engine
 //------------------------------------------------------------------------------
 
-FileSaverRenderEngine::FileSaverRenderEngine(const RenderConfig *rcfg) :
+FileSaverRenderEngine::FileSaverRenderEngine(RenderConfigConstPtr rcfg) :
 		RenderEngine(rcfg) {
 }
 
@@ -94,7 +94,7 @@ static string Base64Encode(const char *data, const size_t size) {
 	return ss.str() + "===";
 }
 
-void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
+void FileSaverRenderEngine::ExportSceneGLTF(RenderConfigConstPtr renderConfig,
 		const string &fileName) {
 	SLG_LOG("[FileSaverRenderEngine] Export glTF scene file: " << fileName);
 	
@@ -414,7 +414,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 	gltfFile.close();
 }
 
-void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
+void FileSaverRenderEngine::ExportScene(RenderConfigConstPtr renderConfig,
 		const string &directoryName, const string &renderEngineType) {
 	SLG_LOG("[FileSaverRenderEngine] Export directory: " << directoryName);
 
@@ -511,7 +511,7 @@ Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
 }
 
-RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *FileSaverRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new FileSaverRenderEngine(rcfg);
 }
 

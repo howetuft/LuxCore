@@ -18,6 +18,7 @@
 
 #include <mutex>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "slg/rendersession.h"
 #include "slg/renderstate.h"
@@ -34,7 +35,7 @@ void (*slg::SLG_DebugHandler)(const char *msg) = NULL;
 void slg::NullDebugHandler(const char *msg) {
 }
 
-RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, Film *startFilm) {
+RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, FilmPtr startFilm) {
 	renderConfig = rcfg;
 
 	const double now = WallClockTime();
@@ -63,7 +64,6 @@ RenderSession::~RenderSession() {
 		Stop();
 
 	delete renderEngine;
-	delete film;
 }
 
 void RenderSession::Start() {
@@ -71,10 +71,6 @@ void RenderSession::Start() {
 		// I need to allocate a new film because the current one has already been
 		// used. For instance, it can happen when stopping and starting the
 		// same session.
-
-		// Delete the old film
-		delete film;
-		film = NULL;
 
 		// Create the new film
 		film = renderConfig->AllocFilm();
@@ -233,10 +229,6 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 
 		// Update render config properties
 		renderConfig->UpdateFilmProperties(props);
-
-		// Delete the old film
-		delete film;
-		film = NULL;
 
 		// Create the new film
 		film = renderConfig->AllocFilm();

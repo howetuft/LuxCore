@@ -66,15 +66,14 @@ FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
 		standAloneFilm(NULL) {
 }
 
-FilmImpl::FilmImpl(slg::Film *film) : renderSession(NULL) {
+FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(NULL) {
 	standAloneFilm = film;
 }
 
 FilmImpl::~FilmImpl() {
-	delete standAloneFilm;
 }
 
-slg::Film *FilmImpl::GetSLGFilm() const {
+std::shared_ptr<slg::Film> FilmImpl::GetSLGFilm() const {
 	if (renderSession)
 		return renderSession->renderSession->film;
 	else
@@ -104,7 +103,7 @@ unsigned int FilmImpl::GetHeight() const {
 luxrays::Properties FilmImpl::GetStats() const {
 	API_BEGIN_NOARGS();
 
-	slg::Film *film = GetSLGFilm();
+	std::shared_ptr<slg::Film> film = GetSLGFilm();
 
 	Properties stats;
 	stats.Set(Property("stats.film.total.samplecount")(film->GetTotalSampleCount()));
@@ -120,7 +119,7 @@ float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
 	API_BEGIN_NOARGS();
 
 	const float result = GetSLGFilm()->GetFilmY(imagePipelineIndex);
-	
+
 	API_RETURN("{}", result);
 
 	return result;
@@ -134,26 +133,26 @@ void FilmImpl::Clear() {
 	API_END();
 }
 
-void FilmImpl::AddFilm(const Film &film) {
-	const FilmImpl *filmImpl = dynamic_cast<const FilmImpl *>(&film);
+void FilmImpl::AddFilm(std::shared_ptr<const Film> film) {
+	auto filmImpl = dynamic_pointer_cast<const FilmImpl>(film);
 	assert (filmImpl);
-	
-	API_BEGIN("{}", (void *)filmImpl);
+
+	API_BEGIN("{}", (void *)filmImpl.get());
 
 	AddFilm(film, 0, 0, filmImpl->GetWidth(), filmImpl->GetHeight(), 0, 0);
 
 	API_END();
 }
 
-void FilmImpl::AddFilm(const Film &film,
+void FilmImpl::AddFilm(std::shared_ptr<const Film> film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	const FilmImpl *srcFilmImpl = dynamic_cast<const FilmImpl *>(&film);
+	auto srcFilmImpl = dynamic_pointer_cast<const FilmImpl>(film);
 	assert (srcFilmImpl);
-	
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}", (void *)srcFilmImpl, srcOffsetX, srcOffsetY, srcWidth, srcHeight, dstOffsetX, dstOffsetY);
-	
+
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}", (void *)srcFilmImpl.get(), srcOffsetX, srcOffsetY, srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+
 	const FilmImpl *dstFilmImpl = this;
 
 	// I have to clip the parameters to avoid an out of bound memory access
@@ -222,7 +221,7 @@ double FilmImpl::GetTotalSampleCount() const {
 	const double result = GetSLGFilm()->GetTotalSampleCount();
 
 	API_RETURN("{}", result);
-	
+
 	return result;
 }
 
@@ -230,9 +229,9 @@ bool FilmImpl::HasOutput(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
 	const bool result = GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
-	
+
 	API_RETURN("{}", result);
-	
+
 	return result;
 }
 
@@ -242,7 +241,7 @@ unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
 	const unsigned int result = GetSLGFilm()->GetOutputCount((slg::FilmOutputs::FilmOutputType)type);
 
 	API_RETURN("{}", result);
-	
+
 	return result;
 }
 
@@ -250,9 +249,9 @@ size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
 	const size_t result = GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
-	
+
 	API_RETURN("{}", result);
-	
+
 	return result;
 }
 
@@ -308,18 +307,18 @@ void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
 	if (renderSession) {
 		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
-		slg::Film *film = renderSession->renderSession->film;
+		auto film = renderSession->renderSession->film;
 		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
 
 		// Only USER_IMPORTANCE can be updated
-		float *destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+	auto destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
 				index, executeImagePipeline);
 		copy(buffer, buffer + pixelsCount, destBuffer);
 	} else {
 		const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
 
 		// Only USER_IMPORTANCE can be updated
-		float *destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+	auto destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
 				index, executeImagePipeline);
 		copy(buffer, buffer + pixelsCount, destBuffer);
 	}
@@ -659,8 +658,8 @@ SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePo
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(std::make_shared<slg::Scene> scn) {
-	camera = std::shared_ptr<CameraImpl>(*this);
+SceneImpl::SceneImpl(std::shared_ptr<slg::Scene> scn) {
+	camera = std::make_shared<CameraImpl>(*this);
 	scene = scn;
 	allocatedScene = false;
 }
@@ -1243,7 +1242,7 @@ void SceneImpl::Save(const std::string &fileName) const {
 Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-	Point *result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+auto result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
 
 	API_RETURN("{}", (void *)result);
 	
@@ -1253,7 +1252,7 @@ Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-	Triangle *result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 
 	API_RETURN("{}", (void *)result);
 	
@@ -1285,8 +1284,11 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 	allocatedScene = true;
 }
 
-RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,
-			FilmImpl **startFilm) {
+RenderConfigImpl::RenderConfigImpl(
+		const std::string &fileName,
+		std::shared_ptr<RenderStateImpl> * startState,
+		std::shared_ptr<FilmImpl> * startFilm
+) {
 	SerializationInputFile sif(fileName);
 
 	// Read the render configuration and the scene
@@ -1300,7 +1302,7 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl 
 	*startState = std::make_shared<RenderStateImpl>(st);
 
 	// Save the film
-	slg::Film *sf;
+	std::shared_ptr<slg::Film> sf;
 	sif.GetArchive() >> sf;
 	*startFilm = std::make_shared<FilmImpl>(sf);
 
@@ -1309,9 +1311,6 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl 
 }
 
 RenderConfigImpl::~RenderConfigImpl() {
-	delete renderConfig;
-	if (allocatedScene)
-		delete scene;
 }
 
 const Properties &RenderConfigImpl::GetProperties() const {
@@ -1516,7 +1515,7 @@ const RenderConfig &RenderSessionImpl::GetRenderConfig() const {
 RenderState *RenderSessionImpl::GetRenderState() {
 	API_BEGIN_NOARGS();
 
-	RenderState *result = std::make_shared<RenderStateImpl>(renderSession->GetRenderState());
+auto result = std::make_shared<RenderStateImpl>(renderSession->GetRenderState());
 
 	API_RETURN("{}", (void *)result);
 
@@ -1651,7 +1650,7 @@ static void SetTileProperties(Properties &props, const string &prefix,
 	Property tilePendingPassesProp(prefix + ".pendingpasses");
 	Property tileErrorProp(prefix + ".error");
 
-	for(const slg::Tile *tile: tiles) {
+	for(auto tile: tiles) {
 		tileCoordProp.Add(tile->coord.x).Add(tile->coord.y);
 		tilePassProp.Add(tile->pass);
 		tilePendingPassesProp.Add(tile->pendingPasses);
@@ -1718,7 +1717,7 @@ void RenderSessionImpl::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
 
-		const HardwareDevice *hardDev = dynamic_cast<const HardwareDevice *>(dev);
+		auto hardDev = dynamic_pointer_cast<const HardwareDevice>(dev);
 		if (hardDev) {
 			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
 			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
@@ -1737,12 +1736,12 @@ void RenderSessionImpl::UpdateStats() {
 	switch (renderSession->renderEngine->GetType()) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
-			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
+		auto engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
 			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
 			break;
 		}
 		case slg::TILEPATHOCL: {
-			slg::TilePathOCLRenderEngine *engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
+		auto engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
@@ -1771,7 +1770,7 @@ void RenderSessionImpl::UpdateStats() {
 		}
 #endif
 		case slg::TILEPATHCPU: {
-			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
+			auto engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));

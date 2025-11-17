@@ -37,7 +37,7 @@ using namespace slg;
 // TilePathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-TilePathOCLRenderEngine::TilePathOCLRenderEngine(const RenderConfig *rcfg,
+TilePathOCLRenderEngine::TilePathOCLRenderEngine(RenderConfigConstPtr rcfg,
 		const bool supportsNativeThreads) :
 		PathOCLBaseRenderEngine(rcfg, supportsNativeThreads) {
 	tileRepository = NULL;
@@ -240,7 +240,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			PhotonGICache::ToProperties(cfg);
 }
 
-RenderEngine *TilePathOCLRenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *TilePathOCLRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	return new TilePathOCLRenderEngine(rcfg, true);
 }
 

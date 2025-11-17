@@ -32,7 +32,7 @@ using namespace slg;
 
 PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		Sampler *eSampler, Sampler *lSampler,
-		SceneConstPtr scn, Film *flm,
+		SceneConstPtr scn, FilmPtr flm,
 		const VarianceClamping *varClamping,
 		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
@@ -90,7 +90,7 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults,
+void PathTracer::InitEyeSampleResults(FilmConstPtr film, vector<SampleResult> &sampleResults,
 		const bool useFilmSplat) {
 	SampleResult &sampleResult = sampleResults[0];
 
@@ -340,7 +340,7 @@ void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
 	}	
 }
 
-void PathTracer::GenerateEyeRay(CameraConstPtr camera, const Film *film, Ray &eyeRay,
+void PathTracer::GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
 	const float filmX = sampler->GetSample(0);
 	const float filmY = sampler->GetSample(1);
@@ -667,7 +667,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyeSample(IntersectionDevice *device,
-		SceneConstPtr scene, const Film *film,
+		SceneConstPtr scene, FilmConstPtr film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
 	ResetEyeSampleResults(sampleResults);
 
@@ -683,7 +683,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResults,
-		const Film *film) {
+		FilmConstPtr film) {
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
@@ -695,7 +695,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 
 void PathTracer::ConnectToEye(IntersectionDevice *device,
 		SceneConstPtr scene,
-		const Film *film, const float time,
+		FilmConstPtr film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
 		const Spectrum &flux, const LightPathInfo &pathInfo,
@@ -794,7 +794,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderLightSample(IntersectionDevice *device,
-		SceneConstPtr scene, const Film *film,
+		SceneConstPtr scene, FilmConstPtr film,
 		Sampler *sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
 	sampleResults.clear();

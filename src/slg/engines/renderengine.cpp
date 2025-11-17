@@ -48,7 +48,7 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(const RenderConfig *cfg) :
+RenderEngine::RenderEngine(RenderConfigConstPtr cfg) :
 	bootStrapSeed(131), seedBaseGenerator(131) {
 	renderConfig = cfg;
 	pixelFilter = NULL;
@@ -85,16 +85,15 @@ RenderEngine::~RenderEngine() {
 	delete ctx;
 
 	delete startRenderState;
-	delete startFilm;
 	delete pixelFilter;
 }
 
-void RenderEngine::SetRenderState(RenderState *state, Film *oldFilm) {
+void RenderEngine::SetRenderState(RenderState *state, FilmPtr oldFilm) {
 	startRenderState = state;
 	startFilm = oldFilm;
 }
 
-void RenderEngine::Start(Film *flm, std::mutex *flmMutex) {
+void RenderEngine::Start(FilmPtr flm, std::mutex *flmMutex) {
 	std::unique_lock<std::mutex> lock(engineMutex);
 
 	assert (!started);
@@ -127,8 +126,6 @@ void RenderEngine::Start(Film *flm, std::mutex *flmMutex) {
 		assert (film->IsInitiliazed());
 
 		film->AddFilm(*startFilm);
-		delete startFilm;
-		startFilm = nullptr;
 	}
 
 	StartLockLess();
@@ -195,7 +192,7 @@ void RenderEngine::BeginFilmEdit() {
 	Stop();
 }
 
-void RenderEngine::EndFilmEdit(Film *flm, std::mutex *flmMutex) {
+void RenderEngine::EndFilmEdit(FilmPtr flm, std::mutex *flmMutex) {
 	film = NULL;
 	filmMutex = NULL;
 
@@ -264,7 +261,7 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
 
-RenderEngine *RenderEngine::FromProperties(const RenderConfig *rcfg) {
+RenderEngine *RenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	const string type = rcfg->cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	RenderEngineRegistry::FromProperties func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
