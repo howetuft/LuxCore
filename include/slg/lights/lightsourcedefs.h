@@ -35,14 +35,14 @@ namespace slg {
 class TriangleLight;
 class Scene;
 
-class LightSourceDefinitions {
+class LightSourceDefinitions : public std::enable_shared_from_this<LightSourceDefinitions> {
 public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
 	void SetLightStrategy(const luxrays::Properties &props);
 
-	void UpdateVisibilityMaps(SceneConstRef scene, const bool useRTMode);
+	void UpdateVisibilityMaps(SceneConstPtr scene, const bool useRTMode);
 
 	void DefineLightSource(LightSourcePtr l);
 	bool IsLightSourceDefined(const std::string &name) const;
@@ -90,7 +90,7 @@ private:
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightStrategyType, etc.
 	// This is called by Scene::Preprocess()
-	void Preprocess(SceneConstRef scene, const bool useRTMode);
+	void Preprocess(SceneConstPtr scene, const bool useRTMode);
 
 	robin_hood::unordered_flat_map<std::string, LightSourcePtr> lightsByName;
 

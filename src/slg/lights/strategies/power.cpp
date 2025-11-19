@@ -28,11 +28,11 @@ using namespace slg;
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
+void LightStrategyPower::Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene.lightDefs.GetSize();
+	const u_int lightCount = scene->lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -42,7 +42,7 @@ void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
-	auto &lights = scene.lightDefs.GetLightSources();
+	auto &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto& l = lights[i];
 		float power = l->GetPower(scene) * l->GetImportance();

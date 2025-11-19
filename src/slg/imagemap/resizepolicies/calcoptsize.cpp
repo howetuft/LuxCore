@@ -54,7 +54,7 @@ static void GenerateEyeRay(CameraConstPtr camera, const UV &sampleOffestUV, Ray 
 
 void ImageMapResizePolicy::RenderFunc(std::stop_token stop_token, const u_int threadIndex,
 		ImageMapCache *imc, const vector<u_int> *imgMapsIndices, u_int *workCounter,
-		SceneConstRef scene, SobolSamplerSharedData *sobolSharedData,
+		SceneConstPtr scene, SobolSamplerSharedData *sobolSharedData,
 		std::barrier<completion_t> *threadsSyncBarrier) {
 	// Hard coded parameters
 	const u_int passesCount = 1;
@@ -75,7 +75,7 @@ void ImageMapResizePolicy::RenderFunc(std::stop_token stop_token, const u_int th
 
 	threadsSyncBarrier->arrive_and_wait();
 
-	CameraConstPtr camera = scene.camera;
+	CameraConstPtr camera = scene->camera;
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
@@ -155,7 +155,7 @@ void ImageMapResizePolicy::RenderFunc(std::stop_token stop_token, const u_int th
 
 					RayHit eyeRayHit;
 					Spectrum connectionThroughput;
-					const bool hit = scene.Intersect(NULL,
+					const bool hit = scene->Intersect(NULL,
 							EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 							&volInfo, sampler.GetSample(sampleOffset),
 							&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -249,7 +249,7 @@ void ImageMapResizePolicy::RenderFunc(std::stop_token stop_token, const u_int th
 //------------------------------------------------------------------------------
 
 
-void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneConstRef scene,
+void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneConstPtr scene,
 		const vector<u_int> &imgMapsIndices) {
 	// Do a test render to establish the optimal image maps sizes
 	const size_t renderThreadCount = GetHardwareThreadCount();

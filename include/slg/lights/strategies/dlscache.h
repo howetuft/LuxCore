@@ -40,12 +40,12 @@ public:
 	LightStrategyDLSCache(const DLSCParams &params);
 	virtual ~LightStrategyDLSCache();
 
-	virtual void Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
 			const bool useRTMode);
 	
 	// Used for direct light sampling
 	virtual LightSourcePtr SampleLights(
-			SceneConstRef scene,
+			SceneConstPtr scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
@@ -55,7 +55,7 @@ public:
 			const bool isVolume) const;
 
 	// Used for light emission
-	virtual LightSourcePtr SampleLights(SceneConstRef scene, const float u, float *pdf) const;
+	virtual LightSourcePtr SampleLights(SceneConstPtr scene, const float u, float *pdf) const;
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }

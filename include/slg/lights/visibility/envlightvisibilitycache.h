@@ -201,10 +201,10 @@ class ELVCSceneVisibility;
 
 class EnvLightVisibilityCache {
 public:
-	EnvLightVisibilityCache(SceneConstRef scene, const EnvLightSource *envLight,
+	EnvLightVisibilityCache(SceneConstPtr scene, const EnvLightSource *envLight,
 			ImageMapPtr luminanceMapImage,
 			const ELVCParams &params);
-	EnvLightVisibilityCache(SceneConstRef scene, const EnvLightSource *envLight,
+	EnvLightVisibilityCache(SceneConstPtr scene, const EnvLightSource *envLight,
 			const u_int mapWidth, const u_int mapHeight, const ELVCParams &params);
 	virtual ~EnvLightVisibilityCache();
 
@@ -245,7 +245,7 @@ private:
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
 
-	SceneConstRef scene;
+	SceneConstPtr scene;
 	const EnvLightSource *envLight;
 	ImageMapConstPtr luminanceMapImage;
 

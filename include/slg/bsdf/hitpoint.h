@@ -26,6 +26,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -82,7 +83,7 @@ typedef struct HitPoint_t {
 	//
 	// Note: this is also _not_ initializing volume related information.
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
+		SceneConstPtr scene, const u_int meshIndex, const u_int triangleIndex,
 		const luxrays::Point &p, const luxrays::Vector &d,
 		const float b1, const float b2,
 		const float passThroughEvent);

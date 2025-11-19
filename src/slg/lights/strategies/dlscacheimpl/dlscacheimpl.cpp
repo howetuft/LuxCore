@@ -324,7 +324,7 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(
 	}
 }
 
-void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstRef scene) {
+void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstPtr scene) {
 	auto& lights = scene->lightDefs.GetLightSources();
 
 	DLSCacheEntry &entry = cacheEntries[entryIndex];

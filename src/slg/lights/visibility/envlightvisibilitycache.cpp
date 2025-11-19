@@ -104,7 +104,7 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 // Env. light visibility cache builder
 //------------------------------------------------------------------------------
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
+EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
 		ImageMapPtr li, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(li), params(p),
 		cacheEntriesBVH(nullptr) {
@@ -114,7 +114,7 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLig
 	mapHeight = luminanceMapImage->GetHeight();
 }
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
+EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
 		const u_int width, const u_int height, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(nullptr), params(p),
 		cacheEntriesBVH(nullptr), mapWidth(width), mapHeight(height) {
@@ -218,7 +218,7 @@ public:
 	
 protected:
 	virtual IndexOctree<ELVCVisibilityParticle> *AllocOctree() const {
-		return new ELVCOctree(visibilityParticles, scene.dataSet->GetBBox(),
+		return new ELVCOctree(visibilityParticles, scene->dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
@@ -365,7 +365,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene.Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+		if (!scene->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 

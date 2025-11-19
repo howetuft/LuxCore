@@ -585,7 +585,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 		bool bevelContinueToTrace = !hit;
 		VolumeConstPtr rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {		
-			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
+			bsdf->Init(fromLight, throughShadowTransparency, shared_from_this(), *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 
 			// Check if it a triangle with bevel edges
@@ -638,7 +638,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				bsdf->Init(
 					fromLight,
 					throughShadowTransparency,
-					*this,
+					shared_from_this(),
 					*ray,
 					rayVolume,
 					t,

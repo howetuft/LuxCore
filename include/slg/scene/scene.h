@@ -77,7 +77,7 @@ typedef int SceneRayType;
 class SampleResult;
 
 
-class Scene {
+class Scene : public std::enable_shared_from_this<Scene> {
 public:
 	// Constructor used to create a scene by calling methods
 	Scene(const luxrays::Properties *resizePolicyProps = nullptr);

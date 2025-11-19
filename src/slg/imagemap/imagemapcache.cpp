@@ -197,7 +197,7 @@ void ImageMapCache::GetImageMaps(vector<ImageMapConstPtr > &ims) {
 		ims.push_back(im);
 }
 
-void ImageMapCache::Preprocess(SceneConstRef scene, const bool useRTMode) {
+void ImageMapCache::Preprocess(SceneConstPtr scene, const bool useRTMode) {
 	resizePolicy->Preprocess(*this, scene, useRTMode);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

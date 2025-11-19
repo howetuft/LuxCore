@@ -27,18 +27,18 @@ using namespace slg;
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
+void LightStrategyUniform::Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 	
-	const u_int lightCount = scene.lightDefs.GetSize();
+	const u_int lightCount = scene->lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
-	const vector<LightSourcePtr> &lights = scene.lightDefs.GetLightSources();
+	const vector<LightSourcePtr> &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto l = lights[i];
 

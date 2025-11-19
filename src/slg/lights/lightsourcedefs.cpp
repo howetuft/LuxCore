@@ -159,7 +159,7 @@ void LightSourceDefinitions::UpdateVolumeReferences(VolumeConstPtr oldVol, Volum
 
 }
 
-void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMode) {
+void LightSourceDefinitions::Preprocess(SceneConstPtr scene, const bool useRTMode) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
@@ -199,7 +199,7 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 		if (tl) {
 			intersectableLightSources.push_back(tl);
 
-			tl->meshIndex = scene.objDefs.GetSceneObjectIndex(tl->sceneObject);
+			tl->meshIndex = scene->objDefs.GetSceneObjectIndex(tl->sceneObject);
 		}
 
 		++i;
@@ -213,7 +213,7 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 		if (tl) {
 			intersectableLightSources.push_back(tl);
 
-			tl->meshIndex = scene.objDefs.GetSceneObjectIndex(tl->sceneObject);
+			tl->meshIndex = scene->objDefs.GetSceneObjectIndex(tl->sceneObject);
 		}
 	}
 
@@ -221,14 +221,14 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 //	SLG_LOG("Light step #2 preprocessing time: " << (end2 - end1) << "secs");
 
 	// Build 2 tables to go from mesh index and triangle index to light index
-	lightIndexOffsetByMeshIndex.resize(scene.objDefs.GetSize());
+	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize());
 	lightIndexByTriIndex.clear();
 	
 	// Step #1: initialize lightIndexOffsetByMeshIndex and set the lightIndexByTriIndex size
 	
-	const u_int meshCount = scene.objDefs.GetSize();
+	const u_int meshCount = scene->objDefs.GetSize();
 	for (u_int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
-		SceneObjectConstPtr so = scene.objDefs.GetSceneObject(meshIndex);
+		SceneObjectConstPtr so = scene->objDefs.GetSceneObject(meshIndex);
 
 		if (so->GetMaterial()->IsLightSource()) {
 			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
@@ -249,7 +249,7 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 			unsigned
 #endif
 			int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
-		SceneObjectConstPtr so = scene.objDefs.GetSceneObject(meshIndex);
+		SceneObjectConstPtr so = scene->objDefs.GetSceneObject(meshIndex);
 
 		if (so->GetMaterial()->IsLightSource()) {
 			auto mesh = so->GetExtMesh();
@@ -267,8 +267,8 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 //	SLG_LOG("Light step #3 preprocessing time: " << (end3 - end2) << "secs");
 
 	// I need to check all volume definitions for radiance group usage too
-	for (u_int i = 0; i < scene.matDefs.GetSize(); ++i) {
-		MaterialConstPtr mat = scene.matDefs.GetMaterial(i);
+	for (u_int i = 0; i < scene->matDefs.GetSize(); ++i) {
+		MaterialConstPtr mat = scene->matDefs.GetMaterial(i);
 
 		auto vol = dynamic_pointer_cast<const Volume>(mat);
 		if (vol && vol->GetVolumeEmissionTexture()) {
@@ -310,7 +310,7 @@ void LightSourceDefinitions::Preprocess(SceneConstRef scene, const bool useRTMod
 //	SLG_LOG("Light total preprocessing time: " << (endTotal - start) << "secs");
 }
 
-void LightSourceDefinitions::UpdateVisibilityMaps(SceneConstRef scene, const bool useRTMode) {
+void LightSourceDefinitions::UpdateVisibilityMaps(SceneConstPtr scene, const bool useRTMode) {
 	// Build visibility maps for Env. lights
 	for (auto envLight : GetEnvLightSources())
 		envLight->UpdateVisibilityMap(scene, useRTMode);

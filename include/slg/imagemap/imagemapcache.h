@@ -34,7 +34,7 @@ namespace slg {
 // ImageMapCache
 //------------------------------------------------------------------------------
 
-class ImageMapCache {
+class ImageMapCache : std::enable_shared_from_this<ImageMapCache> {
 public:
 	ImageMapCache();
 	~ImageMapCache();
@@ -64,7 +64,7 @@ public:
 
 private:
 	// Used for the support of resize policies
-	void Preprocess(SceneConstRef scene, const bool useRTMode);
+	void Preprocess(SceneConstPtr scene, const bool useRTMode);
 
 	std::string GetCacheKey(const std::string &fileName,
 				const ImageMapConfig &imgCfg) const;

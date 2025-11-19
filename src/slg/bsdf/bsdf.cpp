@@ -26,10 +26,10 @@ using namespace std;
 
 // Used when hitting a surface
 void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const Ray &ray, const RayHit &rayHit,
+		SceneConstPtr scene, const Ray &ray, const RayHit &rayHit,
 		const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	// Get the scene object
-	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
+	sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
 
 	// Get the mesh
 	auto mesh = sceneObject->GetExtMesh();
@@ -48,11 +48,11 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	volInfo->SetHitPointVolumes(hitPoint,
 			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
-			scene.defaultWorldVolume);
+			scene->defaultWorldVolume);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.lightDefs.GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
+		triangleLightSource = scene->lightDefs.GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
 	else
 		triangleLightSource = NULL;
 
@@ -64,14 +64,14 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 }
 
 // Used when have a point of a surface
-void BSDF::Init(const Scene &scene,
+void BSDF::Init(SceneConstPtr scene,
 		const u_int meshIndex, const u_int triangleIndex,
 		const Point &surfacePoint,
 		const float surfacePointBary1, const float surfacePointBary2, 
 		const float time,
 		const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	// Get the scene object
-	sceneObject = scene.objDefs.GetSceneObject(meshIndex);
+	sceneObject = scene->objDefs.GetSceneObject(meshIndex);
 
 	// Get the mesh
 	auto mesh = sceneObject->GetExtMesh();
@@ -90,11 +90,11 @@ void BSDF::Init(const Scene &scene,
 	volInfo->SetHitPointVolumes(hitPoint,
 			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
-			scene.defaultWorldVolume);
+			scene->defaultWorldVolume);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.lightDefs.GetLightSourceByMeshAndTriIndex(meshIndex, triangleIndex);
+		triangleLightSource = scene->lightDefs.GetLightSourceByMeshAndTriIndex(meshIndex, triangleIndex);
 	else
 		triangleLightSource = NULL;
 
@@ -107,7 +107,7 @@ void BSDF::Init(const Scene &scene,
 
 // Used when hitting a volume scatter point
 void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const luxrays::Ray &ray,
+		SceneConstPtr scene, const luxrays::Ray &ray,
 		VolumeConstPtr volume, const float t, const float passThroughEvent) {
 	hitPoint.fromLight = fixedFromLight;
 	hitPoint.throughShadowTransparency = throughShadowTransparency;

@@ -78,7 +78,7 @@ public:
 	virtual float GetAvgPassThroughTransparency() const { return 1.f; }
 
 	virtual u_int GetID() const = 0;
-	virtual float GetPower(const Scene &scene) const = 0;
+	virtual float GetPower(SceneConstPtr scene) const = 0;
 	virtual float GetImportance() const = 0;
 
 	virtual bool IsDirectLightSamplingEnabled() const = 0;
@@ -132,7 +132,7 @@ public:
 	virtual bool IsIntersectable() const { return true; }
 
 	virtual float GetAvgPassThroughTransparency() const { return lightMaterial->GetAvgPassThroughTransparency(); }
-	virtual float GetPower(const Scene &scene) const = 0;
+	virtual float GetPower(SceneConstPtr scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }
 
@@ -210,7 +210,7 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	static float GetEnvRadius(const Scene &scene);
+	static float GetEnvRadius(SceneConstPtr scene);
 
 protected:
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
@@ -230,10 +230,10 @@ public:
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const {
 		throw std::runtime_error("Internal error: called EnvLightSource::GetEnvUV()");
 	}
-	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) { }
+	virtual void UpdateVisibilityMap(SceneConstPtr scene, const bool useRTMode) { }
 
 	// Note: bsdf parameter can be NULL if it is a camera ray
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
+	virtual luxrays::Spectrum GetRadiance(SceneConstPtr scene,
 			const BSDF *bsdf, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 

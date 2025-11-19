@@ -55,7 +55,7 @@ public:
 
 	// A BSDF initialized from a ray hit
 	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const luxrays::Ray &ray,
+		SceneConstPtr scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo) {
 		assert (!rayHit.Miss());
@@ -63,7 +63,7 @@ public:
 				ray, rayHit, passThroughEvent, volInfo);
 	}
 	// A BSDF initialized with a point on a surface
-	BSDF(const Scene &scene,
+	BSDF(SceneConstPtr scene,
 		const u_int meshIndex, const u_int triangleIndex,
 		const luxrays::Point &surfacePoint,
 		const float surfacePointBary1, const float surfacePointBary2, 
@@ -75,7 +75,7 @@ public:
 	}
 	// A BSDF initialized with a volume scattering point
 	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const luxrays::Ray &ray,
+		SceneConstPtr scene, const luxrays::Ray &ray,
 		VolumeConstPtr volume, const float t, const float passThroughEvent) {
 		Init(fixedFromLight, throughShadowTransparency,
 				scene, ray, volume, t, passThroughEvent);
@@ -83,11 +83,11 @@ public:
 
 	// Used when hitting a surface
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const luxrays::Ray &ray,
+		SceneConstPtr scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo);
 	// Used when have a point of a surface
-	void Init(const Scene &scene,
+	void Init(SceneConstPtr scene,
 		const u_int meshIndex, const u_int triangleIndex,
 		const luxrays::Point &surfacePoint,
 		const float surfacePointBary1, const float surfacePointBary2, 
@@ -95,7 +95,7 @@ public:
 		const float passThroughEvent, const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		const Scene &scene, const luxrays::Ray &ray,
+		SceneConstPtr scene, const luxrays::Ray &ray,
 		VolumeConstPtr volume, const float t, const float passThroughEvent);
 
 	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);

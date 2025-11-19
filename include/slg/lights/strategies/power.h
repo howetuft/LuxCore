@@ -31,7 +31,7 @@ class LightStrategyPower : public DistributionLightStrategy {
 public:
 	LightStrategyPower() : DistributionLightStrategy(TYPE_POWER) { }
 
-	virtual void Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
 			const bool useRTMode);
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }

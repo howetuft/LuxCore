@@ -47,12 +47,12 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(SceneConstRef scn, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
 			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
 	virtual LightSourcePtr SampleLights(
-			SceneConstRef scene,
+			SceneConstPtr scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
@@ -62,7 +62,7 @@ public:
 			const bool isVolume) const = 0;
 
 	// Used for light emission
-	virtual LightSourcePtr SampleLights(SceneConstRef, const float u, float *pdf) const = 0;
+	virtual LightSourcePtr SampleLights(SceneConstPtr, const float u, float *pdf) const = 0;
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const = 0;

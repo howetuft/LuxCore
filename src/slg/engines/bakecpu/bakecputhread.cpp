@@ -162,7 +162,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 
 	const u_int sceneObjIndex = state.scene->objDefs.GetSceneObjectIndex(sceneObj);
 	const PathVolumeInfo volInfo;
-	BSDF bsdf(*state.scene, sceneObjIndex, triangleIndex,
+	BSDF bsdf(state.scene, sceneObjIndex, triangleIndex,
 			samplePoint, b1, b2,
 			timeSample, state.eyeSampler->GetSample(pathTracer.eyeSampleSize), &volInfo);
 

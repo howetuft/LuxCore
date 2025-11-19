@@ -34,7 +34,7 @@ LightStrategyDLSCache::LightStrategyDLSCache(const DLSCParams &params) :
 LightStrategyDLSCache::~LightStrategyDLSCache() {
 }
 
-void LightStrategyDLSCache::Preprocess(SceneConstRef scn, const LightStrategyTask type,
+void LightStrategyDLSCache::Preprocess(SceneConstPtr scn, const LightStrategyTask type,
 			const bool rtMode) {
 	taskType = type;
 	useRTMode = rtMode;
@@ -46,7 +46,7 @@ void LightStrategyDLSCache::Preprocess(SceneConstRef scn, const LightStrategyTas
 }
 
 LightSourcePtr LightStrategyDLSCache::SampleLights(
-	SceneConstRef scene,
+	SceneConstPtr scene,
 	const float u,
 	const Point &p, const Normal &n,
 	const bool isVolume,
@@ -60,7 +60,7 @@ LightSourcePtr LightStrategyDLSCache::SampleLights(
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 
 			if (*pdf > 0.f)
-				return scene.lightDefs.GetLightSources()[lightIndex];
+				return scene->lightDefs.GetLightSources()[lightIndex];
 			else
 				return nullptr;
 		} else
@@ -83,7 +83,7 @@ float LightStrategyDLSCache::SampleLightPdf(LightSourceConstPtr light,
 		return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 }
 
-LightSourcePtr LightStrategyDLSCache::SampleLights(SceneConstRef scene, const float u,
+LightSourcePtr LightStrategyDLSCache::SampleLights(SceneConstPtr scene, const float u,
 			float *pdf) const {
 	return distributionStrategy.SampleLights(scene, u, pdf);
 }

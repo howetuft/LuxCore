@@ -149,7 +149,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		float lightPickPdf;
 		auto light = lightStrategy->SampleLights(
-			*scene,
+			scene,
 			u0,
 			bsdf.hitPoint.p,
 			landingNormal,
@@ -324,7 +324,7 @@ void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
 			continue;
 
 		float directPdfW;
-		const Spectrum envRadiance = envLight->GetRadiance(*scene, bsdf, -ray.d, &directPdfW);
+		const Spectrum envRadiance = envLight->GetRadiance(scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
 			if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
@@ -808,7 +808,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 	// Select one light source
 	float lightPickPdf;
 	LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->
-			SampleLights(*scene, sampler->GetSample(0), &lightPickPdf);
+			SampleLights(scene, sampler->GetSample(0), &lightPickPdf);
 
 	if (light) {
 		// Initialize the light path

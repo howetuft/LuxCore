@@ -65,6 +65,15 @@ namespace luxcore {
 class Scene;
 using ScenePtr = std::shared_ptr<Scene>;
 
+class Film;
+using FilmPtr = std::shared_ptr<Film>;
+
+class RenderConfig;
+using RenderConfigPtr = std::shared_ptr<RenderConfig>;
+
+class RenderState;
+using RenderStatePtr = std::shared_ptr<RenderState>;
+
 #define LC_MESH_MAX_DATA_COUNT 8
 
 // This is mostly for compatibility with the past

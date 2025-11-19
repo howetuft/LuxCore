@@ -85,7 +85,7 @@ ImageMapPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &
 // ImageMapResizeMinMemPolicy::Preprocess()
 //------------------------------------------------------------------------------
 
-void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, SceneConstRef scene,
+void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, SceneConstPtr scene,
 		const bool useRTMode) const {
 	if (useRTMode)
 		return;

@@ -95,17 +95,17 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 			editActions.Has(LIGHTS_EDIT) ||
 			editActions.Has(LIGHT_TYPES_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
-		lightDefs.Preprocess(*this, useRTMode);
+		lightDefs.Preprocess(shared_from_this(), useRTMode);
 	}
 
 	// And for visibility maps
-	lightDefs.UpdateVisibilityMaps(*this, useRTMode);
+	lightDefs.UpdateVisibilityMaps(shared_from_this(), useRTMode);
 
 	//--------------------------------------------------------------------------
 	// Preprocess image maps according resize policy
 	//--------------------------------------------------------------------------
 
-	imgMapCache.Preprocess(*this, useRTMode);
+	imgMapCache.Preprocess(shared_from_this(), useRTMode);
 	
 	//--------------------------------------------------------------------------
 	// Reset the edit actions

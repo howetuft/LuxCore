@@ -22,6 +22,7 @@
 #include "luxrays/utils/properties.h"
 
 #include "slg/slg.h"
+#include "slg/usings.h"
 #include "slg/renderconfig.h"
 #include "slg/renderstate.h"
 #include "slg/engines/renderengine.h"

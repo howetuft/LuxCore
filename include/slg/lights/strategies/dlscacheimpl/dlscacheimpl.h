@@ -162,7 +162,7 @@ public:
 	const DLSCParams &GetParams() const { return params; }
 	const DLSCBvh *GetBVH() const { return cacheEntriesBVH; }
 
-	void Build(SceneConstRef scene);
+	void Build(SceneConstPtr scene);
 	
 	const luxrays::Distribution1D *GetLightDistribution(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;

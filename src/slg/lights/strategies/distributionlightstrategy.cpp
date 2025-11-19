@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightSourcePtr DistributionLightStrategy::SampleLights(
-		SceneConstRef scene,
+		SceneConstPtr scene,
 		const float u,
 		const Point &p, const Normal &n,
 		const bool isVolume,
@@ -45,7 +45,7 @@ float DistributionLightStrategy::SampleLightPdf(LightSourceConstPtr light,
 }
 
 LightSourcePtr DistributionLightStrategy::SampleLights(
-		SceneConstRef scene,
+		SceneConstPtr scene,
 		const float u,
 		float *pdf ) const {
 	if (lightsDistribution) {
@@ -53,7 +53,7 @@ LightSourcePtr DistributionLightStrategy::SampleLights(
 		//assert ((lightIndex >= 0) && (lightIndex < scene.lightDefs.GetSize()));
 
 		if (*pdf > 0.f)
-			return scene.lightDefs.GetLightSources()[lightIndex];
+			return scene->lightDefs.GetLightSources()[lightIndex];
 		else
 			return nullptr;
 	} else
