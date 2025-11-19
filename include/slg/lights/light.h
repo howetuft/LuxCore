@@ -29,6 +29,7 @@
 #include "luxrays/core/color/spds/irregular.h"
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/mcdistribution.h"
+#include "slg/usings.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/mapping/mapping.h"
 #include "slg/materials/material.h"
@@ -52,10 +53,6 @@ typedef enum {
 	TYPE_IL_SKY2, TYPE_LASER, TYPE_SPHERE, TYPE_MAPSPHERE,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
-
-class LightSource;
-using LightSourceConstPtr = std::shared_ptr<const LightSource>;
-using LightSourcePtr = std::shared_ptr<LightSource>;
 
 //------------------------------------------------------------------------------
 // Generic LightSource interface
@@ -91,14 +88,14 @@ public:
 	virtual bool IsVisibleIndirectSpecular() const = 0;
 
 	// Emits particle from the light
-	virtual luxrays::Spectrum Emit(const Scene &scene,
+	virtual luxrays::Spectrum Emit(SceneConstPtr scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		luxrays::Ray &ray, float &emissionPdfW,
 		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// Illuminates bsdf.hitPoint.p
-    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
+    virtual luxrays::Spectrum Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
@@ -107,7 +104,7 @@ public:
 	// shadow (to avoid tracing the shadow ray). This method can be optionally
 	// implemented by a light source. The return value can be just false if the
 	// answer is unknown.
-	virtual bool IsAlwaysInShadow(const Scene &scene,
+	virtual bool IsAlwaysInShadow(SceneConstPtr scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
 		return false;
 	}
@@ -222,10 +219,6 @@ protected:
 //------------------------------------------------------------------------------
 // Env. LightSource interface
 //------------------------------------------------------------------------------
-
-class EnvLightSource;
-using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
-using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
 
 class EnvLightSource : public InfiniteLightSource {
 public:

@@ -35,14 +35,6 @@ namespace slg {
 class TriangleLight;
 class Scene;
 
-class EnvLightSource;
-using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
-using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
-
-class LightStrategy;
-using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
-using LightStrategyPtr = std::shared_ptr<LightStrategy>;
-
 class LightSourceDefinitions {
 public:
 	LightSourceDefinitions();

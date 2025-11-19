@@ -19,6 +19,7 @@
 #ifndef _SLG_CAMERA_H
 #define	_SLG_CAMERA_H
 
+#include "slg/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
@@ -41,11 +42,6 @@ using namespace luxrays::ocl;
 class Scene;
 class Volume;
 class PathVolumeInfo;
-
-class Camera;
-using CameraPtr = std::shared_ptr<Camera>;
-using CameraConstPtr = std::shared_ptr<const Camera>;
-using CameraRef = Camera&;
 
 class Camera {
 public:

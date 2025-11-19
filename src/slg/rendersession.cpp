@@ -35,7 +35,11 @@ void (*slg::SLG_DebugHandler)(const char *msg) = NULL;
 void slg::NullDebugHandler(const char *msg) {
 }
 
-RenderSession::RenderSession(RenderConfig *rcfg, RenderState *startState, FilmPtr startFilm) {
+RenderSession::RenderSession(
+	RenderConfigPtr rcfg,
+	RenderStatePtr startState,
+	FilmPtr startFilm
+) {
 	renderConfig = rcfg;
 
 	const double now = WallClockTime();
@@ -210,7 +214,7 @@ void RenderSession::SaveFilmOutputs() {
 	film->Output();
 }
 
-RenderState *RenderSession::GetRenderState() {
+RenderStatePtr RenderSession::GetRenderState() {
 	// Check if we are in the right state
 	if (!IsInPause())
 		throw runtime_error("A rendering state can be retrieved only while the rendering session is paused");
@@ -277,9 +281,9 @@ static size_t SaveRsmFile(RenderSession *renderSession, const std::string &fileN
 	sof.GetArchive() << renderSession->renderConfig;
 
 	// Save the render state
-	RenderState *renderState = renderSession->GetRenderState();
+	auto renderState = renderSession->GetRenderState();
 	sof.GetArchive() << renderState;
-	delete renderState;
+	renderState.reset();
 
 	// Save the film
 	sof.GetArchive() << renderSession->film;

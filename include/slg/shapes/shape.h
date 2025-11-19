@@ -21,6 +21,8 @@
 
 #include <vector>
 
+#include "slg/usings.h"
+
 namespace luxrays {
 	class ExtTriangleMesh;
 }
@@ -28,13 +30,6 @@ namespace luxrays {
 namespace slg {
 
 class Scene;
-
-class Shape;
-using ShapeConstPtr = std::shared_ptr<const Shape>;
-using ShapePtr = std::shared_ptr<Shape>;
-
-class Scene;
-using SceneConstRef = const Scene&;
 
 class Shape {
 public:

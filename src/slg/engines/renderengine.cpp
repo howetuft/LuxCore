@@ -84,11 +84,10 @@ RenderEngine::~RenderEngine() {
 
 	delete ctx;
 
-	delete startRenderState;
 	delete pixelFilter;
 }
 
-void RenderEngine::SetRenderState(RenderState *state, FilmPtr oldFilm) {
+void RenderEngine::SetRenderState(RenderStatePtr state, FilmPtr oldFilm) {
 	startRenderState = state;
 	startFilm = oldFilm;
 }

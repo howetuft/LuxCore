@@ -21,12 +21,10 @@
 
 #include <string>
 
+#include "slg/usings.h"
 #include "slg/shapes/shape.h"
 
 namespace slg {
-
-class Camera;
-using CameraConstPtr = std::shared_ptr<const Camera>;
 
 class SubdivShape : public Shape {
 public:

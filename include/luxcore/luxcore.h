@@ -1366,7 +1366,7 @@ public:
 	 * memory for Film is freed by RenderSession.
 	 */
 	static std::shared_ptr<RenderSession> Create(
-			std::shared_ptr<const RenderConfig> config,
+			std::shared_ptr<RenderConfig> config,
 			std::shared_ptr<RenderState> * startState = nullptr,
 			std::shared_ptr<Film> * startFilm = nullptr
 	);
@@ -1379,7 +1379,11 @@ public:
 	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
 	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
 	 */
-	static std::shared_ptr<RenderSession> Create(std::shared_ptr<const RenderConfig> config, const std::string &startStateFileName, const std::string &startFilmFileName);
+	static std::shared_ptr<RenderSession> Create(
+		std::shared_ptr<RenderConfig> config,
+		const std::string &startStateFileName,
+		const std::string &startFilmFileName
+	);
 
 	virtual ~RenderSession();
 
@@ -1389,7 +1393,7 @@ public:
 	 *
 	 * \return a reference to the RenderingConfig.
 	 */
-	virtual const RenderConfig &GetRenderConfig() const = 0;
+	virtual std::shared_ptr<RenderConfig> GetRenderConfig() = 0;
 
 	/*!
 	 * \brief Returns a pointer to the current RenderState. The session must be
@@ -1459,11 +1463,11 @@ public:
 	virtual void WaitNewFrame() = 0;
 
 	/*!
-	 * \brief Returns a reference to a Film with the output of the rendering.
+	 * \brief Returns a pointer to a Film with the output of the rendering.
 	 *
-	 * \return the reference to the Film.
+	 * \return the pointer to the Film.
 	 */
-	virtual Film &GetFilm() = 0;
+	virtual std::shared_ptr<Film> GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.

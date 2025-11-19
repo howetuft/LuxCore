@@ -19,14 +19,11 @@
 #ifndef _SLG_TRIANGLELIGHT_H
 #define	_SLG_TRIANGLELIGHT_H
 
+#include "slg/usings.h"
 #include "slg/lights/light.h"
 #include "slg/scene/sceneobject.h"
 
 namespace slg {
-
-class TriangleLight;
-using TriangleLightConstPtr = std::shared_ptr<const TriangleLight>;
-using TriangleLightPtr = std::shared_ptr<TriangleLight>;
 
 
 //------------------------------------------------------------------------------

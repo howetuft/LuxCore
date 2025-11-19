@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/intersectiondevice.h"
@@ -45,12 +46,16 @@ using namespace luxcore::detail;
 // FilmImpl
 //------------------------------------------------------------------------------
 
-FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
+FilmImpl::FilmImpl(const std::string &fileName) : renderSession(nullptr) {
 	standAloneFilm = slg::Film::LoadSerialized(fileName);
 }
 
-FilmImpl::FilmImpl(const luxrays::Properties &props, const bool hasPixelNormalizedChannel,
-		const bool hasScreenNormalizedChannel) : renderSession(NULL) {
+FilmImpl::FilmImpl(
+	const luxrays::Properties &props,
+	const bool hasPixelNormalizedChannel,
+	const bool hasScreenNormalizedChannel
+) : renderSession(nullptr)
+{
 	standAloneFilm = slg::Film::FromProperties(props);
 
 	if (hasPixelNormalizedChannel)
@@ -62,11 +67,14 @@ FilmImpl::FilmImpl(const luxrays::Properties &props, const bool hasPixelNormaliz
 	standAloneFilm->Init();
 }
 
-FilmImpl::FilmImpl(const RenderSessionImpl &session) : renderSession(&session),
-		standAloneFilm(NULL) {
-}
+FilmImpl::FilmImpl(
+	std::shared_ptr<const RenderSessionImpl> session
+) :
+	renderSession(session),
+	standAloneFilm(nullptr)
+{}
 
-FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(NULL) {
+FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(nullptr) {
 	standAloneFilm = film;
 }
 
@@ -441,10 +449,10 @@ void FilmImpl::DeleteAllImagePipelines()  {
 	if (renderSession) {
 		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
-		renderSession->renderSession->film->SetImagePipelines(NULL);
+		renderSession->renderSession->film->SetImagePipelines(nullptr);
 		renderSession->renderSession->renderConfig->DeleteAllFilmImagePipelinesProperties();
 	} else
-		standAloneFilm->SetImagePipelines(NULL);
+		standAloneFilm->SetImagePipelines(nullptr);
 
 	API_END();
 }
@@ -1297,7 +1305,7 @@ RenderConfigImpl::RenderConfigImpl(
 	allocatedScene = true;
 
 	// Read the render state
-	slg::RenderState *st;
+	std::shared_ptr<slg::RenderState> st;
 	sif.GetArchive() >> st;
 	*startState = std::make_shared<RenderStateImpl>(st);
 
@@ -1443,12 +1451,11 @@ RenderStateImpl::RenderStateImpl(const std::string &fileName) {
 	renderState = slg::RenderState::LoadSerialized(fileName);
 }
 
-RenderStateImpl::RenderStateImpl(slg::RenderState *state) {
+RenderStateImpl::RenderStateImpl(std::shared_ptr<slg::RenderState> state) {
 	renderState = state;
 }
 
 RenderStateImpl::~RenderStateImpl() {
-	delete renderState;
 }
 
 void RenderStateImpl::Save(const std::string &fileName) const {
@@ -1463,61 +1470,75 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, RenderStateImpl *startState, FilmImpl *startFilm) :
-		renderConfig(config) {
-	film = std::make_shared<FilmImpl>(*this);
+RenderSessionImpl::RenderSessionImpl(
+	std::shared_ptr<RenderConfigImpl> config,
+	std::shared_ptr<RenderStateImpl> startState,
+	std::shared_ptr<FilmImpl> startFilm
+) :
+	renderConfig(config)
+{
+	// Create film and session
+	film = std::make_shared<FilmImpl>(shared_from_this());
 
-	renderSession = std::make_shared<slg::RenderSession>(config->renderConfig,
-			startState ? startState->renderState : NULL,
-			startFilm ? startFilm->standAloneFilm : NULL);
+	renderSession = std::make_shared<slg::RenderSession>(
+		config->renderConfig,
+		startState ? startState->renderState : nullptr,
+		startFilm ? startFilm->standAloneFilm : nullptr);
 
 	if (startState) {
 		// slg::RenderSession will take care of deleting startState->renderState
-		startState->renderState = NULL;
+		startState->renderState = nullptr;
 		// startState is not more a valid/usable object after this point, it can
 		// only be deleted
 	}
 
 	if (startFilm) {
 		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
-		startFilm->standAloneFilm = NULL;
+		startFilm->standAloneFilm = nullptr;
 		// startFilm is not more a valid/usable object after this point, it can
 		// only be deleted
 	}
 }
 
-RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, const std::string &startStateFileName,
-		const std::string &startFilmFileName) :
-		renderConfig(config) {
-	film = std::make_shared<FilmImpl>(*this);
+RenderSessionImpl::RenderSessionImpl(
+	std::shared_ptr<RenderConfigImpl> config,
+	const std::string &startStateFileName,
+	const std::string &startFilmFileName
+) :
+	renderConfig(config)
+{
+	film = std::make_shared<FilmImpl>(shared_from_this());
 
-	unique_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
-	unique_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
+	auto startFilm = slg::Film::LoadSerialized(startFilmFileName);
+	auto startState = slg::RenderState::LoadSerialized(startStateFileName);
 
-	renderSession = std::make_shared<slg::RenderSession>(config->renderConfig,
-			startState.release(), startFilm.release());
+	renderSession = std::make_shared<slg::RenderSession>(
+		config->renderConfig,
+		startState,
+		startFilm
+	);
 }
 
 RenderSessionImpl::~RenderSessionImpl() {
-	delete film;
-	delete renderSession;
 }
-const RenderConfig &RenderSessionImpl::GetRenderConfig() const {
+
+std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {
 	API_BEGIN_NOARGS();
 
-	const RenderConfig &result = *renderConfig;
+	auto result = renderConfig;
 
-	API_RETURN("{}", (void *)&result);
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-RenderState *RenderSessionImpl::GetRenderState() {
+std::shared_ptr<RenderState> RenderSessionImpl::GetRenderState() {
 	API_BEGIN_NOARGS();
 
-auto result = std::make_shared<RenderStateImpl>(renderSession->GetRenderState());
+	// Create a new RenderStateImpl
+	auto result = std::make_shared<RenderStateImpl>(renderSession->GetRenderState());
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
@@ -1632,18 +1653,20 @@ void RenderSessionImpl::WaitNewFrame() {
 	API_END();
 }
 
-Film &RenderSessionImpl::GetFilm() {
+std::shared_ptr<Film> RenderSessionImpl::GetFilm() {
 	API_BEGIN_NOARGS();
 
-	Film &result = *film;
+	auto result = film;
 
-	API_RETURN("{}", (void *)&result);
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-static void SetTileProperties(Properties &props, const string &prefix,
-		const deque<const slg::Tile *> &tiles) {
+static void SetTileProperties(
+	Properties &props,
+	const string &prefix,
+	const std::deque<const slg::Tile *> &tiles) {
 	props.Set(Property(prefix + ".count")((unsigned int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
@@ -1717,7 +1740,7 @@ void RenderSessionImpl::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
 
-		auto hardDev = dynamic_pointer_cast<const HardwareDevice>(dev);
+		auto hardDev = dynamic_cast<const HardwareDevice *>(dev);
 		if (hardDev) {
 			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
 			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));

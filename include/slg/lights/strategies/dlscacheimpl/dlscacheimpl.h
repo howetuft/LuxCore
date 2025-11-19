@@ -171,14 +171,14 @@ public:
 
 private:
 	float SampleLight(const DLSCVisibilityParticle &visibilityParticle,
-		LightSourceConstPtr light, const u_int pass, SceneConstRef scene) const;
+		LightSourceConstPtr light, const u_int pass, SceneConstPtr scene) const;
 	
-	float EvaluateBestRadius(SceneConstRef scene);
-	void TraceVisibilityParticles(SceneConstRef);
+	float EvaluateBestRadius(SceneConstPtr scene);
+	void TraceVisibilityParticles(SceneConstPtr);
 	void InitCacheEntry(const u_int entryIndex);
-	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex, SceneConstRef);
-	void BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstRef);
-	void BuildCacheEntries(SceneConstRef scene);
+	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex, SceneConstPtr);
+	void BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstPtr);
+	void BuildCacheEntries(SceneConstPtr scene);
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 

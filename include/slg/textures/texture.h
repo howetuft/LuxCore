@@ -118,9 +118,6 @@ inline float Noise(const luxrays::Point &P) {
 	return Noise(P.x, P.y, P.z);
 }
 
-using TexturePtr = std::shared_ptr<Texture>;
-using TextureConstPtr = std::shared_ptr<const Texture>;
-using TextureRef = Texture&;
 
 }
 

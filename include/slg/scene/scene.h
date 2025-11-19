@@ -31,6 +31,7 @@
 #include "luxrays/utils/mcdistribution.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
+#include "slg/usings.h"
 #include "slg/core/sdl.h"
 #include "slg/cameras/camera.h"
 #include "slg/editaction.h"
@@ -74,11 +75,6 @@ typedef enum {
 typedef int SceneRayType;
 
 class SampleResult;
-
-class Scene;
-using SceneConstPtr = std::shared_ptr<const Scene>;
-using ScenePtr = std::shared_ptr<Scene>;
-using SceneConstRef = const Scene&;
 
 
 class Scene {

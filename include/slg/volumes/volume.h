@@ -80,11 +80,6 @@ protected:
 	int priority;
 };
 
-using VolumePtr = std::shared_ptr<Volume>;
-using VolumeConstPtr = std::shared_ptr<const Volume>;
-using VolumeRef = Volume&;
-using VolumeConstRef = const Volume&;
-
 // An utility class
 class SchlickScatter {
 public:

@@ -118,8 +118,8 @@ void BakeCPURenderEngine::InitFilm() {
 	film->Init();
 }
 
-RenderState *BakeCPURenderEngine::GetRenderState() {
-	return new BakeCPURenderState(bootStrapSeed, photonGICache);
+RenderStatePtr BakeCPURenderEngine::GetRenderState() {
+	return std::make_shared<BakeCPURenderState>(bootStrapSeed, photonGICache);
 }
 
 void BakeCPURenderEngine::StartLockLess() {
@@ -147,7 +147,7 @@ void BakeCPURenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		BakeCPURenderState *rs = (BakeCPURenderState *)startRenderState;
+		auto rs = static_pointer_cast<BakeCPURenderState>(startRenderState);
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
@@ -163,8 +163,7 @@ void BakeCPURenderEngine::StartLockLess() {
 		if (photonGICache)
 			photonGICache->SetScene(renderConfig->scene);
 
-		delete startRenderState;
-		startRenderState = NULL;
+		startRenderState = nullptr;
 	}
 
 	//--------------------------------------------------------------------------

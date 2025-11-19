@@ -28,6 +28,7 @@
 #include "luxrays/utils/serializationutils.h"
 
 #include "slg/slg.h"
+#include "slg/usings.h"
 #include "slg/samplers/sobol.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
@@ -41,10 +42,6 @@ namespace slg {
 namespace ocl {
 #include "slg/engines/caches/photongi/pgic_types.cl"
 }
-
-class Scene;
-using SceneConstPtr = std::shared_ptr<const Scene>;
-using ScenePtr = std::shared_ptr<Scene>;
 
 
 //------------------------------------------------------------------------------

@@ -43,8 +43,8 @@ void LightCPURenderEngine::InitFilm() {
 	film->Init();
 }
 
-RenderState *LightCPURenderEngine::GetRenderState() {
-	return new LightCPURenderState(bootStrapSeed);
+RenderStatePtr LightCPURenderEngine::GetRenderState() {
+	return std::make_shared<LightCPURenderState>(bootStrapSeed);
 }
 
 void LightCPURenderEngine::StartLockLess() {
@@ -64,15 +64,15 @@ void LightCPURenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		LightCPURenderEngine *rs = (LightCPURenderEngine *)startRenderState;
+		//auto rs = static_pointer_cast<LightCPURenderEngine>(startRenderState);
+		auto rs = static_pointer_cast<LightCPURenderState>(startRenderState);
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
 		SLG_LOG("Continuing the rendering with new LIGHTCPU seed: " + ToString(newSeed));
 		SetSeed(newSeed);
-		
-		delete startRenderState;
-		startRenderState = NULL;
+
+		startRenderState = nullptr;
 	}
 
 	//--------------------------------------------------------------------------

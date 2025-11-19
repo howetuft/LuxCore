@@ -446,7 +446,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		if (light) {
 			Ray shadowRay;
 			float directPdfW, emissionPdfW, cosThetaAtLight;
-			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf,
+			const Spectrum lightRadiance = light->Illuminate(scene, eyeVertex.bsdf,
 					time, u1, u2, u3, shadowRay, directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
@@ -580,7 +580,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
-	lightVertex.throughput = light->Emit(*scene,
+	lightVertex.throughput = light->Emit(scene,
 			time, sampler->GetSample(5), sampler->GetSample(6),
 			sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 			lightRay, lightEmitPdfW,

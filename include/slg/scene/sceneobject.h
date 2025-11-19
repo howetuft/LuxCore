@@ -92,9 +92,6 @@ private:
 	bool cameraInvisible;
 };
 
-using SceneObjectRef = SceneObject&;
-using SceneObjectPtr = std::shared_ptr<SceneObject>;
-using SceneObjectConstPtr = std::shared_ptr<const SceneObject>;
 
 }
 

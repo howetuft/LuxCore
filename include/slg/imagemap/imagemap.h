@@ -36,14 +36,11 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
+#include "slg/usings.h"
 #include "slg/core/colorspace.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
-
-class ImageMap;
-using ImageMapConstPtr = std::shared_ptr<const ImageMap>;
-using ImageMapPtr = std::shared_ptr<ImageMap>;
 
 // OpenCL data types
 namespace ocl {

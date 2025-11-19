@@ -147,9 +147,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
-    RenderConfig *config;
-    RenderState *startRenderState = NULL;
-    Film *startFilm = NULL;
+    std::shared_ptr<RenderConfig> config;
+    std::shared_ptr<RenderState> startRenderState = nullptr;
+    std::shared_ptr<Film> startFilm = nullptr;
 
     if (configFileName.compare("") != 0) {
       // Clear the file name resolver list
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
     const string configFileNameExt = GetFileNameExt(configFileName);
     if (configFileName.compare("") == 0) {
       // Start without a rendering
-      config = NULL;
+      config = nullptr;
     } else if (configFileNameExt == ".lxs") {
       // It is a LuxRender SDL file
       LA_LOG("Parsing LuxRender SDL file...");
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
       //LA_LOG("RenderConfig: \n" << renderConfigProps);
       //LA_LOG("Scene: \n" << sceneProps);
 
-      Scene *scene = Scene::Create();
+      auto scene = Scene::Create();
       scene->Parse(sceneProps);
       config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
       config->DeleteSceneOnExit();
@@ -188,8 +188,8 @@ int main(int argc, char *argv[]) {
       config->Parse(cmdLineProp);
     } else if (configFileNameExt == ".rsm") {
       // It is a rendering resume file
-      delete startRenderState;
-      delete startFilm;
+      startRenderState.reset();
+      startFilm.reset();
       config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
       config->Parse(cmdLineProp);
     } else
@@ -209,14 +209,14 @@ int main(int argc, char *argv[]) {
       throw runtime_error("You have to use both a film and render state to resume the rendering");
 
     if (config && (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER")) {
-      RenderSession *session = RenderSession::Create(config);
+      auto session = RenderSession::Create(config);
 
       // Save the scene and exit
       session->Start();
       session->Stop();
 
-      delete session;
-      delete config;
+      session.reset();
+      config.reset();
     } else {
       LuxCoreApp app(config);
       app.optMouseGrabMode = mouseGrabMode;

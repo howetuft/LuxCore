@@ -713,7 +713,7 @@ typedef struct {
 // File GetOutput() related functions
 //------------------------------------------------------------------------------
 
-static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat1(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj, const size_t index, const bool executeImagePipeline) {
   const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
 
@@ -776,13 +776,13 @@ static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::Fi
   }
 }
 
-static void Film_GetOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputFloat2(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_GetOutputFloat1(film, type, obj, 0, true);
 }
 
 static void Film_GetOutputFloat3(
-    luxcore::detail::FilmImpl *film,
+    std::shared_ptr<luxcore::detail::FilmImpl> film,
     const Film::FilmOutputType type,
     py::object &obj,
     const size_t index) {
@@ -790,7 +790,7 @@ static void Film_GetOutputFloat3(
 }
 
 static void Film_GetOutputUInt1(
-    luxcore::detail::FilmImpl *film,
+    std::shared_ptr<luxcore::detail::FilmImpl> film,
     const Film::FilmOutputType type,
     py::object &obj,
     const size_t index,
@@ -827,12 +827,12 @@ static void Film_GetOutputUInt1(
   }
 }
 
-static void Film_GetOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt2(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_GetOutputUInt1(film, type, obj, 0, true);
 }
 
-static void Film_GetOutputUInt3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt3(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_GetOutputUInt1(film, type, obj, index, true);
 }
@@ -842,7 +842,7 @@ static void Film_GetOutputUInt3(luxcore::detail::FilmImpl *film, const Film::Fil
 //------------------------------------------------------------------------------
 
 static void Film_UpdateOutputFloat1(
-    luxcore::detail::FilmImpl *film,
+    std::shared_ptr<luxcore::detail::FilmImpl> film,
     const Film::FilmOutputType type,
     py::object &obj,
     const size_t index,
@@ -908,54 +908,54 @@ static void Film_UpdateOutputFloat1(
   }
 }
 
-static void Film_UpdateOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_UpdateOutputFloat2(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_UpdateOutputFloat1(film, type, obj, 0, false);
 }
 
-static void Film_UpdateOutputFloat3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_UpdateOutputFloat3(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_UpdateOutputFloat1(film, type, obj, index, false);
 }
 
-static void Film_UpdateOutputUInt1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt1(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj, const size_t index, const bool executeImagePipeline) {
   throw runtime_error("Film Output not available: " + luxrays::ToString(type));
 }
 
-static void Film_UpdateOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt2(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_UpdateOutputUInt1(film, type, obj, 0, false);
 }
 
-static void Film_UpdateOutputUInt3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt3(std::shared_ptr<luxcore::detail::FilmImpl> film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_UpdateOutputUInt1(film, type, obj, index, false);
 }
 
 //------------------------------------------------------------------------------
 
-static void Film_AddFilm1(luxcore::detail::FilmImpl *film, luxcore::detail::FilmImpl *srcFilm) {
-  film->AddFilm(*srcFilm);
+static void Film_AddFilm1(std::shared_ptr<luxcore::detail::FilmImpl> film, std::shared_ptr<luxcore::detail::FilmImpl> srcFilm) {
+  film->AddFilm(srcFilm);
 }
 
-static void Film_AddFilm2(luxcore::detail::FilmImpl *film, luxcore::detail::FilmImpl *srcFilm,
+static void Film_AddFilm2(std::shared_ptr<luxcore::detail::FilmImpl> film, std::shared_ptr<luxcore::detail::FilmImpl> srcFilm,
     const size_t srcOffsetX, const size_t srcOffsetY,
     const size_t srcWidth, const size_t srcHeight,
     const size_t dstOffsetX, const size_t dstOffsetY) {
-  film->AddFilm(*srcFilm, srcOffsetX,  srcOffsetY, srcWidth,  srcHeight, dstOffsetX,  dstOffsetY);
+  film->AddFilm(srcFilm, srcOffsetX,  srcOffsetY, srcWidth,  srcHeight, dstOffsetX,  dstOffsetY);
 }
 
-static float Film_GetFilmY1(luxcore::detail::FilmImpl *film) {
+static float Film_GetFilmY1(std::shared_ptr<luxcore::detail::FilmImpl> film) {
   return film->GetFilmY();
 }
 
-static float Film_GetFilmY2(luxcore::detail::FilmImpl *film, const size_t imagePipelineIndex) {
+static float Film_GetFilmY2(std::shared_ptr<luxcore::detail::FilmImpl> film, const size_t imagePipelineIndex) {
   return film->GetFilmY(imagePipelineIndex);
 }
 
 static void Film_ApplyOIDN(
-	luxcore::detail::FilmImpl *film,
+	std::shared_ptr<luxcore::detail::FilmImpl> film,
 	const size_t imagePipelineIndex
 ) {
 	film->ApplyOIDN(imagePipelineIndex);
@@ -1150,7 +1150,7 @@ static void Scene_DefineMesh1(luxcore::detail::SceneImpl *scene, const string &m
     }
   }
 
-  luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+  auto mesh = std::make_shared<luxrays::ExtTriangleMesh>(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
 
   // Apply the transformation if required
   if (!transformation.is_none()) {
@@ -1351,7 +1351,7 @@ static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string
     }
   }
 
-  luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(plyNbVerts, plyNbTris, points, tris, normals, &uvs, &colors, &as);
+  auto mesh = std::make_shared<luxrays::ExtTriangleMesh>(plyNbVerts, plyNbTris, points, tris, normals, &uvs, &colors, &as);
 
   // Apply the transformation if required
   if (!transformation.is_none()) {
@@ -1552,7 +1552,7 @@ static void Scene_DefineMeshExt3(
 	}
 
 	// Create Mesh
-	auto* newMesh =  new luxrays::ExtTriangleMesh(
+	auto newMesh =  std::make_shared<luxrays::ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
 		points.release(),
@@ -2043,17 +2043,18 @@ static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
 
 static py::tuple RenderConfig_LoadResumeFile(const py::str &fileNameStr) {
   const string fileName = py::cast<string>(fileNameStr);
-  luxcore::detail::RenderStateImpl *startState;
-  luxcore::detail::FilmImpl *startFilm;
-  luxcore::detail::RenderConfigImpl *config = new luxcore::detail::RenderConfigImpl(fileName, &startState, &startFilm);
+  RenderStateImplPtr startState;
+  FilmImplPtr startFilm;
+  auto config = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, &startState, &startFilm);
 
   //return py::make_tuple(TransferToPython(config), TransferToPython(startState), TransferToPython(startFilm));  TODO
   return py::make_tuple(config, startState, startFilm);
 }
 
-static luxcore::detail::RenderConfigImpl *RenderConfig_LoadFile(const py::str &fileNameStr) {
-  const string fileName = py::cast<string>(fileNameStr);
-  luxcore::detail::RenderConfigImpl *config = new luxcore::detail::RenderConfigImpl(fileName);
+static std::shared_ptr<luxcore::detail::RenderConfigImpl>
+RenderConfig_LoadFile(const py::str &fileNameStr) {
+  const std::string fileName = py::cast<std::string>(fileNameStr);
+  auto config = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName);
 
   return config;
 }
@@ -2075,16 +2076,23 @@ static py::tuple RenderConfig_GetFilmSize(luxcore::detail::RenderConfigImpl *ren
 // Glue for RenderSession class
 //------------------------------------------------------------------------------
 
-static luxcore::detail::RenderConfigImpl &RenderSession_GetRenderConfig(luxcore::detail::RenderSessionImpl *renderSession) {
-  return (luxcore::detail::RenderConfigImpl &)renderSession->GetRenderConfig();
+static std::shared_ptr<luxcore::detail::RenderConfigImpl>
+RenderSession_GetRenderConfig(
+	std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession
+) {
+  return static_pointer_cast<luxcore::detail::RenderConfigImpl>(renderSession->GetRenderConfig());
 }
 
-static luxcore::detail::FilmImpl &RenderSession_GetFilm(luxcore::detail::RenderSessionImpl *renderSession) {
-  return (luxcore::detail::FilmImpl &)renderSession->GetFilm();
+static std::shared_ptr<luxcore::detail::FilmImpl>
+RenderSession_GetFilm(std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession) {
+  return static_pointer_cast<luxcore::detail::FilmImpl>(renderSession->GetFilm());
 }
 
-static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::detail::RenderSessionImpl *renderSession) {
-  return (luxcore::detail::RenderStateImpl *)renderSession->GetRenderState();
+static std::shared_ptr<luxcore::detail::RenderStateImpl>
+RenderSession_GetRenderState(
+	std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession
+) {
+  return static_pointer_cast<luxcore::detail::RenderStateImpl>(renderSession->GetRenderState());
 }
 
 //------------------------------------------------------------------------------
@@ -2499,10 +2507,10 @@ PYBIND11_MODULE(pyluxcore, m) {
   // RenderConfig class
   //--------------------------------------------------------------------------
 
-  py::class_<luxcore::detail::RenderConfigImpl>(m, "RenderConfig")
+  py::class_<luxcore::detail::RenderConfigImpl, py::smart_holder>(m, "RenderConfig")
     .def(py::init<luxrays::Properties>())
     //.def(py::init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
-    .def(py::init<luxrays::Properties, luxcore::detail::SceneImpl *>(), py::keep_alive<1, 3>())
+    .def(py::init<luxrays::Properties, std::shared_ptr<luxcore::detail::SceneImpl> >(), py::keep_alive<1, 3>())
     //.def("__init__", make_constructor(RenderConfig_LoadFile))
     .def(py::init(&RenderConfig_LoadFile))
     .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, py::return_value_policy::reference_internal)
@@ -2530,10 +2538,10 @@ PYBIND11_MODULE(pyluxcore, m) {
   // RenderSession class
   //--------------------------------------------------------------------------
 
-  py::class_<luxcore::detail::RenderSessionImpl>(m, "RenderSession")
-    .def(py::init<luxcore::detail::RenderConfigImpl *>(), py::keep_alive<1, 2>())
-    .def(py::init<luxcore::detail::RenderConfigImpl *, string, string>(), py::keep_alive<1, 2>())
-    .def(py::init<luxcore::detail::RenderConfigImpl *, luxcore::detail::RenderStateImpl *, luxcore::detail::FilmImpl *>(), py::keep_alive<1, 2>())
+  py::class_<luxcore::detail::RenderSessionImpl, py::smart_holder>(m, "RenderSession")
+    .def(py::init<RenderConfigImplPtr>(), py::keep_alive<1, 2>())
+    .def(py::init<RenderConfigImplPtr, string, string>(), py::keep_alive<1, 2>())
+    .def(py::init<RenderConfigImplPtr, RenderStateImplPtr, FilmImplPtr>(), py::keep_alive<1, 2>())
     .def("GetRenderConfig", &RenderSession_GetRenderConfig, py::return_value_policy::reference_internal)
     .def("Start", &luxcore::detail::RenderSessionImpl::Start)
     .def("Stop", &luxcore::detail::RenderSessionImpl::Stop)

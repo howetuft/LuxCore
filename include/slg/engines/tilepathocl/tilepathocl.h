@@ -96,7 +96,7 @@ public:
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
-	virtual RenderState *GetRenderState();
+	virtual RenderStatePtr GetRenderState();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry

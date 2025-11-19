@@ -249,10 +249,6 @@ public:
 	const bool uniformScale;
 };
 
-using TextureMapping2DPtr = std::shared_ptr<TextureMapping2D>;
-using TextureMapping3DPtr = std::shared_ptr<TextureMapping3D>;
-using TextureMapping2DConstPtr = std::shared_ptr<const TextureMapping2D>;
-using TextureMapping3DConstPtr = std::shared_ptr<const TextureMapping3D>;
 
 }
 

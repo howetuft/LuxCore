@@ -24,6 +24,7 @@
 #include <barrier>
 
 #include "luxrays/devices/ocldevice.h"
+#include "slg/usings.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/core/sdl.h"
 
@@ -33,8 +34,6 @@ class Scene;
 class ImageMapCache;
 class SobolSamplerSharedData;
 
-using SceneConstRef = const Scene &;
-using ScenePtr = std::shared_ptr<Scene>;
 //------------------------------------------------------------------------------
 // ImageMapResizePolicy
 //------------------------------------------------------------------------------

@@ -55,8 +55,8 @@ void PathCPURenderEngine::InitFilm() {
 	film->Init();
 }
 
-RenderState *PathCPURenderEngine::GetRenderState() {
-	return new PathCPURenderState(bootStrapSeed, photonGICache);
+RenderStatePtr PathCPURenderEngine::GetRenderState() {
+	return std::make_shared<PathCPURenderState>(bootStrapSeed, photonGICache);
 }
 
 void PathCPURenderEngine::StartLockLess() {
@@ -94,7 +94,7 @@ void PathCPURenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		PathCPURenderState *rs = (PathCPURenderState *)startRenderState;
+		auto rs = static_pointer_cast<PathCPURenderState>(startRenderState);
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
@@ -110,8 +110,7 @@ void PathCPURenderEngine::StartLockLess() {
 		if (photonGICache)
 			photonGICache->SetScene(renderConfig->scene);
 
-		delete startRenderState;
-		startRenderState = NULL;
+		startRenderState = nullptr;
 	}
 
 	//--------------------------------------------------------------------------

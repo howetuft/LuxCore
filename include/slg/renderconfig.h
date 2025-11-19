@@ -28,10 +28,6 @@
 
 namespace slg {
 
-class RenderConfig;
-using RenderConfigConstPtr = std::shared_ptr<const RenderConfig>;
-using RenderConfigPtr = std::shared_ptr<RenderConfig>;
-
 class RenderConfig : public std::enable_shared_from_this<RenderConfig> {
 public:
 	RenderConfig(const luxrays::Properties &props, ScenePtr scene = nullptr);

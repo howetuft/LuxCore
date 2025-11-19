@@ -135,7 +135,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		// Initialize the light path
 		float lightEmitPdfW;
 		Ray nextEventRay;
-		lightPathFlux = light->Emit(*scene,
+		lightPathFlux = light->Emit(scene,
 				time, samples[2], samples[3], samples[4], samples[5], samples[6],
 				nextEventRay, lightEmitPdfW);
 

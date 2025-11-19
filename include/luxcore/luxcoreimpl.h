@@ -40,10 +40,12 @@ class RenderSessionImpl;
 class FilmImpl : public Film {
 public:
 	FilmImpl(const std::string &fileName);
-	FilmImpl(const luxrays::Properties &props,
+	FilmImpl(
+		const luxrays::Properties &props,
 		const bool hasPixelNormalizedChannel,
-		const bool hasScreenNormalizedChannel);
-	FilmImpl(const RenderSessionImpl &session);
+		const bool hasScreenNormalizedChannel
+	);
+	FilmImpl(std::shared_ptr<const RenderSessionImpl> session);
 	FilmImpl(slg::FilmPtr film);
 	~FilmImpl();
 
@@ -325,22 +327,22 @@ private:
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-class RenderSessionImpl : public RenderSession {
+class RenderSessionImpl : public RenderSession, public std::enable_shared_from_this<RenderSessionImpl> {
 public:
 	RenderSessionImpl(
-		std::shared_ptr<const RenderConfigImpl> config,
+		std::shared_ptr<RenderConfigImpl> config,
 		std::shared_ptr<RenderStateImpl> startState = nullptr,
 		std::shared_ptr<FilmImpl> startFilm = nullptr
 	);
 	RenderSessionImpl(
-		std::shared_ptr<const RenderConfigImpl> config,
+		std::shared_ptr<RenderConfigImpl> config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
 
 	~RenderSessionImpl();
 
-	const RenderConfig &GetRenderConfig() const;
+	std::shared_ptr<RenderConfig> GetRenderConfig();
 	std::shared_ptr<RenderState> GetRenderState();
 
 	void Start();
@@ -360,7 +362,7 @@ public:
 	void WaitNewFrame();
 
 	bool NeedPeriodicFilmSave();
-	Film &GetFilm();
+	std::shared_ptr<Film> GetFilm();
 
 	void UpdateStats();
 	const luxrays::Properties &GetStats() const;
@@ -372,7 +374,7 @@ public:
 	friend class FilmImpl;
 
 private:
-	std::shared_ptr<const RenderConfigImpl> renderConfig;
+	std::shared_ptr<RenderConfigImpl> renderConfig;
 	std::shared_ptr<FilmImpl> film;
 
 	std::shared_ptr<slg::RenderSession> renderSession;
@@ -387,6 +389,13 @@ template <> struct std::formatter<luxcore::Camera::CameraType>: formatter<string
   auto format(luxcore::Camera::CameraType cam, std::format_context& ctx) const
     -> format_context::iterator;
 };
+
+
+using RenderConfigImplPtr = std::shared_ptr<luxcore::detail::RenderConfigImpl>;
+using RenderStateImplPtr = std::shared_ptr<luxcore::detail::RenderStateImpl>;
+using RenderSessionImplPtr = std::shared_ptr<luxcore::detail::RenderSessionImpl>;
+using FilmImplPtr = std::shared_ptr<luxcore::detail::FilmImpl>;
+
 
 #endif	/* _LUXCOREIMPL_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

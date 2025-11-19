@@ -27,6 +27,7 @@
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/properties.h"
+#include "slg/usings.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/textures/texture.h"
@@ -293,10 +294,6 @@ extern luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const 
 	float u0, float u1, float *pdf);
 extern float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 	const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir);
-
-using MaterialRef = Material&;
-using MaterialPtr = std::shared_ptr<Material>;
-using MaterialConstPtr = std::shared_ptr<const Material>;
 
 }
 

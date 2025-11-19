@@ -79,8 +79,8 @@ PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_i
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 
-RenderState *PathOCLRenderEngine::GetRenderState() {
-	return new PathOCLRenderState(bootStrapSeed, photonGICache);
+RenderStatePtr PathOCLRenderEngine::GetRenderState() {
+	return std::make_shared<PathOCLRenderState>(bootStrapSeed, photonGICache);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -113,7 +113,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		PathOCLRenderState *rs = (PathOCLRenderState *)startRenderState;
+		auto rs = static_pointer_cast<PathOCLRenderState>(startRenderState);
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
@@ -123,14 +123,13 @@ void PathOCLRenderEngine::StartLockLess() {
 		// Transfer the ownership of PhotonGI cache pointer
 		photonGICache = rs->photonGICache;
 		rs->photonGICache = nullptr;
-		
+
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
 			photonGICache->SetScene(renderConfig->scene);
 
-		delete startRenderState;
-		startRenderState = NULL;
+		startRenderState = nullptr;
 
 		hasStartFilm = true;
 	} else
@@ -142,7 +141,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	if (nativeRenderThreadCount > 0) {
 		eyeSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
-		
+
 	}
 
 	//--------------------------------------------------------------------------

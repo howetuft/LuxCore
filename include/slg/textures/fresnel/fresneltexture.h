@@ -19,6 +19,7 @@
 #ifndef _SLG_FRESNELTEXTURE_H
 #define	_SLG_FRESNELTEXTURE_H
 
+#include "slg/usings.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -52,7 +53,6 @@ private:
 			const float eta);
 };
 
-using FresnelTextureConstPtr = std::shared_ptr<const FresnelTexture>;
 
 }
 

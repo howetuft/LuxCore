@@ -30,10 +30,6 @@ namespace slg {
 // FilmConvTest
 //------------------------------------------------------------------------------
 
-class Film;
-using FilmPtr = std::shared_ptr<Film>;
-using FilmConstPtr = std::shared_ptr<const Film>;
-using FilmConstRef = const Film&;
 
 class FilmConvTest {
 public:

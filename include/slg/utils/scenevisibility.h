@@ -30,7 +30,7 @@ namespace slg {
 template <class T>
 class SceneVisibility {
 public:
-	SceneVisibility(SceneConstRef scene, std::vector<T> &visibilityParticles,
+	SceneVisibility(SceneConstPtr scene, std::vector<T> &visibilityParticles,
 			const u_int maxPathDepth, const u_int maxSampleCount,
 			const float targetHitRate,
 			const float lookUpRadius, const float lookUpNormalAngle,
@@ -79,7 +79,7 @@ protected:
 	virtual bool ProcessVisibilityParticle(const T &visibilityParticle, std::vector<T> &visibilityParticles,
 			IndexOctree<T> *particlesOctree, const float maxDistance2) const = 0;
 
-	SceneConstRef scene;
+	SceneConstPtr scene;
 	std::vector<T> &visibilityParticles;
 	const u_int maxPathDepth, maxSampleCount;	
 	const float targetHitRate, lookUpRadius, lookUpNormalAngle, timeStart, timeEnd;

@@ -246,8 +246,8 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");
 
-	RenderConfig *config = RenderConfig::Create(cfgProps, scene);
-	RenderSession *session = RenderSession::Create(config);
+	auto config = RenderConfig::Create(cfgProps, scene);
+	auto session = RenderSession::Create(config);
 
 	// Start the rendering
 	session->Start();
@@ -259,10 +259,6 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	
 	// Stop the rendering
 	session->Stop();
-
-	delete session;
-	delete config;
-	delete scene;
 
 	LC_LOG("Done.");
 }

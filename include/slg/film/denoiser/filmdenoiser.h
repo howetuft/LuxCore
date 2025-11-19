@@ -34,7 +34,6 @@ namespace slg {
 
 class Film;
 class SampleResult;
-using FilmConstRef = const Film&;
 
 class FilmDenoiser {
 public:

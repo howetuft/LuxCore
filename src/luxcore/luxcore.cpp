@@ -548,13 +548,13 @@ RenderState::~RenderState() {
 //------------------------------------------------------------------------------
 
 std::shared_ptr<RenderSession> RenderSession::Create(
-	std::shared_ptr<const RenderConfig> config,
+	std::shared_ptr<RenderConfig> config,
 	std::shared_ptr<RenderState> * startState,
 	std::shared_ptr<Film> * startFilm
 ) {
 	API_BEGIN("{}, {}, {}", (void *)config.get(), (void *)startState->get(), (void *)startFilm->get());
 
-	auto configImpl = dynamic_pointer_cast<const luxcore::detail::RenderConfigImpl>(config);
+	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
 	auto startStateImpl = dynamic_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
 	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImpl>(*startFilm);
 
@@ -566,13 +566,13 @@ std::shared_ptr<RenderSession> RenderSession::Create(
 }
 
 std::shared_ptr<RenderSession> RenderSession::Create(
-		std::shared_ptr<const RenderConfig> config,
+		std::shared_ptr<RenderConfig> config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 ) {
 	API_BEGIN("{}, {}, {}", (void *)config.get(), ToArgString(startStateFileName), ToArgString(startFilmFileName));
 
-	auto configImpl = dynamic_pointer_cast<const luxcore::detail::RenderConfigImpl>(config);
+	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
 
 	auto result = std::make_shared<luxcore::detail::RenderSessionImpl>(configImpl, startStateFileName, startFilmFileName);
 

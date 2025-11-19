@@ -85,10 +85,10 @@ public:
 	void SetSeed(const unsigned long seed);
 	void GenerateNewSeedBase();
 
-	virtual RenderState *GetRenderState() {
+	virtual RenderStatePtr GetRenderState() {
 		throw std::runtime_error("RenderEngine::GetRenderState() not implemented for render engine: " + GetTag());
 	}
-	virtual void SetRenderState(RenderState *state, FilmPtr startFilm);
+	virtual void SetRenderState(RenderStatePtr state, FilmPtr startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -188,7 +188,7 @@ protected:
 
 	double raysCount;
 
-	RenderState *startRenderState;
+	RenderStatePtr startRenderState;
 	FilmPtr startFilm;
 
 	bool started, editMode, pauseMode;

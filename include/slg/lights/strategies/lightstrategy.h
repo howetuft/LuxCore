@@ -19,6 +19,7 @@
 #ifndef _SLG_LIGHTSTRATEGY_H
 #define	_SLG_LIGHTSTRATEGY_H
 
+#include "slg/usings.h"
 #include "slg/lights/light.h"
 #include "slg/scene/scene.h"
 
@@ -27,11 +28,6 @@ namespace slg {
 //------------------------------------------------------------------------------
 // LightStrategy
 //------------------------------------------------------------------------------
-
-class Scene;
-using SceneConstPtr = std::shared_ptr<const Scene>;
-using ScenePtr = std::shared_ptr<Scene>;
-using SceneConstRef = const Scene&;
 
 typedef enum {
 	TASK_EMIT, TASK_ILLUMINATE, TASK_INFINITE_ONLY,
@@ -43,10 +39,6 @@ typedef enum {
 	LIGHT_STRATEGY_TYPE_COUNT
 } LightStrategyType;
 
-
-class LightStrategy;
-using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
-using LightStrategyPtr = std::shared_ptr<LightStrategy>;
 
 class LightStrategy {
 public:

@@ -46,8 +46,8 @@ void TilePathCPURenderEngine::InitFilm() {
 	film->Init();
 }
 
-RenderState *TilePathCPURenderEngine::GetRenderState() {
-	return new TilePathCPURenderState(bootStrapSeed, tileRepository, photonGICache);
+RenderStatePtr TilePathCPURenderEngine::GetRenderState() {
+	return std::make_shared<TilePathCPURenderState>(bootStrapSeed, tileRepository, photonGICache);
 }
 
 void TilePathCPURenderEngine::StartLockLess() {
@@ -78,7 +78,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 		// Check if the render state is of the right type
 		startRenderState->CheckEngineTag(GetObjectTag());
 
-		TilePathCPURenderState *rs = (TilePathCPURenderState *)startRenderState;
+		auto rs = static_pointer_cast<TilePathCPURenderState>(startRenderState);
 
 		// Use a new seed to continue the rendering
 		const u_int newSeed = rs->bootStrapSeed + 1;
@@ -93,8 +93,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 		photonGICache = rs->photonGICache;
 		rs->photonGICache = nullptr;
 		
-		delete startRenderState;
-		startRenderState = NULL;
+		startRenderState = nullptr;
 	} else {
 		film->Reset();
 

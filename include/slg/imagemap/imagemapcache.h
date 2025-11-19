@@ -23,14 +23,12 @@
 #include <vector>
 
 #include "luxrays/devices/ocldevice.h"
+#include "slg/usings.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/core/sdl.h"
 
 namespace slg {
-
-class Scene;
-using SceneConstRef = const Scene&;
 
 //------------------------------------------------------------------------------
 // ImageMapCache

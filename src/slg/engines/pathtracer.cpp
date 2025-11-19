@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 
+#include "slg/usings.h"
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/metropolis.h"
@@ -159,7 +160,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		if (light) {
 			Ray shadowRay;
 			float directPdfW;
-			Spectrum lightRadiance = light->Illuminate(*scene, bsdf,
+			Spectrum lightRadiance = light->Illuminate(scene, bsdf,
 					time, u1, u2, u3, shadowRay, directPdfW);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
@@ -813,7 +814,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 		// Initialize the light path
 		Ray nextEventRay;
 		float lightEmitPdfW;
-		lightPathFlux = light->Emit(*scene,
+		lightPathFlux = light->Emit(scene,
 				time, sampler->GetSample(1), sampler->GetSample(2),
 				sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5),
 				nextEventRay, lightEmitPdfW);
