@@ -119,13 +119,13 @@ float *FilmDenoiser::GetHistoImage() {
 }
 
 void FilmDenoiser::CheckReferenceFilm() {
-	if (referenceFilm->filmDenoiser.warmUpDone) {
+	if (referenceFilm->filmDenoiser->warmUpDone) {
 		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 
-		sampleScale = referenceFilm->filmDenoiser.sampleScale;
-		radianceChannelScales = referenceFilm->filmDenoiser.radianceChannelScales;
-		samplesAccumulatorPixelNormalized = referenceFilm->filmDenoiser.samplesAccumulatorPixelNormalized;
-		samplesAccumulatorScreenNormalized = referenceFilm->filmDenoiser.samplesAccumulatorScreenNormalized;
+		sampleScale = referenceFilm->filmDenoiser->sampleScale;
+		radianceChannelScales = referenceFilm->filmDenoiser->radianceChannelScales;
+		samplesAccumulatorPixelNormalized = referenceFilm->filmDenoiser->samplesAccumulatorPixelNormalized;
+		samplesAccumulatorScreenNormalized = referenceFilm->filmDenoiser->samplesAccumulatorScreenNormalized;
 
 		warmUpDone = true;
 	}
@@ -146,11 +146,11 @@ void FilmDenoiser::SetReferenceFilm(FilmConstPtr refFilm,
 }
 
 void FilmDenoiser::CopyReferenceFilm(FilmConstPtr refFilm) {
-	if (!warmUpDone && refFilm->filmDenoiser.warmUpDone) {
+	if (!warmUpDone && refFilm->filmDenoiser->warmUpDone) {
 		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 
-		sampleScale = refFilm->filmDenoiser.sampleScale;
-		radianceChannelScales = refFilm->filmDenoiser.radianceChannelScales;
+		sampleScale = refFilm->filmDenoiser->sampleScale;
+		radianceChannelScales = refFilm->filmDenoiser->radianceChannelScales;
 
 		bcd::HistogramParameters histogramParameters;
 		// I use the pipeline of the first BCD plugin

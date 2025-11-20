@@ -63,7 +63,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	}
 
 	// Initialize the map Film
-	engine->mapFilm = std::make_shared<Film>(mapInfo.width, mapInfo.height, nullptr);
+	engine->mapFilm = Film::Create(mapInfo.width, mapInfo.height, nullptr);
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
 	// Copy the halt conditions too
 	engine->mapFilm->CopyHaltSettings(*engine->film);

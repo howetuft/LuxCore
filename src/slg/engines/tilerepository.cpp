@@ -64,7 +64,7 @@ Tile::~Tile() {
 }
 
 void Tile::InitTileFilm(const Film &film, FilmPtr *tileFilm) {
-	(*tileFilm) = std::make_shared<Film>(coord.width, coord.height);
+	(*tileFilm) = Film::Create(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
 
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE

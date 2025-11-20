@@ -114,7 +114,7 @@ FilmPtr Film::FromProperties(const Properties &cfg) {
 	if (filmSubRegionUsed)
 		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
 
-	FilmPtr film = std::make_shared<Film>(filmFullWidth, filmFullHeight,
+	FilmPtr film = Film::Create(filmFullWidth, filmFullHeight,
 			filmSubRegionUsed ? filmSubRegion : nullptr);
 
 	// For compatibility with the past

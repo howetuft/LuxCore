@@ -313,8 +313,8 @@ public:
 	// Used by BCD denoiser plugin
 	//--------------------------------------------------------------------------
 
-	const FilmDenoiser &GetDenoiser() const { return filmDenoiser; }
-	FilmDenoiser &GetDenoiser() { return filmDenoiser; }
+	const FilmDenoiser &GetDenoiser() const { return *filmDenoiser; }
+	FilmDenoiser &GetDenoiser() { return *filmDenoiser; }
 
 	//--------------------------------------------------------------------------
 	// Samples related methods
@@ -491,6 +491,8 @@ private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	void InitFilmDenoiser();
 
 	void FreeChannels();
 	void MergeSampleBuffers(const u_int imagePipelineIndex);

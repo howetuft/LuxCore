@@ -113,7 +113,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmPtr engineFlm,
 	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
 
 	// Allocate the new Film
-	film = std::make_shared<Film>(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
+	film = Film::Create(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(*engineFilm);
 	// Engine film may have RADIANCE_PER_SCREEN_NORMALIZED channel because of
 	// hybrid back/forward path tracing

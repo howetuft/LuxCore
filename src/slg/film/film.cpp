@@ -41,12 +41,13 @@ FilmPtr Film::Create(
 	const u_int height,
 	const u_int *subRegion
 ) {
-	auto result = std::make_shared<Film>(width, height, subRegion);
+	auto result = std::make_shared<Film>(Private(), width, height, subRegion);
 	result->InitFilmDenoiser();
+	return result;
 }
 
 void Film::InitFilmDenoiser() {
-	filmDenoiser.reset(std::make_unique<FilmDenoiser>(shared_from_this()));
+	filmDenoiser = std::move(std::make_unique<FilmDenoiser>(shared_from_this()));
 }
 
 Film::Film() {
@@ -239,7 +240,7 @@ void Film::CopyDynamicSettings(const Film &film) {
 	for(ImagePipeline *ip: film.imagePipelines)
 		imagePipelines.push_back(ip->Copy());
 
-	filmDenoiser.SetEnabled(film.filmDenoiser.IsEnabled());
+	filmDenoiser->SetEnabled(film.filmDenoiser->IsEnabled());
 }
 
 void Film::CopyHaltSettings(const Film &film) {
@@ -335,9 +336,9 @@ void Film::SetSampleCount(const double totalSampleCount,
 			RADIANCE_PER_SCREEN_NORMALIZED_count);
 
 	// Check the if Film denoiser warmup is done
-	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
-			!filmDenoiser.IsWarmUpDone())
-		filmDenoiser.CheckIfWarmUpDone();
+	if (filmDenoiser->IsEnabled() && !filmDenoiser->HasReferenceFilm() &&
+			!filmDenoiser->IsWarmUpDone())
+		filmDenoiser->CheckIfWarmUpDone();
 }
 
 void Film::AddSampleCount(const u_int threadIndex,
@@ -610,7 +611,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
-	filmDenoiser.Reset();
+	filmDenoiser->Reset();
 
 	// Initialize the statistics
 	samplesCounts.Clear();
@@ -1317,19 +1318,19 @@ void Film::AddFilmImpl(const Film &film,
 	// Film denoiser related code
 	//--------------------------------------------------------------------------
 
-	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm()) {
+	if (filmDenoiser->IsEnabled() && !filmDenoiser->HasReferenceFilm()) {
 		if (overwrite)
-			filmDenoiser.Reset();
+			filmDenoiser->Reset();
 
 		// Add denoiser SamplesAccumulator statistics
-		filmDenoiser.AddDenoiser(film.GetDenoiser(),
+		filmDenoiser->AddDenoiser(film.GetDenoiser(),
 				srcOffsetX, srcOffsetY,
 				srcWidth, srcHeight,
 				dstOffsetX, dstOffsetY);
 
 		// Check if the BCD denoiser warm up period is over
-		if (!filmDenoiser.IsWarmUpDone())
-			filmDenoiser.CheckIfWarmUpDone();
+		if (!filmDenoiser->IsWarmUpDone())
+			filmDenoiser->CheckIfWarmUpDone();
 	}
 }
 

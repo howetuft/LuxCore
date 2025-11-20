@@ -46,7 +46,7 @@ TilePathNativeRenderThread::~TilePathNativeRenderThread() {
 void TilePathNativeRenderThread::StartRenderThread() {
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
-	tileFilm = std::make_shared<Film>(
+	tileFilm = Film::Create(
 			engine->tileRepository->tileWidth,
 			engine->tileRepository->tileHeight,
 			nullptr

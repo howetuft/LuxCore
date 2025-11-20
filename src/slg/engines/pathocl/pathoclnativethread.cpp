@@ -64,7 +64,7 @@ void PathOCLNativeRenderThread::Start() {
 		const u_int filmHeight = engine->film->GetHeight();
 		const u_int *filmSubRegion = engine->film->GetSubRegion();
 
-		threadFilm = std::make_shared<Film>(filmWidth, filmHeight, filmSubRegion);
+		threadFilm = Film::Create(filmWidth, filmHeight, filmSubRegion);
 		threadFilm->CopyDynamicSettings(*(engine->film));
 		// I'm not removing the pipeline and disabling the film denoiser
 		// in order to support BCD denoiser.

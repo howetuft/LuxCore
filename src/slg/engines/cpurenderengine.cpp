@@ -273,7 +273,7 @@ CPUTileRenderThread::~CPUTileRenderThread() {
 void CPUTileRenderThread::StartRenderThread() {
 
 	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
-	tileFilm = std::make_shared<Film>(
+	tileFilm = Film::Create(
 			cpuTileEngine->tileRepository->tileWidth,
 			cpuTileEngine->tileRepository->tileHeight,
 			nullptr
