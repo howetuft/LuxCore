@@ -68,7 +68,7 @@ FilmImpl::FilmImpl(
 }
 
 FilmImpl::FilmImpl(
-	std::shared_ptr<const RenderSessionImpl> session
+	RenderSessionImplConstPtr session
 ) :
 	renderSession(session),
 	standAloneFilm(nullptr)
@@ -81,7 +81,7 @@ FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(nullptr) {
 FilmImpl::~FilmImpl() {
 }
 
-std::shared_ptr<slg::Film> FilmImpl::GetSLGFilm() const {
+slg::FilmPtr FilmImpl::GetSLGFilm() const {
 	if (renderSession)
 		return renderSession->renderSession->film;
 	else

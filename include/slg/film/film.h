@@ -99,6 +99,10 @@ class SampleResult;
 class ImagePipeline;
 
 class Film : public std::enable_shared_from_this<Film> {
+
+	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
+	struct Private{ explicit Private() = default; };
+
 public:
 	typedef enum {
 		RADIANCE_PER_PIXEL_NORMALIZED,
@@ -145,10 +149,21 @@ public:
 		NOISE,
 		USER_IMPORTANCE
 	} FilmChannelType;
-	
+
 	typedef std::unordered_set<FilmChannelType, std::hash<int> > FilmChannels;
 
-	Film(const u_int width, const u_int height, const u_int *subRegion = nullptr);
+	static FilmPtr Create(
+		const u_int width,
+		const u_int height,
+		const u_int *subRegion = nullptr
+	);
+
+	Film(
+		Private,
+		const u_int width,
+		const u_int height,
+		const u_int *subRegion = nullptr
+	);
 	~Film();
 
 	void SetThreadCount(const u_int threadCount);
@@ -164,7 +179,7 @@ public:
 	// Dynamic settings
 	//--------------------------------------------------------------------------
 
-	void SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline);
+	void SetImagePipelines(const u_int index, ImagePipeline *newImagePipeline);
 	void SetImagePipelines(ImagePipeline *newImagePiepeline);
 	void SetImagePipelines(std::vector<ImagePipeline *> &newImagePiepelines);
 	const u_int GetImagePipelineCount() const { return imagePipelines.size(); }
@@ -525,7 +540,7 @@ private:
 	FilmConvTest *convTest;
 	double haltTime;
 	u_int haltSPP, haltSPP_PixelNormalized, haltSPP_ScreenNormalized;
-	
+
 	float haltNoiseThreshold;
 	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep, haltNoiseThresholdImagePipelineIndex;
 	bool haltNoiseThresholdUseFilter, haltNoiseThresholdStopRendering;
@@ -539,8 +554,8 @@ private:
 
 	FilmOutputs filmOutputs;
 
-	FilmDenoiser filmDenoiser;
-	
+	std::unique_ptr<FilmDenoiser> filmDenoiser;
+
 	bool initialized;
 };
 

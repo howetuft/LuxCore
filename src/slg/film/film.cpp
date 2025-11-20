@@ -36,7 +36,20 @@ using namespace slg;
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film() : filmDenoiser(shared_from_this()) {
+FilmPtr Film::Create(
+	const u_int width,
+	const u_int height,
+	const u_int *subRegion
+) {
+	auto result = std::make_shared<Film>(width, height, subRegion);
+	result->InitFilmDenoiser();
+}
+
+void Film::InitFilmDenoiser() {
+	filmDenoiser.reset(std::make_unique<FilmDenoiser>(shared_from_this()));
+}
+
+Film::Film() {
 	initialized = false;
 
 	width = 0;
@@ -98,8 +111,7 @@ Film::Film() : filmDenoiser(shared_from_this()) {
 	SetUpHW();
 }
 
-Film::Film(const u_int w, const u_int h, const u_int * sr) :
-	filmDenoiser(shared_from_this())
+Film::Film(Private p, const u_int w, const u_int h, const u_int * sr)
 {
 	if ((w == 0) || (h == 0))
 		throw runtime_error("Film can not have 0 width or a height");
@@ -197,7 +209,7 @@ Film::~Film() {
 	// some memory so I have to set the current context
 	if (hardwareDevice)
 		hardwareDevice->PushThreadCurrentDevice();
-		
+
 	for(ImagePipeline *ip: imagePipelines)
 		delete ip;
 
@@ -1388,7 +1400,7 @@ void Film::RunTests() {
 			(haltSPP > 0) && (spp > haltSPP)
 		)
 		haltSPPStop = true;
-		
+
 	if (haltSPPStop) {
 		SLG_LOG("Samples per pixel 100%, rendering done.");
 		statsConvergence = 1.f;
@@ -1415,12 +1427,12 @@ void Film::RunTests() {
 	if (convTestRequired) {
 		// Run the convergence test
 		const u_int testResult = convTest->Test();
-		
+
 		// Set statsConvergence only if haltNoiseThreshold is enabled
 		if (haltNoiseThreshold > 0.f)
 			statsConvergence = 1.f - testResult / static_cast<float>(pixelCount);
 	}
-	
+
 	if (noiseEstimationRequired) {
 		ExecuteImagePipeline(noiseEstimationImagePipelineIndex);
 		// Run the noise estimation test
