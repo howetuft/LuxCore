@@ -31,13 +31,40 @@
 namespace luxcore {
 namespace detail {
 
+class RenderSessionImpl;
+using RenderSessionImplPtr = std::shared_ptr<RenderSessionImpl>;
+using RenderSessionImplConstPtr = std::shared_ptr<const RenderSessionImpl>;
+
+class RenderConfigImpl;
+using RenderConfigImplPtr = std::shared_ptr<RenderConfigImpl>;
+
+class RenderStateImpl;
+using RenderStateImplPtr = std::shared_ptr<RenderStateImpl>;
+
+class SceneImpl;
+using SceneImplConstRef = const SceneImpl &;
+
+class CameraImpl;
+using CameraImplPtr = std::shared_ptr<CameraImpl>;
+
+class FilmImpl;
+using FilmImplPtr = std::shared_ptr<FilmImpl>;
+
+// Disambiguation: there are luxcore::Film and slg:Film...
+using LuxFilm = luxcore::Film;
+using LuxFilmPtr = std::shared_ptr<luxcore::Film>;
+using LuxFilmConstPtr = std::shared_ptr<const luxcore::Film>;
+
+// Disambiguation: there are luxcore::Camera and slg:Camera...
+using LuxCamera = luxcore::Camera;
+using LuxCameraConstRef = const luxcore::Camera &;
+
+
 //------------------------------------------------------------------------------
 // FilmImpl
 //------------------------------------------------------------------------------
 
-class RenderSessionImpl;
-
-class FilmImpl : public Film {
+class FilmImpl : public luxcore::Film {
 public:
 	FilmImpl(const std::string &fileName);
 	FilmImpl(
@@ -45,7 +72,7 @@ public:
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
-	FilmImpl(std::shared_ptr<const RenderSessionImpl> session);
+	FilmImpl(RenderSessionImplConstPtr session);
 	FilmImpl(slg::FilmPtr film);
 	~FilmImpl();
 
@@ -55,16 +82,20 @@ public:
 	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
-	void AddFilm(std::shared_ptr<const Film> film);
+	void AddFilm(LuxFilmConstPtr film);
 	void AddFilm(
-		std::shared_ptr<const Film> film,
+		LuxFilmConstPtr film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY
 	);
 
 	void SaveOutputs() const;
-	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+	void SaveOutput(
+		const std::string &fileName,
+		const FilmOutputType type,
+		const luxrays::Properties &props
+	) const;
 	void SaveFilm(const std::string &fileName) const;
 
 	double GetTotalSampleCount() const;
@@ -109,21 +140,20 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	std::shared_ptr<slg::Film> GetSLGFilm() const;
+	slg::FilmPtr GetSLGFilm() const;
 
-	std::shared_ptr<const RenderSessionImpl> renderSession;
-	std::shared_ptr<slg::Film> standAloneFilm;
+	RenderSessionImplConstPtr renderSession;
+	slg::FilmPtr standAloneFilm;
 };
 
 //------------------------------------------------------------------------------
 // CameraImpl
 //------------------------------------------------------------------------------
 
-class SceneImpl;
 
-class CameraImpl : public Camera {
+class CameraImpl : public luxcore::Camera {
 public:
-	CameraImpl(const SceneImpl &scene);
+	CameraImpl(SceneImplConstRef scene);
 	~CameraImpl();
 
 	const CameraType GetType() const;
@@ -143,23 +173,29 @@ public:
 	friend class SceneImpl;
 
 private:
-	const SceneImpl &scene;
+	SceneImplConstRef scene;
 };
 
 //------------------------------------------------------------------------------
 // SceneImpl
 //------------------------------------------------------------------------------
 
-class SceneImpl : public Scene {
+class SceneImpl : public luxcore::Scene {
 public:
-	SceneImpl(std::shared_ptr<slg::Scene> scn);
+	SceneImpl(slg::ScenePtr scn);
 	SceneImpl(const luxrays::Properties *resizePolicyProps = nullptr);
-	SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps = nullptr);
-	SceneImpl(const std::string &fileName,  const luxrays::Properties *resizePolicyProps = nullptr);
+	SceneImpl(
+		const luxrays::Properties &props,
+		const luxrays::Properties *resizePolicyProps = nullptr
+	);
+	SceneImpl(
+		const std::string &fileName,
+		const luxrays::Properties *resizePolicyProps = nullptr
+	);
 	~SceneImpl();
 
 	void GetBBox(float min[3], float max[3]) const;
-	const Camera &GetCamera() const;
+	LuxCameraConstRef GetCamera() const;
 
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
@@ -183,11 +219,17 @@ public:
 		const unsigned int index, float *data);
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
-	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+	void DefineStrands(
+		const std::string &shapeName,
+		const luxrays::cyHairFile &strandsFile,
 		const StrandsTessellationType tesselType,
-		const unsigned int adaptiveMaxDepth, const float adaptiveError,
-		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const bool useCameraPosition);
+		const unsigned int adaptiveMaxDepth,
+		const float adaptiveError,
+		const unsigned int solidSideCount,
+		const bool solidCapBottom,
+		const bool solidCapTop,
+		const bool useCameraPosition
+	);
 
 	bool IsMeshDefined(const std::string &meshName) const;
 	bool IsTextureDefined(const std::string &texName) const;
@@ -198,18 +240,28 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const float transMat[16], const unsigned int objectID);
-	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const float *transMat, const unsigned int *objectIDs);
-	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
-			const unsigned int steps, const float *times, const float *transMats,
-			const unsigned int objectID);
-	void DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
-			const unsigned int count, const unsigned int steps, const float *times,
-			const float *transMats, const unsigned int *objectIDs);
-	void UpdateObjectTransformation(const std::string &objName, const float transMat[16]);
-	void UpdateObjectMaterial(const std::string &objName, const std::string &matName);
+	void DuplicateObject(
+		const std::string &srcObjName, const std::string &dstObjName,
+		const float transMat[16], const unsigned int objectID
+	);
+	void DuplicateObject(
+		const std::string &srcObjName, const std::string &dstObjNamePrefix,
+		const unsigned int count, const float *transMat, const unsigned int *objectIDs
+	);
+	void DuplicateObject(
+		const std::string &srcObjName, const std::string &dstObjName,
+		const unsigned int steps, const float *times, const float *transMats,
+		const unsigned int objectID);
+	void DuplicateObject(
+		const std::string &srcObjName, const std::string &dstObjNamePrefix,
+		const unsigned int count, const unsigned int steps, const float *times,
+		const float *transMats, const unsigned int *objectIDs);
+	void UpdateObjectTransformation(
+		const std::string &objName, const float transMat[16]
+	);
+	void UpdateObjectMaterial(
+		const std::string &objName, const std::string &matName
+	);
 
 	void DeleteObject(const std::string &objName);
 	void DeleteObjects(std::vector<std::string> &objNames);
@@ -221,10 +273,16 @@ public:
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
 
-	void DefineImageMapUChar(const std::string &imgMapName,
-			unsigned char *pixels, const float gamma, const unsigned int channels,
-			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType);
+	void DefineImageMapUChar(
+		const std::string &imgMapName,
+		unsigned char *pixels,
+		const float gamma,
+		const unsigned int channels,
+		const unsigned int width,
+		const unsigned int height,
+		ChannelSelectionType selectionType,
+		WrapType wrapType
+	);
 	void DefineImageMapHalf(const std::string &imgMapName,
 			unsigned short *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
@@ -250,8 +308,8 @@ public:
 private:
 	mutable luxrays::Properties scenePropertiesCache;
 
-	std::shared_ptr<slg::Scene> scene;
-	std::shared_ptr<CameraImpl> camera;
+	slg::ScenePtr scene;
+	CameraImplPtr camera;
 	bool allocatedScene;
 };
 
@@ -259,10 +317,8 @@ private:
 // RenderConfigImpl
 //------------------------------------------------------------------------------
 
-class RenderStateImpl;
-class RenderSessionImpl;
 
-class RenderConfigImpl : public RenderConfig {
+class RenderConfigImpl : public luxcore::RenderConfig {
 public:
 	RenderConfigImpl(const luxrays::Properties &props, std::shared_ptr<SceneImpl> scene = NULL);
 	RenderConfigImpl(const std::string &fileName);
@@ -328,19 +384,39 @@ private:
 //------------------------------------------------------------------------------
 
 class RenderSessionImpl : public RenderSession, public std::enable_shared_from_this<RenderSessionImpl> {
+
+	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
+	struct Private{ explicit Private() = default; };
+
 public:
-	RenderSessionImpl(
+
+	static RenderSessionImplPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
-		std::shared_ptr<RenderStateImpl> startState = nullptr,
-		std::shared_ptr<FilmImpl> startFilm = nullptr
+		std::shared_ptr<RenderStateImpl>& startState,
+		std::shared_ptr<FilmImpl>& startFilm
 	);
-	RenderSessionImpl(
+	static RenderSessionImplPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
 
+	// Public, but private, constructors
+	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
+	RenderSessionImpl(
+		Private priv,
+		std::shared_ptr<RenderConfigImpl> config,
+		std::shared_ptr<RenderStateImpl> startState = nullptr,
+		std::shared_ptr<FilmImpl> startFilm = nullptr
+	);
+	RenderSessionImpl(
+		Private priv,
+		std::shared_ptr<RenderConfigImpl> config,
+		const std::string &startStateFileName,
+		const std::string &startFilmFileName
+	);
 	~RenderSessionImpl();
+
 
 	std::shared_ptr<RenderConfig> GetRenderConfig();
 	std::shared_ptr<RenderState> GetRenderState();
@@ -362,7 +438,7 @@ public:
 	void WaitNewFrame();
 
 	bool NeedPeriodicFilmSave();
-	std::shared_ptr<Film> GetFilm();
+	LuxFilmPtr GetFilm();
 
 	void UpdateStats();
 	const luxrays::Properties &GetStats() const;
@@ -379,6 +455,9 @@ private:
 
 	std::shared_ptr<slg::RenderSession> renderSession;
 	luxrays::Properties stats;
+
+	void InitFilm();
+
 };
 
 }
@@ -390,11 +469,6 @@ template <> struct std::formatter<luxcore::Camera::CameraType>: formatter<string
     -> format_context::iterator;
 };
 
-
-using RenderConfigImplPtr = std::shared_ptr<luxcore::detail::RenderConfigImpl>;
-using RenderStateImplPtr = std::shared_ptr<luxcore::detail::RenderStateImpl>;
-using RenderSessionImplPtr = std::shared_ptr<luxcore::detail::RenderSessionImpl>;
-using FilmImplPtr = std::shared_ptr<luxcore::detail::FilmImpl>;
 
 
 #endif	/* _LUXCOREIMPL_H */

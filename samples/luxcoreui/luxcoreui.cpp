@@ -67,7 +67,7 @@ static void ConvertImage(const string &fileName) {
 */
 
 int main(int argc, char *argv[]) {
-  try {
+  //try {
     // Initialize LuxCore
     luxcore::Init(LuxCoreApp::LogHandler);
     //luxcore::SetEnableLogSubSystem(luxcore::LOG_API, true);
@@ -226,13 +226,13 @@ int main(int argc, char *argv[]) {
     }
 
     LA_LOG("Done.");
-  } catch (runtime_error &err) {
-    LA_LOG("RUNTIME ERROR: " << err.what());
-    return EXIT_FAILURE;
-  } catch (exception &err) {
-    LA_LOG("ERROR: " << err.what());
-    return EXIT_FAILURE;
-  }
+  //} catch (runtime_error &err) {
+    //LA_LOG("RUNTIME ERROR: " << err.what());
+    //return EXIT_FAILURE;
+  //} catch (exception &err) {
+    //LA_LOG("ERROR: " << err.what());
+    //return EXIT_FAILURE;
+  //}
 
   return EXIT_SUCCESS;
 }

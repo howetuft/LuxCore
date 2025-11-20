@@ -1470,15 +1470,39 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
+RenderSessionImplPtr RenderSessionImpl::Create(
+	RenderConfigImplPtr config,
+	RenderStateImplPtr& startState,
+	FilmImplPtr& startFilm
+) {
+	auto result = std::make_shared<RenderSessionImpl>(
+		Private(), config, startState, startFilm
+	);
+	result->InitFilm();
+	return result;
+}
+
+RenderSessionImplPtr RenderSessionImpl::Create(
+	RenderConfigImplPtr config,
+	const std::string &startStateFileName,
+	const std::string &startFilmFileName
+) {
+	auto result = std::make_shared<RenderSessionImpl>(
+		Private(), config, startStateFileName, startFilmFileName
+	);
+	result->InitFilm();
+	return result;
+}
+
 RenderSessionImpl::RenderSessionImpl(
+	Private priv,
 	std::shared_ptr<RenderConfigImpl> config,
 	std::shared_ptr<RenderStateImpl> startState,
 	std::shared_ptr<FilmImpl> startFilm
 ) :
 	renderConfig(config)
 {
-	// Create film and session
-	film = std::make_shared<FilmImpl>(shared_from_this());
+	// Create session
 
 	renderSession = std::make_shared<slg::RenderSession>(
 		config->renderConfig,
@@ -1501,13 +1525,13 @@ RenderSessionImpl::RenderSessionImpl(
 }
 
 RenderSessionImpl::RenderSessionImpl(
+	Private priv,
 	std::shared_ptr<RenderConfigImpl> config,
 	const std::string &startStateFileName,
 	const std::string &startFilmFileName
 ) :
 	renderConfig(config)
 {
-	film = std::make_shared<FilmImpl>(shared_from_this());
 
 	auto startFilm = slg::Film::LoadSerialized(startFilmFileName);
 	auto startState = slg::RenderState::LoadSerialized(startStateFileName);
@@ -1520,6 +1544,10 @@ RenderSessionImpl::RenderSessionImpl(
 }
 
 RenderSessionImpl::~RenderSessionImpl() {
+}
+
+void RenderSessionImpl::InitFilm() {
+	film = std::make_shared<FilmImpl>(shared_from_this());
 }
 
 std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {

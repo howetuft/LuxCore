@@ -22,6 +22,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
 #include "slg/slg.h"
+#include "slg/usings.h"
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/oclrenderengine.h"
@@ -547,7 +548,7 @@ RenderState::~RenderState() {
 // RenderSession
 //------------------------------------------------------------------------------
 
-std::shared_ptr<RenderSession> RenderSession::Create(
+RenderSessionPtr RenderSession::Create(
 	std::shared_ptr<RenderConfig> config,
 	std::shared_ptr<RenderState> * startState,
 	std::shared_ptr<Film> * startFilm
@@ -558,15 +559,15 @@ std::shared_ptr<RenderSession> RenderSession::Create(
 	auto startStateImpl = dynamic_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
 	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImpl>(*startFilm);
 
-	auto result = std::make_shared<luxcore::detail::RenderSessionImpl>(configImpl, startStateImpl, startFilmImpl);
+	auto result = RenderSessionImpl::Create(configImpl, startStateImpl, startFilmImpl);
 
 	API_RETURN("{}", ToArgString(result));
 
 	return result;
 }
 
-std::shared_ptr<RenderSession> RenderSession::Create(
-		std::shared_ptr<RenderConfig> config,
+RenderSessionPtr RenderSession::Create(
+		RenderConfigPtr config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 ) {
@@ -574,10 +575,10 @@ std::shared_ptr<RenderSession> RenderSession::Create(
 
 	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
 
-	auto result = std::make_shared<luxcore::detail::RenderSessionImpl>(configImpl, startStateFileName, startFilmFileName);
+	auto result = RenderSessionImpl::Create(configImpl, startStateFileName, startFilmFileName);
 
 	API_RETURN("{}", ToArgString(result));
-	
+
 	return result;
 }
 

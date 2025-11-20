@@ -74,6 +74,9 @@ using RenderConfigPtr = std::shared_ptr<RenderConfig>;
 class RenderState;
 using RenderStatePtr = std::shared_ptr<RenderState>;
 
+class RenderSession;
+using RenderSessionPtr = std::shared_ptr<RenderSession>;
+
 #define LC_MESH_MAX_DATA_COUNT 8
 
 // This is mostly for compatibility with the past

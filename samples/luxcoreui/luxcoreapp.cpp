@@ -355,7 +355,7 @@ void LuxCoreApp::StartRendering(
 
 	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
 
-	try {
+	//try {
 		session = RenderSession::Create(config, &startState, &startFilm);
 
 		// Re-start the rendering
@@ -365,12 +365,12 @@ void LuxCoreApp::StartRendering(
 
 		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
 			userImportancePaintWindow.Init();
-	} catch(exception &ex) {
-		LA_LOG("RenderSession starting error: " << endl << ex.what());
+	//} catch(exception &ex) {
+		//LA_LOG("RenderSession starting error: " << endl << ex.what());
 
-		session.reset();
-		session = NULL;
-	}
+		//session.reset();
+		//session = NULL;
+	//}
 }
 
 void LuxCoreApp::DeleteRendering() {
