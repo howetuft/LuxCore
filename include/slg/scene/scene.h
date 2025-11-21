@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "luxrays/usings.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/core/geometry/transform.h"
@@ -180,7 +181,7 @@ public:
 	SceneObjectDefinitions objDefs; // SceneObject definitions
 	LightSourceDefinitions lightDefs; // LightSource definitions
 
-	luxrays::DataSet *dataSet;
+	luxrays::DataSetPtr dataSet;
 	// The bounding sphere of the scene (including the camera)
 	luxrays::BSphere sceneBSphere;
 

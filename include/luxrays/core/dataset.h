@@ -24,6 +24,7 @@
 #include <mutex>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/usings.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/core/trianglemesh.h"
 
@@ -51,7 +52,7 @@ public:
 	void UpdateBBoxes();
 
 	bool HasAccelerator(const AcceleratorType accelType) const;
-	const Accelerator *GetAccelerator(const AcceleratorType accelType);
+	AcceleratorConstPtr GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
 	void UpdateAccelerators();
 
@@ -62,7 +63,7 @@ public:
 	u_longlong GetTotalTriangleCount() const { return totalTriangleCount; }
 
 	u_int GetDataSetID() const { return dataSetID; }
-	bool IsEqual(const DataSet *dataSet) const;
+	bool IsEqual(DataSetConstPtr dataSet) const;
 
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
@@ -80,7 +81,7 @@ private:
 	BSphere bsphere;
 
 	std::mutex accelsMutex;
-	std::unordered_map<AcceleratorType, Accelerator *> accels;
+	std::unordered_map<AcceleratorType, AcceleratorPtr> accels;
 
 	AcceleratorType accelType;
 	bool preprocessed;

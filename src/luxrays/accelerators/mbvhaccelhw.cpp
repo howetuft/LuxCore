@@ -281,7 +281,7 @@ public:
 	}
 
 	void UpdateBVHNodes();
-	virtual void Update(const DataSet *newDataSet);
+	virtual void Update(DataSetConstPtr newDataSet) override;
 	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
@@ -437,7 +437,7 @@ void MBVHKernel::UpdateBVHNodes() {
 	}
 }
 
-void MBVHKernel::Update(const DataSet *newDataSet) {
+void MBVHKernel::Update(DataSetConstPtr newDataSet) {
 	if (!mbvh.nRootNodes)
 		return;
 

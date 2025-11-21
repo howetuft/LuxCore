@@ -77,7 +77,7 @@ void Scene::Init(const luxrays::Properties *resizePolicyProps) {
 }
 
 Scene::~Scene() {
-	delete dataSet;
+	dataSet.reset();
 }
 
 Properties Scene::ToProperties(const bool useRealFileName) const {

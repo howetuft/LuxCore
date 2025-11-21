@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,37 +16,22 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/intersectiondevice.h"
+// This file is intended to gather all usings (pointers, refs etc.) for
+// luxrays classes
+
+#pragma once
+
+#include <memory>
 
 namespace luxrays {
 
-//------------------------------------------------------------------------------
-// IntersectionDevice
-//------------------------------------------------------------------------------
+class Accelerator;
+using AcceleratorPtr = std::shared_ptr<Accelerator>;
+using AcceleratorConstPtr = std::shared_ptr<const Accelerator>;
 
-IntersectionDevice::IntersectionDevice() : dataSet(nullptr) {
-}
-
-IntersectionDevice::~IntersectionDevice() {
-	if (started)
-		Stop();
-}
-
-void IntersectionDevice::SetDataSet(DataSetPtr newDataSet) {
-	assert (!started);
-
-	dataSet = newDataSet;
-}
-
-void IntersectionDevice::Start() {
-	assert (dataSet != NULL);
-
-	Device::Start();
-
-	statsStartTime = WallClockTime();
-	statsTotalSerialRayCount = 0.0;
-	statsTotalDataParallelRayCount = 0.0;
-}
+class DataSet;
+using DataSetPtr = std::shared_ptr<DataSet>;
+using DataSetConstPtr = std::shared_ptr<const DataSet>;
 
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

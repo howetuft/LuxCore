@@ -244,7 +244,7 @@ public:
 			device.FreeBuffer(&nodeBuffs[i]);
 	}
 
-	virtual void Update(const DataSet *newDataSet) { assert(false); }
+	virtual void Update(DataSetConstPtr newDataSet) override { assert(false); }
 	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 

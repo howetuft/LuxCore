@@ -31,6 +31,7 @@
 
 #include <bcd/core/SamplesAccumulator.h>
 
+#include "luxrays/usings.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -452,7 +453,7 @@ public:
 	int hwDeviceIndex;
 
 	luxrays::Context *ctx;
-	luxrays::DataSet *dataSet;
+	luxrays::DataSetPtr dataSet;
 	luxrays::HardwareDevice *hardwareDevice;
 
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;

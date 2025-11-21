@@ -580,7 +580,7 @@ public:
 		
 	}
 
-	virtual void Update(const DataSet *newDataSet) { assert(false); }
+	virtual void Update(DataSetConstPtr newDataSet) { assert(false); }
 	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
