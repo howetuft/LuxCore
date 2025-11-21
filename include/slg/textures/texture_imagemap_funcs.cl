@@ -62,9 +62,9 @@ OPENCL_FORCE_INLINE float3 YCbCrToRGB(const float3 YCbCr) {
 OPENCL_FORCE_INLINE float3 ImageMapTexture_SampleTile(__global const Texture* restrict tex,
 		const float2 vertex, const float2 offset
 		TEXTURES_PARAM_DECL) {
-	__global ImageMapConstPtr randomImageMap = &imageMapDescs[tex->imageMapTex.randomImageMapIndex];
-	__global ImageMapConstPtr imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
-	__global ImageMapConstPtr randomizedTilingLUT = &imageMapDescs[tex->imageMapTex.randomizedTilingLUTIndex];
+	__global const ImageMap *randomImageMap = &imageMapDescs[tex->imageMapTex.randomImageMapIndex];
+	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
+	__global const ImageMap *randomizedTilingLUT = &imageMapDescs[tex->imageMapTex.randomizedTilingLUTIndex];
 	
 	const float2 noiseP = MAKE_FLOAT2(vertex.x / randomImageMap->width, vertex.y / randomImageMap->height);
 	const float3 noise = ImageMap_GetSpectrum(randomImageMap, noiseP.x, noiseP.y IMAGEMAPS_PARAM);

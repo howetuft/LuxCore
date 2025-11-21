@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE float3 Volume_Emission(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 Volume_Emission(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
 	if (emiTexIndex != NULL_INDEX) {
@@ -101,7 +101,7 @@ OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u,
 // ClearVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 ClearVolume_SigmaA(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.clear.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -109,12 +109,12 @@ OPENCL_FORCE_INLINE float3 ClearVolume_SigmaA(__global VolumeConstPtr vol, __glo
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolume_SigmaS(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return
 			ClearVolume_SigmaA(vol, hitPoint
@@ -123,7 +123,7 @@ OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global VolumeConstPtr vol, __glo
 				TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_INLINE float ClearVolume_Scatter(__global VolumeConstPtr vol,
+OPENCL_FORCE_INLINE float ClearVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
@@ -163,7 +163,7 @@ OPENCL_FORCE_INLINE float ClearVolume_Scatter(__global VolumeConstPtr vol,
 // HomogeneousVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaA(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -171,7 +171,7 @@ OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaA(__global VolumeConstPtr vol,
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaS(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -179,7 +179,7 @@ OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaS(__global VolumeConstPtr vol,
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float HomogeneousVolume_Scatter(__global VolumeConstPtr vol,
+OPENCL_FORCE_INLINE float HomogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
@@ -219,7 +219,7 @@ OPENCL_FORCE_INLINE float HomogeneousVolume_Scatter(__global VolumeConstPtr vol,
 // HeterogeneousVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaA(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -227,7 +227,7 @@ OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaA(__global VolumeConstPtr vo
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaS(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -235,13 +235,13 @@ OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaS(__global VolumeConstPtr vo
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaT(__global VolumeConstPtr vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaT(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return HeterogeneousVolume_SigmaA(vol, hitPoint TEXTURES_PARAM) +
 			HeterogeneousVolume_SigmaS(vol, hitPoint TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_INLINE float HeterogeneousVolume_Scatter(__global VolumeConstPtr vol,
+OPENCL_FORCE_INLINE float HeterogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
@@ -316,7 +316,7 @@ OPENCL_FORCE_INLINE float HeterogeneousVolume_Scatter(__global VolumeConstPtr vo
 // Volume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global VolumeConstPtr vol,
+OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThrough,
 		const bool scatteredStart, float3 *connectionThroughput,
