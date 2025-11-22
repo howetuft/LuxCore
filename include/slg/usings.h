@@ -87,6 +87,14 @@ class RenderState;
 using RenderStateConstPtr = std::shared_ptr<const RenderState>;
 using RenderStatePtr = std::shared_ptr<RenderState>;
 
+class RenderEngine;
+using RenderEngineConstPtr = std::shared_ptr<const RenderEngine>;
+using RenderEnginePtr = std::shared_ptr<RenderEngine>;
+
+class RenderEngine;
+using RenderEngineConstPtr = std::shared_ptr<const RenderEngine>;
+using RenderEnginePtr = std::shared_ptr<RenderEngine>;
+
 class Texture;
 using TexturePtr = std::shared_ptr<Texture>;
 using TextureConstPtr = std::shared_ptr<const Texture>;

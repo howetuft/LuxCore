@@ -66,8 +66,8 @@ RenderSession::~RenderSession() {
 		EndSceneEdit();
 	if (renderEngine->IsStarted())
 		Stop();
-
-	delete renderEngine;
+	renderEngine.reset();
+	film.reset();
 }
 
 void RenderSession::Start() {
@@ -97,7 +97,7 @@ void RenderSession::BeginSceneEdit() {
 void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
-	
+
 	if ((renderEngine->GetType() != RTPATHOCL) &&
 			(renderEngine->GetType() != RTPATHCPU)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);

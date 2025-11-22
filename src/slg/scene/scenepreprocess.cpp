@@ -105,7 +105,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	//--------------------------------------------------------------------------
 
 	imgMapCache.Preprocess(shared_from_this(), useRTMode);
-	
+
 	//--------------------------------------------------------------------------
 	// Reset the edit actions
 	//--------------------------------------------------------------------------

@@ -260,11 +260,11 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
 
-RenderEngine *RenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEnginePtr RenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
 	const string type = rcfg->cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	RenderEngineRegistry::FromProperties func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
-		return func(rcfg);
+		return std::shared_ptr<RenderEngine>(func(rcfg));
 	else
 		throw runtime_error("Unknown render engine type in RenderEngine::FromProperties(): " + type);
 }

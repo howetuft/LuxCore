@@ -311,7 +311,7 @@ void LuxCoreApp::StartRendering(
 	if (session) {
 	  session.reset();
 	  session = nullptr;
-        }
+	}
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (engineType.starts_with("RT")) {

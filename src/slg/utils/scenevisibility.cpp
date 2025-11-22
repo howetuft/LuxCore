@@ -66,16 +66,16 @@ SceneVisibility<T>::TraceVisibilityThread::~TraceVisibilityThread() {
 
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::Start() {
-	renderThread = new std::jthread(std::bind_front(&TraceVisibilityThread::RenderFunc, this));
+	renderThread = std::make_shared<std::jthread>(
+		std::bind_front(&TraceVisibilityThread::RenderFunc, this)
+	);
+	SetThreadName(renderThread, "LxTrcVisibility");
 }
 
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::Join() {
 	if (renderThread) {
 		renderThread->join();
-
-		delete renderThread;
-		renderThread = nullptr;
 	}
 }
 
@@ -98,7 +98,7 @@ void SceneVisibility<T>::TraceVisibilityThread::GenerateEyeRay(CameraConstPtr ca
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_token) {
 	const u_int workSize = 4096;
-	
+
 	// Hard coded RR parameters
 	const u_int rrDepth = 3;
 	const float rrImportanceCap = .5f;
@@ -118,16 +118,16 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			&visibilitySobolSharedData);
-	
+
 	// Request the samples
 	const u_int sampleBootSize = 5;
 	const u_int sampleStepSize = 4;
-	const u_int sampleSize = 
+	const u_int sampleSize =
 		sampleBootSize + // To generate eye ray
 		sv.maxPathDepth * sampleStepSize; // For each path vertex
 	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
-	
-	// Initialize SampleResult 
+
+	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
 	const Film::FilmChannels sampleResultsChannels({

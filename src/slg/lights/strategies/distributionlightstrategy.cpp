@@ -53,7 +53,7 @@ LightSourcePtr DistributionLightStrategy::SampleLights(
 		//assert ((lightIndex >= 0) && (lightIndex < scene.lightDefs.GetSize()));
 
 		if (*pdf > 0.f)
-			return scene->lightDefs.GetLightSources()[lightIndex];
+			return scene->lightDefs.GetLightSource(lightIndex);
 		else
 			return nullptr;
 	} else

@@ -164,7 +164,8 @@ void LightSourceDefinitions::Preprocess(SceneConstPtr scene, const bool useRTMod
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
 //	const double start = WallClockTime();
-	
+	SLG_LOG("Preprocessing light source definitions");
+
 	lightGroupCount = 0;
 	lights.clear();
 	lights.resize(lightsByName.size());
@@ -173,10 +174,11 @@ void LightSourceDefinitions::Preprocess(SceneConstPtr scene, const bool useRTMod
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
 	// To accelerate the light pointer to light index lookup
 	robin_hood::unordered_flat_map<LightSourceConstPtr, u_int> light2indexLookupAccel;
-	
+
 	u_int i = 0;
 	for (auto const &e : lightsByName) {
 		LightSourcePtr l = e.second;
+		assert(l);
 
 		// Initialize the light source index
 		l->lightSceneIndex = i;

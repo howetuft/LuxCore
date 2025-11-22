@@ -42,9 +42,8 @@ void LightStrategyLogPower::Preprocess(SceneConstPtr scene, const LightStrategyT
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
-	auto &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto l = lights[i];
+		auto l = scene->lightDefs.GetLightSource(i);
 		const float power = logf(1.f + l->GetPower(scene)) * l->GetImportance();
 
 		switch (taskType) {

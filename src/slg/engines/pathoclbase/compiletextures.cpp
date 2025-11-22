@@ -184,9 +184,11 @@ void CompiledScene::CompileTextureMapping3D(
 			mapping->type = slg::ocl::LOCALRANDOMMAPPING3D;
 
 			auto gm = dynamic_pointer_cast<const LocalRandomMapping3D>(m);
+			assert(gm);
+
 			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
-			
+
 			switch (gm->seedType) {
 				case RandomMappingSeedType::OBJECT_ID:
 					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID;

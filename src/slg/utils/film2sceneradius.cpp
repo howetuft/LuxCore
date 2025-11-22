@@ -273,8 +273,8 @@ float Film2SceneRadius(SceneConstPtr scene,
 	// Render 16 passes at 256 * 256 resolution
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
 
-	vector<Film2SceneRadiusThreadParams> params(renderThreadCount);
-	vector<std::jthread *> renderThreads(renderThreadCount);
+	std::vector<Film2SceneRadiusThreadParams> params(renderThreadCount);
+	std::vector<JThreadPtr> renderThreads(renderThreadCount);
 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		params[i].threadIndex = i;
@@ -286,14 +286,16 @@ float Film2SceneRadius(SceneConstPtr scene,
 		params[i].timeEnd = timeEnd;
 		params[i].validator = validator;
 
-		renderThreads[i] = new std::jthread(&Film2SceneRadiusThread, boost::ref(params[i]));
+		renderThreads[i] = std::make_shared<std::jthread>(
+			&Film2SceneRadiusThread, boost::ref(params[i])
+		);
+		SetThreadName(renderThreads[i], "LxFlm2ScnRadius");
 	}
 
 	float totalAccumulatedRadiusSize = 0.f;
 	u_int totalRadiusSizeCount = 0;
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		renderThreads[i]->join();
-		delete renderThreads[i];
 
 		totalAccumulatedRadiusSize += params[i].accumulatedRadiusSize;
 		totalRadiusSizeCount += params[i].radiusSizeCount;

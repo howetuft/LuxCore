@@ -59,15 +59,15 @@ void TracePhotonsThread::Start() {
 	indirectPhotons.clear();
 	causticPhotons.clear();
 
-	renderThread = new std::jthread(std::bind_front(&TracePhotonsThread::RenderFunc, this));
+	renderThread = std::make_shared<std::jthread>(
+		std::bind_front(&TracePhotonsThread::RenderFunc, this)
+	);
+	SetThreadName(renderThread, "LxTracePhotons");
 }
 
 void TracePhotonsThread::Join() {
 	if (renderThread) {
 		renderThread->join();
-
-		delete renderThread;
-		renderThread = nullptr;
 	}
 }
 

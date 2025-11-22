@@ -62,7 +62,7 @@ public:
 	void Parse(const luxrays::Properties &props);
 
 	RenderConfigPtr renderConfig;
-	RenderEngine *renderEngine;
+	RenderEnginePtr renderEngine;
 
 	std::mutex filmMutex;
 	FilmPtr film;

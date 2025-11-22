@@ -19,6 +19,7 @@
 #ifndef _SLG_BIDIRCPU_H
 #define	_SLG_BIDIRCPU_H
 
+#include "luxrays/utils/thread.h"
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -72,7 +73,13 @@ protected:
 		return a * a; // Power heuristic
 	}
 
-	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&BiDirCPURenderThread::RenderFunc, this)); }
+	virtual JThreadPtr AllocRenderThread() {
+		auto t = std::make_shared<std::jthread>(
+			std::bind_front(&BiDirCPURenderThread::RenderFunc, this)
+		);
+		luxrays::SetThreadName(t, "LxBiDirCPU");
+		return t;
+	}
 
 	void AOVWarmUp(std::stop_token stop_token, luxrays::RandomGenerator *rndGen);
 	

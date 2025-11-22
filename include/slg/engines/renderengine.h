@@ -149,7 +149,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEnginePtr FromProperties(RenderConfigConstPtr rcfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 

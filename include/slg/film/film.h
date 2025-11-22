@@ -45,6 +45,8 @@
 
 namespace slg {
 
+using JThreadPtr = std::shared_ptr<std::jthread>;
+
 // OpenCL data types
 namespace ocl {
 #include "slg/film/film_types.cl"
@@ -536,7 +538,7 @@ private:
 	FilmSamplesCounts samplesCounts;
 
 	std::vector<ImagePipeline *> imagePipelines;
-	std::jthread *imagePipelineThread;
+	JThreadPtr imagePipelineThread;
 	bool isAsyncImagePipelineRunning;
 
 	// Halt conditions

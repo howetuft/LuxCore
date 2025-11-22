@@ -203,7 +203,6 @@ Film::~Film() {
 	if (imagePipelineThread) {
 		imagePipelineThread->request_stop();
 		imagePipelineThread->join();
-		delete imagePipelineThread;
 	}
 
 	// The image pipeline plugin destructor can use the hardware device to free

@@ -35,7 +35,7 @@ namespace slg {
 class TriangleLight;
 class Scene;
 
-class LightSourceDefinitions : public std::enable_shared_from_this<LightSourceDefinitions> {
+class LightSourceDefinitions {
 public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
@@ -56,7 +56,7 @@ public:
 	void DeleteLightSource(const std::string &name);
 	void DeleteLightSourceStartWith(const std::string &namePrefix);
 	void DeleteLightSourceByMaterial(MaterialConstPtr mat);
-	
+
 	void UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol);
 
 	//--------------------------------------------------------------------------
@@ -64,13 +64,14 @@ public:
 	//--------------------------------------------------------------------------
 
 	TriangleLightConstPtr GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const;
- 
+
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
 	const std::vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
 
-	const std::vector<LightSourcePtr> &GetLightSources() const {
-		return lights;
+	LightSourcePtr GetLightSource(size_t n) const {
+		//return lights[n];
+		return lights.at(n);
 	}
 	const std::vector<EnvLightSourcePtr> &GetEnvLightSources() const {
 		return envLightSources;

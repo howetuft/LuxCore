@@ -62,7 +62,7 @@ class LightSource : public luxrays::NamedObject {
 public:
 	LightSource() : NamedObject("light"), lightSceneIndex(0),
 			volume(NULL) { }
-	virtual ~LightSource() { }
+	virtual ~LightSource() { SLG_LOG("REMOVE LIGHT /!\\"); }
 
 	virtual void Preprocess() = 0;
 
@@ -127,7 +127,7 @@ public:
 class IntersectableLightSource : public LightSource {
 public:
 	IntersectableLightSource() : lightMaterial(NULL) { }
-	virtual ~IntersectableLightSource() { }
+	virtual ~IntersectableLightSource() { SDL_LOG("Removing intersectable light"); }
 
 	virtual bool IsIntersectable() const { return true; }
 
@@ -165,12 +165,12 @@ public:
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
 	virtual bool IsVisibleIndirectGlossy() const { return false; }
 	virtual bool IsVisibleIndirectSpecular() const { return false; }
-	
+
 	void SetID(const u_int lightID) { id = lightID; }
 	u_int GetID() const { return id; }
 	float GetImportance() const { return importance; }
 	void SetImportance(const float imp) { importance = imp; }
-	
+
 	const luxrays::Spectrum &GetTemperatureScale() const { return temperatureScale; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

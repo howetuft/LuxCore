@@ -60,7 +60,7 @@ LightSourcePtr LightStrategyDLSCache::SampleLights(
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 
 			if (*pdf > 0.f)
-				return scene->lightDefs.GetLightSources()[lightIndex];
+				return scene->lightDefs.GetLightSource(lightIndex);
 			else
 				return nullptr;
 		} else

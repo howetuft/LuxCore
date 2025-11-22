@@ -60,30 +60,15 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 static std::mutex defaultPropertiesMutex;
-static unique_ptr<Properties> defaultProperties;
+static std::unique_ptr<Properties> defaultProperties;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 
-void RenderConfig::InitDefaultProperties() {
-	// Check if I have to initialize the default Properties
-	if (!defaultProperties.get()) {
-		std::unique_lock<std::mutex> lock(defaultPropertiesMutex);
-		if (!defaultProperties.get()) {
-			Properties *props = new Properties();
-			*props << RenderConfig::ToProperties(Properties());
-
-			defaultProperties.reset(props);
-		}
-	}
+RenderConfigPtr RenderConfig::Create(const luxrays::Properties &props, ScenePtr scene) {
+	return std::make_shared<RenderConfig>(Private(), props, scene);
 }
 
-const Properties &RenderConfig::GetDefaultProperties() {
-	InitDefaultProperties();
-
-	return *defaultProperties;
-}
-
-RenderConfig::RenderConfig(const Properties &props, ScenePtr scn) : scene(scn) {
+RenderConfig::RenderConfig(Private p, const Properties &props, ScenePtr scn) : scene(scn) {
 	InitDefaultProperties();
 
 	SLG_LOG("Configuration: ");
@@ -114,8 +99,25 @@ RenderConfig::RenderConfig(const Properties &props, ScenePtr scn) : scene(scn) {
 	Parse(props);
 }
 
-RenderConfig::~RenderConfig() {
+void RenderConfig::InitDefaultProperties() {
+	// Check if I have to initialize the default Properties
+	if (!defaultProperties.get()) {
+		std::unique_lock<std::mutex> lock(defaultPropertiesMutex);
+		if (!defaultProperties.get()) {
+			Properties *props = new Properties();
+			*props << RenderConfig::ToProperties(Properties());
+
+			defaultProperties.reset(props);
+		}
+	}
 }
+
+const Properties &RenderConfig::GetDefaultProperties() {
+	InitDefaultProperties();
+
+	return *defaultProperties;
+}
+
 
 bool RenderConfig::HasCachedKernels() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -299,7 +301,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, FilmPtr film, const
 	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
 }
 
-RenderEngine *RenderConfig::AllocRenderEngine() const {
+RenderEnginePtr RenderConfig::AllocRenderEngine() const {
 #if defined(LUXRAYS_DISABLE_OPENCL)
 	// This is a specific test for OpenCL-less version in order to print
 	// a more clear error

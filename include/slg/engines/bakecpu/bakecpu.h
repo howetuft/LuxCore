@@ -20,6 +20,7 @@
 #define	_SLG_BAKECPU_H
 
 #include "slg/slg.h"
+#include "luxrays/utils/thread.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -68,7 +69,13 @@ protected:
 	void RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
 	void RenderFunc(std::stop_token stop_token);
 
-	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(std::bind_front(&BakeCPURenderThread::RenderFunc, this))); }
+	virtual JThreadPtr AllocRenderThread() {
+		auto t = std::make_shared<std::jthread>(
+			std::bind_front(std::bind_front(&BakeCPURenderThread::RenderFunc, this))
+		);
+		luxrays::SetThreadName(t, "LxBakeCPU");
+		return t;
+	}
 };
 
 class BakeCPURenderEngine : public CPUNoTileRenderEngine {

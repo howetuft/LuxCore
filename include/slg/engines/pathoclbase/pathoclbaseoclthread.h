@@ -23,6 +23,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/thread.h"
 
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
@@ -38,6 +39,8 @@ namespace ocl { namespace pathoclbase {
 #include "slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl"
 } }
 
+
+using JThreadPtr = std::shared_ptr<std::jthread>;
 
 class PathOCLBaseRenderEngine;
 
@@ -259,7 +262,7 @@ protected:
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
 
-	std::jthread *renderThread;
+	JThreadPtr renderThread;
 
 	std::vector<std::shared_ptr<ThreadFilm> > threadFilms;
 

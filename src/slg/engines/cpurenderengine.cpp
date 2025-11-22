@@ -76,8 +76,6 @@ void CPURenderThread::StopRenderThread() {
 	if (renderThread) {
 		renderThread->request_stop();
 		renderThread->join();
-		delete renderThread;
-		renderThread = NULL;
 	}
 }
 

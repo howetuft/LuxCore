@@ -42,9 +42,8 @@ void LightStrategyPower::Preprocess(SceneConstPtr scene, const LightStrategyTask
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
-	auto &lights = scene->lightDefs.GetLightSources();
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto& l = lights[i];
+		auto l = scene->lightDefs.GetLightSource(i);
 		float power = l->GetPower(scene) * l->GetImportance();
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())

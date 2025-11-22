@@ -304,17 +304,16 @@ void CompiledScene::CompileLights() {
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
-	
-	const vector<LightSourcePtr> &lightSources = scene->lightDefs.GetLightSources();
-	const u_int lightCount = lightSources.size();
+
+	const u_int lightCount = scene->lightDefs.GetSize();
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
 	envLightDistributions.clear();
-	
+
 	CompileELVC(nullptr);
 
-	for (u_int i = 0; i < lightSources.size(); ++i) {
-		auto l = lightSources[i];
+	for (u_int i = 0; i < lightCount; ++i) {
+		auto l = scene->lightDefs.GetLightSource(i);
 
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
 		oclLight->lightSceneIndex = l->lightSceneIndex;

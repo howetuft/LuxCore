@@ -29,9 +29,17 @@
 namespace slg {
 
 class RenderConfig : public std::enable_shared_from_this<RenderConfig> {
+
+	struct Private{ explicit Private() = default; };
+
 public:
-	RenderConfig(const luxrays::Properties &props, ScenePtr scene = nullptr);
-	~RenderConfig();
+
+	static RenderConfigPtr Create(
+		const luxrays::Properties &props,
+		ScenePtr scene = nullptr
+	);
+
+	RenderConfig(Private, const luxrays::Properties &props, ScenePtr scene = nullptr);
 
 	bool HasCachedKernels();
 
@@ -51,7 +59,7 @@ public:
 		SamplerSharedData *sharedData,
 		const luxrays::Properties &additionalProps) const;
 
-	RenderEngine *AllocRenderEngine() const;
+	RenderEnginePtr AllocRenderEngine() const;
 
 	const luxrays::Properties &ToProperties() const;
 

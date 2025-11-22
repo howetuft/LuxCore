@@ -248,15 +248,17 @@ void PathOCLBaseOCLRenderThread::StartRenderThread() {
 	threadDone = false;
 
 	// Create the thread for the rendering
-	renderThread = new std::jthread(std::bind_front(&PathOCLBaseOCLRenderThread::RenderThreadImpl, this));
+	renderThread = std::make_shared<std::jthread>(
+		std::bind_front(&PathOCLBaseOCLRenderThread::RenderThreadImpl, this)
+	);
+
+	SetThreadName(renderThread, "LxPathOCL_OCL");
 }
 
 void PathOCLBaseOCLRenderThread::StopRenderThread() {
 	if (renderThread) {
 		renderThread->request_stop();
 		renderThread->join();
-		delete renderThread;
-		renderThread = nullptr;
 	}
 }
 

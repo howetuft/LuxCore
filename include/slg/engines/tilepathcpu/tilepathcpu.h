@@ -20,6 +20,7 @@
 #define	_SLG_TILEPATHCPU_H
 
 #include "slg/slg.h"
+#include "luxrays/utils/thread.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/pathtracer.h"
 #include "slg/samplers/sampler.h"
@@ -44,7 +45,13 @@ public:
 	friend class TilePathCPURenderEngine;
 
 private:
-	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&TilePathCPURenderThread::RenderFunc, this)); }
+	virtual JThreadPtr AllocRenderThread() {
+		auto t = std::make_shared<std::jthread>(
+			std::bind_front(&TilePathCPURenderThread::RenderFunc, this)
+		);
+		luxrays::SetThreadName(t, "LxTilePathCPU");
+		return t;
+	}
 
 	void RenderFunc(std::stop_token stop_token);
 

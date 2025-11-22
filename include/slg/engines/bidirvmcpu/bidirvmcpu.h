@@ -100,7 +100,13 @@ public:
 	friend class BiDirVMCPURenderEngine;
 
 private:
-	virtual std::jthread *AllocRenderThread() { return new std::jthread(std::bind_front(&BiDirVMCPURenderThread::RenderFuncVM, this)); }
+	virtual JThreadPtr AllocRenderThread() {
+		auto t = std::make_shared<std::jthread>(
+			std::bind_front(&BiDirVMCPURenderThread::RenderFuncVM, this)
+		);
+		luxrays::SetThreadName(t, "LxBiDirVMCPU");
+		return t;
+	}
 
 	void RenderFuncVM(std::stop_token stop_token);
 };

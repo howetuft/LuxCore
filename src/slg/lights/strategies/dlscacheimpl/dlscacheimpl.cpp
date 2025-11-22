@@ -246,7 +246,6 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(
 	SceneConstPtr scene
 ) {
 	const DLSCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
-	auto& lights = scene->lightDefs.GetLightSources();
 
 	//--------------------------------------------------------------------------
 	// Build the list of luminance received from each light source
@@ -257,8 +256,8 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(
 	// For some Debugging
 	//SLG_LOG("DLSC entry #" << entryIndex);
 
-	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		auto light = lights[lightIndex];
+	for (u_int lightIndex = 0; lightIndex < scene->lightDefs.GetSize(); ++lightIndex) {
+		auto light = scene->lightDefs.GetLightSource(lightIndex);
 
 		// Check if the light source uses direct light sampling
 		if (!light->IsDirectLightSamplingEnabled()) {
@@ -325,10 +324,9 @@ void DirectLightSamplingCache::ComputeCacheEntryReceivedLuminance(
 }
 
 void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh, SceneConstPtr scene) {
-	auto& lights = scene->lightDefs.GetLightSources();
 
 	DLSCacheEntry &entry = cacheEntries[entryIndex];
-	vector<float> entryReceivedLuminance(lights.size(), 0.f);
+	std::vector<float> entryReceivedLuminance(scene->lightDefs.GetSize(), 0.f);
 
 	// Look for all neighbor particles
 	vector<u_int> allNearEntryIndices;
@@ -340,12 +338,12 @@ void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entr
 
 		const vector<float> &neighborEntryReceivedLuminance = cacheEntriesReceivedLuminance[index];
 
-		for (u_int i = 0; i < lights.size(); ++i)
+		for (u_int i = 0; i < scene->lightDefs.GetSize(); ++i)
 			entryReceivedLuminance[i] += neighborEntryReceivedLuminance[i];
 	}
 	
 	const float scale = 1.f / (allNearEntryIndices.size());
-	for (u_int i = 0; i < lights.size(); ++i)
+	for (u_int i = 0; i < scene->lightDefs.GetSize(); ++i)
 		entryReceivedLuminance[i] *= scale;
 
 	// Look for the max. luminance value	
@@ -370,10 +368,9 @@ void DirectLightSamplingCache::BuildCacheEntries(SceneConstPtr scene) {
 	// Print the number of light with enabled direct light sampling
 	//--------------------------------------------------------------------------
 
-	auto& lights = scene->lightDefs.GetLightSources();
 	u_int dlsLightCount = 0;
-	for (u_int lightIndex = 0; lightIndex < lights.size(); ++lightIndex) {
-		auto light = lights[lightIndex];
+	for (u_int lightIndex = 0; lightIndex < scene->lightDefs.GetSize(); ++lightIndex) {
+		auto light = scene->lightDefs.GetLightSource(lightIndex);
 
 		// Check if the light source uses direct light sampling
 		if (light->IsDirectLightSamplingEnabled())
@@ -387,7 +384,7 @@ void DirectLightSamplingCache::BuildCacheEntries(SceneConstPtr scene) {
 
 	cacheEntriesReceivedLuminance.resize(visibilityParticles.size());
 	for (u_int visibilityParticleIndex = 0; visibilityParticleIndex < visibilityParticles.size(); ++visibilityParticleIndex)
-		cacheEntriesReceivedLuminance[visibilityParticleIndex].resize(lights.size(), 0.f);
+		cacheEntriesReceivedLuminance[visibilityParticleIndex].resize(scene->lightDefs.GetSize(), 0.f);
 		
 	//--------------------------------------------------------------------------
 	// Initialize compute the cache entries received luminance

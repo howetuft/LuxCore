@@ -1278,9 +1278,9 @@ RenderConfigImpl::RenderConfigImpl(
 	if (scn) {
 		scene = scn;
 		allocatedScene = false;
-		renderConfig = std::make_shared<slg::RenderConfig>(props, scene->scene);
+		renderConfig = slg::RenderConfig::Create(props, scene->scene);
 	} else {
-		renderConfig = std::make_shared<slg::RenderConfig>(props);
+		renderConfig = slg::RenderConfig::Create(props);
 		scene = std::make_shared<SceneImpl>(renderConfig->scene);
 		allocatedScene = true;
 	}
@@ -1787,12 +1787,12 @@ void RenderSessionImpl::UpdateStats() {
 	switch (renderSession->renderEngine->GetType()) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
-		auto engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
+		auto engine = static_pointer_cast<slg::RTPathOCLRenderEngine>(renderSession->renderEngine);
 			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
 			break;
 		}
 		case slg::TILEPATHOCL: {
-		auto engine = (slg::TilePathOCLRenderEngine *)renderSession->renderEngine;
+		auto engine = static_pointer_cast<slg::TilePathOCLRenderEngine>(renderSession->renderEngine);
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
@@ -1821,7 +1821,7 @@ void RenderSessionImpl::UpdateStats() {
 		}
 #endif
 		case slg::TILEPATHCPU: {
-			auto engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
+			auto engine = static_pointer_cast<slg::CPUTileRenderEngine>(renderSession->renderEngine);
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
@@ -1863,7 +1863,7 @@ void RenderSessionImpl::UpdateStats() {
 
 const Properties &RenderSessionImpl::GetStats() const {
 	API_BEGIN_NOARGS();
-	
+
 	const Properties &result = stats;
 
 	//API_RETURN("{}", ToArgString(result));
