@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/intersectiondevice.h"
@@ -450,7 +451,7 @@ void FilmImpl::DeleteAllImagePipelines()  {
 		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
 
 		renderSession->renderSession->film->SetImagePipelines(nullptr);
-		renderSession->renderSession->renderConfig->DeleteAllFilmImagePipelinesProperties();
+		renderSession->renderSession->renderConfig.DeleteAllFilmImagePipelinesProperties();
 	} else
 		standAloneFilm->SetImagePipelines(nullptr);
 
@@ -1419,7 +1420,7 @@ void RenderConfigImpl::Save(const std::string &fileName) const {
 void RenderConfigImpl::Export(const std::string &dirName) const {
 	API_BEGIN("{}", ToArgString(dirName));
 
-	slg::FileSaverRenderEngine::ExportScene(renderConfig, dirName,
+	slg::FileSaverRenderEngine::ExportScene(*renderConfig, dirName,
 			renderConfig->GetProperty("renderengine.type").Get<string>());
 
 	API_END();
@@ -1428,7 +1429,7 @@ void RenderConfigImpl::Export(const std::string &dirName) const {
 void RenderConfigImpl::ExportGLTF(const std::string &fileName) const {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	slg::FileSaverRenderEngine::ExportSceneGLTF(renderConfig, fileName);
+	slg::FileSaverRenderEngine::ExportSceneGLTF(*renderConfig, fileName);
 
 	API_END();
 }
@@ -1504,10 +1505,11 @@ RenderSessionImpl::RenderSessionImpl(
 {
 	// Create session
 
-	renderSession = std::make_shared<slg::RenderSession>(
-		config->renderConfig,
-		startState ? startState->renderState : nullptr,
-		startFilm ? startFilm->standAloneFilm : nullptr);
+	renderSession = std::make_unique<slg::RenderSession>(
+		*config->renderConfig,
+		startState ? startState->renderState : slg::RenderStatePtr(nullptr),
+		startFilm ? startFilm->standAloneFilm : slg::FilmPtr(nullptr)
+	);
 
 	if (startState) {
 		// slg::RenderSession will take care of deleting startState->renderState
@@ -1536,8 +1538,8 @@ RenderSessionImpl::RenderSessionImpl(
 	auto startFilm = slg::Film::LoadSerialized(startFilmFileName);
 	auto startState = slg::RenderState::LoadSerialized(startStateFileName);
 
-	renderSession = std::make_shared<slg::RenderSession>(
-		config->renderConfig,
+	renderSession = std::make_unique<slg::RenderSession>(
+		*config->renderConfig,
 		startState,
 		startFilm
 	);
@@ -1781,18 +1783,18 @@ void RenderSessionImpl::UpdateStats() {
 	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
 
 	// The explicit cast to size_t is required by VisualC++
-	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig.scene->dataSet->GetTotalTriangleCount()));
 
 	// Some engine specific statistic
 	switch (renderSession->renderEngine->GetType()) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
-		auto engine = static_pointer_cast<slg::RTPathOCLRenderEngine>(renderSession->renderEngine);
+		auto engine = static_cast<slg::RTPathOCLRenderEngine*>(renderSession->renderEngine.get());
 			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
 			break;
 		}
 		case slg::TILEPATHOCL: {
-		auto engine = static_pointer_cast<slg::TilePathOCLRenderEngine>(renderSession->renderEngine);
+		auto engine = static_cast<slg::TilePathOCLRenderEngine*>(renderSession->renderEngine.get());
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
@@ -1821,7 +1823,7 @@ void RenderSessionImpl::UpdateStats() {
 		}
 #endif
 		case slg::TILEPATHCPU: {
-			auto engine = static_pointer_cast<slg::CPUTileRenderEngine>(renderSession->renderEngine);
+			auto engine = static_cast<slg::CPUTileRenderEngine*>(renderSession->renderEngine.get());
 
 			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
 			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));

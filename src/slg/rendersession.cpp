@@ -36,11 +36,11 @@ void slg::NullDebugHandler(const char *msg) {
 }
 
 RenderSession::RenderSession(
-	RenderConfigPtr rcfg,
+	RenderConfigRef rcfg,
 	RenderStatePtr startState,
 	FilmPtr startFilm
-) {
-	renderConfig = rcfg;
+) : renderConfig(rcfg) {
+	SDL_LOG("Creating session");
 
 	const double now = WallClockTime();
 	lastPeriodicFilmOutputsSave = now;
@@ -51,21 +51,23 @@ RenderSession::RenderSession(
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = renderConfig->AllocFilm();
+	film = renderConfig.AllocFilm();
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
 	//--------------------------------------------------------------------------
 
-	renderEngine = renderConfig->AllocRenderEngine();
+	renderEngine = renderConfig.AllocRenderEngine();
 	renderEngine->SetRenderState(startState, startFilm);
 }
 
 RenderSession::~RenderSession() {
-	if (renderEngine->IsInSceneEdit())
+	if (renderEngine->IsInSceneEdit()) {
 		EndSceneEdit();
-	if (renderEngine->IsStarted())
+	}
+	if (renderEngine->IsStarted()) {
 		Stop();
+	}
 	renderEngine.reset();
 	film.reset();
 }
@@ -77,7 +79,7 @@ void RenderSession::Start() {
 		// same session.
 
 		// Create the new film
-		film = renderConfig->AllocFilm();
+		film = renderConfig.AllocFilm();
 	}
 
 	renderEngine->Start(film, &filmMutex);
@@ -96,7 +98,7 @@ void RenderSession::BeginSceneEdit() {
 
 void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
-	const EditActionList editActions = renderConfig->scene->editActions;
+	const EditActionList editActions = renderConfig.scene->editActions;
 
 	if ((renderEngine->GetType() != RTPATHOCL) &&
 			(renderEngine->GetType() != RTPATHCPU)) {
@@ -119,25 +121,25 @@ void RenderSession::Resume() {
 }
 
 bool RenderSession::HasPeriodicFilmOutputsSave() {
-	const double period = renderConfig->GetProperty("periodicsave.film.outputs.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.film.outputs.period").Get<double>();
 
 	return (period > 0.0);
 }
 
 bool RenderSession::HasPeriodicFilmSave() {
-	const double period = renderConfig->GetProperty("periodicsave.film.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.film.period").Get<double>();
 
 	return (period > 0.0);
 }
 
 bool RenderSession::HasResumeRenderingSave() {
-	const double period = renderConfig->GetProperty("periodicsave.resumerendering.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.resumerendering.period").Get<double>();
 
 	return (period > 0.0);
 }
 
 bool RenderSession::NeedPeriodicFilmOutputsSave(const bool force) {
-	const double period = renderConfig->GetProperty("periodicsave.film.outputs.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.film.outputs.period").Get<double>();
 	if (period > 0.0) {
 		if (force)
 			return true;
@@ -153,7 +155,7 @@ bool RenderSession::NeedPeriodicFilmOutputsSave(const bool force) {
 }
 
 bool RenderSession::NeedPeriodicFilmSave(const bool force) {
-	const double period = renderConfig->GetProperty("periodicsave.film.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.film.period").Get<double>();
 	if (period > 0.0) {
 		if (force)
 			return true;
@@ -169,7 +171,7 @@ bool RenderSession::NeedPeriodicFilmSave(const bool force) {
 }
 
 bool RenderSession::NeedResumeRenderingSave(const bool force) {
-	const double period = renderConfig->GetProperty("periodicsave.resumerendering.period").Get<double>();
+	const double period = renderConfig.GetProperty("periodicsave.resumerendering.period").Get<double>();
 	if (period > 0.0) {
 		if (force)
 			return true;
@@ -193,7 +195,7 @@ void RenderSession::SaveFilm(const string &fileName) {
 	// renderEngine->UpdateFilm() uses the film lock on its own
 	std::unique_lock<std::mutex> lock(filmMutex);
 
-	if (renderConfig->GetProperty("film.safesave").Get<bool>()) {
+	if (renderConfig.GetProperty("film.safesave").Get<bool>()) {
 		SafeSave safeSave(fileName);
 
 		Film::SaveSerialized(safeSave.GetSaveFileName(), film);
@@ -232,13 +234,13 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 		renderEngine->BeginFilmEdit();
 
 		// Update render config properties
-		renderConfig->UpdateFilmProperties(props);
+		renderConfig.UpdateFilmProperties(props);
 
 		// Create the new film
-		film = renderConfig->AllocFilm();
+		film = renderConfig.AllocFilm();
 
 		// I have to update the camera
-		renderConfig->scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+		renderConfig.scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
 		renderEngine->EndFilmEdit(film, &filmMutex);
 	} else {
@@ -246,7 +248,7 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 		film->Parse(props);
 
 		// Update render config properties
-		renderConfig->UpdateFilmProperties(props);
+		renderConfig.UpdateFilmProperties(props);
 	}
 }
 
@@ -257,7 +259,7 @@ void RenderSession::CheckPeriodicSave(const bool force) {
 
 	// Film periodic save
 	if (NeedPeriodicFilmSave(force)) {
-		const string fileName = renderConfig->GetProperty("periodicsave.film.filename").Get<string>();
+		const string fileName = renderConfig.GetProperty("periodicsave.film.filename").Get<string>();
 
 		SaveFilm(fileName);
 	}
@@ -267,7 +269,7 @@ void RenderSession::CheckPeriodicSave(const bool force) {
 		// The .rsm file can be save only during a pause
 		Pause();
 
-		const string fileName = renderConfig->GetProperty("periodicsave.resumerendering.filename").Get<string>();
+		const string fileName = renderConfig.GetProperty("periodicsave.resumerendering.filename").Get<string>();
 		SaveResumeFile(fileName);
 		
 		Resume();
@@ -299,7 +301,7 @@ static size_t SaveRsmFile(RenderSession *renderSession, const std::string &fileN
 void RenderSession::SaveResumeFile(const string &fileName) {
 	size_t fileSize;
 
-	if (renderConfig->GetProperty("resumerendering.filesafe").Get<bool>()) {
+	if (renderConfig.GetProperty("resumerendering.filesafe").Get<bool>()) {
 		SafeSave safeSave(fileName);
 		
 		fileSize = SaveRsmFile(this, safeSave.GetSaveFileName());

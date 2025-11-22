@@ -33,7 +33,7 @@ namespace slg {
 
 class FileSaverRenderEngine : public RenderEngine {
 public:
-	FileSaverRenderEngine(RenderConfigConstPtr cfg);
+	FileSaverRenderEngine(RenderConfigConstRef cfg);
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -41,9 +41,9 @@ public:
 	virtual bool HasDone() const { return true; }
 	virtual void WaitForDone() const { }
 
-	static void ExportScene(RenderConfigConstPtr renderConfig, const std::string &directoryName,
+	static void ExportScene(RenderConfigConstRef renderConfig, const std::string &directoryName,
 		const std::string &renderEngineType);
-	static void ExportSceneGLTF(RenderConfigConstPtr renderConfig, const std::string &fileName);
+	static void ExportSceneGLTF(RenderConfigConstRef renderConfig, const std::string &fileName);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
@@ -52,7 +52,7 @@ public:
 	static RenderEngineType GetObjectType() { return FILESAVER; }
 	static std::string GetObjectTag() { return "FILESAVER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

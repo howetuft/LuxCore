@@ -55,7 +55,7 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfigConstPtr cfg);
+	RenderEngine(RenderConfigConstRef cfg);
 	virtual ~RenderEngine();
 
 	bool IsStarted() const { return started; }
@@ -149,7 +149,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static RenderEnginePtr FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEngineUPtr FromProperties(RenderConfigConstRef rcfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -175,7 +175,7 @@ protected:
 	std::vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
-	RenderConfigConstPtr renderConfig;
+	RenderConfigConstRef renderConfig;
 	Filter *pixelFilter;
 	FilmPtr film;
 	std::mutex *filmMutex;

@@ -28,10 +28,10 @@ using namespace std;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigConstPtr rcfg) :
+BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigConstRef rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr),
 		photonGICache(nullptr) {
-	if (rcfg->scene->camera->GetType() == Camera::STEREO)
+	if (rcfg.scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
 	lightPathsCount = 1;
@@ -51,7 +51,7 @@ RenderStatePtr BiDirCPURenderEngine::GetRenderState() {
 }
 
 void BiDirCPURenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -102,7 +102,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
-			photonGICache->SetScene(renderConfig->scene);
+			photonGICache->SetScene(renderConfig.scene);
 
 		startRenderState = nullptr;
 	}
@@ -113,7 +113,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 
 	// note: photonGICache could have been restored from the render state
 	if (!photonGICache) {
-		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+		photonGICache = PhotonGICache::FromProperties(renderConfig.scene, cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
@@ -141,7 +141,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 void BiDirCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
 	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
@@ -175,7 +175,7 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			PhotonGICache::ToProperties(cfg);
 }
 
-RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
 	return new BiDirCPURenderEngine(rcfg);
 }
 

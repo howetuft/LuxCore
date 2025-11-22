@@ -59,7 +59,7 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 	double lastProgressPrint = start;
 		
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 	auto camera = scene->camera;
 
 	SobolSampler sampler(rndGen, engine->film, engine->sampleSplatter, true, 0.f, 0.f,
@@ -233,7 +233,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 		const PathVertexVM &eyeVertex, const PathVertexVM &lightVertex,
 		SampleResult &eyeSampleResult, const float u0) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 
 	Vector p2pDir(lightVertex.bsdf.hitPoint.p - eyeVertex.bsdf.hitPoint.p);
 	const float p2pDistance2 = p2pDir.LengthSquared();
@@ -327,7 +327,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 		return;
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 
 	Vector eyeDir;
 	float eyeDistance = 0;
@@ -431,7 +431,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		const PathVertexVM &eyeVertex,
 		SampleResult &eyeSampleResult) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 	
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
@@ -520,7 +520,7 @@ void BiDirCPURenderThread::DirectHitLight(
 	}
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 
 	const float lightPickPdf = scene->lightDefs.GetEmitLightStrategy()->SampleLightPdf(light,
 			eyeVertex.bsdf.hitPoint.p, eyeVertex.bsdf.hitPoint.geometryN,
@@ -546,7 +546,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 				eyeVertex, &eyeSampleResult.radiance[eyeVertex.bsdf.GetLightID()]);
 	} else {
 		BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-		auto scene = engine->renderConfig->scene;
+		auto scene = engine->renderConfig.scene;
 
 		for(auto el: scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(scene,
@@ -564,7 +564,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 
 	// Select one light source
 	// BiDir can use only a single strategy, emit in this case
@@ -754,7 +754,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 	auto camera = scene->camera;
 	PhotonGICache *photonGICache = engine->photonGICache;
 
@@ -763,7 +763,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		AOVWarmUp(stop_token, rndGen);
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
+	Sampler *sampler = engine->renderConfig.AllocSampler(rndGen, engine->film, engine->sampleSplatter,
 			engine->samplerSharedData, Properties());
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray

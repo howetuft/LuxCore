@@ -26,9 +26,9 @@ using namespace slg;
 // LightCPURenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfigConstPtr rcfg) :
+LightCPURenderEngine::LightCPURenderEngine(RenderConfigConstRef rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr) {
-	if (rcfg->scene->camera->GetType() == Camera::STEREO)
+	if (rcfg.scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 }
 
@@ -38,7 +38,7 @@ LightCPURenderEngine::~LightCPURenderEngine() {
 
 void LightCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
 	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
@@ -48,7 +48,7 @@ RenderStatePtr LightCPURenderEngine::GetRenderState() {
 }
 
 void LightCPURenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -113,7 +113,7 @@ Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
 	return new LightCPURenderEngine(rcfg);
 }
 

@@ -100,9 +100,9 @@ void CPURenderThread::WaitForDone() const {
 // CPURenderEngine
 //------------------------------------------------------------------------------
 
-CPURenderEngine::CPURenderEngine(RenderConfigConstPtr cfg) : RenderEngine(cfg) {
+CPURenderEngine::CPURenderEngine(RenderConfigConstRef cfg) : RenderEngine(cfg) {
 	// I have to use u_int because Property::Get<size_t>() is not defined
-	const size_t renderThreadCount =  Max<u_int>(1u, cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
+	const size_t renderThreadCount =  Max<u_int>(1u, cfg.cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -206,7 +206,7 @@ CPUNoTileRenderThread::~CPUNoTileRenderThread() {
 // CPUNoTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfigConstPtr cfg) : CPURenderEngine(cfg) {
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfigConstRef cfg) : CPURenderEngine(cfg) {
 	samplerSharedData = NULL;
 }
 
@@ -215,7 +215,7 @@ CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
 }
 
 void CPUNoTileRenderEngine::StartLockLess() {
-	samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+	samplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, film);
 	
 	CPURenderEngine::StartLockLess();
 }
@@ -286,7 +286,7 @@ void CPUTileRenderThread::StartRenderThread() {
 // CPUTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUTileRenderEngine::CPUTileRenderEngine(RenderConfigConstPtr cfg) : CPURenderEngine(cfg) {
+CPUTileRenderEngine::CPUTileRenderEngine(RenderConfigConstRef cfg) : CPURenderEngine(cfg) {
 	tileRepository = NULL;
 }
 

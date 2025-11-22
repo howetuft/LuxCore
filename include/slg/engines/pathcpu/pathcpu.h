@@ -58,7 +58,7 @@ protected:
 
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	PathCPURenderEngine(RenderConfigConstPtr cfg);
+	PathCPURenderEngine(RenderConfigConstRef cfg);
 	virtual ~PathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -73,7 +73,7 @@ public:
 	static RenderEngineType GetObjectType() { return PATHCPU; }
 	static std::string GetObjectTag() { return "PATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
 
 	friend class PathCPURenderThread;
 

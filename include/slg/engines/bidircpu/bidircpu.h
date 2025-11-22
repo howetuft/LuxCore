@@ -122,7 +122,7 @@ class SobolSamplerSharedData;
 
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BiDirCPURenderEngine(RenderConfigConstPtr cfg);
+	BiDirCPURenderEngine(RenderConfigConstRef cfg);
 	virtual ~BiDirCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -137,7 +137,7 @@ public:
 	static RenderEngineType GetObjectType() { return BIDIRCPU; }
 	static std::string GetObjectTag() { return "BIDIRCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
 
 	// Signed because of the delta parameter
 	u_int maxEyePathDepth, maxLightPathDepth;

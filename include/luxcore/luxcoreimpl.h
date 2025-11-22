@@ -355,7 +355,7 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	std::shared_ptr<slg::RenderConfig> renderConfig;
+	std::unique_ptr<slg::RenderConfig> renderConfig;
 
 	std::shared_ptr<SceneImpl> scene;
 	bool allocatedScene;
@@ -453,7 +453,7 @@ private:
 	std::shared_ptr<RenderConfigImpl> renderConfig;
 	std::shared_ptr<FilmImpl> film;
 
-	std::shared_ptr<slg::RenderSession> renderSession;
+	std::unique_ptr<slg::RenderSession> renderSession;
 	luxrays::Properties stats;
 
 	void InitFilm();

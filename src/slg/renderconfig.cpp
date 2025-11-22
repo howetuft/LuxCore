@@ -24,8 +24,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 
 #include "luxrays/utils/serializationutils.h"
+#include "slg/usings.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
@@ -64,8 +66,8 @@ static std::unique_ptr<Properties> defaultProperties;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 
-RenderConfigPtr RenderConfig::Create(const luxrays::Properties &props, ScenePtr scene) {
-	return std::make_shared<RenderConfig>(Private(), props, scene);
+RenderConfigUPtr RenderConfig::Create(const luxrays::Properties &props, ScenePtr scene) {
+	return std::make_unique<RenderConfig>(Private(), props, scene);
 }
 
 RenderConfig::RenderConfig(Private p, const Properties &props, ScenePtr scn) : scene(scn) {
@@ -301,7 +303,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, FilmPtr film, const
 	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
 }
 
-RenderEnginePtr RenderConfig::AllocRenderEngine() const {
+RenderEngineUPtr RenderConfig::AllocRenderEngine() const {
 #if defined(LUXRAYS_DISABLE_OPENCL)
 	// This is a specific test for OpenCL-less version in order to print
 	// a more clear error
@@ -312,7 +314,7 @@ RenderEnginePtr RenderConfig::AllocRenderEngine() const {
 		throw runtime_error(type + " render engine is not supported by OpenCL-less version of the binaries. Download the OpenCL-enabled version or change the render engine used.");
 #endif
 
-	return RenderEngine::FromProperties(shared_from_this());
+	return RenderEngine::FromProperties(*this);
 }
 
 const Properties &RenderConfig::ToProperties() const {
@@ -390,10 +392,10 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 // Serialization methods
 //------------------------------------------------------------------------------
 
-RenderConfigPtr RenderConfig::LoadSerialized(const std::string &fileName) {
+RenderConfigUPtr RenderConfig::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	RenderConfigPtr renderConfig;
+	RenderConfigUPtr renderConfig;
 	sif.GetArchive() >> renderConfig;
 
 	if (!sif.IsGood())
@@ -402,9 +404,10 @@ RenderConfigPtr RenderConfig::LoadSerialized(const std::string &fileName) {
 	return renderConfig;
 }
 
+// Save serialized method - pointer argument
 void RenderConfig::SaveSerialized(
 	const std::string &fileName,
-	RenderConfigConstPtr renderConfig
+	const RenderConfigUPtr& renderConfig
 ) {
 	Properties emptyProps;
 	SaveSerialized(fileName, renderConfig, emptyProps);
@@ -412,7 +415,7 @@ void RenderConfig::SaveSerialized(
 
 void RenderConfig::SaveSerialized(
 	const std::string &fileName,
-	RenderConfigConstPtr renderConfig,
+	const RenderConfigUPtr& renderConfig,
 	const luxrays::Properties &additionalCfg
 ) {
 	SerializationOutputFile sof(fileName);
@@ -424,7 +427,7 @@ void RenderConfig::SaveSerialized(
 	sof.GetArchive() << renderConfig;
 
 	renderConfig->saveAdditionalCfg.Clear();
-	
+
 	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized render configuration: " + fileName);
 
@@ -432,6 +435,31 @@ void RenderConfig::SaveSerialized(
 
 	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }
+
+// Save serialized method - reference argument
+void RenderConfig::SaveSerialized(
+	const std::string &fileName,
+	const RenderConfigConstRef renderConfig,
+	const luxrays::Properties &additionalCfg
+) {
+	SerializationOutputFile sof(fileName);
+
+	// This is quite a trick
+	renderConfig.saveAdditionalCfg.Clear();
+	renderConfig.saveAdditionalCfg.Set(additionalCfg);
+
+	sof.GetArchive() << renderConfig;
+
+	renderConfig.saveAdditionalCfg.Clear();
+
+	if (!sof.IsGood())
+		throw runtime_error("Error while saving serialized render configuration: " + fileName);
+
+	sof.Flush();
+
+	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+}
+
 
 template<class Archive> void RenderConfig::save(Archive &ar, const unsigned int version) const {
 	Properties completeCfg;

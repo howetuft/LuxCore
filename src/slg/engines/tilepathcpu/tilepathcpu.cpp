@@ -32,7 +32,7 @@ using namespace slg;
 // TilePathCPURenderEngine
 //------------------------------------------------------------------------------
 
-TilePathCPURenderEngine::TilePathCPURenderEngine(RenderConfigConstPtr rcfg) :
+TilePathCPURenderEngine::TilePathCPURenderEngine(RenderConfigConstRef rcfg) :
 		CPUTileRenderEngine(rcfg), photonGICache(nullptr) {
 }
 
@@ -42,7 +42,7 @@ TilePathCPURenderEngine::~TilePathCPURenderEngine() {
 
 void TilePathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
 
@@ -51,7 +51,7 @@ RenderStatePtr TilePathCPURenderEngine::GetRenderState() {
 }
 
 void TilePathCPURenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -97,7 +97,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 	} else {
 		film->Reset();
 
-		tileRepository = TileRepository::FromProperties(renderConfig->cfg);
+		tileRepository = TileRepository::FromProperties(renderConfig.cfg);
 		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 		tileRepository->InitTiles(*film);
 	}
@@ -108,7 +108,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 	// note: photonGICache could have been restored from the render state
 	if ((GetType() != RTPATHCPU) && !photonGICache) {
-		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+		photonGICache = PhotonGICache::FromProperties(renderConfig.scene, cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
@@ -153,7 +153,7 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
 	return new TilePathCPURenderEngine(rcfg);
 }
 

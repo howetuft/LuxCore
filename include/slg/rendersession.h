@@ -33,7 +33,7 @@ namespace slg {
 class RenderSession {
 public:
 	RenderSession(
-		RenderConfigPtr cfg,
+		RenderConfigRef cfg,
 		RenderStatePtr startState = nullptr,
 		FilmPtr startFilm = nullptr
 	);
@@ -61,8 +61,8 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 
-	RenderConfigPtr renderConfig;
-	RenderEnginePtr renderEngine;
+	RenderConfigRef renderConfig;
+	RenderEngineUPtr renderEngine;
 
 	std::mutex filmMutex;
 	FilmPtr film;

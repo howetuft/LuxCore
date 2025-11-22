@@ -51,7 +51,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 	auto camera = scene->camera;
 
 	// Setup the samplers
@@ -62,7 +62,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
-		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+		Sampler *sampler = engine->renderConfig.AllocSampler(rndGen, engine->film,
 				engine->sampleSplatter,	engine->samplerSharedData, Properties());
 		sampler->SetThreadIndex(threadIndex);
 		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);

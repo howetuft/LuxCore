@@ -78,10 +78,15 @@ using MaterialConstPtr = std::shared_ptr<const Material>;
 class RenderConfig;
 using RenderConfigConstPtr = std::shared_ptr<const RenderConfig>;
 using RenderConfigPtr = std::shared_ptr<RenderConfig>;
+using RenderConfigUPtr = std::unique_ptr<RenderConfig>;
+using RenderConfigConstUPtr = std::unique_ptr<const RenderConfig>;
+using RenderConfigRef = RenderConfig &;
+using RenderConfigConstRef = const RenderConfig &;
 
 class RenderSession;
 using RenderSessionConstPtr = std::shared_ptr<const RenderSession>;
 using RenderSessionPtr = std::shared_ptr<RenderSession>;
+using RenderSessionConstRef = const RenderSession &;
 
 class RenderState;
 using RenderStateConstPtr = std::shared_ptr<const RenderState>;
@@ -94,6 +99,7 @@ using RenderEnginePtr = std::shared_ptr<RenderEngine>;
 class RenderEngine;
 using RenderEngineConstPtr = std::shared_ptr<const RenderEngine>;
 using RenderEnginePtr = std::shared_ptr<RenderEngine>;
+using RenderEngineUPtr = std::unique_ptr<RenderEngine>;
 
 class Texture;
 using TexturePtr = std::shared_ptr<Texture>;

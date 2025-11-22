@@ -68,7 +68,7 @@ protected:
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfigConstPtr cfg);
+	CPURenderEngine(RenderConfigConstRef cfg);
 	virtual ~CPURenderEngine();
 
 	virtual bool HasDone() const;
@@ -113,7 +113,7 @@ public:
 
 class CPUNoTileRenderEngine : public CPURenderEngine {
 public:
-	CPUNoTileRenderEngine(RenderConfigConstPtr cfg);
+	CPUNoTileRenderEngine(RenderConfigConstRef cfg);
 	virtual ~CPUNoTileRenderEngine();
 
 	virtual void StartLockLess();
@@ -155,7 +155,7 @@ protected:
 
 class CPUTileRenderEngine : public CPURenderEngine {
 public:
-	CPUTileRenderEngine(RenderConfigConstPtr cfg);
+	CPUTileRenderEngine(RenderConfigConstRef cfg);
 	virtual ~CPUTileRenderEngine();
 
 	void GetPendingTiles(std::deque<const Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }

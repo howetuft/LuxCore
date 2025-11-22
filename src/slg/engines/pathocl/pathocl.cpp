@@ -56,7 +56,7 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigConstPtr rcfg) :
+PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigConstRef rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
 	lightSampleSplatter = nullptr; 
 	eyeSamplerSharedData = nullptr;
@@ -84,7 +84,7 @@ RenderStatePtr PathOCLRenderEngine::GetRenderState() {
 }
 
 void PathOCLRenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -127,7 +127,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
-			photonGICache->SetScene(renderConfig->scene);
+			photonGICache->SetScene(renderConfig.scene);
 
 		startRenderState = nullptr;
 
@@ -140,7 +140,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	if (nativeRenderThreadCount > 0) {
-		eyeSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+		eyeSamplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, film);
 
 	}
 
@@ -208,7 +208,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 }
 
 void PathOCLRenderEngine::UpdateTaskCount() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
@@ -286,7 +286,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigConstRef rcfg) {
 	return new PathOCLRenderEngine(rcfg);
 }
 

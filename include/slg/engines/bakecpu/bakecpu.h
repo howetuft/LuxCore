@@ -80,7 +80,7 @@ protected:
 
 class BakeCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BakeCPURenderEngine(RenderConfigConstPtr cfg);
+	BakeCPURenderEngine(RenderConfigConstRef cfg);
 	virtual ~BakeCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -95,7 +95,7 @@ public:
 	static RenderEngineType GetObjectType() { return BAKECPU; }
 	static std::string GetObjectTag() { return "BAKECPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstPtr rcfg);
+	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
 
 	friend class BakeCPURenderThread;
     struct completion_t {

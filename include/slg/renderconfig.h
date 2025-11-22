@@ -28,13 +28,13 @@
 
 namespace slg {
 
-class RenderConfig : public std::enable_shared_from_this<RenderConfig> {
+class RenderConfig {
 
 	struct Private{ explicit Private() = default; };
 
 public:
 
-	static RenderConfigPtr Create(
+	static RenderConfigUPtr Create(
 		const luxrays::Properties &props,
 		ScenePtr scene = nullptr
 	);
@@ -59,18 +59,26 @@ public:
 		SamplerSharedData *sharedData,
 		const luxrays::Properties &additionalProps) const;
 
-	RenderEnginePtr AllocRenderEngine() const;
+	RenderEngineUPtr AllocRenderEngine() const;
 
 	const luxrays::Properties &ToProperties() const;
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProperties();
 
-	static RenderConfigPtr LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, RenderConfigConstPtr renderConfig);
+	static RenderConfigUPtr LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(
 		const std::string &fileName,
-		RenderConfigConstPtr renderConfig,
+		const RenderConfigUPtr& renderConfig
+	);
+	static void SaveSerialized(
+		const std::string &fileName,
+		const RenderConfigUPtr& renderConfig,
+		const luxrays::Properties &additionalCfg
+	);
+	static void SaveSerialized(
+		const std::string &fileName,
+		RenderConfigConstRef renderConfig,
 		const luxrays::Properties &additionalCfg
 	);
 

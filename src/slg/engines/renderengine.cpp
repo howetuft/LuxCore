@@ -48,9 +48,8 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfigConstPtr cfg) :
-	bootStrapSeed(131), seedBaseGenerator(131) {
-	renderConfig = cfg;
+RenderEngine::RenderEngine(RenderConfigConstRef cfg) :
+	bootStrapSeed(131), seedBaseGenerator(131), renderConfig(cfg) {
 	pixelFilter = NULL;
 	film = NULL;
 	filmMutex = NULL;
@@ -58,14 +57,14 @@ RenderEngine::RenderEngine(RenderConfigConstPtr cfg) :
 	editMode = false;
 	pauseMode = false;
 
-	if (renderConfig->cfg.IsDefined("renderengine.seed")) {
-		const u_int seed = Max(1u, renderConfig->cfg.Get("renderengine.seed").Get<u_int>());
+	if (renderConfig.cfg.IsDefined("renderengine.seed")) {
+		const u_int seed = Max(1u, renderConfig.cfg.Get("renderengine.seed").Get<u_int>());
 		seedBaseGenerator.init(seed);
 	}
 	GenerateNewSeedBase();
 
 	// Create LuxRays context
-	const Properties cfgProps = renderConfig->ToProperties();
+	const Properties cfgProps = renderConfig.ToProperties();
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
 			Properties() <<
 			cfgProps.Get("opencl.platform.index") <<
@@ -103,15 +102,15 @@ void RenderEngine::Start(FilmPtr flm, std::mutex *flmMutex) {
 	filmMutex = flmMutex;
 
 	delete pixelFilter;
-	pixelFilter = renderConfig->AllocPixelFilter();
+	pixelFilter = renderConfig.AllocPixelFilter();
 
-	const float epsilonMin = renderConfig->GetProperty("scene.epsilon.min").Get<double>();
+	const float epsilonMin = renderConfig.GetProperty("scene.epsilon.min").Get<double>();
 	MachineEpsilon::SetMin(epsilonMin);
-	const float epsilonMax = renderConfig->GetProperty("scene.epsilon.max").Get<double>();
+	const float epsilonMax = renderConfig.GetProperty("scene.epsilon.max").Get<double>();
 	MachineEpsilon::SetMax(epsilonMax);
 
 	// Force a complete preprocessing
-	ScenePtr scene = renderConfig->scene;
+	ScenePtr scene = renderConfig.scene;
 	scene->editActions.AddAllAction();
 	scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());
@@ -166,7 +165,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	assert (editMode);
 
 	// Pre-process scene data
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+	renderConfig.scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());
 
 	// Reset halt conditions
@@ -260,11 +259,11 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
 
-RenderEnginePtr RenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
-	const string type = rcfg->cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+RenderEngineUPtr RenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+	const string type = rcfg.cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	RenderEngineRegistry::FromProperties func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
-		return std::shared_ptr<RenderEngine>(func(rcfg));
+		return std::unique_ptr<RenderEngine>(func(rcfg));
 	else
 		throw runtime_error("Unknown render engine type in RenderEngine::FromProperties(): " + type);
 }

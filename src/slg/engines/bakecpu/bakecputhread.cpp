@@ -41,7 +41,7 @@ BakeCPURenderThread::BakeCPURenderThread(BakeCPURenderEngine *engine,
 
 void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
-	auto scene = engine->renderConfig->scene;
+	auto scene = engine->renderConfig.scene;
 
 	// Lock the main film
 	std::unique_lock<std::mutex> lock(*engine->filmMutex);
@@ -439,7 +439,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		Sampler *eyeSampler = nullptr;
 		Sampler *lightSampler = nullptr;
 
-		eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
+		eyeSampler = engine->renderConfig.AllocSampler(rndGen, engine->mapFilm,
 				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
 		eyeSampler->SetThreadIndex(threadIndex);
 		// Below, I need 7 additional samples
@@ -467,7 +467,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		// Setup PathTracer thread state
 		PathTracerThreadState pathTracerThreadState(device,
 				eyeSampler, lightSampler,
-				engine->renderConfig->scene, engine->mapFilm,
+				engine->renderConfig.scene, engine->mapFilm,
 				&varianceClamping,
 				true);
 

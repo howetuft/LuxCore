@@ -33,7 +33,7 @@ namespace slg {
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfigConstPtr cfg, const bool supportsNativeThreads);
+	OCLRenderEngine(RenderConfigConstRef cfg, const bool supportsNativeThreads);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 

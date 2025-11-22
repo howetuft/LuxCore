@@ -37,7 +37,7 @@ using namespace slg;
 // TilePathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-TilePathOCLRenderEngine::TilePathOCLRenderEngine(RenderConfigConstPtr rcfg,
+TilePathOCLRenderEngine::TilePathOCLRenderEngine(RenderConfigConstRef rcfg,
 		const bool supportsNativeThreads) :
 		PathOCLBaseRenderEngine(rcfg, supportsNativeThreads) {
 	tileRepository = NULL;
@@ -87,7 +87,7 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 
 	// Work on a copy of configuration properties so I can edit tile.size if
 	// required
-	Properties cfgProps = renderConfig->cfg;
+	Properties cfgProps = renderConfig.cfg;
 	if (GetType() == RTPATHOCL) {
 		cfgProps.Delete("tile.size");
 
@@ -128,7 +128,7 @@ RenderStatePtr TilePathOCLRenderEngine::GetRenderState() {
 }
 
 void TilePathOCLRenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
+	const Properties &cfg = renderConfig.cfg;
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
@@ -239,7 +239,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			PhotonGICache::ToProperties(cfg);
 }
 
-RenderEngine *TilePathOCLRenderEngine::FromProperties(RenderConfigConstPtr rcfg) {
+RenderEngine *TilePathOCLRenderEngine::FromProperties(RenderConfigConstRef rcfg) {
 	return new TilePathOCLRenderEngine(rcfg, true);
 }
 

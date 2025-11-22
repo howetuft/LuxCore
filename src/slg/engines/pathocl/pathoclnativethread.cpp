@@ -108,7 +108,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	Sampler *eyeSampler = nullptr;
 	Sampler *lightSampler = nullptr;
 
-	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
+	eyeSampler = engine->renderConfig.AllocSampler(rndGen, film,
 			nullptr, engine->eyeSamplerSharedData, Properties());
 	eyeSampler->SetThreadIndex(threadIndex);
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
@@ -133,7 +133,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	// Setup PathTracer thread state
 	PathTracerThreadState pathTracerThreadState(intersectionDevice,
 			eyeSampler, lightSampler,
-			engine->renderConfig->scene, film,
+			engine->renderConfig.scene, film,
 			&varianceClamping);
 
 	//--------------------------------------------------------------------------
