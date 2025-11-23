@@ -1473,11 +1473,11 @@ public:
 	virtual void WaitNewFrame() = 0;
 
 	/*!
-	 * \brief Returns a pointer to a Film with the output of the rendering.
+	 * \brief Returns a reference to a Film with the output of the rendering.
 	 *
-	 * \return the pointer to the Film.
+	 * \return the reference to the Film.
 	 */
-	virtual std::shared_ptr<Film> GetFilm() = 0;
+	virtual Film& GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.

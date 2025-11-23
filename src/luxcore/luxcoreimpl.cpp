@@ -79,9 +79,6 @@ FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(nullptr) {
 	standAloneFilm = film;
 }
 
-FilmImpl::~FilmImpl() {
-}
-
 slg::FilmPtr FilmImpl::GetSLGFilm() const {
 	if (renderSession)
 		return renderSession->renderSession->film;
@@ -1453,9 +1450,6 @@ RenderStateImpl::RenderStateImpl(std::shared_ptr<slg::RenderState> state) {
 	renderState = state;
 }
 
-RenderStateImpl::~RenderStateImpl() {
-}
-
 void RenderStateImpl::Save(const std::string &fileName) const {
 	API_BEGIN("{}", ToArgString(fileName));
 
@@ -1541,7 +1535,7 @@ RenderSessionImpl::RenderSessionImpl(
 }
 
 void RenderSessionImpl::InitFilm() {
-	film = std::make_shared<FilmImpl>(shared_from_this());
+	film = std::make_unique<FilmImpl>(shared_from_this());
 }
 
 std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {
@@ -1675,14 +1669,12 @@ void RenderSessionImpl::WaitNewFrame() {
 	API_END();
 }
 
-std::shared_ptr<Film> RenderSessionImpl::GetFilm() {
+LuxFilmRef RenderSessionImpl::GetFilm() {
 	API_BEGIN_NOARGS();
 
-	auto result = film;
+	API_RETURN("{}", (void *)film.get());
 
-	API_RETURN("{}", (void *)result.get());
-
-	return result;
+	return *film;
 }
 
 static void SetTileProperties(

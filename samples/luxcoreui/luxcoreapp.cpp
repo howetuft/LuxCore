@@ -188,8 +188,8 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 void LuxCoreApp::RenderConfigParse(const Properties &props) {
 	if (session) {
 		// Delete the session
+		session->Stop();
 		session.reset();
-		session = nullptr;
 	}
 
 	// Change the configuration
@@ -309,9 +309,9 @@ void LuxCoreApp::StartRendering(
 	CloseAllRenderConfigEditors();
 
 	if (session) {
-	  session.reset();
+		session->Stop();
+		session.reset();
 	}
-	session = nullptr;
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (engineType.starts_with("RT")) {
@@ -355,6 +355,7 @@ void LuxCoreApp::StartRendering(
 
 	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
 
+	// TODO
 	//try {
 		session = RenderSession::Create(config, &startState, &startFilm);
 

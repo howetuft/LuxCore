@@ -55,6 +55,7 @@ using FilmImplPtr = std::shared_ptr<FilmImpl>;
 // Disambiguation: there are luxcore::Film and slg:Film...
 using LuxFilm = luxcore::Film;
 using LuxFilmPtr = std::shared_ptr<luxcore::Film>;
+using LuxFilmRef = luxcore::Film &;
 using LuxFilmConstPtr = std::shared_ptr<const luxcore::Film>;
 
 // Disambiguation: there are luxcore::Camera and slg:Camera...
@@ -76,7 +77,6 @@ public:
 	);
 	FilmImpl(RenderSessionImplConstPtr session);
 	FilmImpl(slg::FilmPtr film);
-	~FilmImpl();
 
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
@@ -330,8 +330,8 @@ public:
 	RenderConfigImpl(const std::string &fileName);
 	RenderConfigImpl(
 		const std::string &fileName,
-		std::shared_ptr<RenderStateImpl>& startState,  // In/out
-		std::shared_ptr<FilmImpl>& startFilm  // In/out
+		std::shared_ptr<RenderStateImpl>& startState,  // Out
+		std::shared_ptr<FilmImpl>& startFilm  // Out
 	);
 
 	const luxrays::Properties &GetProperties() const;
@@ -373,13 +373,14 @@ class RenderStateImpl : public RenderState {
 public:
 	RenderStateImpl(const std::string &fileName);
 	RenderStateImpl(std::shared_ptr<slg::RenderState> state);
-	~RenderStateImpl();
 
 	void Save(const std::string &fileName) const;
 
 	friend class RenderSessionImpl;
 
 private:
+	// RenderStateImpl does not create underlying slg::RenderState,
+	// hence the shared pointer
 	std::shared_ptr<slg::RenderState> renderState;
 };
 
@@ -387,8 +388,10 @@ private:
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-class RenderSessionImpl : public RenderSession, public std::enable_shared_from_this<RenderSessionImpl> {
-
+class RenderSessionImpl :
+	public luxcore::RenderSession,
+	public std::enable_shared_from_this<RenderSessionImpl>
+{
 	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
 	struct Private{ explicit Private() = default; };
 
@@ -405,7 +408,7 @@ public:
 		const std::string &startFilmFileName
 	);
 
-	// Public, but private, constructors
+	// Public... but private constructors
 	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
 	RenderSessionImpl(
 		Private priv,
@@ -440,7 +443,7 @@ public:
 	void WaitNewFrame();
 
 	bool NeedPeriodicFilmSave();
-	LuxFilmPtr GetFilm();
+	LuxFilmRef GetFilm();
 
 	void UpdateStats();
 	const luxrays::Properties &GetStats() const;
@@ -449,13 +452,21 @@ public:
 
 	void SaveResumeFile(const std::string &fileName);
 
+	// TODO
+	~RenderSessionImpl() {
+		SDL_LOG("DESTROYING RENDERSESSIONIMPL");
+	}
+
 	friend class FilmImpl;
 
 private:
-	std::shared_ptr<RenderConfigImpl> renderConfig;
-	std::shared_ptr<FilmImpl> film;
+	// RenderSessionImpl is created by RenderConfigImpl
+	// This should be a reference, but it can't, due to serialization
+	std::shared_ptr<RenderConfigImpl> renderConfig;  // Back link
 
+	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
 	std::unique_ptr<slg::RenderSession> renderSession;
+	std::unique_ptr<FilmImpl> film;
 	luxrays::Properties stats;
 
 	void InitFilm();

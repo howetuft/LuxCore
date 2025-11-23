@@ -104,7 +104,7 @@ static void BatchRendering(RenderConfigPtr config, RenderStatePtr startState, Fi
 	const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
 	if (renderEngine != "FILESAVER") {
 		// Save the rendered image
-		session->GetFilm()->SaveOutputs();
+		session->GetFilm().SaveOutputs();
 	}
 
 	session.reset();

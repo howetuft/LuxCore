@@ -2083,9 +2083,9 @@ RenderSession_GetRenderConfig(
   return static_pointer_cast<luxcore::detail::RenderConfigImpl>(renderSession->GetRenderConfig());
 }
 
-static std::shared_ptr<luxcore::detail::FilmImpl>
+luxcore::detail::FilmImpl&
 RenderSession_GetFilm(std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession) {
-  return static_pointer_cast<luxcore::detail::FilmImpl>(renderSession->GetFilm());
+  return static_cast<luxcore::detail::FilmImpl&>(renderSession->GetFilm());
 }
 
 static std::shared_ptr<luxcore::detail::RenderStateImpl>

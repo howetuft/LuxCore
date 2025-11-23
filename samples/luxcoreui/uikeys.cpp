@@ -138,9 +138,9 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 		switch (key) {
 			case GLFW_KEY_P: {
 				if (io.KeyShift)
-					app->session->GetFilm()->SaveFilm("film.flm");
+					app->session->GetFilm().SaveFilm("film.flm");
 				else
-					app->session->GetFilm()->SaveOutputs();
+					app->session->GetFilm().SaveOutputs();
 				break;
 			}
 			case GLFW_KEY_SPACE: {
