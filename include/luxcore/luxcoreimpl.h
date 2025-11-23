@@ -144,6 +144,8 @@ public:
 private:
 	slg::FilmPtr GetSLGFilm() const;
 
+	// FilmImpl is created by RenderSessionImpl or from scratch
+	// (hence the pointer, instead of a reference)
 	RenderSessionImplConstPtr renderSession;
 	slg::FilmPtr standAloneFilm;
 };

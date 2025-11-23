@@ -1540,9 +1540,6 @@ RenderSessionImpl::RenderSessionImpl(
 	);
 }
 
-RenderSessionImpl::~RenderSessionImpl() {
-}
-
 void RenderSessionImpl::InitFilm() {
 	film = std::make_shared<FilmImpl>(shared_from_this());
 }
