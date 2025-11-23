@@ -1589,24 +1589,24 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-RenderSessionImplPtr RenderSessionImpl::Create(
+RenderSessionImplUPtr RenderSessionImpl::Create(
 	RenderConfigImplPtr config,
 	RenderStateImplPtr& startState,
 	FilmImplStandalonePtr& startFilm
 ) {
-	auto result = std::make_shared<RenderSessionImpl>(
+	auto result = std::make_unique<RenderSessionImpl>(
 		Private(), config, startState, startFilm
 	);
 	result->InitFilm();
 	return result;
 }
 
-RenderSessionImplPtr RenderSessionImpl::Create(
+RenderSessionImplUPtr RenderSessionImpl::Create(
 	RenderConfigImplPtr config,
 	const std::string &startStateFileName,
 	const std::string &startFilmFileName
 ) {
-	auto result = std::make_shared<RenderSessionImpl>(
+	auto result = std::make_unique<RenderSessionImpl>(
 		Private(), config, startStateFileName, startFilmFileName
 	);
 	result->InitFilm();

@@ -35,6 +35,7 @@ namespace detail {
 class RenderSessionImpl;
 using RenderSessionImplPtr = std::shared_ptr<RenderSessionImpl>;
 using RenderSessionImplConstPtr = std::shared_ptr<const RenderSessionImpl>;
+using RenderSessionImplUPtr = std::unique_ptr<RenderSessionImpl>;
 using RenderSessionImplRef = RenderSessionImpl &;
 using RenderSessionImplConstRef = const RenderSessionImpl &;
 
