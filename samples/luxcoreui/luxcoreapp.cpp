@@ -284,9 +284,9 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 			StartRendering();
 		} else if (ext == ".rsm") {
 			// It is a LuxCore resume file
-                        std::shared_ptr<RenderState> startState;
-                        std::shared_ptr<Film> startFilm;
-			config = RenderConfig::Create(fileName, &startState, &startFilm);
+			std::shared_ptr<RenderState> startState;
+			std::shared_ptr<Film> startFilm;
+			config = RenderConfig::Create(fileName, startState, startFilm);
 
 			StartRendering(startState, startFilm);
 		} else
@@ -310,8 +310,8 @@ void LuxCoreApp::StartRendering(
 
 	if (session) {
 	  session.reset();
-	  session = nullptr;
 	}
+	session = nullptr;
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (engineType.starts_with("RT")) {

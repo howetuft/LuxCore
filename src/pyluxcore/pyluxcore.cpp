@@ -2046,7 +2046,7 @@ static py::tuple RenderConfig_LoadResumeFile(const py::str &fileNameStr) {
   const std::string fileName = py::cast<std::string>(fileNameStr);
   RenderStateImplPtr startState;
   FilmImplPtr startFilm;
-  auto config = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, &startState, &startFilm);
+  auto config = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, startState, startFilm);
 
   return py::make_tuple(config, startState, startFilm);
 }

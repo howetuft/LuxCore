@@ -539,7 +539,7 @@ const CameraImpl::CameraType CameraImpl::GetType() const {
 	API_BEGIN_NOARGS();
 
 	const CameraImpl::CameraType type = (Camera::CameraType)scene.scene->camera->GetType();
-	
+
 	API_RETURN("{}", type);
 
 	return type;
@@ -640,19 +640,19 @@ void CameraImpl::RotateDown(const float angle) const {
 //------------------------------------------------------------------------------
 
 SceneImpl::SceneImpl(const luxrays::Properties *resizePolicyProps) {
-	camera = std::make_shared<CameraImpl>(*this);
+	camera = std::make_unique<CameraImpl>(*this);
 	scene = std::make_shared<slg::Scene>(resizePolicyProps);
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
-	camera = std::make_shared<CameraImpl>(*this);
+	camera = std::make_unique<CameraImpl>(*this);
 	scene = std::make_shared<slg::Scene>(props, resizePolicyProps);
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePolicyProps) {
-	camera = std::make_shared<CameraImpl>(*this);
+	camera = std::make_unique<CameraImpl>(*this);
 
 	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
@@ -668,13 +668,11 @@ SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePo
 }
 
 SceneImpl::SceneImpl(std::shared_ptr<slg::Scene> scn) {
-	camera = std::make_shared<CameraImpl>(*this);
+	camera = std::make_unique<CameraImpl>(*this);
 	scene = scn;
 	allocatedScene = false;
 }
 
-SceneImpl::~SceneImpl() {
-}
 
 void SceneImpl::GetBBox(float min[3], float max[3]) const {
 	API_BEGIN("{}, {}", (void *)min, (void *)max);
@@ -703,7 +701,7 @@ bool SceneImpl::IsImageMapDefined(const std::string &imgMapName) const {
 	API_BEGIN("{}", ToArgString(imgMapName));
 
 	const bool result = scene->IsImageMapDefined(imgMapName);
-	
+
 	API_RETURN("{}", result);
 
 	return result;
@@ -724,7 +722,9 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 	auto mesh = scene->extMeshCache.GetExtMesh(meshName);
 	auto extTriMesh = dynamic_pointer_cast<ExtTriangleMesh>(mesh);
 	if (!extTriMesh)
-		throw runtime_error("Applied transformation can be set only for normal meshes: " + meshName);
+		throw runtime_error(
+			"Applied transformation can be set only for normal meshes: " + meshName
+		);
 
 	// I have to transpose the matrix
 	const Matrix4x4 mat(
@@ -1295,8 +1295,8 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 
 RenderConfigImpl::RenderConfigImpl(
 		const std::string &fileName,
-		std::shared_ptr<RenderStateImpl> * startState,
-		std::shared_ptr<FilmImpl> * startFilm
+		std::shared_ptr<RenderStateImpl>&  startState,
+		std::shared_ptr<FilmImpl>&  startFilm
 ) {
 	SerializationInputFile sif(fileName);
 
@@ -1308,18 +1308,15 @@ RenderConfigImpl::RenderConfigImpl(
 	// Read the render state
 	std::shared_ptr<slg::RenderState> st;
 	sif.GetArchive() >> st;
-	*startState = std::make_shared<RenderStateImpl>(st);
+	startState = std::make_shared<RenderStateImpl>(st);
 
 	// Save the film
 	std::shared_ptr<slg::Film> sf;
 	sif.GetArchive() >> sf;
-	*startFilm = std::make_shared<FilmImpl>(sf);
+	startFilm = std::make_shared<FilmImpl>(sf);
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized render session: " + fileName);
-}
-
-RenderConfigImpl::~RenderConfigImpl() {
 }
 
 const Properties &RenderConfigImpl::GetProperties() const {
@@ -1512,14 +1509,12 @@ RenderSessionImpl::RenderSessionImpl(
 	);
 
 	if (startState) {
-		// slg::RenderSession will take care of deleting startState->renderState
 		startState->renderState = nullptr;
 		// startState is not more a valid/usable object after this point, it can
 		// only be deleted
 	}
 
 	if (startFilm) {
-		// slg::RenderSession will take care of deleting startFilm->standAloneFilm too
 		startFilm->standAloneFilm = nullptr;
 		// startFilm is not more a valid/usable object after this point, it can
 		// only be deleted

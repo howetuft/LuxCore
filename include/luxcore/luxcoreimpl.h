@@ -43,9 +43,11 @@ using RenderStateImplPtr = std::shared_ptr<RenderStateImpl>;
 
 class SceneImpl;
 using SceneImplConstRef = const SceneImpl &;
+using SceneImplPtr = std::shared_ptr<SceneImpl>;
 
 class CameraImpl;
 using CameraImplPtr = std::shared_ptr<CameraImpl>;
+using CameraImplUPtr = std::unique_ptr<CameraImpl>;
 
 class FilmImpl;
 using FilmImplPtr = std::shared_ptr<FilmImpl>;
@@ -192,7 +194,6 @@ public:
 		const std::string &fileName,
 		const luxrays::Properties *resizePolicyProps = nullptr
 	);
-	~SceneImpl();
 
 	void GetBBox(float min[3], float max[3]) const;
 	LuxCameraConstRef GetCamera() const;
@@ -309,7 +310,7 @@ private:
 	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::ScenePtr scene;
-	CameraImplPtr camera;
+	CameraImplUPtr camera;
 	bool allocatedScene;
 };
 
@@ -320,14 +321,16 @@ private:
 
 class RenderConfigImpl : public luxcore::RenderConfig {
 public:
-	RenderConfigImpl(const luxrays::Properties &props, std::shared_ptr<SceneImpl> scene = NULL);
+	RenderConfigImpl(
+		const luxrays::Properties &props,
+		SceneImplPtr scene = nullptr
+	);
 	RenderConfigImpl(const std::string &fileName);
 	RenderConfigImpl(
 		const std::string &fileName,
-		std::shared_ptr<RenderStateImpl> * startState,
-		std::shared_ptr<FilmImpl> * startFilm
+		std::shared_ptr<RenderStateImpl>& startState,  // In/out
+		std::shared_ptr<FilmImpl>& startFilm  // In/out
 	);
-	~RenderConfigImpl();
 
 	const luxrays::Properties &GetProperties() const;
 	const luxrays::Property GetProperty(const std::string &name) const;
@@ -356,7 +359,6 @@ public:
 
 private:
 	std::unique_ptr<slg::RenderConfig> renderConfig;
-
 	std::shared_ptr<SceneImpl> scene;
 	bool allocatedScene;
 };
@@ -415,8 +417,6 @@ public:
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
-	~RenderSessionImpl();
-
 
 	std::shared_ptr<RenderConfig> GetRenderConfig();
 	std::shared_ptr<RenderState> GetRenderState();

@@ -493,33 +493,28 @@ std::shared_ptr<RenderConfig> RenderConfig::Create(const std::string &fileName) 
 
 std::shared_ptr<RenderConfig> RenderConfig::Create(
 	const std::string &fileName,
-	std::shared_ptr<RenderState> * startState,
-	std::shared_ptr<Film> * startFilm
+	std::shared_ptr<RenderState>& startState,  // In/out
+	std::shared_ptr<Film>& startFilm  // In/out
 ) {
-	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState->get(), (void *)startFilm->get());
+	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState.get(), (void *)startFilm.get());
 
 	std::shared_ptr<luxcore::detail::RenderStateImpl> ss;
 	std::shared_ptr<luxcore::detail::FilmImpl> sf;
-	auto rcfg = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, &ss, &sf);
+	auto rcfg = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, ss, sf);
 
-	*startState = static_pointer_cast<luxcore::RenderState>(ss);
-	*startFilm = static_pointer_cast<luxcore::Film>(sf);
+	startState = static_pointer_cast<luxcore::RenderState>(ss);
+	startFilm = static_pointer_cast<luxcore::Film>(sf);
 
 	API_RETURN("{}", (void *)rcfg.get());
 
 	return rcfg;
 }
 
-RenderConfig::~RenderConfig() {
-	API_BEGIN_NOARGS();
-	API_END();
-}
-
 const Properties &RenderConfig::GetDefaultProperties() {
 	API_BEGIN_NOARGS();
 
 	const Properties &result = luxcore::detail::RenderConfigImpl::GetDefaultProperties();
-	
+
 	API_RETURN("{}", ToArgString(result));
 
 	return result;

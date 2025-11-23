@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
 			config->Parse(cmdLineProp);
 		} else if (configFileNameExt == ".rsm") {
 			// It is a rendering resume file
-			config = RenderConfig::Create(configFileName, &startRenderState, &startFilm);
+			config = RenderConfig::Create(configFileName, startRenderState, startFilm);
 			config->Parse(cmdLineProp);
 		} else
 			throw runtime_error("Unknown file extension: " + configFileName);

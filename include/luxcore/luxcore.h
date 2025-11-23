@@ -1223,16 +1223,14 @@ public:
 	 *
 	 * \param fileName is the binary file used to build the new
 	 * RenderConfig. The extension for the binary format must be ".rsm".
-	 * \param startState the pointer to the render state will be returned here.
-	 * \param startFilm the pointer to the film will be returned here.
+	 * \param startState the reference to the render state will be returned here.
+	 * \param startFilm the reference to the film will be returned here.
 	 */
 	static std::shared_ptr<RenderConfig> Create(
 		const std::string &fileName,
-		std::shared_ptr<RenderState> * startState,
-		std::shared_ptr<Film> * startFilm
+		std::shared_ptr<RenderState> & startState,
+		std::shared_ptr<Film> & startFilm
 	);
-
-	virtual ~RenderConfig();
 
 	/*!
 	 * \brief Returns a reference to the Properties used to create the RenderConfig.

@@ -81,7 +81,7 @@ void FileSaverRenderEngine::SaveScene() {
 
 static string Base64Encode(const char *data, const size_t size) {
 	stringstream ss;
-	
+
 	typedef boost::archive::iterators::base64_from_binary<
 			boost::archive::iterators::transform_width<const char *, 6, 8>
 	> base64_t;
