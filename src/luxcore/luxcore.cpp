@@ -276,7 +276,7 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 std::shared_ptr<Film> Film::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	auto result = std::make_shared<luxcore::detail::FilmImpl>(fileName);
+	auto result = std::make_shared<luxcore::detail::FilmImplStandalone>(fileName);
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -288,7 +288,7 @@ std::shared_ptr<Film> Film::Create(const luxrays::Properties &props,
 		const bool hasScreenNormalizedChannel) {
 	API_BEGIN("{}, {}, {}", ToArgString(props), hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 
-	auto result = std::make_shared<luxcore::detail::FilmImpl>(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
+	auto result = std::make_shared<luxcore::detail::FilmImplStandalone>(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -552,7 +552,7 @@ RenderSessionPtr RenderSession::Create(
 
 	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
 	auto startStateImpl = dynamic_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
-	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImpl>(*startFilm);
+	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm);
 
 	auto result = RenderSessionImpl::Create(configImpl, startStateImpl, startFilmImpl);
 

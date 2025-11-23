@@ -2386,9 +2386,15 @@ PYBIND11_MODULE(pyluxcore, m) {
     })
   ;
 
-  py::class_<luxcore::detail::FilmImpl>(m, "Film")
-    .def(py::init<std::string>())
-    .def(py::init<luxrays::Properties, bool, bool>())
+  py::class_<luxcore::detail::FilmImpl, py::smart_holder>(m, "Film")
+    .def(py::init([](std::string s){ return luxcore::detail::FilmImpl::Create(s); }))
+    .def(py::init([](
+		luxrays::Properties & props,
+		bool hasPixelNormalizedChannel,
+		bool hasScreenNormalizedChannel
+	) { return luxcore::detail::FilmImpl::Create(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel); }))
+    //.def(py::init<std::string>([](std::string s){ return luxcore::detail::FilmImpl::Create(s);})
+    //.def(py::init<luxrays::Properties, bool, bool>())
     .def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
     .def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)
     .def("GetStats", &luxcore::detail::FilmImpl::GetStats)
@@ -2548,7 +2554,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::init([](RenderConfigImplPtr config, std::string& startState, std::string& startFilm){
 			return luxcore::detail::RenderSessionImpl::Create(config, startState, startFilm);} ))
 	.def(
-		py::init([](RenderConfigImplPtr config, RenderStateImplPtr& startState, FilmImplPtr& startFilm){
+		py::init([](RenderConfigImplPtr config, RenderStateImplPtr& startState, FilmImplStandalonePtr& startFilm){
 			return luxcore::detail::RenderSessionImpl::Create(config, startState, startFilm);} ))
 	//.def(py::init<RenderConfigImpl, RenderStateImplPtr, FilmImplPtr>(), py::keep_alive<1, 2>())
     .def("GetRenderConfig", &RenderSession_GetRenderConfig, py::return_value_policy::reference_internal)

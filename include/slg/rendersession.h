@@ -64,7 +64,7 @@ public:
 	RenderConfigRef renderConfig;
 	RenderEngineUPtr renderEngine;
 
-	std::mutex filmMutex;
+	mutable std::mutex filmMutex;
 	FilmPtr film;
 
 protected:

@@ -86,6 +86,7 @@ using RenderConfigConstRef = const RenderConfig &;
 class RenderSession;
 using RenderSessionConstPtr = std::shared_ptr<const RenderSession>;
 using RenderSessionPtr = std::shared_ptr<RenderSession>;
+using RenderSessionRef = RenderSession &;
 using RenderSessionConstRef = const RenderSession &;
 
 class RenderState;

@@ -47,45 +47,6 @@ using namespace luxcore::detail;
 // FilmImpl
 //------------------------------------------------------------------------------
 
-FilmImpl::FilmImpl(const std::string &fileName) : renderSession(nullptr) {
-	standAloneFilm = slg::Film::LoadSerialized(fileName);
-}
-
-FilmImpl::FilmImpl(
-	const luxrays::Properties &props,
-	const bool hasPixelNormalizedChannel,
-	const bool hasScreenNormalizedChannel
-) : renderSession(nullptr)
-{
-	standAloneFilm = slg::Film::FromProperties(props);
-
-	if (hasPixelNormalizedChannel)
-		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	if (hasScreenNormalizedChannel)
-		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	standAloneFilm->SetRadianceGroupCount(standAloneFilm->GetRadianceGroupCount());
-
-	standAloneFilm->Init();
-}
-
-FilmImpl::FilmImpl(
-	RenderSessionImplConstPtr session
-) :
-	renderSession(session),
-	standAloneFilm(nullptr)
-{}
-
-FilmImpl::FilmImpl(std::shared_ptr<slg::Film> film) : renderSession(nullptr) {
-	standAloneFilm = film;
-}
-
-slg::FilmPtr FilmImpl::GetSLGFilm() const {
-	if (renderSession)
-		return renderSession->renderSession->film;
-	else
-		return standAloneFilm;
-}
-
 unsigned int FilmImpl::GetWidth() const {
 	API_BEGIN_NOARGS();
 
@@ -191,32 +152,17 @@ void FilmImpl::AddFilm(std::shared_ptr<const Film> film,
 	API_END();
 }
 
-void FilmImpl::SaveOutputs() const {
-	API_BEGIN_NOARGS();
-
-	if (renderSession)
-		renderSession->renderSession->SaveFilmOutputs();
-	else
-		throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
-
-	API_END();
-}
-
-void FilmImpl::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
+void FilmImpl::SaveOutput(
+	const std::string &fileName,
+	const FilmOutputType type,
+	const Properties &props
+) const {
 	API_BEGIN("{}, {}, {}", ToArgString(fileName),ToArgString(type), ToArgString(props));
 
-	GetSLGFilm()->Output(fileName, (slg::FilmOutputs::FilmOutputType)type, &props);
-	
-	API_END();
-}
-
-void FilmImpl::SaveFilm(const string &fileName) const {
-	API_BEGIN("{}", ToArgString(fileName));
-
-	if (renderSession)
-		renderSession->renderSession->SaveFilm(fileName);
-	else
-		slg::Film::SaveSerialized(fileName, standAloneFilm);
+	GetSLGFilm()->Output(
+		fileName, static_cast<slg::FilmOutputs::FilmOutputType>(type),
+		&props
+	);
 
 	API_END();
 }
@@ -234,7 +180,7 @@ double FilmImpl::GetTotalSampleCount() const {
 bool FilmImpl::HasOutput(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const bool result = GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
+	const bool result = GetSLGFilm()->HasOutput(static_cast<slg::FilmOutputs::FilmOutputType>(type));
 
 	API_RETURN("{}", result);
 
@@ -244,7 +190,7 @@ bool FilmImpl::HasOutput(const FilmOutputType type) const {
 unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const unsigned int result = GetSLGFilm()->GetOutputCount((slg::FilmOutputs::FilmOutputType)type);
+	const unsigned int result = GetSLGFilm()->GetOutputCount(static_cast<slg::FilmOutputs::FilmOutputType>(type));
 
 	API_RETURN("{}", result);
 
@@ -254,7 +200,9 @@ unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
 size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const size_t result = GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
+	const size_t result = GetSLGFilm()->GetOutputSize(
+		static_cast<slg::FilmOutputs::FilmOutputType>(type)
+	);
 
 	API_RETURN("{}", result);
 
@@ -267,69 +215,8 @@ unsigned int FilmImpl::GetRadianceGroupCount() const {
 	const unsigned int result = GetSLGFilm()->GetRadianceGroupCount();
 
 	API_RETURN("{}", result);
-	
+
 	return result;
-}
-
-void FilmImpl::GetOutputFloat(const FilmOutputType type, float *buffer,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
-
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type,
-				buffer, index, executeImagePipeline);
-	} else
-		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type,
-				buffer, index, executeImagePipeline);
-
-	API_END();
-}
-
-void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
-
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type,
-				buffer, index, executeImagePipeline);
-	} else
-		standAloneFilm->GetOutput<unsigned int>((slg::FilmOutputs::FilmOutputType)type,
-				buffer, index, executeImagePipeline);
-
-	API_END();
-}
-
-void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
-
-	if (type != OUTPUT_USER_IMPORTANCE)
-		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
-
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		auto film = renderSession->renderSession->film;
-		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
-
-		// Only USER_IMPORTANCE can be updated
-	auto destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
-				index, executeImagePipeline);
-		copy(buffer, buffer + pixelsCount, destBuffer);
-	} else {
-		const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
-
-		// Only USER_IMPORTANCE can be updated
-	auto destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
-				index, executeImagePipeline);
-		copy(buffer, buffer + pixelsCount, destBuffer);
-	}
-
-	API_END();
 }
 
 void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
@@ -344,80 +231,20 @@ void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *b
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const bool result = GetSLGFilm()->HasChannel((slg::Film::FilmChannelType)type);
+	const bool result = GetSLGFilm()->HasChannel(static_cast<slg::Film::FilmChannelType>(type));
 
 	API_RETURN("{}", result);
-	
+
 	return result;
 }
 
 unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const unsigned int result = GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
+	const unsigned int result = GetSLGFilm()->GetChannelCount(static_cast<slg::Film::FilmChannelType>(type));
 
 	API_RETURN("{}", result);
-	
-	return result;
-}
 
-const float *FilmImpl::GetChannelFloat(const FilmChannelType type,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
-
-	const float *result;
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		result = renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-	} else
-		result = standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-
-	API_RETURN("{}", (void *)result);
-	
-	return result;
-}
-
-const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
-
-	const unsigned int *result;
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		result = renderSession->renderSession->film->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-	} else
-		result = standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-
-	API_RETURN("{}", (void *)result);
-	
-	return result;
-}
-
-float *FilmImpl::UpdateChannelFloat(const FilmChannelType type,
-		const unsigned int index, const bool executeImagePipeline) {
-	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
-
-	if (type != CHANNEL_USER_IMPORTANCE)
-		throw runtime_error("Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()");
-
-	float *result;
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		result = renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-	} else
-		result = standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
-				index, executeImagePipeline);
-
-	API_RETURN("{}", (void *)result);
-	
 	return result;
 }
 
@@ -425,99 +252,399 @@ unsigned int *FilmImpl::UpdateChannelUInt(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline) {
 	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
 
-	throw runtime_error("No channel can be updated with Film::UpdateChannel<unsigned int>()");
+	throw runtime_error(
+		"No channel can be updated with Film::UpdateChannel<unsigned int>()"
+	);
 
 	API_END();
 }
 
-void FilmImpl::Parse(const luxrays::Properties &props) {
+//------------------------------------------------------------------------------
+// FilmImplSession
+//------------------------------------------------------------------------------
+
+FilmImplSession::FilmImplSession(RenderSessionImplRef session) :
+	renderSession(session)
+{}
+
+void FilmImplSession::GetOutputFloat(const FilmOutputType type, float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	renderSession.GetSLGRenderSession().film->GetOutput<float>(
+		static_cast<slg::FilmOutputs::FilmOutputType>(type),
+		buffer, index, executeImagePipeline
+	);
+
+	API_END();
+}
+
+void FilmImplSession::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	renderSession.GetSLGRenderSession().film->GetOutput<u_int>(
+		static_cast<slg::FilmOutputs::FilmOutputType>(type),
+		buffer, index, executeImagePipeline
+	);
+
+	API_END();
+}
+
+void FilmImplSession::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	if (type != OUTPUT_USER_IMPORTANCE)
+		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
+
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	auto film = renderSession.GetSLGRenderSession().film;
+	const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+	auto destBuffer = renderSession.GetSLGRenderSession().film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+
+	API_END();
+}
+
+const float * FilmImplSession::GetChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const float *result;
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	result = renderSession.GetSLGRenderSession().film->GetChannel<float>(
+		static_cast<slg::Film::FilmChannelType>(type),
+		index, executeImagePipeline
+	);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+const unsigned int * FilmImplSession::GetChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const unsigned int *result;
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	result = renderSession.GetSLGRenderSession().film->GetChannel<unsigned int>(static_cast<slg::Film::FilmChannelType>(type),
+			index, executeImagePipeline);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+float * FilmImplSession::UpdateChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	if (type != CHANNEL_USER_IMPORTANCE)
+		throw runtime_error(
+			"Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()"
+		);
+
+	float *result;
+
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+
+	result = renderSession.GetSLGRenderSession().film->GetChannel<float>(
+		static_cast<slg::Film::FilmChannelType>(type),
+		index, executeImagePipeline
+	);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+void FilmImplSession::Parse(const luxrays::Properties &props) {
 	API_BEGIN("{}", ToArgString(props));
 
-	if (renderSession)
-		throw runtime_error("Film::Parse() can be used only with a stand alone Film");
-	else
-		standAloneFilm->Parse(props);
+	throw runtime_error("Film::Parse() can be used only with a stand alone Film");
 
 	API_END();
 }
 
-void FilmImpl::DeleteAllImagePipelines()  {
+void FilmImplSession::DeleteAllImagePipelines()  {
 	API_BEGIN_NOARGS();
 
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
 
-		renderSession->renderSession->film->SetImagePipelines(nullptr);
-		renderSession->renderSession->renderConfig.DeleteAllFilmImagePipelinesProperties();
-	} else
-		standAloneFilm->SetImagePipelines(nullptr);
+	renderSession.GetSLGRenderSession().film->SetImagePipelines(nullptr);
+	renderSession.GetSLGRenderSession().renderConfig.DeleteAllFilmImagePipelinesProperties();
 
 	API_END();
 }
 
-void FilmImpl::ExecuteImagePipeline(const u_int index) {
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
+void FilmImplSession::ExecuteImagePipeline(const u_int index) {
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
 
-		renderSession->renderSession->film->ExecuteImagePipeline(index);
-	} else
-		standAloneFilm->ExecuteImagePipeline(index);
+	renderSession.GetSLGRenderSession().film->ExecuteImagePipeline(index);
 }
 
-void FilmImpl::AsyncExecuteImagePipeline(const u_int index) {
+void FilmImplSession::AsyncExecuteImagePipeline(const u_int index) {
 	API_BEGIN("{}", index);
 
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->AsyncExecuteImagePipeline(index);
-	} else
-		standAloneFilm->AsyncExecuteImagePipeline(index);
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+	renderSession.GetSLGRenderSession().film->AsyncExecuteImagePipeline(index);
 
 	API_END();
 }
 
-void FilmImpl::WaitAsyncExecuteImagePipeline() {
+void FilmImplSession::WaitAsyncExecuteImagePipeline() {
 	API_BEGIN_NOARGS();
 
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
-
-		renderSession->renderSession->film->WaitAsyncExecuteImagePipeline();
-	} else
-		standAloneFilm->WaitAsyncExecuteImagePipeline();
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+	renderSession.GetSLGRenderSession().film->WaitAsyncExecuteImagePipeline();
 
 	API_END();
 }
 
-bool FilmImpl::HasDoneAsyncExecuteImagePipeline() {
+bool FilmImplSession::HasDoneAsyncExecuteImagePipeline() {
 	API_BEGIN_NOARGS();
 
 	bool result;
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
 
-		result = renderSession->renderSession->film->HasDoneAsyncExecuteImagePipeline();
-	} else
-		result = standAloneFilm->HasDoneAsyncExecuteImagePipeline();
+	result = renderSession.GetSLGRenderSession().film->HasDoneAsyncExecuteImagePipeline();
 
 	API_RETURN("{}", result);
 
 	return result;
 }
 
-
-void FilmImpl::ApplyOIDN(const u_int index) {
+void FilmImplSession::ApplyOIDN(const u_int index) {
 	API_BEGIN("{}", index);
 	slg::IntelOIDN oidn("RT", 6000, 0.f, true);
 
-	if (renderSession) {
-		std::unique_lock<std::mutex> lock(renderSession->renderSession->filmMutex);
+	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
+	oidn.Apply(*renderSession.GetSLGRenderSession().film, index);
 
-		oidn.Apply(*renderSession->renderSession->film, index);
-	} else {
-		oidn.Apply(*standAloneFilm, index);
-	}
+	API_END();
+}
+
+void FilmImplSession::SaveOutputs() const {
+	API_BEGIN_NOARGS();
+
+	renderSession.GetSLGRenderSession().SaveFilmOutputs();
+
+	API_END();
+}
+
+void FilmImplSession::SaveFilm(const string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
+	renderSession.GetSLGRenderSession().SaveFilm(fileName);
+
+	API_END();
+}
+
+slg::FilmPtr FilmImplSession::GetSLGFilm() const {
+	return renderSession.GetSLGRenderSession().film;
+}
+
+//------------------------------------------------------------------------------
+// FilmImplStandalone
+//------------------------------------------------------------------------------
+
+FilmImplStandalone::FilmImplStandalone(const std::string &fileName) {
+	standAloneFilm = slg::Film::LoadSerialized(fileName);
+}
+
+FilmImplStandalone::FilmImplStandalone(
+	const luxrays::Properties &props,
+	const bool hasPixelNormalizedChannel,
+	const bool hasScreenNormalizedChannel
+) {
+	standAloneFilm = slg::Film::FromProperties(props);
+
+	if (hasPixelNormalizedChannel)
+		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	if (hasScreenNormalizedChannel)
+		standAloneFilm->AddChannel(slg::Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	standAloneFilm->SetRadianceGroupCount(standAloneFilm->GetRadianceGroupCount());
+
+	standAloneFilm->Init();
+}
+
+FilmImplStandalone::FilmImplStandalone(std::shared_ptr<slg::Film> film) :
+	standAloneFilm(film)
+{}
+
+slg::FilmPtr FilmImplStandalone::GetSLGFilm() const {
+	return standAloneFilm;
+}
+
+void FilmImplStandalone::SaveOutputs() const {
+	API_BEGIN_NOARGS();
+
+	throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
+
+	API_END();
+}
+
+void FilmImplStandalone::SaveFilm(const string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
+	slg::Film::SaveSerialized(fileName, standAloneFilm);
+
+	API_END();
+}
+
+void FilmImplStandalone::GetOutputFloat(
+	const FilmOutputType type, float *buffer,
+	const unsigned int index, const bool executeImagePipeline
+) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	standAloneFilm->GetOutput<float>(
+		static_cast<slg::FilmOutputs::FilmOutputType>(type),
+		buffer, index, executeImagePipeline
+	);
+
+	API_END();
+}
+
+void FilmImplStandalone::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	standAloneFilm->GetOutput<unsigned int>(
+		static_cast<slg::FilmOutputs::FilmOutputType>(type),
+		buffer, index, executeImagePipeline
+	);
+
+	API_END();
+}
+
+void FilmImplStandalone::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
+	if (type != OUTPUT_USER_IMPORTANCE)
+		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
+
+	const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
+
+	// Only USER_IMPORTANCE can be updated
+	auto destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+
+	API_END();
+}
+
+const float * FilmImplStandalone::GetChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const float *result;
+	result = standAloneFilm->GetChannel<float>(
+		static_cast<slg::Film::FilmChannelType>(type),
+		index, executeImagePipeline
+	);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+const unsigned int *FilmImplStandalone::GetChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const unsigned int *result;
+	result = standAloneFilm->GetChannel<unsigned int>(
+		static_cast<slg::Film::FilmChannelType>(type),
+		index, executeImagePipeline
+	);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+float *FilmImplStandalone::UpdateChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	if (type != CHANNEL_USER_IMPORTANCE)
+		throw runtime_error("Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()");
+
+	float *result;
+	result = standAloneFilm->GetChannel<float>(static_cast<slg::Film::FilmChannelType>(type),
+				index, executeImagePipeline);
+
+	API_RETURN("{}", (void *)result);
+
+	return result;
+}
+
+void FilmImplStandalone::Parse(const luxrays::Properties &props) {
+	API_BEGIN("{}", ToArgString(props));
+
+	standAloneFilm->Parse(props);
+
+	API_END();
+}
+
+void FilmImplStandalone::DeleteAllImagePipelines()  {
+	API_BEGIN_NOARGS();
+
+	standAloneFilm->SetImagePipelines(nullptr);
+
+	API_END();
+}
+
+void FilmImplStandalone::ExecuteImagePipeline(const u_int index) {
+	standAloneFilm->ExecuteImagePipeline(index);
+}
+
+void FilmImplStandalone::AsyncExecuteImagePipeline(const u_int index) {
+	API_BEGIN("{}", index);
+
+	standAloneFilm->AsyncExecuteImagePipeline(index);
+
+	API_END();
+}
+
+void FilmImplStandalone::WaitAsyncExecuteImagePipeline() {
+	API_BEGIN_NOARGS();
+
+	standAloneFilm->WaitAsyncExecuteImagePipeline();
+
+	API_END();
+}
+
+bool FilmImplStandalone::HasDoneAsyncExecuteImagePipeline() {
+	API_BEGIN_NOARGS();
+
+	bool result;
+	result = standAloneFilm->HasDoneAsyncExecuteImagePipeline();
+
+	API_RETURN("{}", result);
+
+	return result;
+}
+
+void FilmImplStandalone::ApplyOIDN(const u_int index) {
+	API_BEGIN("{}", index);
+	slg::IntelOIDN oidn("RT", 6000, 0.f, true);
+
+	oidn.Apply(*standAloneFilm, index);
 
 	API_END();
 }
@@ -1310,7 +1437,7 @@ RenderConfigImpl::RenderConfigImpl(
 	// Save the film
 	std::shared_ptr<slg::Film> sf;
 	sif.GetArchive() >> sf;
-	startFilm = std::make_shared<FilmImpl>(sf);
+	startFilm = std::make_shared<FilmImplStandalone>(sf);
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized render session: " + fileName);
@@ -1465,7 +1592,7 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 RenderSessionImplPtr RenderSessionImpl::Create(
 	RenderConfigImplPtr config,
 	RenderStateImplPtr& startState,
-	FilmImplPtr& startFilm
+	FilmImplStandalonePtr& startFilm
 ) {
 	auto result = std::make_shared<RenderSessionImpl>(
 		Private(), config, startState, startFilm
@@ -1490,7 +1617,7 @@ RenderSessionImpl::RenderSessionImpl(
 	Private priv,
 	std::shared_ptr<RenderConfigImpl> config,
 	std::shared_ptr<RenderStateImpl> startState,
-	std::shared_ptr<FilmImpl> startFilm
+	std::shared_ptr<FilmImplStandalone> startFilm
 ) :
 	renderConfig(config)
 {
@@ -1535,7 +1662,8 @@ RenderSessionImpl::RenderSessionImpl(
 }
 
 void RenderSessionImpl::InitFilm() {
-	film = std::make_unique<FilmImpl>(shared_from_this());
+	// Only for standalone case: we need to create the session film
+	film = std::make_unique<FilmImplSession>(*this);
 }
 
 std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {

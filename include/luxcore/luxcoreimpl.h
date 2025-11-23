@@ -22,6 +22,7 @@
 #include <format>
 
 #include <luxcore/luxcore.h>
+#include <slg/usings.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/renderstate.h>
@@ -34,6 +35,8 @@ namespace detail {
 class RenderSessionImpl;
 using RenderSessionImplPtr = std::shared_ptr<RenderSessionImpl>;
 using RenderSessionImplConstPtr = std::shared_ptr<const RenderSessionImpl>;
+using RenderSessionImplRef = RenderSessionImpl &;
+using RenderSessionImplConstRef = const RenderSessionImpl &;
 
 class RenderConfigImpl;
 using RenderConfigImplPtr = std::shared_ptr<RenderConfigImpl>;
@@ -52,6 +55,9 @@ using CameraImplUPtr = std::unique_ptr<CameraImpl>;
 class FilmImpl;
 using FilmImplPtr = std::shared_ptr<FilmImpl>;
 
+class FilmImplStandalone;
+using FilmImplStandalonePtr = std::shared_ptr<FilmImplStandalone>;
+
 // Disambiguation: there are luxcore::Film and slg:Film...
 using LuxFilm = luxcore::Film;
 using LuxFilmPtr = std::shared_ptr<luxcore::Film>;
@@ -69,14 +75,6 @@ using LuxCameraConstRef = const luxcore::Camera &;
 
 class FilmImpl : public luxcore::Film {
 public:
-	FilmImpl(const std::string &fileName);
-	FilmImpl(
-		const luxrays::Properties &props,
-		const bool hasPixelNormalizedChannel,
-		const bool hasScreenNormalizedChannel
-	);
-	FilmImpl(RenderSessionImplConstPtr session);
-	FilmImpl(slg::FilmPtr film);
 
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
@@ -92,13 +90,13 @@ public:
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY
 	);
 
-	void SaveOutputs() const;
+	virtual void SaveOutputs() const = 0;
 	void SaveOutput(
 		const std::string &fileName,
 		const FilmOutputType type,
 		const luxrays::Properties &props
 	) const;
-	void SaveFilm(const std::string &fileName) const;
+	virtual void SaveFilm(const std::string &fileName) const = 0;
 
 	double GetTotalSampleCount() const;
 
@@ -110,45 +108,130 @@ public:
 	bool HasChannel(const FilmChannelType type) const;
 	unsigned int GetChannelCount(const FilmChannelType type) const;
 
-	void GetOutputFloat(const FilmOutputType type, float *buffer,
-			const unsigned int index, const bool executeImagePipeline);
-	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
-			const unsigned int index, const bool executeImagePipeline);
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer,
+			const unsigned int index, const bool executeImagePipeline) = 0;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline) = 0;
 	void UpdateOutputFloat(const FilmOutputType type, const float *buffer,
-			const unsigned int index, const bool executeImagePipeline);
+			const unsigned int index, const bool executeImagePipeline) = 0;
 	void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline); // throw
+
+	virtual const float *GetChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) = 0;
+	virtual const unsigned int *GetChannelUInt(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) = 0;
+	virtual float *UpdateChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) = 0;
+	virtual unsigned int *UpdateChannelUInt(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 
-	const float *GetChannelFloat(const FilmChannelType type,
-			const unsigned int index, const bool executeImagePipeline);
-	const unsigned int *GetChannelUInt(const FilmChannelType type,
-			const unsigned int index, const bool executeImagePipeline);
-	float *UpdateChannelFloat(const FilmChannelType type,
-			const unsigned int index, const bool executeImagePipeline);
-	unsigned int *UpdateChannelUInt(const FilmChannelType type,
-			const unsigned int index, const bool executeImagePipeline);
+	// TODO
+	virtual void Parse(const luxrays::Properties &props) = 0;
 
-	void Parse(const luxrays::Properties &props);
+	virtual void DeleteAllImagePipelines() = 0;
 
-	void DeleteAllImagePipelines();
+	virtual void ExecuteImagePipeline(const u_int index) = 0;
+	virtual void AsyncExecuteImagePipeline(const u_int index) = 0;
+	virtual void WaitAsyncExecuteImagePipeline() = 0;
+	virtual bool HasDoneAsyncExecuteImagePipeline() = 0;
 
-	void ExecuteImagePipeline(const u_int index);
-	void AsyncExecuteImagePipeline(const u_int index);
-	void WaitAsyncExecuteImagePipeline();
-	bool HasDoneAsyncExecuteImagePipeline();
-
-	void ApplyOIDN(const u_int index);
+	virtual void ApplyOIDN(const u_int index) = 0;
 
 	friend class RenderSessionImpl;
 
 private:
-	slg::FilmPtr GetSLGFilm() const;
-
-	// FilmImpl is created by RenderSessionImpl or from scratch
-	// (hence the pointer, instead of a reference)
-	RenderSessionImplConstPtr renderSession;
-	slg::FilmPtr standAloneFilm;
+	virtual slg::FilmPtr GetSLGFilm() const = 0;
 };
+
+
+// FilmImplStandalone is created from another Film
+class FilmImplStandalone : public FilmImpl {
+public:
+	FilmImplStandalone(slg::FilmPtr film);
+	FilmImplStandalone(const std::string &fileName);
+	FilmImplStandalone(
+		const luxrays::Properties &props,
+		const bool hasPixelNormalizedChannel,
+		const bool hasScreenNormalizedChannel
+	);
+
+	virtual void SaveOutputs() const override;
+	virtual void SaveFilm(const std::string &fileName) const override;
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+	void UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+
+	virtual const float *GetChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual float *UpdateChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual const unsigned int * GetChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) override;
+
+
+	virtual void Parse(const luxrays::Properties &props) override;
+
+	virtual void DeleteAllImagePipelines() override;
+
+	virtual void ExecuteImagePipeline(const u_int index) override;
+	virtual void AsyncExecuteImagePipeline(const u_int index) override;
+	virtual void WaitAsyncExecuteImagePipeline() override;
+	virtual bool HasDoneAsyncExecuteImagePipeline() override;
+
+	virtual void ApplyOIDN(const u_int index) override;
+
+	slg::FilmPtr standAloneFilm;
+
+private:
+
+	virtual slg::FilmPtr GetSLGFilm() const override;
+};
+
+
+// FilmImplSession is created by RenderSessionImpl
+class FilmImplSession : public FilmImpl {
+public:
+	FilmImplSession(RenderSessionImplRef session);
+
+	virtual void SaveOutputs() const override;
+	virtual void SaveFilm(const std::string &fileName) const override;
+	virtual void GetOutputFloat(const FilmOutputType type, float *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+	void UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+			const unsigned int index, const bool executeImagePipeline) override;
+
+	virtual const float *GetChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual float *UpdateChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline) override;
+	virtual const unsigned int * GetChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) override;
+
+
+	virtual void Parse(const luxrays::Properties &props) override;
+
+	virtual void DeleteAllImagePipelines() override;
+
+	virtual void ExecuteImagePipeline(const u_int index) override;
+	virtual void AsyncExecuteImagePipeline(const u_int index) override;
+	virtual void WaitAsyncExecuteImagePipeline() override;
+	virtual bool HasDoneAsyncExecuteImagePipeline() override;
+
+	virtual void ApplyOIDN(const u_int index) override;
+
+	RenderSessionImplRef renderSession;  // Back link, read/write
+
+private:
+
+	virtual slg::FilmPtr GetSLGFilm() const override;
+};
+
 
 //------------------------------------------------------------------------------
 // CameraImpl
@@ -400,7 +483,7 @@ public:
 	static RenderSessionImplPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
 		std::shared_ptr<RenderStateImpl>& startState,
-		std::shared_ptr<FilmImpl>& startFilm
+		std::shared_ptr<FilmImplStandalone>& startFilm
 	);
 	static RenderSessionImplPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
@@ -414,7 +497,7 @@ public:
 		Private priv,
 		std::shared_ptr<RenderConfigImpl> config,
 		std::shared_ptr<RenderStateImpl> startState = nullptr,
-		std::shared_ptr<FilmImpl> startFilm = nullptr
+		std::shared_ptr<FilmImplStandalone> startFilm = nullptr
 	);
 	RenderSessionImpl(
 		Private priv,
@@ -451,6 +534,8 @@ public:
 	void Parse(const luxrays::Properties &props);
 
 	void SaveResumeFile(const std::string &fileName);
+
+	slg::RenderSessionRef GetSLGRenderSession() const { return *renderSession; }
 
 	// TODO
 	~RenderSessionImpl() {
