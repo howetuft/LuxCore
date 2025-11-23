@@ -472,21 +472,19 @@ private:
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-class RenderSessionImpl :
-	public luxcore::RenderSession,
-	public std::enable_shared_from_this<RenderSessionImpl>
+class RenderSessionImpl : public luxcore::RenderSession
 {
 	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
 	struct Private{ explicit Private() = default; };
 
 public:
 
-	static RenderSessionImplPtr Create(
+	static RenderSessionImplUPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
 		std::shared_ptr<RenderStateImpl>& startState,
 		std::shared_ptr<FilmImplStandalone>& startFilm
 	);
-	static RenderSessionImplPtr Create(
+	static RenderSessionImplUPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
@@ -547,7 +545,7 @@ public:
 
 private:
 	// RenderSessionImpl is created by RenderConfigImpl
-	// This should be a reference, but it can't, due to serialization
+	// It should be a reference, but it can't, due to serialization
 	std::shared_ptr<RenderConfigImpl> renderConfig;  // Back link
 
 	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
