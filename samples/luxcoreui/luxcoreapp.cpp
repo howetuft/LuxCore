@@ -188,7 +188,6 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 void LuxCoreApp::RenderConfigParse(const Properties &props) {
 	if (session) {
 		// Delete the session
-		session->Stop();
 		session.reset();
 	}
 
@@ -309,7 +308,6 @@ void LuxCoreApp::StartRendering(
 	CloseAllRenderConfigEditors();
 
 	if (session) {
-		session->Stop();
 		session.reset();
 	}
 

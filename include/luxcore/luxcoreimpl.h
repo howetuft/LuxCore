@@ -536,8 +536,9 @@ public:
 
 	slg::RenderSessionRef GetSLGRenderSession() const { return *renderSession; }
 
-	// TODO
 	~RenderSessionImpl() {
+		// Stop the machinery before destructing
+		renderSession->Stop();
 		SDL_LOG("DESTROYING RENDERSESSIONIMPL");
 	}
 
