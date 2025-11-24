@@ -2453,7 +2453,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Scene class
   //--------------------------------------------------------------------------
 
-  py::class_<luxcore::detail::SceneImpl>(m, "Scene")
+  py::class_<luxcore::detail::SceneImpl, std::shared_ptr<luxcore::detail::SceneImpl>>(m, "Scene")
     .def(py::init<>())
     .def(py::init<luxrays::Properties, luxrays::Properties *>())
     .def(py::init<luxrays::Properties>())
@@ -2518,7 +2518,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     //.def(py::init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
     .def(py::init<luxrays::Properties, std::shared_ptr<luxcore::detail::SceneImpl> >(), py::keep_alive<1, 3>())
     //.def("__init__", make_constructor(RenderConfig_LoadFile))
-    .def(py::init(&RenderConfig_LoadFile))
+    //.def(py::init(&RenderConfig_LoadFile)) TODO
     .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, py::return_value_policy::reference_internal)
     .def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
     .def("GetScene", &RenderConfig_GetScene, py::return_value_policy::reference_internal)
