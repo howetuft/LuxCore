@@ -443,6 +443,7 @@ public:
 
 	friend class RenderSessionImpl;
 
+
 private:
 	std::unique_ptr<slg::RenderConfig> renderConfig;
 	std::shared_ptr<SceneImpl> scene;
@@ -475,6 +476,7 @@ private:
 class RenderSessionImpl : public luxcore::RenderSession
 {
 	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
+	// Need that to use std::make_unique
 	struct Private{ explicit Private() = default; };
 
 public:
@@ -505,38 +507,37 @@ public:
 		const std::string &startFilmFileName
 	);
 
-	std::shared_ptr<RenderConfig> GetRenderConfig();
-	std::shared_ptr<RenderState> GetRenderState();
+	std::shared_ptr<RenderConfig> GetRenderConfig() override;
+	std::shared_ptr<RenderState> GetRenderState() override;
 
-	void Start();
-	void Stop();
-	bool IsStarted() const;
+	void Start() override;
+	void Stop() override;
+	bool IsStarted() const override;
 
-	void BeginSceneEdit();
-	void EndSceneEdit();
-	bool IsInSceneEdit() const;
+	void BeginSceneEdit() override;
+	void EndSceneEdit() override;
+	bool IsInSceneEdit() const override;
 
-	void Pause();
-	void Resume();
-	bool IsInPause() const;
+	void Pause() override;
+	void Resume() override;
+	bool IsInPause() const override;
 
-	bool HasDone() const;
-	void WaitForDone() const;
-	void WaitNewFrame();
+	bool HasDone() const override;
+	void WaitForDone() const override;
+	void WaitNewFrame() override;
 
-	bool NeedPeriodicFilmSave();
-	LuxFilmRef GetFilm();
+	LuxFilmRef GetFilm() override;
 
-	void UpdateStats();
-	const luxrays::Properties &GetStats() const;
+	void UpdateStats() override;
+	const luxrays::Properties &GetStats() const override;
 
-	void Parse(const luxrays::Properties &props);
+	void Parse(const luxrays::Properties &props) override;
 
-	void SaveResumeFile(const std::string &fileName);
+	void SaveResumeFile(const std::string &fileName) override;
 
-	slg::RenderSessionRef GetSLGRenderSession() const { return *renderSession; }
+	virtual slg::RenderSessionRef GetSLGRenderSession() const { return *renderSession; }
 
-	~RenderSessionImpl() {
+	virtual ~RenderSessionImpl() override {
 		// Stop the machinery before destructing
 		renderSession->Stop();
 		SDL_LOG("DESTROYING RENDERSESSIONIMPL");
