@@ -2513,7 +2513,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   // RenderConfig class
   //--------------------------------------------------------------------------
 
-  py::class_<luxcore::detail::RenderConfigImpl>(m, "RenderConfig")
+  py::class_<luxcore::detail::RenderConfigImpl, RenderConfigImplPtr>(m, "RenderConfig")
     .def(py::init<luxrays::Properties>())
     //.def(py::init<luxrays::Properties, luxcore::detail::SceneImpl *>()[with_custodian_and_ward<1, 3>()])
     .def(py::init<luxrays::Properties, std::shared_ptr<luxcore::detail::SceneImpl> >(), py::keep_alive<1, 3>())
