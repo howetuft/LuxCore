@@ -2543,13 +2543,14 @@ PYBIND11_MODULE(pyluxcore, m) {
   //--------------------------------------------------------------------------
   // RenderSession class
   //--------------------------------------------------------------------------
+
   py::class_<luxcore::detail::RenderSessionImpl, py::smart_holder>(m, "RenderSession")
     //.def(py::init<RenderConfigImplPtr>(), py::keep_alive<1, 2>())
     //.def(py::init<RenderConfigImplPtr, std::string, std::string>(), py::keep_alive<1, 2>())
     //.def(py::init<RenderConfigImplPtr, RenderStateImplPtr, FilmImplPtr>(), py::keep_alive<1, 2>())
 	.def(
 		py::init([](RenderConfigImplPtr config){
-			return luxcore::detail::RenderSessionImpl::Create(config, nullptr, nullptr);} ))
+			return luxcore::detail::RenderSessionImpl::Create(config);} ))
 	.def(
 		py::init([](RenderConfigImplPtr config, std::string& startState, std::string& startFilm){
 			return luxcore::detail::RenderSessionImpl::Create(config, startState, startFilm);} ))

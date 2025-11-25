@@ -482,6 +482,9 @@ class RenderSessionImpl : public luxcore::RenderSession
 public:
 
 	static RenderSessionImplUPtr Create(
+		std::shared_ptr<RenderConfigImpl> config
+	);
+	static RenderSessionImplUPtr Create(
 		std::shared_ptr<RenderConfigImpl> config,
 		std::shared_ptr<RenderStateImpl>& startState,
 		std::shared_ptr<FilmImplStandalone>& startFilm

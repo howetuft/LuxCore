@@ -1613,6 +1613,17 @@ RenderSessionImplUPtr RenderSessionImpl::Create(
 	return result;
 }
 
+RenderSessionImplUPtr RenderSessionImpl::Create(RenderConfigImplPtr config) {
+	auto result = std::make_unique<RenderSessionImpl>(
+		Private(),
+		config,
+		std::shared_ptr<RenderStateImpl>(nullptr),
+		std::shared_ptr<FilmImplStandalone>(nullptr)
+	);
+	result->InitFilm();
+	return result;
+}
+
 RenderSessionImpl::RenderSessionImpl(
 	Private priv,
 	std::shared_ptr<RenderConfigImpl> config,
