@@ -95,8 +95,9 @@ void luxrays::SetThreadName(JThreadPtr thread, const std::string name) {
 #elif defined (WIN32)
 	{
 		auto handle = thread->native_handle();
-		DWORD threadId = ::GetThreadId(static_cast<HANDLE>(handle));
-		::SetThreadName(threadId, name.c_str());
+		std::wstring stemp = std::wstring(name.begin(), name.end());
+		LPCWSTR sw = stemp.c_str();
+		HRESULT hr = SetThreadDescription(handle, sw);
 	}
 #endif
 }
