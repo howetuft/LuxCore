@@ -77,6 +77,18 @@ using LuxCameraConstRef = const luxcore::Camera &;
 class FilmImpl : public luxcore::Film {
 public:
 
+	// Standalone film
+	static std::shared_ptr<FilmImpl> Create(slg::FilmPtr film);
+	static std::shared_ptr<FilmImpl> Create(const std::string &fileName);
+	static std::shared_ptr<FilmImpl> Create(
+		const luxrays::Properties &props,
+		const bool hasPixelNormalizedChannel,
+		const bool hasScreenNormalizedChannel
+	);
+
+	// Session film
+	static std::shared_ptr<FilmImpl> Create(RenderSessionImplRef session);
+
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
 	luxrays::Properties GetStats() const;
@@ -141,6 +153,9 @@ public:
 
 	friend class RenderSessionImpl;
 
+protected:
+	FilmImpl() {}
+
 private:
 	virtual slg::FilmPtr GetSLGFilm() const = 0;
 };
@@ -156,6 +171,8 @@ public:
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
+
+	FilmImplStandalone() = delete;
 
 	virtual void SaveOutputs() const override;
 	virtual void SaveFilm(const std::string &fileName) const override;
@@ -197,6 +214,8 @@ private:
 class FilmImplSession : public FilmImpl {
 public:
 	FilmImplSession(RenderSessionImplRef session);
+
+	FilmImplSession() = delete;
 
 	virtual void SaveOutputs() const override;
 	virtual void SaveFilm(const std::string &fileName) const override;
@@ -529,7 +548,7 @@ public:
 	void WaitForDone() const override;
 	void WaitNewFrame() override;
 
-	LuxFilmRef GetFilm() override;
+	LuxFilmPtr GetFilm() override;
 
 	void UpdateStats() override;
 	const luxrays::Properties &GetStats() const override;
@@ -543,7 +562,6 @@ public:
 	virtual ~RenderSessionImpl() override {
 		// Stop the machinery before destructing
 		renderSession->Stop();
-		SDL_LOG("DESTROYING RENDERSESSIONIMPL");
 	}
 
 	friend class FilmImpl;
@@ -554,8 +572,9 @@ private:
 	std::shared_ptr<RenderConfigImpl> renderConfig;  // Back link
 
 	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
+	// RenderSession must not be shared
 	std::unique_ptr<slg::RenderSession> renderSession;
-	std::unique_ptr<FilmImpl> film;
+	std::shared_ptr<FilmImpl> film;
 	luxrays::Properties stats;
 
 	void InitFilm();

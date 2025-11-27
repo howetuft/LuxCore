@@ -62,7 +62,7 @@ class LightSource : public luxrays::NamedObject {
 public:
 	LightSource() : NamedObject("light"), lightSceneIndex(0),
 			volume(NULL) { }
-	virtual ~LightSource() { SLG_LOG("REMOVE LIGHT /!\\"); }
+	virtual ~LightSource() { }
 
 	virtual void Preprocess() = 0;
 

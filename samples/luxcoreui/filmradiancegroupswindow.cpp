@@ -53,7 +53,7 @@ void FilmRadianceGroupsWindow::ParseObjectProperties(const Properties &props) {
 }
 
 bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	const unsigned int radianceGroupCount = app->session->GetFilm().GetRadianceGroupCount();
+	const unsigned int radianceGroupCount = app->session->GetFilm()->GetRadianceGroupCount();
 
 	for (unsigned int radianceGroupIndex = 0; radianceGroupIndex < radianceGroupCount; ++radianceGroupIndex) {
 		const string radianceGroupIndexStr = ToString(radianceGroupIndex);

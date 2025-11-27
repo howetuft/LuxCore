@@ -64,7 +64,7 @@ void StatsWindow::Draw() {
 			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
 			LuxCoreApp::ColoredLabelText("Rendering time:", "%dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
-			LuxCoreApp::ColoredLabelText("Film resolution:", "%d x %d", session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+			LuxCoreApp::ColoredLabelText("Film resolution:", "%d x %d", session->GetFilm()->GetWidth(), session->GetFilm()->GetHeight());
 			int frameBufferWidth, frameBufferHeight;
 			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
 			LuxCoreApp::ColoredLabelText("Screen resolution:", "%d x %d", frameBufferWidth, frameBufferHeight);

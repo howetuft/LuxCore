@@ -47,6 +47,28 @@ using namespace luxcore::detail;
 // FilmImpl
 //------------------------------------------------------------------------------
 
+// Standalone film
+std::shared_ptr<FilmImpl> FilmImpl::Create(slg::FilmPtr film) {
+	return std::make_shared<FilmImplStandalone>(film);
+}
+std::shared_ptr<FilmImpl> FilmImpl::Create(const std::string &fileName) {
+	return std::make_shared<FilmImplStandalone>(fileName);
+}
+std::shared_ptr<FilmImpl> FilmImpl::Create(
+	const luxrays::Properties &props,
+	const bool hasPixelNormalizedChannel,
+	const bool hasScreenNormalizedChannel
+) {
+	return std::make_shared<FilmImplStandalone>(
+		props, hasPixelNormalizedChannel, hasScreenNormalizedChannel
+	);
+}
+
+// Session film
+std::shared_ptr<FilmImpl> FilmImpl::Create(RenderSessionImplRef session) {
+	return std::make_shared<FilmImplSession>(session);
+}
+
 unsigned int FilmImpl::GetWidth() const {
 	API_BEGIN_NOARGS();
 
@@ -1674,7 +1696,7 @@ RenderSessionImpl::RenderSessionImpl(
 
 void RenderSessionImpl::InitFilm() {
 	// Only for standalone case: we need to create the session film
-	film = std::make_unique<FilmImplSession>(*this);
+	film = std::make_shared<FilmImplSession>(*this);
 }
 
 std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {
@@ -1808,12 +1830,12 @@ void RenderSessionImpl::WaitNewFrame() {
 	API_END();
 }
 
-LuxFilmRef RenderSessionImpl::GetFilm() {
+LuxFilmPtr RenderSessionImpl::GetFilm() {
 	API_BEGIN_NOARGS();
 
 	API_RETURN("{}", (void *)film.get());
 
-	return *film;
+	return film;
 }
 
 static void SetTileProperties(

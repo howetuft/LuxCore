@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and   *
  * limitations under the License.                      *
  ***************************************************************************/
+#define PYBIND11_DETAILED_ERROR_MESSAGES
 
 #ifdef WIN32
 // Python 3.8 and older define snprintf as a macro even for VS 2015 and newer
@@ -2083,9 +2084,9 @@ RenderSession_GetRenderConfig(
   return static_pointer_cast<luxcore::detail::RenderConfigImpl>(renderSession->GetRenderConfig());
 }
 
-luxcore::detail::FilmImpl&
+luxcore::detail::FilmImplPtr
 RenderSession_GetFilm(std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession) {
-  return static_cast<luxcore::detail::FilmImpl&>(renderSession->GetFilm());
+  return static_pointer_cast<luxcore::detail::FilmImpl>(renderSession->GetFilm());
 }
 
 static std::shared_ptr<luxcore::detail::RenderStateImpl>
@@ -2386,7 +2387,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     })
   ;
 
-  py::class_<luxcore::detail::FilmImpl, py::smart_holder>(m, "Film")
+  py::class_<luxcore::detail::FilmImpl, std::shared_ptr<luxcore::detail::FilmImpl>>(m, "Film")
     .def(py::init([](std::string s){ return luxcore::detail::FilmImpl::Create(s); }))
     .def(py::init([](
 		luxrays::Properties & props,

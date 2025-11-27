@@ -1477,7 +1477,7 @@ public:
 	 *
 	 * \return the reference to the Film.
 	 */
-	virtual Film& GetFilm() = 0;
+	virtual FilmPtr GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.
