@@ -200,44 +200,58 @@ void Scene::DefineMesh(ExtMeshPtr mesh) {
 			}
 		}
 	}
-	
+
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
 	extMeshCache.DefineExtMesh(mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-void Scene::DefineMesh(const string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n,
-		UV *uvs, Spectrum *cols, float *alphas) {
-	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
-			uvs, cols, alphas);
+void Scene::DefineMesh(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::vector<luxrays::Point> p,
+		std::vector<luxrays::Triangle> vi,
+		std::optional<std::vector<luxrays::Normal>> n,
+		luxrays::ArrayOfOptionals<luxrays::UV> uvs,
+		luxrays::ArrayOfOptionals<luxrays::Spectrum> cols,
+		luxrays::ArrayOfOptionals<float> alphas
+) {
+	auto mesh = std::make_shared<ExtTriangleMesh>(
+		plyNbVerts, plyNbTris, p, vi, n, uvs, cols, alphas
+	);
 	mesh->SetName(shapeName);
-	
+
 	DefineMesh(mesh);
 }
 
-void Scene::DefineMeshExt(const string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n,
-		array<UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
-		array<float *, EXTMESH_MAX_DATA_COUNT> *alphas) {
-	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
-			uvs, cols, alphas);
+void Scene::DefineMeshExt(
+		const string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::vector<luxrays::Point> p,
+		std::vector<luxrays::Triangle> vi,
+		std::optional<std::vector<luxrays::Normal>> n,
+		luxrays::ArrayOfOptionals<UV> uvs,
+		luxrays::ArrayOfOptionals<Spectrum> cols,
+		luxrays::ArrayOfOptionals<float> alphas
+) {
+	auto mesh = std::make_shared<ExtTriangleMesh>(
+		plyNbVerts, plyNbTris, p, vi, n, uvs, cols, alphas
+	);
 	mesh->SetName(shapeName);
-	
+
 	DefineMesh(mesh);
 }
 
 void Scene::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data) {
+		const unsigned int index, std::vector<float> data) {
 	extMeshCache.SetMeshVertexAOV(meshName, index, data);
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data) {
+		const unsigned int index, std::vector<float> data) {
 	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
 }
 

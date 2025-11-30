@@ -71,7 +71,7 @@ void Scene::ParseShapes(const Properties &props) {
 ExtTriangleMeshPtr Scene::CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
 	// The mesh definition is in-lined
 	u_int pointsSize;
-	Point *points;
+	std::vector<Point> points;
 	if (props.IsDefined(propName + ".vertices")) {
 		Property prop = props.Get(propName + ".vertices");
 		if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
@@ -87,7 +87,7 @@ ExtTriangleMeshPtr Scene::CreateInlinedMesh(const string &shapeName, const strin
 		throw runtime_error("Missing shape vertex list: " + shapeName);
 
 	u_int trisSize;
-	Triangle *tris;
+	std::vector<Triangle> tris;
 	if (props.IsDefined(propName + ".faces")) {
 		Property prop = props.Get(propName + ".faces");
 		if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
@@ -100,37 +100,43 @@ ExtTriangleMeshPtr Scene::CreateInlinedMesh(const string &shapeName, const strin
 			tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));
 		}
 	} else {
-		delete[] points;
 		throw runtime_error("Missing shape face list: " + shapeName);
 	}
 
-	Normal *normals = NULL;
+	std::vector<Normal> normals;
 	if (props.IsDefined(propName + ".normals")) {
 		Property prop = props.Get(propName + ".normals");
 		if ((prop.GetSize() == 0) || (prop.GetSize() / 3 != pointsSize))
 			throw runtime_error("Wrong shape normal list length: " + shapeName);
 
-		normals = new Normal[pointsSize];
+		normals.resize(pointsSize);
 		for (u_int i = 0; i < pointsSize; ++i) {
 			const u_int index = i * 3;
 			normals[i] = Normal(prop.Get<double>(index), prop.Get<double>(index + 1), prop.Get<double>(index + 2));
 		}
 	}
 
-	UV *uvs = NULL;
+	std::vector<UV> uvs;
 	if (props.IsDefined(propName + ".uvs")) {
 		Property prop = props.Get(propName + ".uvs");
 		if ((prop.GetSize() == 0) || (prop.GetSize() / 2 != pointsSize))
 			throw runtime_error("Wrong shape uv list length: " + shapeName);
 
-		uvs = new UV[pointsSize];
+		uvs.resize(pointsSize);
 		for (u_int i = 0; i < pointsSize; ++i) {
 			const u_int index = i * 2;
 			uvs[i] = UV(prop.Get<double>(index), prop.Get<double>(index + 1));
 		}
 	}
-	
-	return std::make_shared<ExtTriangleMesh>(pointsSize, trisSize, points, tris, normals, uvs);
+
+	return std::make_shared<ExtTriangleMesh>(
+		pointsSize,
+		trisSize,
+		points,
+		tris,
+		std::make_optional(normals),
+		uvs.empty() ? std::nullopt : std::make_optional(uvs)
+	);
 }
 
 ExtTriangleMeshPtr Scene::CreateShape(const string &shapeName, const Properties &props) {
@@ -160,7 +166,7 @@ ExtTriangleMeshPtr Scene::CreateShape(const string &shapeName, const Properties 
 		shape = meshShape;
 	} else if (shapeType == "inlinedmesh") {
 		auto meshShape = std::make_shared<MeshShape>(CreateInlinedMesh(shapeName, propName, props));
-		
+
 		if (props.IsDefined(propName + ".transformation")) {
 			// Apply the transformation
 			const Matrix4x4 mat = props.Get(Property(propName +

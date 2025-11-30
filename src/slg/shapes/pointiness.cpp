@@ -75,7 +75,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 	const u_int originalVertCount = srcMesh->GetTotalVertexCount();
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 
-	const Point *originalVertices = srcMesh->GetVertices();
+	auto originalVertices = srcMesh->GetVertices();
 
 	// Find duplicate vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
@@ -92,7 +92,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 	const u_int uniqueVertCount = srcMesh->GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount);
 
-	const Triangle *tris = srcMesh->GetTriangles();
+	auto tris = srcMesh->GetTriangles();
 
 	// Build the edge information
 	set<Edge> edges;
@@ -138,7 +138,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 	}
 
 	// Build the curvature information
-	vector<float> rawCurvature(originalVertCount);
+	std::vector<float> rawCurvature(originalVertCount);
 	for (u_int i = 0; i < originalVertCount; ++i) {
 		if (vertexCounters[i] > 0)
 			rawCurvature[i] = -Dot(vertexNormal[i], vertexEdgeVecs[i] / vertexCounters[i]);
@@ -147,9 +147,8 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 	}
 
 	// Blur the curvature information
-	float *curvature = new float[originalVertCount];
-	fill(curvature, curvature + originalVertCount, 0.f);
-	fill(vertexCounters.begin(), vertexCounters.end(), 1);
+	std::vector<float> curvature(originalVertCount, 0.f);
+	std::fill(vertexCounters.begin(), vertexCounters.end(), 1);
 	for(const Edge &e: edges) {
 		curvature[e.v0] += rawCurvature[e.v1];
 		vertexCounters[e.v0]++;
@@ -171,7 +170,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 
 	if (destAOVIndex == NULL_INDEX) {
 		// Make a copy of the original mesh and overwrite vertex color information
-		mesh = srcMesh->Copy(NULL, NULL, NULL, NULL, NULL, curvature);
+		mesh = srcMesh->Copy(std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, curvature);
 	} else {
 		mesh = srcMesh->Copy();
 

@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <deque>
+#include <execution>
 
 #include <boost/serialization/shared_ptr.hpp>
 
@@ -39,9 +40,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
 
-TriangleMesh::TriangleMesh(const u_int meshVertCount,
-		const u_int meshTriCount, Point *meshVertices,
-		Triangle *meshTris) {
+TriangleMesh::TriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		std::vector<Point> meshVertices,
+		std::vector<Triangle> meshTris
+) {
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
 	assert (meshVertices != NULL);
@@ -50,7 +54,7 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 	appliedTransSwapsHandedness = false;
 
 	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
-	const float *vertBuff = (float *)meshVertices;
+	const float *vertBuff = reinterpret_cast<float *>(meshVertices.data());
 	if (vertBuff[3 * meshVertCount] != 1234.1234f)
 		throw runtime_error("luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
 
@@ -80,7 +84,7 @@ BBox TriangleMesh::GetBBox() const {
 		for (u_int i = 0; i < vertCount; ++i)
 			bbox = Union(bbox, vertices[i]);
 		cachedBBox = bbox;
-		
+
 		cachedBBoxValid = true;
 	}
 
@@ -100,11 +104,12 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 TriangleMeshPtr TriangleMesh::Merge(
 	const deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
-	TriangleID **preprocessedMeshTriangleIDs) {
+	TriangleID **preprocessedMeshTriangleIDs
+) {
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
-	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (auto m = meshes.begin(); m < meshes.end(); m++) {
 		totalVertexCount += (*m)->GetTotalVertexCount();
 		totalTriangleCount += (*m)->GetTotalTriangleCount();
 	}
@@ -113,8 +118,8 @@ TriangleMeshPtr TriangleMesh::Merge(
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
 
-	Point *v = AllocVerticesBuffer(totalVertexCount);
-	Triangle *i = AllocTrianglesBuffer(totalTriangleCount);
+	auto v = AllocVerticesBuffer(totalVertexCount);
+	auto i = AllocTrianglesBuffer(totalTriangleCount);
 
 	if (preprocessedMeshIDs)
 		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];
@@ -124,11 +129,14 @@ TriangleMeshPtr TriangleMesh::Merge(
 	u_int vIndex = 0;
 	u_int iIndex = 0;
 	TriangleMeshID currentID = 0;
-	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (auto m = meshes.begin(); m < meshes.end(); ++m) {
 		// Copy the mesh vertices
-		memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
+		// memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
+		auto src = (*m)->GetVertices();
+		auto count = (*m)->GetTotalVertexCount();  // Don't take last point: checksum
+		std::copy(std::execution::par, src.begin(), src.begin() + count, v.begin() + vIndex);
 
-		const Triangle *tris = (*m)->GetTriangles();
+		auto tris = (*m)->GetTriangles();
 
 		// Translate mesh indices
 		for (u_int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
@@ -155,7 +163,7 @@ TriangleMeshPtr TriangleMesh::Merge(
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(
-		vector<u_int> &uniqueVertices,
+		std::vector<u_int> & uniqueVertices,
 		bool (*CompareVertices)(const TriangleMesh& mesh,
 				const u_int vertIndex1, const u_int vertIndex2)) const {
 	const u_int originalVertCount = GetTotalVertexCount();
@@ -178,7 +186,7 @@ u_int TriangleMesh::GetUniqueVerticesMapping(
 
 		return x1 < x2;
 	};
-	sort(sortedVertIndices.begin(), sortedVertIndices.end(), compareVerts);
+	std::sort(sortedVertIndices.begin(), sortedVertIndices.end(), compareVerts);
 
 	// This array stores index of the original vertex for the given vertex index.
 	uniqueVertices.resize(originalVertCount);
@@ -221,7 +229,7 @@ u_int TriangleMesh::GetUniqueVerticesMapping(
 		}
 		uniqueVertices[i] = origIndex;
 	}
-	
+
 	return uniqueVertCount;
 }
 

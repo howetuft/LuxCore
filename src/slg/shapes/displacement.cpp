@@ -41,30 +41,30 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 	const double startTime = WallClockTime();
 
 	const u_int vertCount = srcMesh->GetTotalVertexCount();
-	const Point *vertices = srcMesh->GetVertices();
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+	auto vertices = srcMesh->GetVertices();
+	auto newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 
 	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
 	// used for vector displacement but they may be used by the texture too.
-	vector<Vector> dpdu(vertCount);
-	vector<Vector> dpdv(vertCount);
-	vector<Normal> dndu(vertCount);
-	vector<Normal> dndv(vertCount);
+	std::vector<Vector> dpdu(vertCount);
+	std::vector<Vector> dpdv(vertCount);
+	std::vector<Normal> dndu(vertCount);
+	std::vector<Normal> dndv(vertCount);
 
-	vector<u_int> triangleIndex(vertCount);
+	std::vector<u_int> triangleIndex(vertCount);
 
 	// Go trough the faces and save the information
-	vector<bool> doneVerts(vertCount, false);
+	std::vector<bool> doneVerts(vertCount, false);
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	auto tris = srcMesh->GetTriangles();
 	for (u_int i = 0; i < triCount; ++i) {
-		const Triangle &tri = tris[i];
+		auto& tri = tris[i];
 
 		for (u_int j = 0; j < 3; ++j) {
 			const u_int vertIndex = tri.v[j];
 
 			if (!doneVerts[vertIndex]) {
-				const Normal shadeN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
+				const auto shadeN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
 
 				// Compute geometry differentials
 				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
@@ -90,7 +90,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 #endif
 			int i = 0; i < vertCount; ++i) {
 		HitPoint hitPoint;
-		
+
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
 		hitPoint.p = srcMesh->GetVertex(Transform::TRANS_IDENTITY, i);
 
@@ -140,7 +140,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 
 			// Build the local reference system, uses shadeN, dpdu and dpdv
 			const Frame frame = hitPoint.GetFrame();
-			
+
 			disp = frame.ToWorld(Vector(dispValue.c[binormalIndex], dispValue.c[tangentIndex], dispValue.c[normalIndex]));
 
 
@@ -148,22 +148,22 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 			// the tangent, G along the normal and B along the bitangent.
 			// This is the Blender standard.
 			//disp = frame.ToWorld(Vector(dispValue.c[2], dispValue.c[0], dispValue.c[1]));
-			
+
 			// This is the Mudbox standard.
 			//disp = frame.ToWorld(Vector(dispValue.c[0], dispValue.c[2], dispValue.c[1]));
 		}
 
 		newVertices[i] = vertices[i] + disp;
 	}
-	
+
 	// Make a copy of the original mesh and overwrite vertex information
-	mesh = srcMesh->Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
+	mesh = srcMesh->Copy(newVertices, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
 	if (params.normalSmooth)
 		mesh->ComputeNormals();
-	
+
 	// For some debugging
 	//mesh->Save("debug.ply");
-	
+
 	const double endTime = WallClockTime();
 	SDL_LOG("Displacement time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }

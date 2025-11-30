@@ -295,7 +295,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				MeshConstPtr currentMesh = meshes[absoluteMeshIndex];
 				// I use currentMesh->GetVertices() in order to have access to not
 				// transformed vertices in the case of instances
-				const Point *vertices = currentMesh->GetVertices();
+				const auto vertices = currentMesh->GetVertices();
 				const Point &p0 = vertices[node.triangleLeaf.v[0]];
 				const Point &p1 = vertices[node.triangleLeaf.v[1]];
 				const Point &p2 = vertices[node.triangleLeaf.v[2]];

@@ -44,17 +44,17 @@ void CompiledScene::CompileGeometry() {
 	const double tStart = WallClockTime();
 
 	// Clear vectors
-	verts.resize(0);
-	normals.resize(0);
-	triNormals.resize(0);
-	uvs.resize(0);
-	cols.resize(0);
-	alphas.resize(0);
-	vertexAOVs.resize(0);
-	triAOVs.resize(0);
-	tris.resize(0);
-	interpolatedTransforms.resize(0);
-	meshDescs.resize(0);
+	verts.clear();
+	normals.clear();
+	triNormals.clear();
+	uvs.clear();
+	cols.clear();
+	alphas.clear();
+	vertexAOVs.clear();
+	triAOVs.clear();
+	tris.clear();
+	interpolatedTransforms.clear();
+	meshDescs.clear();
 
 	//--------------------------------------------------------------------------
 	// Translate geometry
@@ -178,7 +178,7 @@ void CompiledScene::CompileGeometry() {
 				}
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_MOTION;
-				
+
 				const MotionSystem &ms = mmesh->GetMotionSystem();
 
 				// Copy the motion system information
@@ -224,22 +224,24 @@ void CompiledScene::CompileGeometry() {
 				throw runtime_error("Unsupported mesh type in CompiledScene::CompileGeometry(): " + ToString(mesh->GetType()));
 		}
 
-		if (!isExistingInstance) {		
+		if (!isExistingInstance) {
 			//------------------------------------------------------------------
 			// Compile mesh normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			if (baseMesh->HasNormals()) {
-				const Normal *n = baseMesh->GetNormals();
-				normals.insert(normals.end(), n, n + baseMesh->GetTotalVertexCount());
+				const auto& n = baseMesh->GetNormals();
+				normals.reserve(normals.size() + n->size());
+				normals.insert(normals.end(), n->begin(), n->end());
 			}
 
 			//------------------------------------------------------------------
 			// Compile mesh triangle normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Normal *tn = baseMesh->GetTriNormals();
-			triNormals.insert(triNormals.end(), tn, tn + baseMesh->GetTotalTriangleCount());
+			const auto& tn = baseMesh->GetTriNormals();
+			triNormals.reserve(triNormals.size() + tn.size());
+			triNormals.insert(triNormals.end(), tn.begin(), tn.end());
 
 			for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
 				//--------------------------------------------------------------
@@ -247,8 +249,9 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh->HasUVs(dataIndex)) {
-					const UV *u = baseMesh->GetUVs(dataIndex);
-					uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
+					const auto& u = baseMesh->GetUVs(dataIndex);
+					uvs.reserve(uvs.size() + u->size());
+					uvs.insert(uvs.end(), u->begin(), u->end());
 				}
 
 				//--------------------------------------------------------------
@@ -256,8 +259,9 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh->HasColors(dataIndex)) {
-					const Spectrum *c = baseMesh->GetColors(dataIndex);
-					cols.insert(cols.end(), c, c + baseMesh->GetTotalVertexCount());
+					const auto& c = baseMesh->GetColors(dataIndex);
+					cols.reserve(cols.size() + c->size());
+					cols.insert(cols.end(), c->begin(), c->end());
 				}
 
 				//--------------------------------------------------------------
@@ -265,8 +269,9 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh->HasAlphas(dataIndex)) {
-					const float *a = baseMesh->GetAlphas(dataIndex);
-					alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
+					const auto& a = baseMesh->GetAlphas(dataIndex);
+					alphas.reserve(alphas.size() + a->size());
+					alphas.insert(alphas.end(), a->begin(), a->end());
 				}
 
 				//--------------------------------------------------------------
@@ -274,8 +279,9 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh->HasVertexAOV(dataIndex)) {
-					const float *v = baseMesh->GetVertexAOVs(dataIndex);
-					vertexAOVs.insert(vertexAOVs.end(), v, v + baseMesh->GetTotalVertexCount());
+					const auto& v = baseMesh->GetVertexAOVs(dataIndex);
+					vertexAOVs.reserve(vertexAOVs.size() + v->size());
+					vertexAOVs.insert(vertexAOVs.end(), v->begin(), v->end());
 				}
 
 				//--------------------------------------------------------------
@@ -283,8 +289,9 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh->HasTriAOV(dataIndex)) {
-					const float *t = baseMesh->GetTriAOVs(dataIndex);
-					triAOVs.insert(triAOVs.end(), t, t + baseMesh->GetTotalTriangleCount());
+					const auto& t = baseMesh->GetTriAOVs(dataIndex);
+					triAOVs.reserve(triAOVs.size() + t->size());
+					triAOVs.insert(triAOVs.end(), t->begin(), t->end());
 				}
 			}
 
@@ -292,15 +299,17 @@ void CompiledScene::CompileGeometry() {
 			// Compile baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Point *v = baseMesh->GetVertices();
-			verts.insert(verts.end(), v, v + baseMesh->GetTotalVertexCount());
+			const auto& v = baseMesh->GetVertices();
+			verts.reserve(verts.size() + v.size());
+			verts.insert(verts.end(), v.begin(), v.end());
 
 			//------------------------------------------------------------------
 			// Compile baseMesh triangle indices
 			//------------------------------------------------------------------
 
-			const Triangle *t = baseMesh->GetTriangles();
-			tris.insert(tris.end(), t, t + baseMesh->GetTotalTriangleCount());
+			const auto& t = baseMesh->GetTriangles();
+			tris.reserve(tris.size() + t.size());
+			tris.insert(tris.end(), t.begin(), t.end());
 		}
 
 		meshDescs.push_back(currentMeshDesc);

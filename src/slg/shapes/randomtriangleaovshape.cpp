@@ -39,11 +39,11 @@ RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMeshPtr srcMe
 		mesh = srcMesh->Copy();
 		return;
 	}
-	
+
 	const double startTime = WallClockTime();
 
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	float *dstTriAOV = new float[triCount];
+	std::vector<float> dstTriAOV(triCount);
 	for (u_int i = 0; i < triCount; ++i) {
 		// Use here the same algorithm used in RandomTexture
 		const u_int seed = (int)srcMesh->GetTriAOV(i, srcDataIndex);
@@ -52,10 +52,10 @@ RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMeshPtr srcMe
 
 		dstTriAOV[i] = rnd.floatValue();
 	}
-	
+
 	mesh = srcMesh->Copy();
 	mesh->DeleteTriAOV(dstDataIndex);
-	mesh->SetTriAOV(dstDataIndex, &dstTriAOV[0]);
+	mesh->SetTriAOV(dstDataIndex, dstTriAOV);
 
 	const double endTime = WallClockTime();
 	SDL_LOG("RandomTriangleAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

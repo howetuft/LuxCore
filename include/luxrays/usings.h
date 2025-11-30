@@ -115,6 +115,11 @@ using RGBColorConstPtr = std::shared_ptr<const RGBColor>;
 using RGBColorUPtr = std::unique_ptr<RGBColor>;
 using RGBColorConstUPtr = std::unique_ptr<const RGBColor>;
 
+using SpectrumPtr = std::shared_ptr<RGBColor>;
+using SpectrumConstPtr = std::shared_ptr<const RGBColor>;
+using SpectrumUPtr = std::unique_ptr<RGBColor>;
+using SpectrumConstUPtr = std::unique_ptr<const RGBColor>;
+
 class Triangle;
 using TrianglePtr = std::shared_ptr<Triangle>;
 using TriangleConstPtr = std::shared_ptr<const Triangle>;
@@ -138,5 +143,34 @@ using VectorPtr = std::shared_ptr<Vector>;
 using VectorConstPtr = std::shared_ptr<const Vector>;
 using VectorUPtr = std::unique_ptr<Vector>;
 using VectorConstUPtr = std::unique_ptr<const Vector>;
+
+class Mesh;
+using MeshConstPtr = std::shared_ptr<const Mesh>;
+using MeshPtr = std::shared_ptr<Mesh>;
+
+class TriangleMesh;
+using TriangleMeshConstPtr = std::shared_ptr<const TriangleMesh>;
+using TriangleMeshPtr = std::shared_ptr<TriangleMesh>;
+
+class MotionTriangleMesh;
+using MotionTriangleMeshConstPtr = std::shared_ptr<const MotionTriangleMesh>;
+using MotionTriangleMeshPtr = std::shared_ptr<MotionTriangleMesh>;
+
+class ExtMesh;
+using ExtMeshConstPtr = std::shared_ptr<const ExtMesh>;
+using ExtMeshPtr = std::shared_ptr<ExtMesh>;
+
+class ExtTriangleMesh;
+using ExtTriangleMeshConstPtr = std::shared_ptr<const ExtTriangleMesh>;
+using ExtTriangleMeshPtr = std::shared_ptr<ExtTriangleMesh>;
+
+class ExtMotionTriangleMesh;
+using ExtMotionTriangleMeshConstPtr = std::shared_ptr<const ExtMotionTriangleMesh>;
+using ExtMotionTriangleMeshPtr = std::shared_ptr<ExtMotionTriangleMesh>;
+
+class ExtInstanceTriangleMesh;
+using ExtInstanceTriangleMeshConstPtr = std::shared_ptr<const ExtInstanceTriangleMesh>;
+using ExtInstanceTriangleMeshPtr = std::shared_ptr<ExtInstanceTriangleMesh>;
+
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -35,6 +35,10 @@ namespace ocl {
 #include "luxrays/core/geometry/triangle_types.cl"
 }
 
+// Output of Sample function
+// (Disambiguated from slg::SampleResult)
+using SampleOut = std::tuple<Point, float, float, float>;
+
 class Triangle {
 public:
 	Triangle() { }
@@ -44,7 +48,7 @@ public:
 		v[2] = v2;
 	}
 
-	BBox WorldBound(const Point *verts) const {
+	BBox WorldBound(const std::vector<Point>& verts) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -88,7 +92,7 @@ public:
 		return true;
 	}
 
-	bool Intersect(const Ray &ray, const Point *verts, float *t, float *b1, float *b2) const {
+	bool Intersect(const Ray &ray, const std::vector<Point>& verts, float *t, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -96,15 +100,15 @@ public:
 		return Intersect(ray, p0, p1, p2, t, b1, b2);
 	}
 
-	float Area(const Point *verts) const {
-		const Point &p0 = verts[v[0]];
-		const Point &p1 = verts[v[1]];
-		const Point &p2 = verts[v[2]];
+	float Area(const std::vector<Point>& verts) const {
+		const Point & p0 = verts[v[0]];
+		const Point & p1 = verts[v[1]];
+		const Point & p2 = verts[v[2]];
 
 		return Area(p0, p1, p2);
 	}
 
-	Normal GetGeometryNormal(const Point *verts) const {
+	Normal GetGeometryNormal(const std::vector<Point>& verts) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -112,23 +116,28 @@ public:
 		return Normal(Normalize(Cross(p1 - p0, p2 - p0)));
 	}
 
-	void Sample(const Point *verts, const float u0,
-		const float u1, Point *p, float *b0, float *b1, float *b2) const {
+	SampleOut Sample(
+		const std::vector<Point>& verts,
+		const float u0,
+		const float u1
+	) const {
+		float b0, b1, b2;
 		// Old triangle uniform sampling
 		// UniformSampleTriangle(u0, u1, b0, b1);
 
 		// This new implementation samples from a one dimensional sample
-		LowDiscrepancySampleTriangle(u0, b0, b1);
+		LowDiscrepancySampleTriangle(u0, &b0, &b1);
 
 		// Get triangle vertices in _p1_, _p2_, and _p3_
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
-		*b2 = 1.f - (*b0) - (*b1);
-		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
+		b2 = 1.f - b0 - b1;
+		Point p = b0 * p0 + b1 * p1 + b2 * p2;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
-	bool GetBaryCoords(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
+	bool GetBaryCoords(const std::vector<Point>& verts, const Point &hitPoint, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -161,14 +170,14 @@ public:
 		const float denom = uCrossV.Length();
 		const float r = vCrossW.Length() / denom;
 		const float t = uCrossW.Length() / denom;
-		
+
 		*b1 = r;
 		*b2 = t;
 
 		return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
 	}
-	
-	
+
+
 	static float GetHeight(const float a, const float b, const float c) {
 		// Heron's formula for triangle area
 		const float s = (a + b + c) * .5f;

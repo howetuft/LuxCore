@@ -269,7 +269,7 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	Point *p;
+	std::vector<Point> p;
 	const long plyNbVerts = ply_set_read_cb(plyfile, "vertex", "x", VertexCB, &p, 0);
 	ply_set_read_cb(plyfile, "vertex", "y", VertexCB, &p, 1);
 	ply_set_read_cb(plyfile, "vertex", "z", VertexCB, &p, 2);
@@ -279,7 +279,7 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	vector<Triangle> vi;
+	std::vector<Triangle> vi;
 	const long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
 	if (plyNbFaces <= 0) {
 		stringstream ss;
@@ -288,12 +288,13 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	}
 
 	// Check if the file includes triaov information
-	array<float *, EXTMESH_MAX_DATA_COUNT> TriAOVs;
-	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbTriAOVs;
+	std::array<std::vector<float>, EXTMESH_MAX_DATA_COUNT> TriAOVs_buf;
+	ArrayOfOptionals<float> TriAOVs;
+	std::array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbTriAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		const string suffix = (i == 0) ? "" : ToString(i);
 
-		plyNbTriAOVs[i] = ply_set_read_cb(plyfile, ("faceaov" + suffix).c_str(), "triaov", TriAOVCB, &TriAOVs[i], 0);
+		plyNbTriAOVs[i] = ply_set_read_cb(plyfile, ("faceaov" + suffix).c_str(), "triaov", TriAOVCB, &TriAOVs_buf[i], 0);
 		if ((plyNbTriAOVs[i] > 0) && (plyNbTriAOVs[i] != plyNbFaces)) {
 			stringstream ss;
 			ss << "Wrong count of triangle AOV #" << i << " in '" << fileName << "'";
@@ -302,10 +303,11 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	}
 
 	// Check if the file includes normal information
-	Normal *n;
-	const long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
-	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
-	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
+	std::vector<Normal> n_buf;
+	std::optional<std::vector<Normal>> n;
+	const long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n_buf, 0);
+	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n_buf, 1);
+	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n_buf, 2);
 	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
 		stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
@@ -315,22 +317,28 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	// This is our own extension to file PLY format in order to support multiple
 	// UVs, Colors and Alphas for each vertex
 
-	array<UV *, EXTMESH_MAX_DATA_COUNT> uvs;
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols;
-	array<float *, EXTMESH_MAX_DATA_COUNT> alphas;
-	array<float *, EXTMESH_MAX_DATA_COUNT> vertexAOVs;
+	std::array<std::vector<UV>, EXTMESH_MAX_DATA_COUNT> uvs_buf;
+	std::array<std::vector<Spectrum>, EXTMESH_MAX_DATA_COUNT> cols_buf;
+	std::array<std::vector<float>, EXTMESH_MAX_DATA_COUNT> alphas_buf;
+	std::array<std::vector<float>, EXTMESH_MAX_DATA_COUNT> vertexAOVs_buf;
 
-	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbUVs;
-	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbColors;
-	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbAlphas;
-	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbVertexAOVs;
-	
+	std::array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbUVs;
+	std::array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbColors;
+	std::array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbAlphas;
+	std::array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbVertexAOVs;
+
+	ArrayOfOptionals<UV> uvs;
+	ArrayOfOptionals<Spectrum> cols;
+	ArrayOfOptionals<float> alphas;
+	ArrayOfOptionals<float> vertexAOVs;
+
+
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		const string suffix = (i == 0) ? "" : ToString(i);
 
 		// Check if the file includes uv information
 		plyNbUVs[i] = ply_set_read_cb(plyfile, "vertex", ("s" + suffix).c_str(), UVCB, &uvs[i], 0);
-		ply_set_read_cb(plyfile, "vertex", ("t" + suffix).c_str(), UVCB, &uvs[i], 1);
+		ply_set_read_cb(plyfile, "vertex", ("t" + suffix).c_str(), UVCB, &uvs_buf[i], 1);
 		if ((plyNbUVs[i] > 0) && (plyNbUVs[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of uvs #" << i << " in '" << fileName << "'";
@@ -338,9 +346,9 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		}
 
 		// Check if the file includes color information
-		plyNbColors[i] = ply_set_read_cb(plyfile, "vertex", ("red" + suffix).c_str(), ColorCB, &cols[i], 0);
-		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols[i], 1);
-		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols[i], 2);
+		plyNbColors[i] = ply_set_read_cb(plyfile, "vertex", ("red" + suffix).c_str(), ColorCB, &cols_buf[i], 0);
+		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols_buf[i], 1);
+		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols_buf[i], 2);
 		if ((plyNbColors[i] > 0) && (plyNbColors[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of colors #" << i << " in '" << fileName << "'";
@@ -348,7 +356,7 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		}
 
 		// Check if the file includes alpha information
-		plyNbAlphas[i] = ply_set_read_cb(plyfile, "vertex", ("alpha" + suffix).c_str(), AlphaCB, &alphas[i], 0);
+		plyNbAlphas[i] = ply_set_read_cb(plyfile, "vertex", ("alpha" + suffix).c_str(), AlphaCB, &alphas_buf[i], 0);
 		if ((plyNbAlphas[i] > 0) && (plyNbAlphas[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of alphas #" << i << " in '" << fileName << "'";
@@ -356,7 +364,7 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		}
 
 		// Check if the file includes vertexAOV information
-		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("vertaov" + suffix).c_str(), VertexAOVCB, &vertexAOVs[i], 0);
+		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("vertaov" + suffix).c_str(), VertexAOVCB, &vertexAOVs_buf[i], 0);
 		if ((plyNbVertexAOVs[i] > 0) && (plyNbVertexAOVs[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of vertex AOV #" << i << " in '" << fileName << "'";
@@ -366,67 +374,67 @@ ExtTriangleMeshPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 
 	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
 	if (plyNbNormals == 0)
-		n = nullptr;
+		n = std::nullopt;
 	else
-		n = new Normal[plyNbNormals];
-	
+		n = n_buf;
+
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (plyNbUVs[i] == 0)
-			uvs[i] = nullptr;
+			uvs[i] = std::nullopt;
 		else
-			uvs[i] = new UV[plyNbUVs[i]];
+			uvs[i] = uvs_buf[i];
 
 		if (plyNbColors[i] == 0)
-			cols[i] = nullptr;
+			cols[i] = std::nullopt;
 		else
-			cols[i] = new Spectrum[plyNbColors[i]];
+			cols[i] = cols_buf[i];
 
 		if (plyNbAlphas[i] == 0)
-			alphas[i] = nullptr;
+			alphas[i] = std::nullopt;
 		else
-			alphas[i] = new float[plyNbAlphas[i]];
+			alphas[i] = alphas_buf[i];
 
 		if (plyNbVertexAOVs[i] == 0)
-			vertexAOVs[i] = nullptr;
+			vertexAOVs[i] = std::nullopt;
 		else
-			vertexAOVs[i] = new float[plyNbVertexAOVs[i]];
+			vertexAOVs[i] = vertexAOVs_buf[i];
 
 		if (plyNbTriAOVs[i] == 0)
-			TriAOVs[i] = nullptr;
+			TriAOVs[i] = std::nullopt;
 		else
-			TriAOVs[i] = new float[plyNbTriAOVs[i]];
+			TriAOVs[i] = TriAOVs_buf[i];
 	}
 
 	if (!ply_read(plyfile)) {
 		stringstream ss;
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
-		delete[] p;
-		delete[] n;
-		
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-			delete[] uvs[i];
-			delete[] cols[i];
-			delete[] alphas[i];
-			delete[] vertexAOVs[i];
-			delete[] TriAOVs[i];
-		}
+		//delete[] p;
+		//delete[] n;
+
+		//for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+			//delete[] uvs[i];
+			//delete[] cols[i];
+			//delete[] alphas[i];
+			//delete[] vertexAOVs[i];
+			//delete[] TriAOVs[i];
+		//}
 
 		throw runtime_error(ss.str());
 	}
-	
+
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
-	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
-	copy(vi.begin(), vi.end(), tris);
+	auto tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
+	std::copy(vi.begin(), vi.end(), tris.begin());
 
-	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, vi.size(), p, tris, n, &uvs, &cols, &alphas);
+	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, vi.size(), p, tris, n, uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		mesh->SetVertexAOV(i, vertexAOVs[i]);
 		mesh->SetTriAOV(i, TriAOVs[i]);
 	}
-	
+
 	return mesh;
 }
 
@@ -525,17 +533,28 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 	for (u_int i = 0; i < vertCount; ++i) {
 		plyFile.write((char *)&vertices[i], sizeof(Point));
 		if (HasNormals())
-			plyFile.write((char *)&normals[i], sizeof(Normal));
+		{
+			auto value = normals.value();
+			plyFile.write((char *)&value[i], sizeof(Normal));
+		}
 
 		for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
-			if (HasUVs(j))
-				plyFile.write((char *)&uvs[j][i], sizeof(UV));
-			if (HasColors(j))
-				plyFile.write((char *)&cols[j][i], sizeof(Spectrum));
-			if (HasAlphas(j))
-				plyFile.write((char *)&alphas[j][i], sizeof(float));
-			if (HasVertexAOV(j))
-				plyFile.write((char *)&vertAOV[j][i], sizeof(float));
+			if (HasUVs(j)) {
+				auto value = uvs[j].value();
+				plyFile.write((char *)&value[i], sizeof(UV));
+			}
+			if (HasColors(j)) {
+				auto value = cols[j].value();
+				plyFile.write((char *)&value[i], sizeof(Spectrum));
+			}
+			if (HasAlphas(j)) {
+				auto value = alphas[j].value();
+				plyFile.write((char *)&value[i], sizeof(float));
+			}
+			if (HasVertexAOV(j)) {
+				auto value = vertAOV[j].value();
+				plyFile.write((char *)&value[i], sizeof(float));
+			}
 		}
 	}
 
@@ -552,7 +571,7 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 	for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
 		if (HasTriAOV(j)) {
 			for (u_int i = 0; i < triCount; ++i)
-				plyFile.write((char *)&triAOV[j][i], sizeof(float));
+				plyFile.write((char *)&triAOV[j].value()[i], sizeof(float));
 		}
 	}
 

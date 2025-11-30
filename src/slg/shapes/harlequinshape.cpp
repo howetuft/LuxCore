@@ -33,16 +33,16 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshPtr srcMesh) {
 	const double startTime = WallClockTime();
 
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Point *vertices = srcMesh->GetVertices();
-	const Triangle *tris = srcMesh->GetTriangles();
+	auto vertices = srcMesh->GetVertices();
+	auto tris = srcMesh->GetTriangles();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(triCount * 3);
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	Spectrum *newVertCols = new Spectrum[triCount * 3];
+	auto newVertices = ExtTriangleMesh::AllocVerticesBuffer(triCount * 3);
+	auto newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+	auto newVertCols = std::vector<Spectrum>(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
-		const Triangle &tri = tris[i];
-		Triangle &newTri = newTris[i];
-		const Spectrum col = GetHarlequinColorByIndex(i);
+		auto& tri = tris[i];
+		auto& newTri = newTris[i];
+		const auto col = GetHarlequinColorByIndex(i);
 
 		newTri.v[0] = i * 3;
 		newTri.v[1] = i * 3 + 1;
@@ -58,8 +58,15 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshPtr srcMesh) {
 		newVertCols[newTri.v[2]] = col;
 	}
 
-	mesh = std::make_shared<ExtTriangleMesh>(triCount * 3, triCount, newVertices, newTris,
-			nullptr, nullptr, newVertCols);
+	mesh = std::make_shared<ExtTriangleMesh>(
+		triCount * 3,
+		triCount,
+		newVertices,
+		newTris,
+		std::nullopt,
+		std::nullopt,
+		newVertCols
+	);
 
 	// For some debugging
 	//mesh->Save("debug.ply");

@@ -18,6 +18,7 @@
 
 #include <unordered_map>
 #include <format>
+#include <execution>
 
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/patchMap.h>
@@ -232,7 +233,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	// Vertices
 	auto vertsBuffer = BuildBuffer<3>(
 		stencilTable,
-		(const float *)srcMesh->GetVertices(),
+		(const float *)srcMesh->GetVertices().data(),
 		nCoarseVerts,
 		nRefinedVerts
 	);
@@ -242,7 +243,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	if (srcMesh->HasNormals()) {
         normsBuffer = BuildBuffer<3>(
 			stencilTable,
-			(const float *)srcMesh->GetNormals(),
+			(const float *)srcMesh->GetNormals()->data(),
 			nCoarseVerts,
 			nRefinedVerts
 		);
@@ -254,7 +255,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 		if (srcMesh->HasUVs(i)) {
 			uvsBuffers[i] = BuildBuffer<2>(
 				stencilTable,
-				(const float *)srcMesh->GetUVs(i),
+				(const float *)srcMesh->GetUVs(i)->data(),
 				nCoarseVerts,
 nRefinedVerts
 			);
@@ -267,7 +268,7 @@ nRefinedVerts
 		if (srcMesh->HasColors(i)) {
 			colsBuffers[i] = BuildBuffer<3>(
 				stencilTable,
-				(const float *)srcMesh->GetColors(i),
+				(const float *)srcMesh->GetColors(i)->data(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -280,7 +281,7 @@ nRefinedVerts
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			alphasBuffers[i] = BuildBuffer<1>(
 				stencilTable,
-				(const float *)srcMesh->GetAlphas(i),
+				(const float *)srcMesh->GetAlphas(i)->data(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -294,7 +295,7 @@ nRefinedVerts
 			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 				vertAOVSsBuffers[i] = BuildBuffer<1>(
 					stencilTable,
-					(const float *)srcMesh->GetVertexAOVs(i),
+					(const float *)srcMesh->GetVertexAOVs(i)->data(),
 					nCoarseVerts,
 					nRefinedVerts
 				);
@@ -309,7 +310,7 @@ nRefinedVerts
 	//--------------------------------------------------------------------------
 
 	// New triangles
-	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(nRefinedFaces);
+	auto newTris = TriangleMesh::AllocTrianglesBuffer(nRefinedFaces);
 	for (int face = 0; face < nRefinedFaces; ++face) {
 		Vtr::ConstIndexArray faceVerts = refLastLevel.GetFaceVertices(face);
 		for (u_int vertex = 0; vertex < 3; ++vertex) {
@@ -318,72 +319,68 @@ nRefinedVerts
 	}
 
 	// New vertices
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(nRefinedVerts);
-	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, &newVerts->x);
+	auto newVerts = TriangleMesh::AllocVerticesBuffer(nRefinedVerts);
+	auto refinedVerts = reinterpret_cast<const float *>(vertsBuffer->BindCpuBuffer()) + nCoarseVerts;
+	std::copy(std::execution::par, refinedVerts, refinedVerts + nRefinedVerts, newVerts.begin());
 
 	// New normals
-	Normal *newNorms = nullptr;
+	std::optional<std::vector<Normal>> newNorms;
 	if (srcMesh->HasNormals()) {
-		newNorms = new Normal[nRefinedVerts];
-		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-		std::copy(refinedNorms, refinedNorms + 3 * nRefinedVerts, &newNorms->x);
+		newNorms.emplace(nRefinedVerts);
+		auto refinedNorms = reinterpret_cast<const Normal *>(normsBuffer->BindCpuBuffer()) + nCoarseVerts;
+		std::copy(std::execution::par, refinedNorms, refinedNorms + nRefinedVerts, newNorms->begin());
 	}
 
 	// New UVs
-	std::array<UV *, EXTMESH_MAX_DATA_COUNT> newUVs;
+	luxrays::ArrayOfOptionals<UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasUVs(i)) {
-			newUVs[i] = new UV[nRefinedVerts];
+			newUVs[i].emplace(nRefinedVerts);
 
-			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
-			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, &newUVs[i]->u);
-		} else
-			newUVs[i] = nullptr;
+			auto refinedUVs = reinterpret_cast<const UV *>(uvsBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedUVs, refinedUVs + nRefinedVerts, newUVs[i]->begin());
+		}
 	}
 
 	// New colors
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
+	luxrays::ArrayOfOptionals<Spectrum> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasColors(i)) {
-			newCols[i] = new Spectrum[nRefinedVerts];
+			newCols[i].emplace(nRefinedVerts);
 
-			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, &newCols[i]->c[0]);
-		} else
-			newCols[i] = nullptr;
+			auto refinedCols = reinterpret_cast<const float *>(colsBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedCols, refinedCols + nRefinedVerts, newCols[i]->begin());
+		}
 	}
 
 	// New alphas
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newAlphas;
+	luxrays::ArrayOfOptionals<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasAlphas(i)) {
-			newAlphas[i] = new float[nRefinedVerts];
+			newAlphas[i].emplace(nRefinedVerts);
 
-			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i]);
-		} else
-			newAlphas[i] = nullptr;
+			auto refinedAlphas = reinterpret_cast<const float *>(alphasBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedAlphas, refinedAlphas + nRefinedVerts, newAlphas[i]->begin());
+		}
 	}
 
 	// New vertAOVs
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
+	luxrays::ArrayOfOptionals<float> newVertAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs[i] = new float[nRefinedVerts];
+			newVertAOVs[i].emplace(nRefinedVerts);
 
-			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i]);
-		} else
-			newVertAOVs[i] = nullptr;
+			auto refinedVertAOVs = reinterpret_cast<const float *>(alphasBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedVertAOVs, refinedVertAOVs + nRefinedVerts, newVertAOVs[i]->begin());
+		}
 	}
 
 	// Allocate the new mesh
 	ExtTriangleMeshPtr newMesh =  std::make_shared<ExtTriangleMesh>(
 		nRefinedVerts, nRefinedFaces,
 		newVerts, newTris, newNorms,
-		&newUVs, &newCols, &newAlphas
+		newUVs, newCols, newAlphas
 	);
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
@@ -401,12 +398,12 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstPtr sr
 	desc.numFaces = srcMesh->GetTotalTriangleCount();
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles());
+	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles().data());
 
 	// Look for mesh boundary edges
 	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	auto tris = srcMesh->GetTriangles();
 
 	// Count how many times an edge is shared
 	for (u_int i = 0; i < triCount; ++i) {
@@ -656,7 +653,7 @@ struct Surface {
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh->GetTriangles()),
+				reinterpret_cast<const int *>(srcMesh->GetTriangles().data()),
 				srcMesh->GetTotalVertexCount(),
 				srcMesh->GetTotalTriangleCount(),
 				patchTableOptions

@@ -202,8 +202,8 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+		void *src, const size_t size, const std::string &desc = "") override;
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff) override;
 
 	//--------------------------------------------------------------------------
 	// CUDADevice specific methods

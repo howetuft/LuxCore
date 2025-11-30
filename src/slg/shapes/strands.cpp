@@ -390,40 +390,40 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		SLG_LOG("Strands mesh: " << meshTris.size() << " triangles");
 
 		// Create the mesh
-		Point *newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
-		copy(meshVerts.begin(), meshVerts.end(), newMeshVerts);
+		auto newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
+		std::copy(meshVerts.begin(), meshVerts.end(), newMeshVerts.begin());
 
-		Triangle *newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
-		copy(meshTris.begin(), meshTris.end(), newMeshTris);
+		auto newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
+		std::copy(meshTris.begin(), meshTris.end(), newMeshTris.begin());
 
-		Normal *newMeshNorms = new Normal[meshNorms.size()];
-		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
+		auto newMeshNorms = std::make_optional<std::vector<Normal>>(meshNorms.size());
+		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms->end());
 		
-		UV *newMeshUVs = new UV[meshUVs.size()];
-		copy(meshUVs.begin(), meshUVs.end(), newMeshUVs);
+		auto newMeshUVs = std::make_optional<std::vector<UV>>(meshUVs.size());
+		copy(meshUVs.begin(), meshUVs.end(), newMeshUVs->begin());
 		
 		// Check if I have to include vertex colors too
-		Spectrum *newMeshCols = NULL;
+		std::optional<std::vector<Spectrum>> newMeshCols;
 		for(const Spectrum &c: meshCols) {
 			if (c != Spectrum(1.f)) {
 				// The mesh uses vertex colors
 				SLG_LOG("Strands shape uses colors");
 
-				newMeshCols = new Spectrum[meshUVs.size()];
-				copy(meshCols.begin(), meshCols.end(), newMeshCols);
+				newMeshCols.emplace(meshUVs.size());
+				copy(meshCols.begin(), meshCols.end(), newMeshCols->begin());
 				break;
 			}
 		}
 
 		// Check if I have to include vertex alpha too
-		float *newMeshTransps = NULL;
+		std::optional<std::vector<float>> newMeshTransps;
 		for(const float &a: meshTransps) {
 			if (a != 1.f) {
 				// The mesh uses vertex alphas
 				SLG_LOG("Strands shape uses alphas");
 
-				newMeshTransps = new float[meshTransps.size()];
-				copy(meshTransps.begin(), meshTransps.end(), newMeshTransps);
+				newMeshTransps.emplace(meshTransps.size());
+				copy(meshTransps.begin(), meshTransps.end(), newMeshTransps->begin());
 				break;
 			}
 		}

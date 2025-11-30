@@ -316,9 +316,9 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
+		void *src, const size_t size, const std::string &desc = "") override;
 
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff) override;
 
 	friend class Context;
 

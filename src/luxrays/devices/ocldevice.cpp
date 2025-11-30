@@ -409,7 +409,7 @@ void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType typ
 	if (type & BUFFER_TYPE_OUT_OF_CORE) {
 		LR_LOG(deviceContext, "WARNING: OpenCL devices don't support out of core memory buffers: " << desc);
 	}
-	
+
 	AllocBuffer(clFlags, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 

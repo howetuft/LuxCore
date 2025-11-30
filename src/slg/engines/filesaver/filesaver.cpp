@@ -176,8 +176,10 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		// Add vertices buffer
 
 		const size_t encodedVerticesSize = sizeof(Point) * triMesh->GetTotalVertexCount();
-		const string encodedVertices = Base64Encode((const char *)triMesh->GetVertices(),
-				encodedVerticesSize);
+		const string encodedVertices = Base64Encode(
+			reinterpret_cast<const char *>(triMesh->GetVertices().data()),
+			encodedVerticesSize
+		);
 
 		j["buffers"].push_back(json::object({
 			{ "uri", "data:application/octet-stream;base64," + encodedVertices },
@@ -215,7 +217,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
 			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh->GetTotalVertexCount();
 			const string encodedVertexUVs = Base64Encode(
-					(const char *)(triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()]),
+					reinterpret_cast<const char *>(triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()]->data()),
 					encodedVertexUVsSize);
 
 			j["buffers"].push_back(json::object({
@@ -236,13 +238,13 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 			UV minUV(numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
 			UV maxUV(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
-			UV *uv = triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()];
+			auto uv = triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()];
 			for (u_int uvIndex = 0; uvIndex < triMesh->GetTotalVertexCount(); ++uvIndex) {
-				minUV.u = Min(minUV.u, uv[uvIndex].u);
-				minUV.v = Min(minUV.v, uv[uvIndex].v);
+				minUV.u = Min(minUV.u, (*uv)[uvIndex].u);
+				minUV.v = Min(minUV.v, (*uv)[uvIndex].v);
 
-				maxUV.u = Max(maxUV.u, uv[uvIndex].u);
-				maxUV.v = Max(maxUV.v, uv[uvIndex].v);
+				maxUV.u = Max(maxUV.u, (*uv)[uvIndex].u);
+				maxUV.v = Max(maxUV.v, (*uv)[uvIndex].v);
 			}
 
 			vertexUVsAccessorIndex = j["accessors"].size();
@@ -261,8 +263,10 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		// Add triangle indices buffer
 
 		const size_t encodedTrianglesSize = sizeof(Triangle) * triMesh->GetTotalTriangleCount();
-		const string encodedTriangles = Base64Encode((const char *)triMesh->GetTriangles(),
-				encodedTrianglesSize);
+		const string encodedTriangles = Base64Encode(
+			reinterpret_cast<const char *>(triMesh->GetTriangles().data()),
+			encodedTrianglesSize
+		);
 
 		j["buffers"].push_back(json::object({
 			{ "uri", "data:application/octet-stream;base64," + encodedTriangles },
