@@ -722,15 +722,14 @@ struct Surface {
 	/// @param N Tessellation rate: each edge will be subdivided into N
 	/// sub-edges
 	///
-	std::tuple<CoordVector, TriangleArrayPtr, int, int>
-	Tessellate (const size_t N) {
+	auto Tessellate (const size_t N) {
 		// This is triforce tessellation.
 
 		// Allocate outputs
 		CoordVector tessCoords;
 		int numTriangles = getTesselTriangleCount(N);
 		int numPoints = getTesselPosCount(N);
-		auto tessTris = TriangleArrayPtr(TriangleMesh::AllocTrianglesBuffer(numTriangles));
+		auto tessTris = TriangleMesh::AllocTrianglesBuffer(numTriangles);
 
 		// Some constants
 		const auto& topology = refiner->GetLevel(0);
@@ -989,8 +988,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated positions
 	///	and a smart pointer to a buffer containing the evaluated normals
 	///
-	std::tuple<PointArrayPtr, NormalArrayPtr>
-	EvaluatePositions(
+	auto EvaluatePositions(
 		const InterpolatedValues& interpolatedPositions,
 		const CoordVector& tessCoords
 	) const {
@@ -998,8 +996,8 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessPositions = PointArrayPtr(TriangleMesh::AllocVerticesBuffer(numCoords));
-		auto tessNormals = NormalArrayPtr(new Normal[numCoords]);
+		auto tessPositions = TriangleMesh::AllocVerticesBuffer(numCoords);
+		auto tessNormals = std::make_optional<std::vector<Normal>>(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1053,10 +1051,10 @@ struct Surface {
 			}
 
 			// Update output (position and normal)
-			tessNormals[vertex] = Normal(Cross(du, dv));
+			(*tessNormals)[vertex] = Normal(Cross(du, dv));
 
 			// Check validity of normal and normalize if ok
-			auto& t = tessNormals[vertex];
+			auto& t = (*tessNormals)[vertex];
 			float length = t.Length();
 
 			if (length != 0.f) {
@@ -1090,7 +1088,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated data
 	///
 	template<typename T>
-	std::unique_ptr<T[]> Evaluate(
+	std::vector<T> Evaluate(
 		const InterpolatedValues& interpolatedValues,
 		const CoordVector& tessCoords
 	) const {
@@ -1098,7 +1096,8 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessValues = std::unique_ptr<T[]>(new T[numCoords]);
+		//auto tessValues = std::unique_ptr<T[]>(new T[numCoords]);
+		std::vector<T> tessValues(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1168,25 +1167,36 @@ struct MultiLayerDataEvaluator{
 		coords(p_coords)
 	{}
 
-	// Return type for evaluation
-	template <typename DATA_BUFFER, typename DATA_OUT>
-	struct EvaluatedLayers: std::vector<DATA_BUFFER> {
+	//// Return type for evaluation
+	//template <typename DATA_BUFFER, typename DATA_OUT>
+	//struct EvaluatedLayers: std::vector<DATA_BUFFER> {
 
-		// Return-object constructor
-		EvaluatedLayers(size_t num_layers):
-			std::vector<DATA_BUFFER>(num_layers)
-		{}
+		//// Return-object constructor
+		//EvaluatedLayers(size_t num_layers):
+			//std::vector<DATA_BUFFER>(num_layers)
+		//{}
 
-		// Return-object releaser
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT>* releaseLayers() {
-			for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-				outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
-			}
-			return &outBuffers;
-		}
+		////// Return-object releaser
+		////std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT>* releaseLayers() {
+			////for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+				////outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
+			////}
+			////return &outBuffers;
+		////}
 
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
-	};
+		////std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
+
+		//// Return-object releaser
+
+		//luxrays::ArrayOfOptionals<DATA_OUT> releaseLayers() {
+			//for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+				//outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
+			//}
+			//return &outBuffers;
+		//}
+
+		//luxrays::ArrayOfOptionals<DATA_OUT> outBuffers;
+	//};
 
 
 	// Evaluator
@@ -1199,7 +1209,7 @@ struct MultiLayerDataEvaluator{
 		// layer. Eventually, the buffers have to be passed to ExtTriangleMesh
 		// constructor, which takes ownership. In that way, they will be released.
 
-		using DATA_IN = std::remove_pointer_t<std::invoke_result_t<EXTRACTOR, u_int>>;
+		using DATA_IN = std::remove_const_t<std::remove_pointer_t<std::invoke_result_t<EXTRACTOR, u_int>>>;
 		using DATA_BUFFER = std::unique_ptr<DATA_IN[]>;
 
 		// Return float* if DATA is FloatAdapter
@@ -1209,14 +1219,15 @@ struct MultiLayerDataEvaluator{
 		>;
 
 		// Return object
-		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT);
+		luxrays::ArrayOfOptionals<DATA_OUT> res;
+		//EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT);
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-			DATA_IN* layerData = getLayerData(layer);
+			const DATA_IN* layerData = getLayerData(layer);
 			if (layerData) {
 				auto interpolatedData = surface.Interpolate(layerData, layerSize);
-				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
+				res[layer] = std::make_optional(surface.Evaluate<DATA_IN>(interpolatedData, coords));
 			}
 		}
 		return res;
@@ -1255,7 +1266,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 
 	// Tessellate
 	CoordVector tessCoords;
-	TriangleArrayPtr tessTriangles;
+	std::vector<Triangle> tessTriangles;
 	int numPoints, numTriangles;
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
@@ -1265,12 +1276,12 @@ ExtTriangleMeshPtr ApplySubdiv(
 	u_int numMeshVertex = srcMesh->GetTotalVertexCount();
 
 	// Evaluate positions and normals
-	PointArrayPtr tessPoints;
-	NormalArrayPtr tessNormals;
+	std::vector<Point> tessPoints;
+	std::optional<std::vector<Normal>> tessNormals;
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
-			surface.Interpolate(srcMesh->GetVertices(), numMeshVertex);
+			surface.Interpolate(srcMesh->GetVertices().data(), numMeshVertex);
 
 		// Evaluate refined (interpolated) positions
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
@@ -1282,21 +1293,21 @@ ExtTriangleMeshPtr ApplySubdiv(
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
 
 	// Evaluate UV
-	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh->GetUVs(layer); };
+	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh->GetUVs(layer)->data(); };
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh->GetColors(layer); };
+	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh->GetColors(layer)->data(); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
 	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetAlphas(layer); };
+		{ return (FloatAdapter*) srcMesh->GetAlphas(layer)->data(); };
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
 	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetVertexAOVs(layer); };
+		{ return (FloatAdapter*) srcMesh->GetVertexAOVs(layer)->data(); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
@@ -1310,9 +1321,9 @@ ExtTriangleMeshPtr ApplySubdiv(
 	auto newMesh =  std::make_shared<ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
-		tessPoints.release(),
-		tessTriangles.release(),
-		tessNormals.release(),
+		tessPoints,
+		tessTriangles,
+		tessNormals,
 		tessUVs.releaseLayers(),
 		tessCols.releaseLayers(),
 		tessAlphas.releaseLayers()
