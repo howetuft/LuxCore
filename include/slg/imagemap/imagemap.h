@@ -30,6 +30,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/utils/strutils.h"
+#include "luxrays/utils/buffer.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/namedobject.h"
@@ -1003,7 +1004,7 @@ protected:
 			~ThreadData();
 
 			u_int currentSamplesIndex;
-			std::vector<luxrays::UV> samples[3];
+			luxrays::Buffer<luxrays::UV> samples[3];
 			
 			u_int samplesCount;
 			float minDistance;

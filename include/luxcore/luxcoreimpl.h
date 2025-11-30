@@ -309,20 +309,32 @@ public:
 	void SetMeshAppliedTransformation(const std::string &meshName,
 			const float *appliedTransMat);
 
-	void DefineMesh(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		float *uvs,	float *cols, float *alphas);
-	void DefineMeshExt(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uv,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
+	void DefineMesh(
+		const std::string &meshName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::shared_ptr<float[]> p,
+		std::shared_ptr<unsigned int[]> vi,
+		std::shared_ptr<float[]> n,
+		std::shared_ptr<float[]> uvs,
+		std::shared_ptr<float[]> cols,
+		std::shared_ptr<float[]> alphas
+	) override;
+	void DefineMeshExt(
+		const std::string &meshName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::shared_ptr<float[]> p,
+		std::shared_ptr<unsigned int[]> vi,
+		std::shared_ptr<float[]> n,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *uv,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *alphas
+	) override;
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t datacount);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t datacount);
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(
@@ -404,8 +416,8 @@ public:
 	// Note: this method is not part of LuxCore API and it is used only internally
 	void DefineMesh(std::shared_ptr<luxrays::ExtTriangleMesh> mesh);
 
-	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
-	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static luxrays::Buffer<luxrays::Point> AllocVerticesBufferVec(const unsigned int meshVertCount);
+	static luxrays::Buffer<luxrays::Triangle> AllocTrianglesBufferVec(const unsigned int meshTriCount);
 
 	friend class CameraImpl;
 	friend class RenderConfigImpl;

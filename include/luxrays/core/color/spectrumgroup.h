@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/buffer.h"
 
 namespace luxrays {
 
@@ -29,13 +30,25 @@ namespace luxrays {
 
 class SpectrumGroup {
 public:
-	SpectrumGroup(const u_int groupsCount = 0) : group(groupsCount) {
+	explicit SpectrumGroup(const u_int groupsCount = 0) : group(groupsCount) {
 	}
+
+	// Copy constructors
+	explicit SpectrumGroup(const SpectrumGroup&) = default;
+	SpectrumGroup& operator=(const SpectrumGroup& other) {
+		group.copy(other.group);
+		return (*this);
+	}
+
+	// Move constructors
+	SpectrumGroup(SpectrumGroup&&) = default;
+	SpectrumGroup& operator=(SpectrumGroup&&) = default;
+
 	virtual ~SpectrumGroup() { }
 
 	u_int Size() const { return group.size(); }
 	void Resize(const u_int s) { group.resize(s); }
-	void Shrink(const u_int s) { group.shrink_to_fit(); }
+	//void Shrink(const u_int s) { group.shrink_to_fit(); }
 
 	void Clear() {
 		for (auto &s : group)
@@ -87,7 +100,7 @@ public:
 		for (auto const &s : group)
 			if (!s.Black())
 				return false;
-		
+
 		return true;
 	}
 
@@ -95,21 +108,21 @@ public:
 		for (auto const &s : group)
 			if (s.IsNaN())
 				return true;
-		
+
 		return false;
 	}
 	bool IsInf() const {
 		for (auto const &s : group)
 			if (s.IsInf())
 				return true;
-		
+
 		return false;
 	}
 	bool IsNeg() const {
 		for (auto const &s : group)
 			if (s.IsNeg())
 				return true;
-		
+
 		return false;
 	}
 	bool IsValid() const {
@@ -133,7 +146,7 @@ public:
 
 		return *this;
 	}
-	
+
 	SpectrumGroup &operator-=(const SpectrumGroup &s2) {
 		// Auto expand the group if required
 		if (s2.group.size() > group.size())
@@ -155,7 +168,7 @@ public:
 
 		return *this;
 	}
-	
+
 	SpectrumGroup &operator/=(const SpectrumGroup &s2) {
 		// Auto expand the group if required
 		if (s2.group.size() > group.size())
@@ -232,11 +245,11 @@ public:
 
 		return *this;
 	}
-	
+
 	friend class boost::serialization::access;
-	
+
 private:
-	std::vector<Spectrum> group;
+	Buffer<Spectrum> group;
 
 	template<class Archive> void serialize(Archive & ar, const unsigned int version) {
 		ar & group;

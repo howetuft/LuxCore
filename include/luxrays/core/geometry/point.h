@@ -35,7 +35,7 @@ class Point {
 public:
 	// Point Methods
 
-	Point(float _x = 0.f, float _y = 0.f, float _z = 0.f)
+	constexpr Point(float _x = 0.f, float _y = 0.f, float _z = 0.f)
 	: x(_x), y(_y), z(_z) {
 	}
 

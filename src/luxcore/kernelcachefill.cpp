@@ -33,9 +33,15 @@ using namespace luxcore::detail;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-static void CreateBox(auto scene, const string &objName, const string &meshName,
-		const string &matName, const bool enableUV, const BBox &bbox) {
-	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
+static void CreateBox(
+	auto scene,
+	const string &objName,
+	const string &meshName,
+	const string &matName,
+	const bool enableUV,
+	const BBox &bbox
+) {
+	auto p = reinterpret_pointer_cast<Point[]>(Scene::AllocVerticesBuffer(24));
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -67,7 +73,7 @@ static void CreateBox(auto scene, const string &objName, const string &meshName,
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
 	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
-	Triangle *vi = (Triangle *)Scene::AllocTrianglesBuffer(12);
+	auto vi = reinterpret_pointer_cast<Triangle[]>(Scene::AllocTrianglesBuffer(12));
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
@@ -90,9 +96,13 @@ static void CreateBox(auto scene, const string &objName, const string &meshName,
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
+		scene->DefineMesh(
+			meshName, 24, 12,
+			reinterpret_pointer_cast<float[]>(p),
+			reinterpret_pointer_cast<unsigned int []>(vi),
+			NULL, NULL, NULL, NULL);
 	} else {
-		UV *uv = new UV[24];
+		auto uv = std::make_shared<UV[]>(24);
 		// Bottom face
 		uv[0] = UV(0.f, 0.f);
 		uv[1] = UV(1.f, 0.f);
@@ -125,7 +135,11 @@ static void CreateBox(auto scene, const string &objName, const string &meshName,
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
+		scene->DefineMesh(
+			meshName, 24, 12,
+			reinterpret_pointer_cast<float[]>(p),
+			reinterpret_pointer_cast<unsigned int []>(vi),
+			NULL, reinterpret_pointer_cast<float[]>(uv), NULL, NULL);
 	}
 
 	// Add the object to the scene
@@ -201,7 +215,14 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 				Property("scene.materials.triangle_light.emission")(1000000.f, 1000000.f, 1000000.f);
 			scene->Parse(props);
 
-			CreateBox(scene, "box_triangle_light", "mesh_box_triangle_light", "triangle_light", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+			CreateBox(
+				scene,
+				"box_triangle_light",
+				"mesh_box_triangle_light",
+				"triangle_light",
+				false,
+				BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f))
+			);
 		}
 
 		// One box for each material

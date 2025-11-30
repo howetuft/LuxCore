@@ -18,6 +18,7 @@
 
 #include <unordered_map>
 #include <format>
+#include <execution>
 
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/patchMap.h>
@@ -232,7 +233,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	// Vertices
 	auto vertsBuffer = BuildBuffer<3>(
 		stencilTable,
-		(const float *)srcMesh->GetVertices(),
+		(const float *)srcMesh->GetVertices().data(),
 		nCoarseVerts,
 		nRefinedVerts
 	);
@@ -242,7 +243,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	if (srcMesh->HasNormals()) {
         normsBuffer = BuildBuffer<3>(
 			stencilTable,
-			(const float *)srcMesh->GetNormals(),
+			(const float *)srcMesh->GetNormals().get(),
 			nCoarseVerts,
 			nRefinedVerts
 		);
@@ -254,7 +255,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 		if (srcMesh->HasUVs(i)) {
 			uvsBuffers[i] = BuildBuffer<2>(
 				stencilTable,
-				(const float *)srcMesh->GetUVs(i),
+				(const float *)srcMesh->GetUVs(i)->data(),
 				nCoarseVerts,
 nRefinedVerts
 			);
@@ -267,7 +268,7 @@ nRefinedVerts
 		if (srcMesh->HasColors(i)) {
 			colsBuffers[i] = BuildBuffer<3>(
 				stencilTable,
-				(const float *)srcMesh->GetColors(i),
+				(const float *)srcMesh->GetColors(i)->data(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -280,7 +281,7 @@ nRefinedVerts
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			alphasBuffers[i] = BuildBuffer<1>(
 				stencilTable,
-				(const float *)srcMesh->GetAlphas(i),
+				(const float *)srcMesh->GetAlphas(i)->data(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -294,7 +295,7 @@ nRefinedVerts
 			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 				vertAOVSsBuffers[i] = BuildBuffer<1>(
 					stencilTable,
-					(const float *)srcMesh->GetVertexAOVs(i),
+					(const float *)srcMesh->GetVertexAOVs(i)->data(),
 					nCoarseVerts,
 					nRefinedVerts
 				);
@@ -309,7 +310,7 @@ nRefinedVerts
 	//--------------------------------------------------------------------------
 
 	// New triangles
-	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(nRefinedFaces);
+	Buffer<Triangle> newTris(nRefinedFaces);
 	for (int face = 0; face < nRefinedFaces; ++face) {
 		Vtr::ConstIndexArray faceVerts = refLastLevel.GetFaceVertices(face);
 		for (u_int vertex = 0; vertex < 3; ++vertex) {
@@ -318,76 +319,77 @@ nRefinedVerts
 	}
 
 	// New vertices
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(nRefinedVerts);
-	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, &newVerts->x);
+	Buffer<Point> newVerts(nRefinedVerts);
+	auto refinedVerts = reinterpret_cast<const float *>(vertsBuffer->BindCpuBuffer()) + nCoarseVerts;
+	std::copy(std::execution::par, refinedVerts, refinedVerts + nRefinedVerts, newVerts.begin());
 
 	// New normals
-	Normal *newNorms = nullptr;
+	Optionals<Normal> newNorms;
 	if (srcMesh->HasNormals()) {
-		newNorms = new Normal[nRefinedVerts];
-		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-		std::copy(refinedNorms, refinedNorms + 3 * nRefinedVerts, &newNorms->x);
+		newNorms = Optionals<Normal>(nRefinedVerts);
+		auto refinedNorms = reinterpret_cast<const Normal *>(normsBuffer->BindCpuBuffer()) + nCoarseVerts;
+		std::copy(std::execution::par, refinedNorms, refinedNorms + nRefinedVerts, newNorms->begin());
 	}
 
 	// New UVs
-	std::array<UV *, EXTMESH_MAX_DATA_COUNT> newUVs;
+	luxrays::ArrayOfOptionals<UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasUVs(i)) {
-			newUVs[i] = new UV[nRefinedVerts];
+			newUVs[i].emplace(nRefinedVerts);
 
-			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
-			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, &newUVs[i]->u);
-		} else
-			newUVs[i] = nullptr;
+			auto refinedUVs = reinterpret_cast<const UV *>(uvsBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedUVs, refinedUVs + nRefinedVerts, newUVs[i]->begin());
+		}
 	}
 
 	// New colors
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
+	luxrays::ArrayOfOptionals<Spectrum> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasColors(i)) {
-			newCols[i] = new Spectrum[nRefinedVerts];
+			newCols[i].emplace(nRefinedVerts);
 
-			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, &newCols[i]->c[0]);
-		} else
-			newCols[i] = nullptr;
+			auto refinedCols = reinterpret_cast<const float *>(colsBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedCols, refinedCols + nRefinedVerts, newCols[i]->begin());
+		}
 	}
 
 	// New alphas
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newAlphas;
+	luxrays::ArrayOfOptionals<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasAlphas(i)) {
-			newAlphas[i] = new float[nRefinedVerts];
+			newAlphas[i].emplace(nRefinedVerts);
 
-			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i]);
-		} else
-			newAlphas[i] = nullptr;
+			auto refinedAlphas = reinterpret_cast<const float *>(alphasBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedAlphas, refinedAlphas + nRefinedVerts, newAlphas[i]->begin());
+		}
 	}
 
 	// New vertAOVs
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
+	luxrays::ArrayOfOptionals<float> newVertAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh->HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs[i] = new float[nRefinedVerts];
+			newVertAOVs[i].emplace(nRefinedVerts);
 
-			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i]);
-		} else
-			newVertAOVs[i] = nullptr;
+			auto refinedVertAOVs = reinterpret_cast<const float *>(alphasBuffers[i]->BindCpuBuffer()) + nCoarseVerts;
+			std::copy(std::execution::par, refinedVertAOVs, refinedVertAOVs + nRefinedVerts, newVertAOVs[i]->begin());
+		}
 	}
 
 	// Allocate the new mesh
 	ExtTriangleMeshPtr newMesh =  std::make_shared<ExtTriangleMesh>(
-		nRefinedVerts, nRefinedFaces,
-		newVerts, newTris, newNorms,
-		&newUVs, &newCols, &newAlphas
+		nRefinedVerts,
+		nRefinedFaces,
+		std::move(newVerts),
+		std::move(newTris),
+		std::move(newNorms),
+		std::move(newUVs),
+		std::move(newCols),
+		std::move(newAlphas)
 	);
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		newMesh->SetVertexAOV(i, newVertAOVs[i]);
+		newMesh->SetVertexAOV(i, std::move(newVertAOVs[i]));
 	}
 
 	return newMesh;
@@ -401,12 +403,12 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstPtr sr
 	desc.numFaces = srcMesh->GetTotalTriangleCount();
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles());
+	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles().data());
 
 	// Look for mesh boundary edges
 	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const auto& tris = srcMesh->GetTriangles();
 
 	// Count how many times an edge is shared
 	for (u_int i = 0; i < triCount; ++i) {
@@ -656,7 +658,7 @@ struct Surface {
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh->GetTriangles()),
+				reinterpret_cast<const int *>(srcMesh->GetTriangles().data()),
 				srcMesh->GetTotalVertexCount(),
 				srcMesh->GetTotalTriangleCount(),
 				patchTableOptions
@@ -670,7 +672,7 @@ struct Surface {
 	///	The refinement is adaptive (in the sense of OpenSubdiv).
 	///
 	/// @param maxLevel The maximum isolation level
-	/// 
+	///
 	void Subdivide(int maxLevel) {
 		// Set refinement level
 		patchTableOptions.maxIsolationLevel = maxLevel;
@@ -725,15 +727,14 @@ struct Surface {
 	/// @param N Tessellation rate: each edge will be subdivided into N
 	/// sub-edges
 	///
-	std::tuple<CoordVector, TriangleArrayPtr, int, int>
-	Tessellate (const size_t N) {
+	auto Tessellate (const size_t N) {
 		// This is triforce tessellation.
 
 		// Allocate outputs
 		CoordVector tessCoords;
 		int numTriangles = getTesselTriangleCount(N);
 		int numPoints = getTesselPosCount(N);
-		auto tessTris = TriangleArrayPtr(TriangleMesh::AllocTrianglesBuffer(numTriangles));
+		Buffer<Triangle> tessTris(numTriangles);
 
 		// Some constants
 		const auto& topology = refiner->GetLevel(0);
@@ -903,7 +904,6 @@ struct Surface {
 			for (int j = 0; j < N; ++j) {
 				for (int i = 0; i < N - j - 1; ++i, ++idxTri) {
 					tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j), pnt(i + 1, j + 1));
-					//tessTris[idxTri] = Triangle(pnt(i, j + 1), pnt(i + 1, j + 1), pnt(i + 1, j));
 				}
 			}
 
@@ -992,8 +992,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated positions
 	///	and a smart pointer to a buffer containing the evaluated normals
 	///
-	std::tuple<PointArrayPtr, NormalArrayPtr>
-	EvaluatePositions(
+	auto EvaluatePositions(
 		const InterpolatedValues& interpolatedPositions,
 		const CoordVector& tessCoords
 	) const {
@@ -1001,8 +1000,8 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessPositions = PointArrayPtr(TriangleMesh::AllocVerticesBuffer(numCoords));
-		auto tessNormals = NormalArrayPtr(new Normal[numCoords]);
+		Buffer<Point> tessPositions(numCoords);
+		Optionals<Normal> tessNormals(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1056,10 +1055,10 @@ struct Surface {
 			}
 
 			// Update output (position and normal)
-			tessNormals[vertex] = Normal(Cross(du, dv));
+			(*tessNormals)[vertex] = Normal(Cross(du, dv));
 
 			// Check validity of normal and normalize if ok
-			auto& t = tessNormals[vertex];
+			auto& t = (*tessNormals)[vertex];
 			float length = t.Length();
 
 			if (length != 0.f) {
@@ -1092,8 +1091,8 @@ struct Surface {
 	///
 	///	@return A smart pointer to a buffer containing the evaluated data
 	///
-	template<typename T>
-	std::unique_ptr<T[]> Evaluate(
+	template<typename TI, typename TO>
+	Buffer<TO> Evaluate(
 		const InterpolatedValues& interpolatedValues,
 		const CoordVector& tessCoords
 	) const {
@@ -1101,11 +1100,12 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessValues = std::unique_ptr<T[]>(new T[numCoords]);
+		using TI_NOCONST = std::remove_const_t<TI>;
+		Buffer<TI_NOCONST> tessValues(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
-		auto inputValues = interpolatedValues.Get<T>();
+		auto inputValues = interpolatedValues.Get<TI>();
 
 		// Evaluate
 		#pragma omp parallel for
@@ -1130,7 +1130,7 @@ struct Surface {
 			Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
 
 			// Evaluate
-			T& val = tessValues[vertex];
+			auto& val = tessValues[vertex];
 
 			val.Clear();
 
@@ -1142,7 +1142,10 @@ struct Surface {
 
 		}  // ~for vertex
 
-		return tessValues;
+		return Buffer<TO>(
+			std::move_iterator(tessValues.begin()),
+			std::move_iterator(tessValues.end())
+		);
 	}
 
 
@@ -1171,55 +1174,32 @@ struct MultiLayerDataEvaluator{
 		coords(p_coords)
 	{}
 
-	// Return type for evaluation
-	template <typename DATA_BUFFER, typename DATA_OUT>
-	struct EvaluatedLayers: std::vector<DATA_BUFFER> {
-
-		// Return-object constructor
-		EvaluatedLayers(size_t num_layers):
-			std::vector<DATA_BUFFER>(num_layers)
-		{}
-
-		// Return-object releaser
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT>* releaseLayers() {
-			for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-				outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
-			}
-			return &outBuffers;
-		}
-
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
-	};
-
 
 	// Evaluator
 	template < typename EXTRACTOR >
-	auto evaluate(EXTRACTOR getLayerData) {
-
-		// Evaluated data are stored as smart pointers in a vector (one row per
-		// layer), so that they are automatically freed if anything goes wrong
-		// before the mesh is built. Each element of the vector is a buffer for a
-		// layer. Eventually, the buffers have to be passed to ExtTriangleMesh
-		// constructor, which takes ownership. In that way, they will be released.
+	auto evaluate(EXTRACTOR getLayerData) const {
 
 		using DATA_IN = std::remove_pointer_t<std::invoke_result_t<EXTRACTOR, u_int>>;
-		using DATA_BUFFER = std::unique_ptr<DATA_IN[]>;
 
-		// Return float* if DATA is FloatAdapter
-		// (for Alpha and AOV)
+		using DATA_IN_NOCONST = std::remove_const_t<DATA_IN>;
+
+		// Return float* if DATA is FloatAdapter (for Alpha and AOV), otherwise
+		// DATA
 		using DATA_OUT = std::conditional_t<
-			std::is_same_v<DATA_IN, FloatAdapter>, float, DATA_IN
+			std::is_same_v<DATA_IN_NOCONST, FloatAdapter>, float, DATA_IN_NOCONST
 		>;
 
-		// Return object
-		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT);
+		// Object to return
+		luxrays::ArrayOfOptionals<DATA_OUT> res;
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-			DATA_IN* layerData = getLayerData(layer);
+			const DATA_IN* layerData = getLayerData(layer);
 			if (layerData) {
 				auto interpolatedData = surface.Interpolate(layerData, layerSize);
-				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
+				res[layer] = luxrays::Optionals<DATA_OUT>(
+					surface.Evaluate<DATA_IN, DATA_OUT>(interpolatedData, coords)
+				);
 			}
 		}
 		return res;
@@ -1245,8 +1225,6 @@ ExtTriangleMeshPtr ApplySubdiv(
 	// Outputs values are returned as tuples, instead of using byref arguments.
 	// This is for readability: arguments are inputs only, return values are output
 
-	using std::tie;
-
 	// Create limit surface from base geometry
 	Surface surface(srcMesh);
 
@@ -1257,49 +1235,46 @@ ExtTriangleMeshPtr ApplySubdiv(
 	size_t tessellationRate = 1 << maxLevel;
 
 	// Tessellate
-	CoordVector tessCoords;
-	TriangleArrayPtr tessTriangles;
-	int numPoints, numTriangles;
-
-	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
+	auto [tessCoords, tessTriangles, numPoints, numTriangles] =
 		surface.Tessellate(tessellationRate);
 
 	// Record initial vertex count
 	u_int numMeshVertex = srcMesh->GetTotalVertexCount();
 
-	// Evaluate positions and normals
-	PointArrayPtr tessPoints;
-	NormalArrayPtr tessNormals;
-	{
-		// Interpolate positions on subdivided surface
-		auto interpolatedPositions =
-			surface.Interpolate(srcMesh->GetVertices(), numMeshVertex);
+	// Interpolate positions on subdivided surface
+	auto interpolatedPositions =
+		surface.Interpolate(srcMesh->GetVertices().data(), numMeshVertex);
 
-		// Evaluate refined (interpolated) positions
-		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
-		tie(tessPoints, tessNormals) =
-			surface.EvaluatePositions(interpolatedPositions, tessCoords);
-	}
+	// Evaluate refined (interpolated) positions and normals
+	SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
+	auto [tessPoints, tessNormals] =
+		surface.EvaluatePositions(interpolatedPositions, tessCoords);
 
 	// Evaluate other primvars
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
 
 	// Evaluate UV
-	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh->GetUVs(layer); };
+	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh->GetUVs(layer)->data(); };
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh->GetColors(layer); };
+	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh->GetColors(layer)->data(); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
-	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetAlphas(layer); };
+	auto extractorAlphas = [&srcMesh](u_int layer) {
+		return reinterpret_cast<const FloatAdapter *>(
+			srcMesh->GetAlphas(layer)->data()
+		);
+	};
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
-	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetVertexAOVs(layer); };
+	auto extractorAOVs = [&srcMesh](u_int layer) {
+		return reinterpret_cast<const FloatAdapter *>(
+				srcMesh->GetVertexAOVs(layer)->data()
+		);
+	};
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
@@ -1313,18 +1288,17 @@ ExtTriangleMeshPtr ApplySubdiv(
 	auto newMesh =  std::make_shared<ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
-		tessPoints.release(),
-		tessTriangles.release(),
-		tessNormals.release(),
-		tessUVs.releaseLayers(),
-		tessCols.releaseLayers(),
-		tessAlphas.releaseLayers()
+		std::move(tessPoints),
+		std::move(tessTriangles),
+		std::move(tessNormals),
+		std::move(tessUVs),
+		std::move(tessCols),
+		std::move(tessAlphas)
 	);
 
 	// Handle AOVs
-	auto tessAOVs_released = *tessAOVs.releaseLayers();
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		newMesh->SetVertexAOV(i, tessAOVs_released[i]);
+		newMesh->SetVertexAOV(i, std::move(tessAOVs[i]));
 	}
 
 	return newMesh;
@@ -1421,8 +1395,8 @@ SubdivShape::SubdivShape(
 
 float SubdivShape::MaxEdgeScreenSize(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh) {
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Point *verts = srcMesh->GetVertices();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const auto& verts = srcMesh->GetVertices();
+	const auto& tris = srcMesh->GetTriangles();
 
 	// Note VisualStudio doesn't support:
 	//#pragma omp parallel for reduction(max:maxEdgeSize)
@@ -1431,9 +1405,10 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstPtr camera, ExtTriangleMeshPtr s
 
 	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
 
-	std::vector<float> maxEdgeSizes(threadCount, 0.f);
+	luxrays::Buffer<float> maxEdgeSizes(threadCount);
+	std::fill(maxEdgeSizes.begin(), maxEdgeSizes.end(), 0.f);
 
-	std::vector<Point> projectedPoints(srcMesh->GetTotalVertexCount());
+	luxrays::Buffer<Point> projectedPoints(srcMesh->GetTotalVertexCount());
 	#pragma omp parallel for
 	for(int i = 0; i < srcMesh->GetTotalVertexCount(); ++i) {
 		projectedPoints[i] = worldToScreen * verts[i];

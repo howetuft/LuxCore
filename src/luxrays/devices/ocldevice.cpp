@@ -335,7 +335,7 @@ void OpenCLDevice::FinishQueue() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
-		void *src, const size_t size, const string &desc) {
+		const void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
@@ -383,14 +383,23 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 				" buffer size: " << ToMemString(size));
 
 	cl_int error;
-	*buff = clCreateBuffer(oclContext, clFlags, size, src, &error);
+
+	// Howetuft: for some reasons, clCreateBuffer requires a non-const source
+	// buffer. As we must guarantee to buffer owner its constantness, we
+	// make a copy of the source.
+	auto non_const_buffer = std::malloc(size);
+	std::memcpy(non_const_buffer, src, size);
+
+	*buff = clCreateBuffer(oclContext, clFlags, size, non_const_buffer, &error);
+
+	std::free(non_const_buffer);
 	CHECK_OCL_ERROR(error);
 
 	AllocMemory(OpenCLDeviceBuffer::GetSize(*buff));
 }
 
 void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const string &desc) {
+		const void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
@@ -409,7 +418,7 @@ void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType typ
 	if (type & BUFFER_TYPE_OUT_OF_CORE) {
 		LR_LOG(deviceContext, "WARNING: OpenCL devices don't support out of core memory buffers: " << desc);
 	}
-	
+
 	AllocBuffer(clFlags, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 

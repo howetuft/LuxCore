@@ -139,33 +139,33 @@ public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const u_int vertCount = srcMesh.GetTotalVertexCount();
 		const u_int triCount = srcMesh.GetTotalTriangleCount();
-		const Point *verts = srcMesh.GetVertices();
-		const Triangle *tris = srcMesh.GetTriangles();
+		auto& verts = srcMesh.GetVertices();
+		auto& tris = srcMesh.GetTriangles();
 
 		vertices.resize(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			vertices[i].p = verts[i];
-		
+
 		if (srcMesh.HasNormals()) {
-			const Normal *norms = srcMesh.GetNormals();
+			auto& norms = *srcMesh.GetNormals();
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].norm = norms[i];
 
 			hasNormals = true;
 		} else
 			hasNormals = false;
-		
+
 		if (srcMesh.HasUVs(0)) {
-			const UV *uvs = srcMesh.GetUVs(0);
+			auto& uvs = *srcMesh.GetUVs(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].uv = uvs[i];
 
 			hasUVs = true;
 		} else
 			hasUVs = false;
-		
+
 		if (srcMesh.HasColors(0)) {
-			const Spectrum *cols = srcMesh.GetColors(0);
+			auto& cols = *srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].col = cols[i];
 
@@ -174,7 +174,7 @@ public:
 			hasColors = false;
 
 		if (srcMesh.HasAlphas(0)) {
-			const float *alphas = srcMesh.GetAlphas(0);
+			auto& alphas = *srcMesh.GetAlphas(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].alpha = alphas[i];
 
@@ -192,44 +192,44 @@ public:
 
 	~Simplify() {
 	}
-	
+
 	ExtTriangleMeshPtr GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
+		Buffer<Point> newVertices(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
-		
-		Normal *newNorms = nullptr;
+
+		Optionals<Normal> newNorms;
 		if (hasNormals) {
-			newNorms = new Normal[vertCount];
+			newNorms = Optionals<Normal>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
-				newNorms[i] = vertices[i].norm;
-		}
-		
-		UV *newUVs = nullptr;
-		if (hasUVs) {
-			newUVs = new UV[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
-				newUVs[i] = vertices[i].uv;
+				(*newNorms)[i] = vertices[i].norm;
 		}
 
-		Spectrum *newCols = nullptr;
+		Optionals<UV> newUVs;;
+		if (hasUVs) {
+			newUVs.emplace(vertCount);
+			for (u_int i = 0; i < vertCount; ++i)
+				(*newUVs)[i] = vertices[i].uv;
+		}
+
+		Optionals<Spectrum> newCols;
 		if (hasColors) {
-			newCols = new Spectrum[vertCount];
+			newCols.emplace(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
-				newCols[i] = vertices[i].col;
+				(*newCols)[i] = vertices[i].col;
 		}
-		
-		float *newAlphas = nullptr;
+
+		Optionals<float> newAlphas;
 		if (hasAlphas) {
-			newAlphas = new float[vertCount];
+			newAlphas.emplace(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
-				newAlphas[i] = vertices[i].alpha;
+				(*newAlphas)[i] = vertices[i].alpha;
 		}
-		
-		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+
+		Buffer<Triangle> newTris(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			assert (triangles[i].v[0] < vertCount);
 			newTris[i].v[0] = triangles[i].v[0];
@@ -240,9 +240,17 @@ public:
 			assert (triangles[i].v[2] < vertCount);
 			newTris[i].v[2] = triangles[i].v[2];
 		}
-		
-		return std::make_shared<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
-				newUVs, newCols, newAlphas);
+
+		return std::make_shared<ExtTriangleMesh>(
+			vertCount,
+			triCount,
+			std::move(newVertices),
+			std::move(newTris),
+			std::move(newNorms),
+			std::move(newUVs),
+			std::move(newCols),
+			std::move(newAlphas)
+		);
 	}
 
 	void Decimate(const float targetTriangleCount, CameraConstPtr scnCamera,

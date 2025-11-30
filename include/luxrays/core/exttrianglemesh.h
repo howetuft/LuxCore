@@ -21,11 +21,12 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <array>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/usings.h"
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
@@ -63,21 +64,6 @@ class RayHit;
  *         | =>       ExtMesh        => |
  */
 
-class ExtMesh;
-using ExtMeshConstPtr = std::shared_ptr<const ExtMesh>;
-using ExtMeshPtr = std::shared_ptr<ExtMesh>;
-
-class ExtTriangleMesh;
-using ExtTriangleMeshConstPtr = std::shared_ptr<const ExtTriangleMesh>;
-using ExtTriangleMeshPtr = std::shared_ptr<ExtTriangleMesh>;
-
-class ExtMotionTriangleMesh;
-using ExtMotionTriangleMeshConstPtr = std::shared_ptr<const ExtMotionTriangleMesh>;
-using ExtMotionTriangleMeshPtr = std::shared_ptr<ExtMotionTriangleMesh>;
-
-class ExtInstanceTriangleMesh;
-using ExtInstanceTriangleMeshConstPtr = std::shared_ptr<const ExtInstanceTriangleMesh>;
-using ExtInstanceTriangleMeshPtr = std::shared_ptr<ExtInstanceTriangleMesh>;
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
@@ -96,10 +82,10 @@ public:
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
 	virtual bool HasColors(const u_int dataIndex) const = 0;
 	virtual bool HasAlphas(const u_int dataIndex) const = 0;
-	
+
 	virtual bool HasVertexAOV(const u_int dataIndex) const = 0;
 	virtual bool HasTriAOV(const u_int dataIndex) const = 0;
-	
+
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const = 0;
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const = 0;
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
@@ -110,7 +96,7 @@ public:
 
 	virtual float GetVertexAOV(const u_int vertIndex, const u_int dataIndex) const = 0;
 	virtual float GetTriAOV(const u_int triIndex, const u_int dataIndex) const = 0;
-	
+
 	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
     virtual void GetDifferentials(const luxrays::Transform &local2World,
 			const u_int triIndex, const Normal &shadeNormal, const u_int dataIndex,
@@ -146,109 +132,143 @@ private:
 	}
 };
 
+
+
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
-			const float bRadius = 0.f);
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Buffer<Point>&& meshVertices,
+		Buffer<Triangle>&& meshTris,
+		Optionals<Normal>&& meshNormals = std::nullopt,
+		Optionals<UV>&& meshUVs = std::nullopt,
+		Optionals<Spectrum>&& meshCols = std::nullopt,
+		Optionals<float>&& meshAlphas = std::nullopt,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Buffer<Point>&& meshVertices,
+		Buffer<Triangle>&& meshTris,
+		Optionals<Normal>&& meshNormals,
+		std::optional<ArrayOfOptionals<UV>>&& meshUVs,
+		std::optional<ArrayOfOptionals<Spectrum>>&& meshCols,
+		std::optional<ArrayOfOptionals<float>>&& meshAlphas,
+		const float bRadius = 0.f
+	);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
-	void SetVertexAOV(const u_int dataIndex, float *values) {
-		vertAOV[dataIndex] = values;
+	void SetVertexAOV(const u_int dataIndex, Optionals<float>&& opt) {
+		vertAOV[dataIndex] = std::move(opt);
+	}
+	void SetVertexAOV(const u_int dataIndex, Buffer<float>&& buf) {
+		vertAOV[dataIndex] = Optionals<float>(std::move(buf));
 	}
 	void DeleteVertexAOV(const u_int dataIndex) {
-		delete[] vertAOV[dataIndex];
-		vertAOV[dataIndex] = nullptr;
+		vertAOV[dataIndex].reset();
 	}
-	float *GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
+	auto& GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
 
-	void SetTriAOV(const u_int dataIndex, float *values) {
-		triAOV[dataIndex] = values;
+	void SetTriAOV(const u_int dataIndex, Optionals<float>&& opt) {
+		triAOV[dataIndex] = std::move(opt);
+	}
+	void SetTriAOV(const u_int dataIndex, Buffer<float>&& buf) {
+		triAOV[dataIndex] = Optionals<float>(std::move(buf));
 	}
 	void DeleteTriAOV(const u_int dataIndex) {
-		delete[] triAOV[dataIndex];
-		triAOV[dataIndex] = nullptr;
+		triAOV[dataIndex].reset();
 	}
-	float *GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
+	auto& GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
 
-	Normal *GetNormals() const { return normals; }
-	Normal *GetTriNormals() const { return triNormals; }
+	auto& GetNormals() const { return normals; }
+	auto& GetTriNormals() const { return triNormals; }
 
-	void SetUVs(const u_int dataIndex, UV *data) {
-		uvs[dataIndex] = data;
+	void SetUVs(const u_int dataIndex, Buffer<UV>&& data) {
+		uvs[dataIndex] = Optionals<UV>(std::move(data));
 	}
 	void DeleteUVs(const u_int dataIndex) {
-		delete [] uvs[dataIndex];
-		uvs[dataIndex] = nullptr;
+		uvs[dataIndex].reset();
 	}
-	UV *GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
+	auto& GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
 
-	void SetColors(const u_int dataIndex, Spectrum *data) {
-		cols[dataIndex] = data;
+	void SetColors(const u_int dataIndex, Buffer<Spectrum>&& data) {
+		cols[dataIndex] = Optionals<Spectrum>(std::move(data));
 	}
 	void DeleteColors(const u_int dataIndex) {
-		delete [] cols[dataIndex];
-		cols[dataIndex] = nullptr;
+		cols[dataIndex].reset();
 	}
-	Spectrum *GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
+	auto& GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
 
-	void SetAlphas(const u_int dataIndex, float *data) {
-		alphas[dataIndex] = data;
+	void SetAlphas(const u_int dataIndex, Buffer<float>&& data) {
+		alphas[dataIndex] = Optionals<float>(std::move(data));
 	}
 	void DeleteAlphas(const u_int dataIndex) {
-		delete [] alphas[dataIndex];
-		alphas[dataIndex] = nullptr;
+		alphas[dataIndex].reset();
 	}
-	float *GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
+	auto& GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
 
-	const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
-	const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }
-	const std::array<float *, EXTMESH_MAX_DATA_COUNT> &GetAllAlphas() const { return alphas; }
+	//const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
+	//const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }
+	//const std::array<float *, EXTMESH_MAX_DATA_COUNT> &GetAllAlphas() const { return alphas; }
+	const auto & GetAllUVs() const { return uvs; }
+	const auto & GetAllColors() const { return cols; }
+	const auto & GetAllAlphas() const { return alphas; }
+	const auto & GetAllVertexAOVs() const { return vertAOV; }
+	const auto & GetAllTriangleAOVs() const { return triAOV; }
 
-	Normal *ComputeNormals();
+	Optionals<Normal> ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
-	virtual bool HasNormals() const { return normals != nullptr; }
-	virtual bool HasUVs(const u_int dataIndex) const { return uvs[dataIndex] != nullptr; }
-	virtual bool HasColors(const u_int dataIndex) const { return cols[dataIndex] != nullptr; }
-	virtual bool HasAlphas(const u_int dataIndex) const { return alphas[dataIndex] != nullptr; }
+	virtual bool HasNormals() const { return normals.has_value(); }
+	virtual bool HasUVs(const u_int dataIndex) const { return uvs[dataIndex].has_value(); }
+	virtual bool HasColors(const u_int dataIndex) const { return cols[dataIndex].has_value(); }
+	virtual bool HasAlphas(const u_int dataIndex) const { return alphas[dataIndex].has_value(); }
 
-	virtual bool HasVertexAOV(const u_int dataIndex) const { return vertAOV[dataIndex] != nullptr; }
-	virtual bool HasTriAOV(const u_int dataIndex) const { return triAOV[dataIndex] != nullptr; }
+	virtual bool HasVertexAOV(const u_int dataIndex) const { return vertAOV[dataIndex].has_value(); }
+	virtual bool HasTriAOV(const u_int dataIndex) const { return triAOV[dataIndex].has_value(); }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
 		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
 		return triNormals[triIndex];
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
-		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[tris[triIndex].v[vertIndex]];
+		const auto& val = *normals;  // Get optional value
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * val[tris[triIndex].v[vertIndex]];
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
-		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[vertIndex];
+		auto& val = *normals;  // Get optional value
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * val[vertIndex];
 	}
 
-	virtual UV GetUV(const u_int vertIndex, const u_int dataIndex) const { return uvs[dataIndex][vertIndex]; }
-	virtual Spectrum GetColor(const u_int vertIndex, const u_int dataIndex) const { return cols[dataIndex][vertIndex]; }
-	virtual float GetAlpha(const u_int vertIndex, const u_int dataIndex) const { return alphas[dataIndex][vertIndex]; }
-	
+	virtual UV GetUV(const u_int vertIndex, const u_int dataIndex) const {
+		auto& val = *uvs[dataIndex];  // Get optional value
+		return val[vertIndex];
+	}
+	virtual Spectrum GetColor(const u_int vertIndex, const u_int dataIndex) const {
+		auto& val = *cols[dataIndex];  // Get optional value
+		return val[vertIndex];
+	}
+	virtual float GetAlpha(const u_int vertIndex, const u_int dataIndex) const {
+		auto& val = *alphas[dataIndex];  // Get optional value
+		return val[vertIndex]; }
+
 	virtual float GetVertexAOV(const u_int vertIndex, const u_int dataIndex) const {
-		if (HasTriAOV(dataIndex))
-			return vertAOV[dataIndex][vertIndex];
+		if (HasTriAOV(dataIndex)) {
+			auto& val = *vertAOV[dataIndex];  // Get optional value
+			return val[vertIndex];
+		}
 		else
 			return 0.f;
 	}
 	virtual float GetTriAOV(const u_int triIndex, const u_int dataIndex) const {
-		if (HasTriAOV(dataIndex))
-			return triAOV[dataIndex][triIndex];
+		if (HasTriAOV(dataIndex)) {
+			auto& val = *triAOV[dataIndex];  // Get optional value
+			return val[triIndex];
+		}
 		else
 			return 0.f;
 	}
@@ -266,19 +286,21 @@ public:
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
 			const float b1, const float b2) const {
-		if (!normals)
+		if (not normals.has_value())
 			return GetGeometryNormal(local2World, triIndex);
+		auto& value = *normals;  // Optional value
 		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
-		return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * value[tri.v[0]] + b1 * value[tri.v[1]] + b2 * value[tri.v[2]]);
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		if (HasUVs(dataIndex)) {
-			const Triangle &tri = tris[triIndex];
+			auto& value = *uvs[dataIndex];  // Optional value
+			auto &tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
-			return b0 * uvs[dataIndex][tri.v[0]] + b1 * uvs[dataIndex][tri.v[1]] + b2 * uvs[dataIndex][tri.v[2]];
+			return b0 * value[tri.v[0]] + b1 * value[tri.v[1]] + b2 * value[tri.v[2]];
 		} else
 			return UV(0.f, 0.f);
 	}
@@ -286,9 +308,10 @@ public:
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		if (HasColors(dataIndex)) {
+			auto& value = *cols[dataIndex];  // Optional value
 			const Triangle &tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
-			return b0 * cols[dataIndex][tri.v[0]] + b1 * cols[dataIndex][tri.v[1]] + b2 * cols[dataIndex][tri.v[2]];
+			return b0 * value[tri.v[0]] + b1 * value[tri.v[1]] + b2 * value[tri.v[2]];
 		} else
 			return Spectrum(1.f);
 	}
@@ -296,19 +319,21 @@ public:
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		if (HasAlphas(dataIndex)) {
-			const Triangle &tri = tris[triIndex];
+			auto& value = *alphas[dataIndex];  // Optional value
+			auto& tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
-			return b0 * alphas[dataIndex][tri.v[0]] + b1 * alphas[dataIndex][tri.v[1]] + b2 * alphas[dataIndex][tri.v[2]];
+			return b0 * value[tri.v[0]] + b1 * value[tri.v[1]] + b2 * value[tri.v[2]];
 		} else
 			return 1.f;
 	}
-	
+
 	virtual float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		if (HasVertexAOV(dataIndex)) {
-			const Triangle &tri = tris[triIndex];
+			auto& value = *vertAOV[dataIndex];  // Optional value
+			auto& tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
-			return b0 * vertAOV[dataIndex][tri.v[0]] + b1 * vertAOV[dataIndex][tri.v[1]] + b2 * vertAOV[dataIndex][tri.v[2]];
+			return b0 * value[tri.v[0]] + b1 * value[tri.v[1]] + b2 * value[tri.v[2]];
 		} else
 			return 0.f;
 	}
@@ -316,22 +341,34 @@ public:
 	virtual void Save(const std::string &fileName) const;
 
 	void CopyAOV(ExtTriangleMeshPtr destMesh) const;
-	ExtTriangleMeshPtr CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f) const;
-	ExtTriangleMeshPtr Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
-			const float bRadius = 0.f) const;
+	ExtTriangleMeshPtr CopyExt(
+			Optionals<Point>&& meshVertices,
+			Optionals<Triangle>&& meshTris,
+			Optionals<Normal>&& meshNormals,
+			std::optional<ArrayOfOptionals<UV>>&& meshUVs,
+			std::optional<ArrayOfOptionals<Spectrum>>&& meshCols,
+			std::optional<ArrayOfOptionals<float>>&& meshAlphas,
+			const float bRadius = 0.f
+	) const;
+	ExtTriangleMeshPtr Copy(
+			Optionals<Point>&& meshVertices,
+			Optionals<Triangle>&& meshTris,
+			Optionals<Normal>&& meshNormals,
+			Optionals<UV>&& mUVs,
+			Optionals<Spectrum>&& mCols,
+			Optionals<float>&& mAlphas,
+			const float bRadius = 0.f
+	) const;
 	ExtTriangleMeshPtr Copy(const float bRadius = 0.f) const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
+		return CopyExt(
+			std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, bRadius
+		);
 	}
 
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
 			luxrays::Point &p, luxrays::Normal &n) const;
-	
+
 	static ExtTriangleMeshPtr Load(const std::string &fileName);
 	static ExtTriangleMeshPtr Merge(const std::vector<ExtTriangleMeshConstPtr > &meshes,
 			const std::vector<luxrays::Transform> *trans = nullptr);
@@ -355,7 +392,7 @@ public:
 
 		luxrays::Point v0, v1;
 	};
-	
+
 	class BevelBoundingCylinder {
 	public:
 		BevelBoundingCylinder() { }
@@ -371,7 +408,7 @@ public:
 		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
 		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
 				luxrays::Normal &n) const;
-		
+
 		luxrays::Point v0, v1;
 		float radius;
 	};
@@ -383,14 +420,16 @@ public:
 	ExtTriangleMesh() {
 	}
 
-	void Init(Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+	void Init(
+		Optionals<Normal>&& meshNormals,
+		std::optional<ArrayOfOptionals<UV>>&& meshUVs,
+		std::optional<ArrayOfOptionals<Spectrum>>&& meshCols,
+		std::optional<ArrayOfOptionals<float>>&& meshAlphas
+	);
 
 	void Preprocess();
 	void PreprocessBevel();
-	
+
 	virtual void SavePly(const std::string &fileName) const;
 	virtual void SaveSerialized(const std::string &fileName) const;
 
@@ -402,33 +441,33 @@ public:
 		ar & hasNormals;
 		if (HasNormals())
 			for (u_int i = 0; i < vertCount; ++i)
-				ar & normals[i];
+				ar & normals.value()[i];
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			const bool hasUVs = HasUVs(i);
 			ar & hasUVs;
 			if (hasUVs)
-				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
+				ar & uvs[i].value();
 
 			const bool hasColors = HasColors(i);
 			ar & hasColors;
 			if (hasColors)
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+				ar & cols[i].value();
 
 			const bool hasAlphas = HasAlphas(i);
 			ar & hasAlphas;
 			if (hasAlphas)
-				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
-			
+				ar & alphas[i].value();
+
 			const bool hasVertexAOV = HasVertexAOV(i);
 			ar & hasVertexAOV;
 			if (hasVertexAOV)
-				ar & boost::serialization::make_array<float>(vertAOV[i], vertCount);
-			
+				ar & vertAOV[i].value();
+
 			const bool hasTriangleAOV = HasTriAOV(i);
 			ar & hasTriangleAOV;
 			if (hasTriangleAOV)
-				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
+				ar & triAOV[i].value();
 		}
 	}
 
@@ -439,72 +478,79 @@ public:
 		bool hasNormals;
 		ar & hasNormals;
 		if (hasNormals) {
-			normals = new Normal[vertCount];
+			normals = Optionals<Normal>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
-				ar & normals[i];
+				ar & normals.value()[i];
 		} else
-			normals = nullptr;
-		triNormals = new Normal[triCount];
+			normals = std::nullopt;
+		triNormals = Buffer<Normal>(triCount);
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			bool hasUVs;
 			ar & hasUVs;
 			if (hasUVs) {
-				uvs[i] = new UV[vertCount];
-				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
+				// TODO
+				uvs[i] = Optionals<UV>(vertCount);
+				//ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
+				ar & uvs[i].value();
 			} else
-				uvs[i] = nullptr;
+				uvs[i] = std::nullopt;
 
 			bool hasColors;
 			ar & hasColors;
 			if (hasColors) {
-				cols[i] = new Spectrum[vertCount];
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+				cols[i] = Optionals<Spectrum>(vertCount);
+				//ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+				ar & cols[i].value();
 			} else
-				cols[i] = nullptr;
+				cols[i] = std::nullopt;
 
 			bool hasAlphas;
 			ar & hasAlphas;
 			if (hasAlphas) {
-				alphas[i] = new float[vertCount];
-				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
+				alphas[i] = Optionals<float>(vertCount);
+				//ar & boost::serialization::make_array<float>(alphas[i], vertCount);
+				ar & alphas[i].value();
 			} else
-				alphas[i] = nullptr;
+				alphas[i] = std::nullopt;
 
 			bool hasVertexAOV;
 			ar & hasVertexAOV;
 			if (hasVertexAOV) {
-				vertAOV[i] = new float[vertCount];
-				ar & boost::serialization::make_array<float>(vertAOV[i], vertCount);
+				vertAOV[i] = Optionals<float>(vertCount);
+				//ar & boost::serialization::make_array<float>(vertAOV[i], vertCount);
+				ar & vertAOV[i].value();
 			} else
-				vertAOV[i] = nullptr;
+				vertAOV[i] = std::nullopt;
 
 			bool hasTriangleAOV;
 			ar & hasTriangleAOV;
 			if (hasTriangleAOV) {
-				triAOV[i] = new float[triCount];
-				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
+				triAOV[i] = Optionals<float>(triCount);
+				//ar & boost::serialization::make_array<float>(triAOV[i], triCount);
+				ar & triAOV[i].value();
 			} else
-				triAOV[i] = nullptr;
+				triAOV[i] = std::nullopt;
 		}
 
 		bevelCylinders = nullptr;
 		bevelBoundingCylinders = nullptr;
 		bevelBVHArrayNodes = nullptr;
-		
+
 		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	Normal *normals; // Vertices normals
-	Normal *triNormals; // Triangle normals
 
-	std::array<UV *, EXTMESH_MAX_DATA_COUNT> uvs; // Vertex uvs
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols; // Vertex colors
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> alphas; // Vertex alphas
+	Buffer<Normal> triNormals; // Triangle normals (computed)
+	Optionals<Normal> normals; // Vertices normals
 
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
+	ArrayOfOptionals<UV> uvs; // Vertex uvs (optional)
+	ArrayOfOptionals<Spectrum> cols; // Vertex colors (optional)
+	ArrayOfOptionals<float> alphas; // Vertex alphas (optional)
+
+	ArrayOfOptionals<float> vertAOV; // Vertex AOV (optional)
+	ArrayOfOptionals<float> triAOV; // Triangle AOV (optional)
 
 	BevelCylinder *bevelCylinders;
 	BevelBoundingCylinder *bevelBoundingCylinders;
@@ -519,14 +565,14 @@ public:
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
-	
+
 	virtual float GetBevelRadius() const { return static_pointer_cast<ExtTriangleMesh>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasUVs(dataIndex); }
 	virtual bool HasColors(const u_int dataIndex) const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasColors(dataIndex); }
 	virtual bool HasAlphas(const u_int dataIndex) const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasAlphas(dataIndex); }
-	
+
 	virtual bool HasVertexAOV(const u_int dataIndex) const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasVertexAOV(dataIndex); }
 	virtual bool HasTriAOV(const u_int dataIndex) const { return static_pointer_cast<ExtTriangleMesh>(mesh)->HasTriAOV(dataIndex); }
 
@@ -584,13 +630,13 @@ public:
 		return static_pointer_cast<ExtTriangleMesh>(mesh)->InterpolateTriColor(triIndex,
 				b1, b2, dataIndex);
 	}
-	
+
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		return static_pointer_cast<ExtTriangleMesh>(mesh)->InterpolateTriAlpha(triIndex,
 				b1, b2, dataIndex);
 	}
-	
+
 	virtual float InterpolateTriVertexAOV(const u_int triIndex, const float b1, const float b2,
 			const u_int dataIndex) const {
 		return static_pointer_cast<ExtTriangleMesh>(mesh)->InterpolateTriVertexAOV(triIndex,
@@ -605,15 +651,15 @@ public:
 
 	const Transform &GetTransformation() const { return trans; }
 	ExtTriangleMeshPtr GetExtTriangleMesh() const { return static_pointer_cast<ExtTriangleMesh>(mesh); };
-	
+
 	void UpdateMeshReferences(ExtTriangleMeshPtr oldMesh, ExtTriangleMeshPtr newMesh);
 
 	friend class boost::serialization::access;
 
+
 private:
 	// Used by serialization
-	ExtInstanceTriangleMesh() {
-	}
+	ExtInstanceTriangleMesh() { }
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(InstanceTriangleMesh);

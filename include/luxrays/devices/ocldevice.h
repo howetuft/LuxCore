@@ -316,9 +316,9 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
+		const void *src, const size_t size, const std::string &desc = "") override;
 
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff) override;
 
 	friend class Context;
 
@@ -327,7 +327,7 @@ protected:
 		const u_int index, const HardwareDeviceBuffer *buff);
 
 	void AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
-			void *src, const size_t size, const std::string &desc = "");
+			const void *src, const size_t size, const std::string &desc = "");
 
 	OpenCLDeviceDescription *deviceDesc;
 

@@ -40,6 +40,7 @@
 using luxrays::Point;
 using luxrays::WallClockTime;
 using namespace oneapi::tbb;
+using namespace luxrays;
 
 
 namespace {
@@ -288,25 +289,28 @@ private:
 
 // Create a grid, ie give an origin point (or midPoint) and cell sizes on X, Y,
 // Z
-Grid ComputeGrid(const Point * points, u_int numPoints) {
+Grid ComputeGrid(const Buffer<Point> & points, u_int numPoints) {
 
 	constexpr float minlimit = std::numeric_limits<float>::min();
 	constexpr float maxlimit = std::numeric_limits<float>::max();
 
 	using sixfloats = std::tuple<float, float, float, float, float, float>;
+	//using const_iter_point = std::vector<Point>::const_iterator;
+	using iter_point = Buffer<Point>::iterator;
 
 	constexpr size_t grain = 1024;
 
 	// Compute bounding box
 	auto boundingbox = parallel_reduce(
 		// Range
-		blocked_range<const Point*>(points, points+numPoints, grain),
+		blocked_range<iter_point>(points.begin(), points.end(), grain),
 
 		// Init
 		std::make_tuple(maxlimit, maxlimit, maxlimit, minlimit, minlimit, minlimit),
 
-		// Body
-		[](const blocked_range<const Point*>& r, sixfloats init) -> sixfloats {
+		// Body:w
+		//
+		[](const blocked_range<iter_point>& r, sixfloats init) -> sixfloats {
 			auto [minX, minY, minZ, maxX, maxY, maxZ] = init;
 			for(auto p=r.begin(); p!=r.end(); ++p) {
 				minX = std::min(minX, p->x);
@@ -388,7 +392,7 @@ using Partition = std::unordered_map<
 
 // Assign points to grid (do the partitioning)
 Partition AssignPointsToGrid(
-	const Grid& grid, const Point * points, u_int numPoints
+	const Grid& grid, const Buffer<Point> & points, u_int numPoints
 ) {
 	// Avoid tiny sets of data for body
 	constexpr size_t grain = 1024;
@@ -644,7 +648,7 @@ ClusterMap CreateClusters(const UnionFind& dsu, u_int numPoints) {
 // Returns:
 // - The merged points, in the form of clusters (map of vectors)
 //
-ClusterMap mergePoints(const Point * points, u_int numPoints, u_int tolerance) {
+ClusterMap mergePoints(const Buffer<Point>& points, u_int numPoints, u_int tolerance) {
 
 	// Compute grid for spatial partitioning
 	const Grid grid{ComputeGrid(points, numPoints)};
@@ -675,12 +679,8 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 	const ClusterMap& clustermap
 ) {
 	const auto numPoints = srcMesh.GetTotalVertexCount();
-	const auto srcPoints = srcMesh.GetVertices();
+	const auto& srcPoints = srcMesh.GetVertices();
 	const auto numNewPoints = clustermap.size();
-
-	// Nota: we use smart pointers until the creation of the ExtTriangleMesh,
-	// so that the memory is automatically released if something goes wrong in
-	// the process. Please keep it so.
 
 	std::vector<Cluster> clusters;
 	clusters.reserve(numNewPoints);
@@ -695,56 +695,48 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 
 	// Allocate mesh data structures
 	// Points
-	std::unique_ptr<Point> newPoints{
-		luxrays::ExtTriangleMesh::AllocVerticesBuffer(numNewPoints)
-	};
-	auto newPointsPtr = newPoints.get();
+	luxrays::Buffer<luxrays::Point> newPoints(numNewPoints);
 
 	// Normals
-	std::unique_ptr<luxrays::Normal> newNormals;
-	const auto srcNormals = srcMesh.GetNormals();
+	luxrays::Optionals<luxrays::Normal> newNormals;
+	const auto& srcNormals = srcMesh.GetNormals();
 	if (srcMesh.HasNormals()) {
-		newNormals.reset(new luxrays::Normal[numNewPoints]);
+		newNormals = luxrays::Optionals<luxrays::Normal>(numNewPoints);
 	}
-	auto newNormalsPtr = newNormals.get();
 
 	// UV
-	std::array<std::unique_ptr<luxrays::UV>, EXTMESH_MAX_DATA_COUNT> newUVs;
-	std::array<luxrays::UV*, EXTMESH_MAX_DATA_COUNT> srcUVs;
+	auto& srcUVs = srcMesh.GetAllUVs();
+	luxrays::ArrayOfOptionals<luxrays::UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasUVs(i)) {
-			srcUVs[i] = srcMesh.GetUVs(i);
-			newUVs[i].reset(new luxrays::UV[numNewPoints]);
+			newUVs[i] = luxrays::Optionals<luxrays::UV>(numNewPoints);
 		}
 	}
 
 	// Colors
-	std::array<std::unique_ptr<luxrays::Spectrum>, EXTMESH_MAX_DATA_COUNT> newColors;
-	std::array<luxrays::Spectrum*, EXTMESH_MAX_DATA_COUNT> srcColors;
+	auto& srcColors = srcMesh.GetAllColors();
+	luxrays::ArrayOfOptionals<luxrays::Spectrum> newColors;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasColors(i)) {
-			srcColors[i] = srcMesh.GetColors(i);
-			newColors[i].reset(new luxrays::Spectrum[numNewPoints]);
+			newColors[i] = luxrays::Optionals<luxrays::Spectrum>(numNewPoints);
 		}
 	}
 
 	// Alphas
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newAlphas;
-	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcAlphas;
+	auto& srcAlphas = srcMesh.GetAllAlphas();
+	luxrays::ArrayOfOptionals<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasAlphas(i)) {
-			srcAlphas[i] = srcMesh.GetAlphas(i);
-			newAlphas[i].reset(new float[numNewPoints]);
+			newAlphas[i] = luxrays::Optionals<float>(numNewPoints);
 		}
 	}
 
 	// VertexAOVs
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newVertexAOVs;
-	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcVertexAOVs;
+	auto& srcVertexAOVs = srcMesh.GetAllVertexAOVs();
+	luxrays::ArrayOfOptionals<float> newVertexAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasVertexAOV(i)) {
-			srcVertexAOVs[i] = srcMesh.GetVertexAOVs(i);
-			newVertexAOVs[i].reset(new float[numNewPoints]);
+			newVertexAOVs[i] = luxrays::Optionals<float>(numNewPoints);
 		}
 	}
 
@@ -775,7 +767,7 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 					std::plus{},
 					[&srcPoints](auto idx) -> Point { return srcPoints[idx]; }
 				) / cluster_size;
-				newPointsPtr[newIdx] = newPoint;
+				newPoints[newIdx] = newPoint;
 
 				// Compute merged normals
 				if (srcMesh.HasNormals()) {
@@ -785,81 +777,77 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 						luxrays::Normal(0, 0, 0),
 						std::plus{},
 						[&srcNormals](auto idx) -> luxrays::Normal {
-							return srcNormals[idx];
+							return (*srcNormals)[idx];
 						}
 					) / cluster_size;
 					const float newNormalLength = newNormal.Length();
 					if (newNormalLength) {
 						newNormal /= newNormalLength;
 					}
-					newNormalsPtr[newIdx] = newNormal;
+					(*newNormals)[newIdx] = newNormal;
 				}
 
 				// Compute merged uv
 				for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 					if (srcMesh.HasUVs(i)) {
-						auto newUVPtr = newUVs[i].get();
 						luxrays::UV newUV = std::transform_reduce(
 							cluster.cbegin(),
 							cluster.cend(),
 							luxrays::UV(0, 0),
 							std::plus{},
 							[&srcUVs, &i](auto idx) -> luxrays::UV {
-								return srcUVs[i][idx];
+								return (*srcUVs[i])[idx];
 							}
 						) / cluster_size;
-						newUVs[i].get()[newIdx] = newUV;
+						(*newUVs[i])[newIdx] = newUV;
 					}
 				}
 
 				// Compute merged colors
 				for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 					if (srcMesh.HasColors(i)) {
-						auto newColorsPtr = newColors[i].get();
 						luxrays::Spectrum newColor = std::transform_reduce(
 							cluster.cbegin(),
 							cluster.cend(),
 							luxrays::Spectrum(0, 0, 0),
 							std::plus{},
 							[&srcColors, &i](auto idx) -> luxrays::Spectrum {
-								return srcColors[i][idx];
+								return (*srcColors[i])[idx];
 							}
 						) / cluster_size;
-						newColorsPtr[newIdx] = newColor;
+						(*newColors[i])[newIdx] = newColor;
 					}
 				}
 
 				// Compute merged alphas
 				for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 					if (srcMesh.HasAlphas(i)) {
-						auto newAlphasPtr = newAlphas[i].get();
 						float newAlpha = std::transform_reduce(
 							cluster.cbegin(),
 							cluster.cend(),
 							0.f,
 							std::plus{},
 							[&srcAlphas, &i](auto idx) -> float {
-								return srcAlphas[i][idx];
+								return (*srcAlphas[i])[idx];
 							}
 						) / cluster_size;
-						newAlphasPtr[newIdx] = newAlpha;
+						(*newAlphas[i])[newIdx] = newAlpha;
 					}
 				}
 
 				// Compute merged vertex AOVs
 				for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 					if (srcMesh.HasVertexAOV(i)) {
-						auto newVertexAOVsPtr = newVertexAOVs[i].get();
 						float newVertexAOV = std::transform_reduce(
 							cluster.cbegin(),
 							cluster.cend(),
 							0.f,
 							std::plus{},
 							[&srcVertexAOVs, &i](auto idx) -> float {
-								return srcVertexAOVs[i][idx];
+								return (*srcVertexAOVs[i])[idx];
 							}
 						) / cluster_size;
-						newVertexAOVsPtr[newIdx] = newVertexAOV;
+						(*newVertexAOVs[i])[newIdx] = newVertexAOV;
 					}
 				}
 			}  // lambda main for loop
@@ -868,11 +856,8 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 
 	// Recompute triangles
 	u_int numTriangles = srcMesh.GetTotalTriangleCount();
-	auto oldTriangles = srcMesh.GetTriangles();
-	auto newTriangles = std::unique_ptr<luxrays::Triangle>(
-		luxrays::ExtTriangleMesh::AllocTrianglesBuffer(numTriangles)
-	);
-	auto newTrianglesPtr = newTriangles.get();
+	auto& oldTriangles = srcMesh.GetTriangles();
+	luxrays::Buffer<luxrays::Triangle> newTriangles(numTriangles);
 	tbb::parallel_for(
 		tbb::blocked_range<u_int>(0, numTriangles),
 		[&](const tbb::blocked_range<u_int>& r) {
@@ -883,53 +868,29 @@ luxrays::ExtTriangleMeshPtr RecreateMesh(
 					pointMap[oldTriangle.v[1]],
 					pointMap[oldTriangle.v[2]]
 				);
-				newTrianglesPtr[i] = newTriangle;
+				newTriangles[i] = newTriangle;
 			}
 		}
 	);
 
-	// Create layer arrays (release smart pointers...)
-	auto meshUVs = new std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT>;
-	auto meshCols = new std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT>;
-	auto meshAlphas = new std::array<float *, EXTMESH_MAX_DATA_COUNT>;
-
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		if (srcMesh.HasUVs(i)) {
-			(*meshUVs)[i] = newUVs[i].release();
-		} else {
-			(*meshUVs)[i] = nullptr;
-		}
-
-		if (srcMesh.HasColors(i)) {
-			(*meshCols)[i] = newColors[i].release();
-		} else {
-			(*meshCols)[i] = nullptr;
-		}
-
-		if (srcMesh.HasAlphas(i)) {
-			(*meshAlphas)[i] = newAlphas[i].release();
-		} else {
-			(*meshAlphas)[i] = nullptr;
-		}
-	}
 
 	// Create new mesh
 	auto newMesh = std::make_shared<luxrays::ExtTriangleMesh>(
 		numNewPoints,
 		numTriangles,
-		newPoints.release(),
-		newTriangles.release(),
-		newNormals.release(),
-		meshUVs,
-		meshCols,
-		meshAlphas,
+		std::move(newPoints),
+		std::move(newTriangles),
+		std::move(newNormals),
+		std::move(newUVs),
+		std::move(newColors),
+		std::move(newAlphas),
 		srcMesh.GetBevelRadius()
 	);
 
-	// Copy AOV to new mesh
+	// Copy vertex AOV to new mesh
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasVertexAOV(i)) {
-			newMesh->SetVertexAOV(i, newVertexAOVs[i].release());
+			newMesh->SetVertexAOV(i, std::move(newVertexAOVs[i]));
 		}
 	}
 

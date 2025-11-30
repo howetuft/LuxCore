@@ -35,11 +35,14 @@ public:
 		CUBIC
 	} InterpolationType;
 
-	BandTexture(const InterpolationType interp,
-			TextureConstPtr amnt,
-			const std::vector<float> &os,
-			const std::vector<luxrays::Spectrum> &vs) :
-			interpType(interp), amount(amnt), offsets(os), values(vs) { }
+	BandTexture(
+		const InterpolationType interp,
+		TextureConstPtr amnt,
+		luxrays::Buffer<float>&& os,
+		luxrays::Buffer<luxrays::Spectrum>&& vs
+	) :
+		interpType(interp), amount(amnt), offsets(std::move(os)), values(std::move(vs))
+	{}
 	virtual ~BandTexture() { }
 
 	virtual TextureType GetType() const { return BAND_TEX; }
@@ -64,8 +67,8 @@ public:
 
 	InterpolationType GetInterpolationType() const { return interpType; }
 	TextureConstPtr GetAmountTexture() const { return amount; }
-	const std::vector<float> &GetOffsets() const { return offsets; }
-	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
+	const luxrays::Buffer<float> &GetOffsets() const { return offsets; }
+	const luxrays::Buffer<luxrays::Spectrum> &GetValues() const { return values; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -76,8 +79,8 @@ private:
 	const InterpolationType interpType;
 
 	TextureConstPtr amount;
-	const std::vector<float> offsets;
-	const std::vector<luxrays::Spectrum> values; 
+	const luxrays::Buffer<float> offsets;
+	const luxrays::Buffer<luxrays::Spectrum> values; 
 };
 
 

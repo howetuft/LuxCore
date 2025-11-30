@@ -24,10 +24,12 @@
 #include <deque>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/usings.h"
 #include "luxrays/core/geometry/triangle.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/buffer.h"
 
 namespace luxrays {
 
@@ -44,18 +46,6 @@ typedef enum {
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
 } MeshType;
 
-class Mesh;
-using MeshConstPtr = std::shared_ptr<const Mesh>;
-using MeshPtr = std::shared_ptr<Mesh>;
-
-class TriangleMesh;
-using TriangleMeshConstPtr = std::shared_ptr<const TriangleMesh>;
-using TriangleMeshPtr = std::shared_ptr<TriangleMesh>;
-
-class MotionTriangleMesh;
-using MotionTriangleMeshConstPtr = std::shared_ptr<const MotionTriangleMesh>;
-using MotionTriangleMeshPtr = std::shared_ptr<MotionTriangleMesh>;
-
 
 class Mesh {
 public:
@@ -68,16 +58,18 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const = 0;
 	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 
-	virtual Point *GetVertices() const = 0;
-	virtual Triangle *GetTriangles() const = 0;
+	virtual const Buffer<Point>& GetVertices() const = 0;
+	virtual const Buffer<Triangle>& GetTriangles() const = 0;
 	virtual u_int GetTotalVertexCount() const = 0;
 	virtual u_int GetTotalTriangleCount() const = 0;
 
 	// This can be a very expansive function to run
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const = 0;
 	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const = 0;
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex, const float u0, const float u1,
-		Point *p, float *b0, float *b1, float *b2) const = 0;
+
+	virtual SampleOut Sample(
+		const luxrays::Transform &local2World, const u_int triIndex, const float u0, const float u1
+	) const = 0;
 
 	virtual void ApplyTransform(const Transform &trans) = 0;
 
@@ -90,14 +82,16 @@ private:
 
 class TriangleMesh : virtual public Mesh {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const u_int meshVertCount,
-		const u_int meshTriCount, Point *meshVertices,
-		Triangle *meshTris);
+	TriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Buffer<Point>&& meshVertices,
+		Buffer<Triangle>&& meshTris
+	);
 	virtual ~TriangleMesh() { };
 	void Delete() {
-		delete[] vertices;
-		delete[] tris;
+		vertices.clear();
+		tris.clear();
 	}
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
@@ -108,23 +102,25 @@ public:
 	}
 	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices[vertIndex]; }
 
-	virtual Point *GetVertices() const { return vertices; }
-	virtual Triangle *GetTriangles() const { return tris; }
+	virtual const Buffer<Point>& GetVertices() const { return vertices; }
+	virtual const Buffer<Triangle>& GetTriangles() const { return tris; }
 	virtual u_int GetTotalVertexCount() const { return vertCount; }
 	virtual u_int GetTotalTriangleCount() const { return triCount; }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		return area;
 	}
-	
+
 	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const {
 		return tris[triIndex].Area(vertices);
 	}
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
-			const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
+	virtual SampleOut Sample(
+			const luxrays::Transform &local2World,
+			const u_int triIndex,
+			const float u0, const float u1) const override
+	{
 		const Triangle &tri = tris[triIndex];
-		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
+		return tri.Sample(vertices, u0, u1);
 	}
 
 	virtual void ApplyTransform(const Transform &trans);
@@ -133,20 +129,21 @@ public:
 			bool (*CompareVertices)(const TriangleMesh &mesh,
 				const u_int vertIndex1, const u_int vertIndex2)) const;
 
-	static Point *AllocVerticesBuffer(const u_int meshVertCount) {
-		// Embree requires a float padding field at the end
-		float *buffer = new float[3 * meshVertCount + 1];
+	//TODO
+	//static Buffer<Point> AllocVerticesBuffer(const u_int meshVertCount) {
+		//// Embree requires a float padding field at the end
+		//Buffer<Point> buffer(meshVertCount + 1);
 
-		// This is a trick so I can check if the buffer has been really allocated
-		// with AllocVerticesBuffer() or not. It is useful for debugging LuxCore
-		// applications.
-		buffer[3 * meshVertCount] = 1234.1234f;
+		//// This is a trick so I can check if the buffer has been really allocated
+		//// with AllocVerticesBuffer() or not. It is useful for debugging LuxCore
+		//// applications.
+		//buffer[meshVertCount] = Point(1234.1234f, 1234.1234f, 1234.1234f);
 		
-		return (Point *)buffer;
-	}
-	static Triangle *AllocTrianglesBuffer(const u_int meshTriCount) {
-		return new Triangle[meshTriCount];
-	}
+		//return buffer;
+	//}
+	//static Buffer<Triangle> AllocTrianglesBuffer(const u_int meshTriCount) {
+		//return Buffer<Triangle>(meshTriCount);
+	//}
 
 	static TriangleMeshPtr Merge(
 		const std::deque<const Mesh *> &meshes,
@@ -158,10 +155,10 @@ protected:
 
 	u_int vertCount;
 	u_int triCount;
-	Point *vertices;
-	Triangle *tris;
+	Buffer<Point> vertices;
+	Buffer<Triangle> tris;
 	float area;
-	
+
 	// The transformation that was applied to the vertices
 	// (needed e.g. for LocalMapping3D evaluation)
 	Transform appliedTrans;
@@ -196,12 +193,12 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
 		ar & vertCount;
-		vertices = new Point[vertCount];
+		vertices = Buffer<Point>(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			ar & vertices[i];
 
 		ar & triCount;
-		tris = new Triangle[triCount];
+		tris = Buffer<Triangle>(triCount);
 		for (u_int i = 0; i < triCount; ++i)
 			ar & tris[i];
 
@@ -227,8 +224,8 @@ public:
 		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+	virtual const Buffer<Point> & GetVertices() const { return mesh->GetVertices(); }
+	virtual const Buffer<Triangle> & GetTriangles() const { return mesh->GetTriangles(); }
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
@@ -253,11 +250,15 @@ public:
 				GetVertex(local2World, tri.v[1]),
 				GetVertex(local2World, tri.v[2]));
 	}
-	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
-			const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
-		*p *= trans;
+	virtual SampleOut Sample(
+		const luxrays::Transform &local2World,
+		const u_int triIndex,
+		const float u0,
+		const float u1
+	) const override {
+		auto [p , b0, b1, b2] = mesh->Sample(local2World, triIndex, u0, u1);
+		p *= trans;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
 	virtual void ApplyTransform(const Transform &t) {
@@ -280,7 +281,7 @@ public:
 	}
 
 	TriangleMeshPtr GetTriangleMesh() const { return mesh; };
-	
+
 	friend class boost::serialization::access;
 
 protected:
@@ -332,8 +333,8 @@ public:
 		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
+	virtual const Buffer<Point>& GetVertices() const { return mesh->GetVertices(); }
+	virtual const Buffer<Triangle>& GetTriangles() const { return mesh->GetTriangles(); }
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
@@ -358,11 +359,12 @@ public:
 				GetVertex(local2World, tri.v[1]),
 				GetVertex(local2World, tri.v[2]));
 	}
-	virtual void Sample(const luxrays::Transform &local2World,
-			const u_int triIndex, const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
-		*p = local2World * (*p);
+	virtual SampleOut Sample(const luxrays::Transform &local2World,
+		const u_int triIndex, const float u0, const float u1
+	) const override {
+		auto [p, b0, b1, b2] = mesh->Sample(local2World, triIndex, u0, u1);
+		p = local2World * p;
+		return std::make_tuple(p, b0, b1, b2);
 	}
 
 	virtual void ApplyTransform(const Transform &t);

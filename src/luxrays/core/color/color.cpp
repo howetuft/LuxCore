@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+#include <boost/core/span.hpp> 
 
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spectrumgroup.h"
@@ -23,6 +24,7 @@
 #include "luxrays/core/color/swcspectrum.h"
 #include "luxrays/core/color/spds/data/xyzbasis.h"
 #include "luxrays/core/color/spds/blackbodyspd.h"
+
 
 using namespace luxrays;
 

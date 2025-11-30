@@ -81,7 +81,7 @@ struct PGICVisibilityParticle : GenericPhoton {
 			const float area = (hitsCount < 16) ?  (radius2 * M_PI) :
 				(luxrays::Sqr(2.f * hitsAccumulatedDistance / hitsCount) * M_PI);
 
-			luxrays::SpectrumGroup result = alphaAccumulated;
+			luxrays::SpectrumGroup result(alphaAccumulated);  // Copy
 			result *= (bsdfEvaluateTotal * INV_PI) / (photonTraced * area);
 
 			return result;

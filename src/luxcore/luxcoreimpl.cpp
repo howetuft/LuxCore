@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+#include <execution>
 
 #include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -885,35 +886,104 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 	API_END();
 }
 
-void SceneImpl::DefineMesh(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		float *uvs, float *cols, float *alphas) {
+// Helper: make a vector from a buffer TODO
+template<typename T, typename S = float>
+std::optional<std::vector<T>> buf2vec(
+	const std::shared_ptr<S[]> buf, size_t objcount
+) {
+	if (buf) {
+		std::vector<T> vec(objcount);
+		auto p = reinterpret_pointer_cast<T[]>(buf).get();
+		std::copy(std::execution::par, p, p + objcount, vec.begin());
+		return std::make_optional(vec);
+	}
+
+	return std::nullopt;
+};
+
+// Helper: buffer to array of optionals  TODO
+template<typename T>
+ArrayOfOptionals<T> buf2aoo(
+	std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> * buf  // input
+) {
+	ArrayOfOptionals<T> res;
+	if (buf) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+			auto optionals = (*buf)[i];
+			if (!optionals) continue;
+			auto values = reinterpret_pointer_cast<T[]>(optionals);
+			std::copy(
+				std::execution::par,
+				res[i]->begin(),
+				res[i]->end(),
+				values.get()
+			);
+		}
+	}
+	return res;
+};
+
+void SceneImpl::DefineMesh(
+	const std::string &meshName,
+	const long plyNbVerts, const long plyNbTris,
+	std::shared_ptr<float[]> p,
+	std::shared_ptr<unsigned int[]> vi,
+	std::shared_ptr<float[]> n,
+	std::shared_ptr<float[]> uvs,
+	std::shared_ptr<float[]> cols,
+	std::shared_ptr<float[]> alphas
+) {
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
 			plyNbVerts, plyNbTris,
-			(void *)p, (void *)vi, (void *)n,
-			(void *)uvs, (void *)cols, (void *)alphas);
+			(void *)p.get(), (void *)vi.get(), (void *)n.get(),
+			(void *)uvs.get(), (void *)cols.get(), (void *)alphas.get());
+
 
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n,
-			(UV *)uvs, (Spectrum *)cols, alphas);
+	//scene->DefineMesh(
+		//meshName,
+		//plyNbVerts,
+		//plyNbTris,
+		//*buf2vec<Point>(p, plyNbVerts),
+		//*buf2vec<Triangle, unsigned int>(vi, plyNbTris),
+		//buf2vec<Normal>(n, plyNbVerts),
+		//buf2vec<UV>(uvs, plyNbVerts),
+		//buf2vec<Spectrum>(cols, plyNbVerts),
+		//buf2vec<float>(alphas, plyNbVerts)
+	//);
+	scene->DefineMesh(
+		meshName,
+		plyNbVerts,
+		plyNbTris,
+		Buffer<Point>(p, plyNbVerts),
+		Buffer<Triangle>(vi, plyNbTris),
+		Optionals<Normal>(n, plyNbVerts),
+		Optionals<UV>(uvs, plyNbVerts),
+		Optionals<Spectrum>(cols, plyNbVerts),
+		Optionals<float>(alphas, plyNbVerts)
+	);
 
 	API_END();
 }
 
-void SceneImpl::DefineMeshExt(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
-		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+void SceneImpl::DefineMeshExt(
+	const std::string &meshName,
+	const long plyNbVerts,
+	const long plyNbTris,
+	std::shared_ptr<float[]> p,
+	std::shared_ptr<unsigned int[]> vi,
+	std::shared_ptr<float[]> n,
+	std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *uvs,
+	std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *cols,
+	std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *alphas
+) {
+
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
 			plyNbVerts, plyNbTris,
-			(void *)p, (void *)vi, (void *)n,
-			(void *)uvs, (void *)cols, (void *)alphas);
+			(void *)p.get(), (void *)vi.get(), (void *)n.get(),
+			(void *)&uvs, (void *)&cols, (void *)&alphas);
 
 	// A safety check
 	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
@@ -922,48 +992,39 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
-	if (uvs) {
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgUVs[i] = (UV *)((*uvs)[i]);
-	} else
-		fill(slgUVs.begin(), slgUVs.end(), nullptr);
-
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
-	if (cols) {
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgCols[i] = (Spectrum *)((*cols)[i]);
-	} else
-		fill(slgCols.begin(), slgCols.end(), nullptr);
-
-	array<float *, EXTMESH_MAX_DATA_COUNT> slgAlphas;
-	if (alphas) {
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgAlphas[i] = (*alphas)[i];
-	} else
-		fill(slgAlphas.begin(), slgAlphas.end(), nullptr);
-
-	scene->DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n,
-			&slgUVs, &slgCols, &slgAlphas);
+	// Define mesh
+	scene->DefineMeshExt(
+		meshName,
+		plyNbVerts,
+		plyNbTris,
+		Buffer<Point>(p, plyNbVerts),
+		Buffer<Triangle>(vi, plyNbTris),
+		Optionals<Normal>(n, plyNbVerts),
+		buf2aoo<UV>(uvs),
+		buf2aoo<Spectrum>(cols),
+		buf2aoo<float>(alphas)
+	);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data) {
+		const unsigned int index, float *data, size_t datacount) {
 	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
 
-	scene->SetMeshVertexAOV(meshName, index, data);
+	Buffer<float> databuf(data, datacount);
+
+	scene->SetMeshVertexAOV(meshName, index, std::move(databuf));
 
 	API_END();
 }
 
 void SceneImpl::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data) {
+		const unsigned int index, float *data, size_t datacount) {
 	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
 
-	scene->SetMeshTriangleAOV(meshName, index, data);
+	Buffer<float> databuf(data, datacount);
+	scene->SetMeshTriangleAOV(meshName, index, std::move(databuf));
 
 	API_END();
 }
@@ -1118,8 +1179,8 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
-	vector<float> tms(steps);
-	vector<Transform> trans(steps);
+	std::vector<float> tms(steps);
+	std::vector<Transform> trans(steps);
 	const float *time = times;
 	const float *transMat = transMats;
 	for (u_int i = 0; i < steps; ++i) {
@@ -1394,23 +1455,23 @@ void SceneImpl::Save(const std::string &fileName) const {
 	API_END();
 }
 
-Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
+luxrays::Buffer<luxrays::Point> SceneImpl::AllocVerticesBufferVec(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-auto result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+	Buffer<Point> result(meshVertCount);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)&result[0]);
+
 	return result;
 }
 
-Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+luxrays::Buffer<luxrays::Triangle> SceneImpl::AllocTrianglesBufferVec(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+	Buffer<Triangle> result(meshTriCount);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)&result[0]);
+
 	return result;
 }
 
@@ -1499,7 +1560,7 @@ const Properties &RenderConfigImpl::ToProperties() const {
 
 Scene &RenderConfigImpl::GetScene() const {
 	API_BEGIN_NOARGS();
-	
+
 	Scene &result = *scene;
 
 	API_RETURN("{}", (void *)&result);
@@ -1538,7 +1599,7 @@ bool RenderConfigImpl::GetFilmSize(unsigned int *filmFullWidth, unsigned int *fi
 	API_BEGIN("{}, {}, {}", (void *)filmFullWidth, (void *)filmFullHeight, (void *)filmSubRegion);
 
 	const bool result = slg::Film::GetFilmSize(renderConfig->cfg, filmFullWidth, filmFullHeight, filmSubRegion);
-	
+
 	API_RETURN("{}", result);
 
 	return result;

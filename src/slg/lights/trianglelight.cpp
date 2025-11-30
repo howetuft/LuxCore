@@ -119,9 +119,7 @@ Spectrum TriangleLight::Emit(SceneConstPtr scene,
 	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
 
 	// Origin
-	Point samplePoint;
-	float b0, b1, b2;
-	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	auto [samplePoint, b0, b1, b2] = mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1);
 
 	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
@@ -171,15 +169,13 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	HitPoint tmpHitPoint;
 	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
 
-	Point samplePoint;
-	float b0, b1, b2;
-	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	auto [samplePoint, b0, b1, b2] = mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1);
 
 	Vector sampleDir = samplePoint - bsdf.hitPoint.p;
 	const float distanceSquared = sampleDir.LengthSquared();
 	const float distance = sqrtf(distanceSquared);
 	sampleDir /= distance;
-	
+
 	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
 			scene, meshIndex, triangleIndex,
@@ -202,7 +198,7 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	//--------------------------------------------------------------------------
 	// Initialize the shadow ray
 	//--------------------------------------------------------------------------
-	
+
 	// Move shadow ray origin along the geometry normal by an epsilon to avoid self-shadow problems
 	const Point shadowRayOrig = bsdf.GetRayOrigin(sampleDir);
 
@@ -224,7 +220,7 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 		const Frame frame(tmpHitPoint.GetFrame());
 
 		const Vector localFromLight = Normalize(frame.ToLocal(-sampleDir));
-		
+
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
 			if (emissionFuncPdf == 0.f)
@@ -232,7 +228,7 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 			*emissionPdfW = emissionFuncPdf * invTriangleArea;
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
-		
+
 		directPdfW = invTriangleArea * distanceSquared;
 	} else {
 		if (emissionPdfW) {
@@ -248,7 +244,7 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	}
 
 	assert (!isnan(directPdfW) && !isinf(directPdfW));
-	
+
 	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;

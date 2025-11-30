@@ -200,45 +200,74 @@ void Scene::DefineMesh(ExtMeshPtr mesh) {
 			}
 		}
 	}
-	
+
 	// This is the only place where it is safe to call extMeshCache.DefineExtMesh()
 	extMeshCache.DefineExtMesh(mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-void Scene::DefineMesh(const string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n,
-		UV *uvs, Spectrum *cols, float *alphas) {
-	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
-			uvs, cols, alphas);
+
+void Scene::DefineMesh(
+	const std::string &shapeName,
+	const long plyNbVerts,
+	const long plyNbTris,
+	luxrays::Buffer<luxrays::Point>&& p,
+	luxrays::Buffer<luxrays::Triangle>&& vi,
+	luxrays::Optionals<luxrays::Normal>&& n,
+	luxrays::Optionals<luxrays::UV>&& uvs,
+	luxrays::Optionals<luxrays::Spectrum>&& cols,
+	luxrays::Optionals<float>&& alphas
+) {
+	auto mesh = std::make_shared<ExtTriangleMesh>(
+		plyNbVerts,
+		plyNbTris,
+		std::move(p),
+		std::move(vi),
+		std::move(n),
+		std::move(uvs),
+		std::move(cols),
+		std::move(alphas)
+	);
 	mesh->SetName(shapeName);
-	
+
 	DefineMesh(mesh);
 }
 
-void Scene::DefineMeshExt(const string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n,
-		array<UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
-		array<float *, EXTMESH_MAX_DATA_COUNT> *alphas) {
-	auto mesh = std::make_shared<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
-			uvs, cols, alphas);
+void Scene::DefineMeshExt(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		luxrays::Buffer<luxrays::Point>&& p,
+		luxrays::Buffer<luxrays::Triangle>&& vi,
+		luxrays::Optionals<luxrays::Normal>&& n,
+		luxrays::ArrayOfOptionals<UV>&& uvs,
+		luxrays::ArrayOfOptionals<Spectrum>&& cols,
+		luxrays::ArrayOfOptionals<float>&& alphas
+) {
+	auto mesh = std::make_shared<ExtTriangleMesh>(
+		plyNbVerts,
+		plyNbTris,
+		std::move(p),
+		std::move(vi),
+		std::move(n),
+		std::move(uvs),
+		std::move(cols),
+		std::move(alphas)
+	);
 	mesh->SetName(shapeName);
-	
+
 	DefineMesh(mesh);
 }
 
 void Scene::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	extMeshCache.SetMeshVertexAOV(meshName, index, data);
+		const unsigned int index, luxrays::Buffer<float>&& data) {
+	extMeshCache.SetMeshVertexAOV(meshName, index, std::move(data));
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
+		const unsigned int index, luxrays::Buffer<float>&& data) {
+	extMeshCache.SetMeshTriangleAOV(meshName, index, std::move(data));
 }
 
 void Scene::DefineMesh(const string &instMeshName, const string &meshName,

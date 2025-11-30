@@ -21,6 +21,7 @@
 
 #include <vector>
 
+#include "luxrays/utils/buffer.h"
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/bsphere.h"
@@ -123,7 +124,7 @@ public:
 
 	// Returns the list of vertices of the clipped polygon
 	// against this bounding box
-	std::vector<Point> ClipPolygon(const std::vector<Point> &vertexList) const;
+	Buffer<Point> ClipPolygon(const Buffer<Point> &vertexList) const;
 	bool IsValid() const {
 		return (pMin.x <= pMax.x) && (pMin.y <= pMax.y) && (pMin.z <= pMax.z);
 	}
@@ -150,9 +151,9 @@ inline std::ostream &operator<<(std::ostream &os, const BBox &b) {
 
 extern Point PlaneClipEdge(const Point &planeOrig, const Normal &planeNormal,
 		const Point &a, const Point &b);
-extern std::vector<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
+extern Buffer<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
 		const Normal &clippingPlaneNormal,
-		const std::vector<Point> &vertexList);
+		const Buffer<Point> &vertexList);
 
 }
 

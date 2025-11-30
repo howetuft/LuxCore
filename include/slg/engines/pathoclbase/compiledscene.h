@@ -21,6 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/slg.h"
 #include "slg/editaction.h"
 
@@ -60,7 +61,7 @@ public:
 
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;
-	std::vector<luxrays::Normal> normals;
+	luxrays::Optionals<luxrays::Normal> normals;
 	std::vector<luxrays::Normal> triNormals;
 	std::vector<luxrays::UV> uvs;
 	std::vector<luxrays::Spectrum> cols;

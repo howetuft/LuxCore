@@ -112,25 +112,48 @@ public:
 	// Mesh shape
 	// Use one of the following methods, do not directly call extMeshCache.DefineExtMesh()
 	void DefineMesh(luxrays::ExtMeshPtr mesh);
-	void DefineMesh(const std::string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
-		luxrays::UV *uv, luxrays::Spectrum *cols, float *alphas);
-	void DefineMeshExt(const std::string &shapeName,
-		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
-		std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-		std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, EXTMESH_MAX_DATA_COUNT> *alphas);
+	void DefineMesh(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		luxrays::Buffer<luxrays::Point>&& p,
+		luxrays::Buffer<luxrays::Triangle>&& vi,
+		luxrays::Optionals<luxrays::Normal>&& n,
+		luxrays::ArrayOfOptionals<luxrays::UV>&& uvs,
+		luxrays::ArrayOfOptionals<luxrays::Spectrum>&& cols,
+		luxrays::ArrayOfOptionals<float>&& alphas
+	);
+	void DefineMesh(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		luxrays::Buffer<luxrays::Point>&& p,
+		luxrays::Buffer<luxrays::Triangle>&& vi,
+		luxrays::Optionals<luxrays::Normal>&& n,
+		luxrays::Optionals<luxrays::UV>&& uvs,
+		luxrays::Optionals<luxrays::Spectrum>&& cols,
+		luxrays::Optionals<float>&& alphas
+	);
+	void DefineMeshExt(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		luxrays::Buffer<luxrays::Point>&& p,
+		luxrays::Buffer<luxrays::Triangle>&& vi,
+		luxrays::Optionals<luxrays::Normal>&& n,
+		luxrays::ArrayOfOptionals<luxrays::UV>&& uvs,
+		luxrays::ArrayOfOptionals<luxrays::Spectrum>&& cols,
+		luxrays::ArrayOfOptionals<float>&& alphas
+	);
 	void DefineMesh(const std::string &instMeshName, const std::string &meshName,
 		const luxrays::Transform &trans);
 	void DefineMesh(const std::string &motMeshName, const std::string &meshName,
 		const luxrays::MotionSystem &ms);
 
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, luxrays::Buffer<float>&& data);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, luxrays::Buffer<float>&& data);
 
 	// Strands shape
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,

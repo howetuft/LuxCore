@@ -45,7 +45,7 @@ public:
 		uvs.push_back(uv);
 	}
 
-	void AdaptiveTessellate(const u_int maxDepth, const float error, vector<float> &values) {
+	void AdaptiveTessellate(const u_int maxDepth, const float error, Buffer<float> &values) {
 		values.push_back(0.f);
 		AdaptiveTessellate(0, maxDepth, error, values, 0.f, 1.f);
 		values.push_back(1.f);
@@ -170,7 +170,7 @@ public:
 
 private:
 	bool AdaptiveTessellate(const u_int depth, const u_int maxDepth, const float error,
-			vector<float> &values, const float t0, const float t1) {
+			Buffer<float> &values, const float t0, const float t1) {
 		if (depth >= maxDepth)
 			return false;
 
@@ -273,11 +273,11 @@ private:
 				Clamp(CatmullRomSpline(a.v, b.v, c.v, d.v, t), 0.f, 1.f));
 	}
 
-	vector<Point> points;
-	vector<float> sizes;
-	vector<Spectrum> cols;
-	vector<float> transps;
-	vector<UV> uvs;
+	Buffer<Point> points;
+	Buffer<float> sizes;
+	Buffer<Spectrum> cols;
+	Buffer<float> transps;
+	Buffer<UV> uvs;
 };
 
 //------------------------------------------------------------------------------
@@ -314,18 +314,19 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 	if (segments || (header.d_segments > 0)) {
 		u_int pointIndex = 0;
 
-		vector<Point> hairPoints;
-		vector<float> hairSizes;
-		vector<Spectrum> hairCols;
-		vector<float> hairTransps;
-		vector<UV> hairUVs;
+		Buffer<Point> hairPoints;
+		Buffer<float> hairSizes;
+		Buffer<Spectrum> hairCols;
+		Buffer<float> hairTransps;
+		Buffer<UV> hairUVs;
 
-		vector<Point> meshVerts;
-		vector<Normal> meshNorms;
-		vector<Triangle> meshTris;
-		vector<UV> meshUVs;
-		vector<Spectrum> meshCols;
-		vector<float> meshTransps;
+		Buffer<Point> meshVerts;
+		Buffer<Normal> meshNorms;
+		Buffer<Triangle> meshTris;
+		Buffer<UV> meshUVs;
+		Buffer<Spectrum> meshCols;
+		Buffer<float> meshTransps;
+
 		for (u_int i = 0; i < header.hair_count; ++i) {
 			// segmentSize must be signed
 			const int segmentSize = segments ? segments[i] : header.d_segments;
@@ -359,9 +360,10 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 
 			switch (tesselType) {
 				case TESSEL_RIBBON:
-					TessellateRibbon(scene, hairPoints, hairSizes, hairCols, hairUVs,
-							hairTransps, meshVerts, meshNorms, meshTris, meshUVs,
-							meshCols, meshTransps);
+					TessellateRibbon(
+						scene, hairPoints, hairSizes, hairCols, hairUVs,
+						hairTransps, meshVerts, meshNorms, meshTris, meshUVs,
+						meshCols, meshTransps);
 					break;
 				case TESSEL_RIBBON_ADAPTIVE:
 					TessellateAdaptive(scene, false, hairPoints, hairSizes, hairCols, hairUVs,
@@ -390,47 +392,78 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		SLG_LOG("Strands mesh: " << meshTris.size() << " triangles");
 
 		// Create the mesh
-		Point *newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
-		copy(meshVerts.begin(), meshVerts.end(), newMeshVerts);
+		Buffer<Point> newMeshVerts(meshVerts.size());
+		std::copy(
+			std::execution::par,
+			meshVerts.begin(),
+			meshVerts.end(),
+			newMeshVerts.begin()
+		);
 
-		Triangle *newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
-		copy(meshTris.begin(), meshTris.end(), newMeshTris);
+		Buffer<Triangle> newMeshTris(meshTris.size());
+		std::copy(
+			std::execution::par,
+			meshTris.begin(),
+			meshTris.end(),
+			newMeshTris.begin()
+		);
 
-		Normal *newMeshNorms = new Normal[meshNorms.size()];
-		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
-		
-		UV *newMeshUVs = new UV[meshUVs.size()];
-		copy(meshUVs.begin(), meshUVs.end(), newMeshUVs);
-		
+		auto newMeshNorms = Optionals<Normal>(std::move(meshNorms));
+
+		auto newMeshUVs = Optionals<UV>(meshUVs.size());
+		std::copy(
+			std::execution::par,
+			meshUVs.begin(),
+			meshUVs.end(),
+			newMeshUVs->begin()
+		);
+
 		// Check if I have to include vertex colors too
-		Spectrum *newMeshCols = NULL;
+		Optionals<Spectrum> newMeshCols;
 		for(const Spectrum &c: meshCols) {
 			if (c != Spectrum(1.f)) {
 				// The mesh uses vertex colors
 				SLG_LOG("Strands shape uses colors");
 
-				newMeshCols = new Spectrum[meshUVs.size()];
-				copy(meshCols.begin(), meshCols.end(), newMeshCols);
+				newMeshCols.emplace(meshUVs.size());
+				std::copy(
+					std::execution::par,
+					meshCols.begin(),
+					meshCols.end(),
+					newMeshCols->begin()
+				);
 				break;
 			}
 		}
 
 		// Check if I have to include vertex alpha too
-		float *newMeshTransps = NULL;
+		Optionals<float> newMeshTransps;
 		for(const float &a: meshTransps) {
 			if (a != 1.f) {
 				// The mesh uses vertex alphas
 				SLG_LOG("Strands shape uses alphas");
 
-				newMeshTransps = new float[meshTransps.size()];
-				copy(meshTransps.begin(), meshTransps.end(), newMeshTransps);
+				newMeshTransps.emplace(meshTransps.size());
+				std::copy(
+					std::execution::par,
+					meshTransps.begin(),
+					meshTransps.end(),
+					newMeshTransps->begin()
+				);
 				break;
 			}
 		}
 
-		mesh = std::make_shared<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
-				newMeshVerts, newMeshTris, newMeshNorms, newMeshUVs,
-				newMeshCols, newMeshTransps);
+		mesh = std::make_shared<ExtTriangleMesh>(
+			meshVerts.size(),
+			meshTris.size(),
+			std::move(newMeshVerts),
+			std::move(newMeshTris),
+			std::move(newMeshNorms),
+			std::move(newMeshUVs),
+			std::move(newMeshCols),
+			std::move(newMeshTransps)
+		);
 	} else
 		throw runtime_error("Strands shape without segments are not supported");
 
@@ -438,13 +471,20 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 	SLG_LOG("Refining time: " << std::setprecision(3) << dt << " secs");
 }
 
-void StrendsShape::TessellateRibbon(SceneConstRef scene,
-		const vector<Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
-		const vector<UV> &hairUVs, const vector<float> &hairTransps,
-		vector<Point> &meshVerts, vector<Normal> &meshNorms,
-		vector<Triangle> &meshTris, vector<UV> &meshUVs, vector<Spectrum> &meshCols,
-		vector<float> &meshTransps) const {
+void StrendsShape::TessellateRibbon(
+		SceneConstRef scene,
+		const Buffer<Point> &hairPoints,
+		const Buffer<float> &hairSizes,
+		const Buffer<Spectrum> &hairCols,
+		const Buffer<UV> &hairUVs,
+		const Buffer<float> &hairTransps,
+		Buffer<Point> &meshVerts,
+		Buffer<Normal> &meshNorms,
+		Buffer<Triangle> &meshTris,
+		Buffer<UV> &meshUVs,
+		Buffer<Spectrum> &meshCols,
+		Buffer<float> &meshTransps
+) const {
 	// Create the mesh vertices
 	const u_int baseOffset = meshVerts.size();
 
@@ -542,12 +582,12 @@ void StrendsShape::TessellateRibbon(SceneConstRef scene,
 }
 
 void StrendsShape::TessellateAdaptive(SceneConstRef scene,
-		const bool solid, const vector<Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
-		const vector<UV> &hairUVs, const vector<float> &hairTransps,
-		vector<Point> &meshVerts, vector<Normal> &meshNorms,
-		vector<Triangle> &meshTris, vector<UV> &meshUVs, vector<Spectrum> &meshCols,
-		vector<float> &meshTransps) const {
+		const bool solid, const Buffer<Point> &hairPoints,
+		const Buffer<float> &hairSizes, const Buffer<Spectrum> &hairCols,
+		const Buffer<UV> &hairUVs, const Buffer<float> &hairTransps,
+		Buffer<Point> &meshVerts, Buffer<Normal> &meshNorms,
+		Buffer<Triangle> &meshTris, Buffer<UV> &meshUVs, Buffer<Spectrum> &meshCols,
+		Buffer<float> &meshTransps) const {
 	// Interpolate the hair segments
 	CatmullRomCurve curve;
 	for (int i = 0; i < (int)hairPoints.size(); ++i)
@@ -555,15 +595,15 @@ void StrendsShape::TessellateAdaptive(SceneConstRef scene,
 				hairTransps[i], hairUVs[i]);
 
 	// Tessellate the curve
-	vector<float> values;
+	Buffer<float> values;
 	curve.AdaptiveTessellate(adaptiveMaxDepth, adaptiveError, values);
 
 	// Create the ribbon
-	vector<Point> tesselPoints;
-	vector<float> tesselSizes;
-	vector<Spectrum> tesselCols;
-	vector<float> tesselTransps;
-	vector<UV> tesselUVs;
+	Buffer<Point> tesselPoints;
+	Buffer<float> tesselSizes;
+	Buffer<Spectrum> tesselCols;
+	Buffer<float> tesselTransps;
+	Buffer<UV> tesselUVs;
 	for (u_int i = 0; i < values.size(); ++i) {
 		tesselPoints.push_back(curve.EvaluatePoint(values[i]));
 		tesselSizes.push_back(curve.EvaluateSize(values[i]));
@@ -581,12 +621,12 @@ void StrendsShape::TessellateAdaptive(SceneConstRef scene,
 }
 
 void StrendsShape::TessellateSolid(SceneConstRef scene,
-		const vector<Point> &hairPoints,
-		const vector<float> &hairSizes, const vector<Spectrum> &hairCols,
-		const vector<UV> &hairUVs, const vector<float> &hairTransps,
-		vector<Point> &meshVerts, vector<Normal> &meshNorms,
-		vector<Triangle> &meshTris, vector<UV> &meshUVs, vector<Spectrum> &meshCols,
-		vector<float> &meshTransps) const {
+		const Buffer<Point> &hairPoints,
+		const Buffer<float> &hairSizes, const Buffer<Spectrum> &hairCols,
+		const Buffer<UV> &hairUVs, const Buffer<float> &hairTransps,
+		Buffer<Point> &meshVerts, Buffer<Normal> &meshNorms,
+		Buffer<Triangle> &meshTris, Buffer<UV> &meshUVs, Buffer<Spectrum> &meshCols,
+		Buffer<float> &meshTransps) const {
 	// Create the mesh vertices
 	const u_int baseOffset = meshVerts.size();
 	const float angleStep = Radians(360.f / solidSideCount);

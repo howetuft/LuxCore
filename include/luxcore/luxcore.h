@@ -867,10 +867,7 @@ public:
 	virtual void SetMeshAppliedTransformation(const std::string &meshName,
 			const float *appliedTransMat) = 0;
 	/*!
-	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
-	 * however freeing of memory for the vertices, triangle indices, etc. depends
-	 * on the setting of SetDeleteMeshData().
+	 * \brief Defines a mesh (to be later used in one or more scene objects).
 	 * NOTE: vertices and triangles buffers MUST be allocated with
 	 * Scene::AllocVerticesBuffer() and Scene::AllocTrianglesBuffer().
 	 *
@@ -886,10 +883,17 @@ public:
 	 * \param cols is a pointer to an array of vertices colors. It can be NULL.
 	 * \param alphas is a pointer to an array of vertices alphas. It can be NULL.
 	 */
-	virtual void DefineMesh(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		float *uvs,	float *cols, float *alphas) = 0;
+	virtual void DefineMesh(
+		const std::string &meshName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::shared_ptr<float[]> p,
+		std::shared_ptr<unsigned int[]> vi,
+		std::shared_ptr<float[]> n,
+		std::shared_ptr<float[]> uvs,
+		std::shared_ptr<float[]> cols,
+		std::shared_ptr<float[]> alphas
+	) = 0;
 	/*!
 	 * \brief This is a special version of Scene::DefineMesh() used to define
 	 * meshes with multiple set of UVs, Colors and/or Alphas.
@@ -912,12 +916,17 @@ public:
 	 * \param alphas is a pointer to an array of pointers. It can be NULL. If not, each
 	 * pointer can also be NULL or a pointer to an arrays of vertices alphas.
 	 */
-	virtual void DefineMeshExt(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) = 0;
+	virtual void DefineMeshExt(
+		const std::string &meshName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		std::shared_ptr<float[]> p,
+		std::shared_ptr<unsigned int[]> vi,
+		std::shared_ptr<float[]> n,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *uv,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<std::shared_ptr<float[]>, LC_MESH_MAX_DATA_COUNT> *alphas
+	) = 0;
 	/*!
 	 * \brief Set a mesh geometry vertex AOV (i.e. generic data associated to
 	 * vertices and used by textures and more).
@@ -930,7 +939,7 @@ public:
 	 * \param data to use for the AOV.
 	 */
 	virtual void SetMeshVertexAOV(const std::string &meshName,
-			const unsigned int index, float *data) = 0;
+			const unsigned int index, float *data, size_t datacount) = 0;
 	/*!
 	 * \brief Set a mesh geometry triangle AOV (i.e. generic data associated to
 	 * triangles and used by textures and more).
@@ -943,7 +952,7 @@ public:
 	 * \param data to use for the AOV.
 	 */
 	virtual void SetMeshTriangleAOV(const std::string &meshName,
-			const unsigned int index, float *data) = 0;
+			const unsigned int index, float *data, size_t datacount) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *
@@ -1160,11 +1169,11 @@ public:
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
-	static float *AllocVerticesBuffer(const unsigned int meshVertCount);
+	static std::shared_ptr<float[]> AllocVerticesBuffer(const unsigned int meshVertCount);
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
-	static unsigned int *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static std::shared_ptr<unsigned int[]> AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 protected:
 	virtual void DefineImageMapUChar(const std::string &imgMapName,

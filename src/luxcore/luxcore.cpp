@@ -343,7 +343,7 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 	const float *result = GetChannelFloat(type, index, executeImagePipeline);
 
 	API_RETURN("{}", (void *)result);
-	
+
 	return result;
 }
 
@@ -445,23 +445,28 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 	API_END();
 }
 
-float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
+std::shared_ptr<float[]> Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-	float *result = (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
+	//auto result = reinterpret_pointer_cast<float[]>(luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount));
 
-	API_RETURN("{}", (void *)result);
+	auto result = std::make_shared<float[]>(meshVertCount * 3 + 1);
+	result[meshVertCount * 3] = 1234.1234f;
+
+	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+std::shared_ptr<unsigned int[]> Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-	unsigned int *result =  (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
+	//auto result = reinterpret_pointer_cast<unsigned int[]>(luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount));
 
-	API_RETURN("{}", (void *)result);
-	
+	auto result = std::make_shared<unsigned int[]>(meshTriCount * 3);
+
+	API_RETURN("{}", (void *)&result[0]);
+
 	return result;
 }
 

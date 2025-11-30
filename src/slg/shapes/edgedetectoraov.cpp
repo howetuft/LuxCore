@@ -49,7 +49,7 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 
 	const double startTime = WallClockTime();
 
-	const Triangle *tris = srcMesh->GetTriangles();
+	const auto& tris = srcMesh->GetTriangles();
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 
 	// Build the edge information
@@ -109,22 +109,22 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 	}
 
 	// Create the processed mesh
-	
+
 	mesh = srcMesh->Copy();
 
-	float *aovEdge[3];
-	aovEdge[0] = new float[triCount];
-	aovEdge[1] = new float[triCount];
-	aovEdge[2] = new float[triCount];
+	Buffer<float> aovEdge[3];
+	aovEdge[0] = Buffer<float>(triCount);
+	aovEdge[1] = Buffer<float>(triCount);
+	aovEdge[2] = Buffer<float>(triCount);
 	for (u_int edgeIndex = 0; edgeIndex < edges.size(); ++edgeIndex) {
 		Edge &e = edges[edgeIndex];
 
 		aovEdge[e.edge][e.tri] = e.aovValue;
 	}
-	
-	mesh->SetTriAOV(destAOVIndex0, aovEdge[0]);
-	mesh->SetTriAOV(destAOVIndex1, aovEdge[1]);
-	mesh->SetTriAOV(destAOVIndex2, aovEdge[2]);
+
+	mesh->SetTriAOV(destAOVIndex0, std::move(aovEdge[0]));
+	mesh->SetTriAOV(destAOVIndex1, std::move(aovEdge[1]));
+	mesh->SetTriAOV(destAOVIndex2, std::move(aovEdge[2]));
 
 	const double endTime = WallClockTime();
 	SDL_LOG("EdgeDetectorAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

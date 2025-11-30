@@ -137,8 +137,8 @@ SceneObjectPtr Scene::CreateObject(const u_int defaultObjID, const string &objNa
 	ExtMeshPtr mesh;
 	if (props.IsDefined(propName + ".motion.0.time")) {
 		// Build the motion system
-		vector<float> times;
-		vector<Transform> transforms;
+		std::vector<float> times;
+		std::vector<Transform> transforms;
 		for (u_int i = 0;; ++i) {
 			const string prefix = propName + ".motion." + ToString(i);
 			if (!props.IsDefined(prefix +".time"))

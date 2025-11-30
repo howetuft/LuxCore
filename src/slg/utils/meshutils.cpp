@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <execution>
+
+#include "slg/usings.h"
 #include "slg/cameras/camera.h"
 #include "slg/utils/meshutils.h"
 
@@ -27,14 +30,14 @@ using namespace slg;
 // ScreenProjection()
 //------------------------------------------------------------------------------
 
-ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
+ExtTriangleMeshUPtr ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
 	const u_int vertCount = mesh.GetTotalVertexCount();
 	const u_int triCount = mesh.GetTotalTriangleCount();
 
-	const Point *vertices = mesh.GetVertices();
-	const Triangle *triangles = mesh.GetTriangles();
+	auto& vertices = mesh.GetVertices();
+	auto& triangles = mesh.GetTriangles();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+	Buffer<Point> newVertices(vertCount);
 	for (u_int i = 0; i < vertCount; ++i) {
 		const Point &oldVertex = vertices[i];
 
@@ -50,26 +53,40 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 		newVertices[i] = newVertex;
 	}
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles, triangles + triCount, newTris);
+	Buffer<Triangle> newTris(triCount);
+	std::copy(
+		std::execution::par,
+		triangles.begin(),
+		triangles.end(),
+		newTris.begin()
+	);
 
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+	return std::make_unique<ExtTriangleMesh>(
+		vertCount, triCount, std::move(newVertices), std::move(newTris)
+	);
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMeshBuilder
 //------------------------------------------------------------------------------
 
-ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
+ExtTriangleMeshUPtr ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
 	const u_int vertCount = vertices.size();
 	const u_int triCount = triangles.size();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	copy(vertices.begin(), vertices.end(), newVertices);
+	Buffer<Point> newVertices(vertCount);
+	std::copy(
+		std::execution::par,
+		vertices.begin(),
+		vertices.end(),
+		newVertices.begin()
+	);
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles.begin(), triangles.end(), newTris);
+	Buffer<Triangle> newTris(triCount);
+	std::copy(triangles.begin(), triangles.end(), newTris.begin());
 
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+	return std::make_unique<ExtTriangleMesh>(
+		vertCount, triCount, std::move(newVertices), std::move(newTris)
+	);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

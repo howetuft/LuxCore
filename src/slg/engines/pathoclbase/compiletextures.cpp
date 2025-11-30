@@ -1955,8 +1955,8 @@ void CompiledScene::CompileTextures() {
 				TextureConstPtr amount = bt->GetAmountTexture();
 				tex->band.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
 
-				const vector<float> &offsets = bt->GetOffsets();
-				const vector<Spectrum> &values = bt->GetValues();
+				const Buffer<float> &offsets = bt->GetOffsets();
+				const Buffer<Spectrum> &values = bt->GetValues();
 				if (offsets.size() > BAND_TEX_MAX_SIZE)
 					throw runtime_error("BandTexture with more than " + ToString(BAND_TEX_MAX_SIZE) + " are not supported");
 				tex->band.size = offsets.size();

@@ -406,8 +406,8 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 
 		auto amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
-		vector<float> offsets;
-		vector<Spectrum> values;
+		Buffer<float> offsets;
+		Buffer<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
 			const float offset = props.Get(Property(propName + ".offset" + ToString(i))(0.0)).Get<double>();
 			const Spectrum value = GetColor(props.Get(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f)));
@@ -418,7 +418,7 @@ TexturePtr Scene::CreateTexture(const string &texName, const Properties &props) 
 		if (offsets.size() == 0)
 			throw runtime_error("Empty Band texture: " + texName);
 
-		tex = std::make_shared<BandTexture>(interpType, amtTex, offsets, values);
+		tex = std::make_shared<BandTexture>(interpType, amtTex, std::move(offsets), std::move(values));
 	} else if (texType == "hitpointcolor") {
 		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 

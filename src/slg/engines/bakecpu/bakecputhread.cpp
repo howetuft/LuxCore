@@ -155,10 +155,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	mesh->GetLocal2World(timeSample, localToWorld);
 
 	// Origin
-	Point samplePoint;
-	float b0, b1, b2;
-	mesh->Sample(localToWorld, triangleIndex, state.eyeSampler->GetSample(2), state.eyeSampler->GetSample(3),
-			&samplePoint, &b0, &b1, &b2);
+	auto [samplePoint, b0, b1, b2] = mesh->Sample(localToWorld, triangleIndex, state.eyeSampler->GetSample(2), state.eyeSampler->GetSample(3));
 
 	const u_int sceneObjIndex = state.scene->objDefs.GetSceneObjectIndex(sceneObj);
 	const PathVolumeInfo volInfo;

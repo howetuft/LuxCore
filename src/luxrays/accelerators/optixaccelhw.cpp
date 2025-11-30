@@ -591,12 +591,13 @@ private:
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
 		// Allocate CUDA vertices buffer
+		auto data = const_cast<Point *>(mesh->GetVertices().data());  // For some reason, ocl asks for non-const source
 		HardwareDeviceBuffer *vertsBuff = nullptr;
-		cudaDevice->AllocBufferRO(&vertsBuff, mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
+		cudaDevice->AllocBufferRO(&vertsBuff, data, sizeof(Point) * mesh->GetTotalVertexCount());
 
 		// Allocate CUDA triangle vertices indices buffer
 		HardwareDeviceBuffer *trisBuff = nullptr;
-		cudaDevice->AllocBufferRO(&trisBuff, mesh->GetTriangles(), sizeof(Triangle) * mesh->GetTotalTriangleCount());
+		cudaDevice->AllocBufferRO(&trisBuff, data, sizeof(Triangle) * mesh->GetTotalTriangleCount());
 
 		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
 

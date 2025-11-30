@@ -36,13 +36,13 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 
 	const u_int vertexCount = srcMesh->GetTotalVertexCount();
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const auto& tris = srcMesh->GetTriangles();
 	SDL_LOG("IslandAOV shape vertex count: " << vertexCount);
 	SDL_LOG("IslandAOV shape triangle count: " << triCount);
 
 	// Built a mapping to have all very near vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+		auto& triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
 
 		const Point v1 = triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1);
 		const Point v2 = triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex2);
@@ -88,8 +88,8 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 	}
 
 	// Build the list of islands
-	float *triAOV = new float[triCount];
-	unordered_map<u_int, u_int> islandIndices;
+	Buffer<float> triAOV(triCount);
+	std::unordered_map<u_int, u_int> islandIndices;
 	u_int islandCount = 0;
 	for (u_int i = 0; i < triCount; ++i) {
 		const u_int leaderIndex = ds.find_set(triangleIndices[i]);
@@ -101,15 +101,15 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 			islandIndices[leaderIndex] = islandCount++;
 		} else
 			islandIndex = islandIndices[leaderIndex];
-		
+
 		triAOV[i] = islandIndex;
 	}
-	
+
 	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
 	mesh = srcMesh->Copy();
 	mesh->DeleteTriAOV(dataIndex);
-	mesh->SetTriAOV(dataIndex, &triAOV[0]);
+	mesh->SetTriAOV(dataIndex, std::move(triAOV));
 
 	const double endTime = WallClockTime();
 	SDL_LOG("IslandAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

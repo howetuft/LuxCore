@@ -76,8 +76,10 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	if (cscene->normals.size() > 0)
 		intersectionDevice->AllocBuffer(&normalsBuff,
 				memTypeFlags,
-				&cscene->normals[0],
-				sizeof(Normal) * cscene->normals.size(), "Normals");
+				//&cscene->normals[0],
+				cscene->normals.getvoid(),
+				sizeof(Normal) * cscene->normals.size(),
+				"Normals");
 	else
 		intersectionDevice->FreeBuffer(&normalsBuff);
 
@@ -85,7 +87,8 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 		intersectionDevice->AllocBuffer(&uvsBuff,
 				memTypeFlags,
 				&cscene->uvs[0],
-				sizeof(UV) * cscene->uvs.size(), "UVs");
+				sizeof(UV) * cscene->uvs.size(),
+				"UVs");
 	else
 		intersectionDevice->FreeBuffer(&uvsBuff);
 

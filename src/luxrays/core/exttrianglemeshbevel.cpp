@@ -274,13 +274,14 @@ void ExtTriangleMesh::PreprocessBevel() {
 		auto compareVerts = [](
 			const TriangleMesh& mesh, const u_int vertIndex1, const u_int vertIndex2
 		) {
-			auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+			//auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+			auto& triMesh = mesh;
 
 			return (DistanceSquared(
 				triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
 				triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC);
 		};
-		vector<u_int> uniqueVertices;
+		std::vector<u_int> uniqueVertices;
 		/*const u_int uniqueVertCount =*/ GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 		//cout << "ExtTriangleMesh " << this->GetName() << " has " << uniqueVertCount << " unique vertices over " << vertCount << endl;
 

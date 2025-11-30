@@ -19,6 +19,7 @@
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/ray.h"
+#include "luxrays/utils/buffer.h"
 
 using namespace std;
 
@@ -86,13 +87,13 @@ Point PlaneClipEdge(const Point &planeOrig, const Normal &planeNormal,
 			a.z + s * (b.z - a.z));
 }
 
-vector<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
+Buffer<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
 		const Normal &clippingPlaneNormal,
-		const vector<Point> &vertexList) {
+		const Buffer<Point> &vertexList) {
 	if (vertexList.size() == 0)
-		return vector<Point>();
+		return Buffer<Point>();
 
-	vector<Point> outputList;
+	Buffer<Point> outputList;
 	Point S = vertexList[vertexList.size() - 1];
 	for (size_t j = 0; j < vertexList.size(); ++j) {
 		const Point &E = vertexList[j];
@@ -112,7 +113,7 @@ vector<Point> PlaneClipPolygon(const Point &clippingPlaneOrigin,
 	return outputList;
 }
 
-vector<Point> BBox::ClipPolygon(const vector<Point> &vertexList) const {
+Buffer<Point> BBox::ClipPolygon(const Buffer<Point> &vertexList) const {
 	const Point clippingPlaneOrigin[6] = {
 		pMin,
 		pMin,
@@ -131,7 +132,7 @@ vector<Point> BBox::ClipPolygon(const vector<Point> &vertexList) const {
 		Normal(0.f, 0.f, -1.f),
 	};
 
-	vector<Point> vlist = vertexList;
+	Buffer<Point> vlist(vertexList);  // Copy
 	// For each bounding box plane
 	for (size_t i = 0; i < 6; ++i)
 		vlist = PlaneClipPolygon(clippingPlaneOrigin[i], clippingPlaneNormal[i], vlist);

@@ -215,8 +215,8 @@ CameraPtr Scene::CreateCamera(const Properties &props) {
 	// Check if I have to use a motion system
 	if (props.IsDefined("scene.camera.motion.0.time")) {
 		// Build the motion system
-		vector<float> times;
-		vector<Transform> transforms;
+		std::vector<float> times;
+		std::vector<Transform> transforms;
 		for (u_int i = 0;; ++i) {
 			const string prefix = "scene.camera.motion." + ToString(i);
 			if (!props.IsDefined(prefix +".time"))

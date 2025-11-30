@@ -41,7 +41,7 @@ ExtTriangleMeshPtr CameraProjUVShape::RefineImpl(SceneConstRef scene) {
 
 	auto camera = scene.camera;
 
-	UV *uvs = new UV[vertCount];
+	Buffer<UV> uvs(vertCount);
 	const float invFilmWidth = 1.f / camera->filmWidth;
 	const float invFilmHeight = 1.f / camera->filmHeight;
 
@@ -60,11 +60,11 @@ ExtTriangleMeshPtr CameraProjUVShape::RefineImpl(SceneConstRef scene) {
 		uvs[i].u = filmX * invFilmWidth;
 		uvs[i].v = filmY * invFilmHeight;
 	}
-	
+
 	if (mesh->HasUVs(uvIndex))
 		mesh->DeleteUVs(uvIndex);
-	mesh->SetUVs(uvIndex, uvs);
-	
+	mesh->SetUVs(uvIndex, std::move(uvs));
+
 	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

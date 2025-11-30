@@ -180,8 +180,8 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 
 		const u_int photonTracedStep = 2000000;
 		u_int photonTracedCount = 0;
-		vector<SpectrumGroup> lastAlpha(visibilityParticles.size());
-		vector<SpectrumGroup> currentAlpha(visibilityParticles.size());
+		std::vector<SpectrumGroup> lastAlpha(visibilityParticles.size());
+		std::vector<SpectrumGroup> currentAlpha(visibilityParticles.size());
 		while (photonTracedCount < params.photon.maxTracedCount) {
 			//------------------------------------------------------------------
 			// Trace additional photons
@@ -208,7 +208,7 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 				// Filter outgoing radiance
 
 				if (params.indirect.filterRadiusScale > 0.f) {
-					vector<SpectrumGroup> filteredCurrentAlpha(visibilityParticles.size());
+					std::vector<SpectrumGroup> filteredCurrentAlpha(visibilityParticles.size());
 					FilterVisibilityParticlesRadiance(currentAlpha, filteredCurrentAlpha);
 
 					currentAlpha = filteredCurrentAlpha;
@@ -230,7 +230,7 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 				float maxError = 0.f;
 				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
 					if (!currentAlpha[i].Black()) {
-						SpectrumGroup alpha = currentAlpha[i];
+						SpectrumGroup alpha(currentAlpha[i]);  // Copy
 						alpha -= lastAlpha[i];
 
 						for (u_int j = 0; j < alpha.Size(); ++j) {
@@ -241,7 +241,7 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 					}
 
 					// Update last alpha cache entries
-					lastAlpha[i] = currentAlpha[i];
+					lastAlpha[i] = currentAlpha[i];  // Copy. Could it be a move?
 				}
 
 				SLG_LOG(boost::format("PhotonGI estimated current indirect photon error: %.2f%%") % (100.f * maxError));

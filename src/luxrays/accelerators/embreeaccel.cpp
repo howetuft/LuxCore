@@ -53,15 +53,17 @@ void EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, MeshConstPtr me
 	const RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_TRIANGLE);
 
 	// Share with Embree the mesh vertices
-	Point *meshVerts = mesh->GetVertices();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, meshVerts,
-			0, sizeof(Point), mesh->GetTotalVertexCount());
+	auto& meshVerts = mesh->GetVertices();
+	rtcSetSharedGeometryBuffer(
+		geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, meshVerts.data(),
+		0, sizeof(Point), mesh->GetTotalVertexCount());
 
 
 	// Share with Embree the mesh triangles
-	Triangle *meshTris = mesh->GetTriangles();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, meshTris,
-			0, sizeof(Triangle), mesh->GetTotalTriangleCount());
+	auto& meshTris = mesh->GetTriangles();
+	rtcSetSharedGeometryBuffer(
+		geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, meshTris.data(),
+		0, sizeof(Triangle), mesh->GetTotalTriangleCount());
 
 	rtcCommitGeometry(geom);
 
@@ -94,9 +96,10 @@ void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, MotionTri
 	}
 
 	// Share the mesh triangles
-	Triangle *meshTris = mtm->GetTriangles();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, (RTCBuffer)meshTris,
-			0, sizeof(Triangle), mtm->GetTotalTriangleCount());
+	auto& meshTris = mtm->GetTriangles();
+	rtcSetSharedGeometryBuffer(
+		geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, (RTCBuffer)meshTris.data(),
+		0, sizeof(Triangle), mtm->GetTotalTriangleCount());
 
 	rtcCommitGeometry(geom);
 
