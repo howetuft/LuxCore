@@ -128,11 +128,11 @@ void VelvetMaterial::Pdf(const HitPoint &hitPoint,
 void VelvetMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
-	P1->AddReferencedTextures(referencedTexs, P1);
-	P2->AddReferencedTextures(referencedTexs, P2);
-	P3->AddReferencedTextures(referencedTexs, P3);
-	Thickness->AddReferencedTextures(referencedTexs, Thickness);
+	Kd->AddReferencedTextures(referencedTexs);
+	P1->AddReferencedTextures(referencedTexs);
+	P2->AddReferencedTextures(referencedTexs);
+	P3->AddReferencedTextures(referencedTexs);
+	Thickness->AddReferencedTextures(referencedTexs);
 }
 
 void VelvetMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

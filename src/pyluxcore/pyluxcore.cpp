@@ -2060,8 +2060,9 @@ RenderConfig_LoadFile(const py::str &fileNameStr) {
   return config;
 }
 
-static luxcore::detail::SceneImpl &RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
-  return (luxcore::detail::SceneImpl &)renderConfig->GetScene();
+static std::shared_ptr<luxcore::detail::SceneImpl>
+RenderConfig_GetScene(luxcore::detail::RenderConfigImpl *renderConfig) {
+  return static_pointer_cast<luxcore::detail::SceneImpl>(renderConfig->GetScene());
 }
 
 static py::tuple RenderConfig_GetFilmSize(luxcore::detail::RenderConfigImpl *renderConfig) {

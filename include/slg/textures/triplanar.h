@@ -52,12 +52,12 @@ public:
 
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-		texX->AddReferencedTextures(referencedTexs, texX);
-		texY->AddReferencedTextures(referencedTexs, texY);
-		texZ->AddReferencedTextures(referencedTexs, texZ);
+		texX->AddReferencedTextures(referencedTexs);
+		texY->AddReferencedTextures(referencedTexs);
+		texZ->AddReferencedTextures(referencedTexs);
 	}
 
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {

@@ -192,7 +192,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	
 	ELVCFilm2SceneRadiusValidator validator(*this);
 
-	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
+	return Film2SceneRadius(scene.lock(), imagePlaneRadius, defaultRadius,
 			params.visibility.maxPathDepth,
 			0.f, 1.f,
 			&validator);
@@ -207,7 +207,7 @@ namespace slg {
 class ELVCSceneVisibility : public SceneVisibility<ELVCVisibilityParticle> {
 public:
 	ELVCSceneVisibility(EnvLightVisibilityCache &cache) :
-		SceneVisibility(cache.scene, cache.visibilityParticles,
+		SceneVisibility(cache.scene.lock(), cache.visibilityParticles,
 				cache.params.visibility.maxPathDepth, cache.params.visibility.maxSampleCount,
 				cache.params.visibility.targetHitRate,
 				cache.params.visibility.lookUpRadius, cache.params.visibility.lookUpNormalAngle,
@@ -218,7 +218,7 @@ public:
 	
 protected:
 	virtual IndexOctree<ELVCVisibilityParticle> *AllocOctree() const {
-		return new ELVCOctree(visibilityParticles, scene->dataSet->GetBBox(),
+		return new ELVCOctree(visibilityParticles, scene.lock()->dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
@@ -365,7 +365,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+		if (!scene.lock()->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 

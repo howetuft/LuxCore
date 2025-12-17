@@ -74,8 +74,7 @@ public:
 	virtual void UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat);
 	virtual bool IsReferencing(MaterialConstPtr mat) const;
 	virtual void AddReferencedMaterials(
-		std::unordered_set<MaterialConstPtr> &referencedMats,
-		MaterialConstPtr self
+		std::unordered_set<MaterialConstPtr> &referencedMats
 	) const;
 	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);

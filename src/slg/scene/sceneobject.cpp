@@ -127,9 +127,8 @@ void SceneObject::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &
 }
 
 void SceneObject::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats,
-	MaterialConstPtr self
+	std::unordered_set<MaterialConstPtr> &referencedMats
 ) const {
-	mat->AddReferencedMaterials(referencedMats, self);
+	mat->AddReferencedMaterials(referencedMats);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

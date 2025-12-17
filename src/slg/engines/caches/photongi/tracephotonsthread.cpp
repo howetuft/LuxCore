@@ -113,12 +113,12 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	newIndirectPhotons.clear();
 	newCausticPhotons.clear();
 	vector<u_int> allNearEntryIndices;
-	
-	SceneConstPtr scene = pgic.scene;
+
+	SceneConstPtr scene = pgic.scene.lock();
 	auto camera = scene->camera;
 
 	bool usefulPath = false;
-	
+
 	Spectrum lightPathFlux;
 
 	const float timeSample = samples[0];

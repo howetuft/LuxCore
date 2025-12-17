@@ -106,8 +106,8 @@ void RoughMatteMaterial::Pdf(const HitPoint &hitPoint,
 void RoughMatteMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
-	sigma->AddReferencedTextures(referencedTexs, sigma);
+	Kd->AddReferencedTextures(referencedTexs);
+	sigma->AddReferencedTextures(referencedTexs);
 }
 
 void RoughMatteMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

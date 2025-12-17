@@ -160,9 +160,9 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	mesh->Sample(localToWorld, triangleIndex, state.eyeSampler->GetSample(2), state.eyeSampler->GetSample(3),
 			&samplePoint, &b0, &b1, &b2);
 
-	const u_int sceneObjIndex = state.scene->objDefs.GetSceneObjectIndex(sceneObj);
+	const u_int sceneObjIndex = state.scene.lock()->objDefs.GetSceneObjectIndex(sceneObj);
 	const PathVolumeInfo volInfo;
-	BSDF bsdf(state.scene, sceneObjIndex, triangleIndex,
+	BSDF bsdf(state.scene.lock(), sceneObjIndex, triangleIndex,
 			samplePoint, b1, b2,
 			timeSample, state.eyeSampler->GetSample(pathTracer.eyeSampleSize), &volInfo);
 
@@ -187,7 +187,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			// force black background option (by default, it is set to true)
 			pathInfo.isPassThroughPath = false;
 
-			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
+			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene.lock(),
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
@@ -231,7 +231,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 				// Render the received light from the path
 				//--------------------------------------------------------------
 
-				pathTracer.RenderEyePath(state.device, state.scene,
+				pathTracer.RenderEyePath(state.device, state.scene.lock(),
 						state.eyeSampler, pathInfo, eyeRay, bsdfSample,
 						state.eyeSampleResults);
 			}
@@ -250,7 +250,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			// force black background option (by default, it is set to true)
 			pathInfo.isPassThroughPath = false;
 
-			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
+			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene.lock(),
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
@@ -293,7 +293,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 				//--------------------------------------------------------------
 
 				const float NdotL = Dot(bsdf.hitPoint.shadeN, sampledDir);
-				pathTracer.RenderEyePath(state.device, state.scene,
+				pathTracer.RenderEyePath(state.device, state.scene.lock(),
 						state.eyeSampler, pathInfo, eyeRay, Spectrum(NdotL * INV_PI / samplePdf),
 						state.eyeSampleResults);
 			}
@@ -358,7 +358,7 @@ void BakeCPURenderThread::RenderLightSample(const BakeMapInfo &mapInfo, PathTrac
 	const PathTracer::ConnectToEyeCallBackType connectToEyeCallBack = std::bind(
 			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
 
-	pathTracer.RenderLightSample(state.device, state.scene, state.film, state.lightSampler,
+	pathTracer.RenderLightSample(state.device, state.scene.lock(), state.film, state.lightSampler,
 			state.lightSampleResults, connectToEyeCallBack);
 }
 

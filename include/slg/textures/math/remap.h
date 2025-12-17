@@ -42,14 +42,14 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-		valueTex->AddReferencedTextures(referencedTexs, valueTex);
-		sourceMinTex->AddReferencedTextures(referencedTexs, sourceMinTex);
-		sourceMaxTex->AddReferencedTextures(referencedTexs, sourceMaxTex);
-		targetMinTex->AddReferencedTextures(referencedTexs, targetMinTex);
-		targetMaxTex->AddReferencedTextures(referencedTexs, targetMaxTex);
+		valueTex->AddReferencedTextures(referencedTexs);
+		sourceMinTex->AddReferencedTextures(referencedTexs);
+		sourceMaxTex->AddReferencedTextures(referencedTexs);
+		targetMinTex->AddReferencedTextures(referencedTexs);
+		targetMaxTex->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		valueTex->AddReferencedImageMaps(referencedImgMaps);

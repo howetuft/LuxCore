@@ -36,7 +36,7 @@ namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(ScenePtr scn, const PathTracer *pt);
+	CompiledScene(SceneConstPtr scn, const PathTracer *pt);
 	~CompiledScene();
 	
 	void SetMaxMemPageSize(const size_t maxSize);
@@ -177,7 +177,7 @@ private:
 	void CompilePhotonGI();
 	void CompilePathTracer();
 
-	ScenePtr scene;
+	SceneConstPtr scene;
 	const PathTracer *pathTracer;
 
 	size_t maxMemPageSize;

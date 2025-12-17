@@ -265,10 +265,9 @@ void Material::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPt
 }
 
 void Material::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats,
-	MaterialConstPtr self
+	std::unordered_set<MaterialConstPtr> &referencedMats
 ) const {
-	referencedMats.insert(self);
+	referencedMats.insert(shared_from_this());
 	if (interiorVolume)
 		referencedMats.insert(interiorVolume);
 	if (exteriorVolume)
@@ -277,13 +276,13 @@ void Material::AddReferencedMaterials(
 
 void Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	if (frontTransparencyTex)
-		frontTransparencyTex->AddReferencedTextures(referencedTexs, frontTransparencyTex);
+		frontTransparencyTex->AddReferencedTextures(referencedTexs);
 	if (backTransparencyTex)
-		backTransparencyTex->AddReferencedTextures(referencedTexs, backTransparencyTex);
+		backTransparencyTex->AddReferencedTextures(referencedTexs);
 	if (emittedTex)
-		emittedTex->AddReferencedTextures(referencedTexs, emittedTex);
+		emittedTex->AddReferencedTextures(referencedTexs);
 	if (bumpTex)
-		bumpTex->AddReferencedTextures(referencedTexs, bumpTex);
+		bumpTex->AddReferencedTextures(referencedTexs);
 }
 
 void Material::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {

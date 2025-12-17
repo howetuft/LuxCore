@@ -67,7 +67,7 @@ void MaterialDefinitions::GetMaterialSortedNamesImpl(
 
 	// Get the list of reference materials by this one
 	std::unordered_set<MaterialConstPtr> referencedTexs;
-	mat->AddReferencedMaterials(referencedTexs, mat);
+	mat->AddReferencedMaterials(referencedTexs);
 
 	// Add all referenced texture names
 	for (auto& refMat : referencedTexs) {

@@ -31,7 +31,7 @@ class SubtractTexture : public Texture {
 public:
 	SubtractTexture(TextureConstPtr t1, TextureConstPtr t2) : tex1(t1), tex2(t2) { }
 	virtual ~SubtractTexture() { }
-	
+
 	virtual TextureType GetType() const { return SUBTRACT_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -41,14 +41,14 @@ public:
 	virtual float Filter() const {
 		return tex1->Filter() - tex2->Filter();
 	}
-	
+
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 		
-		tex1->AddReferencedTextures(referencedTexs, tex1);
-		tex2->AddReferencedTextures(referencedTexs, tex2);
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		tex1->AddReferencedImageMaps(referencedImgMaps);

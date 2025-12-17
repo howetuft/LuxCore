@@ -45,10 +45,10 @@ void LuxCoreApp::BakeAllSceneObjects() {
 	// The render configuration and the scene properties
 	auto renderConfig = session->GetRenderConfig();
 	const Properties &cfgProps =  renderConfig->ToProperties();
-	const Properties &sceneProps =  renderConfig->GetScene().ToProperties();
+	auto sceneProps =  renderConfig->GetScene()->ToProperties();
 
 	// Build the list of scene objects
-	vector<string> objKeys = sceneProps.GetAllUniqueSubNames("scene.objects");
+	vector<string> objKeys = sceneProps->GetAllUniqueSubNames("scene.objects");
 	LC_LOG("Number of objects to bake: " + objKeys.size())
 	if (objKeys.size() == 0) {
 		// There are not object definitions ... quite strange
@@ -116,7 +116,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 
 	// Write the complete new baked scene to file
 	Properties completeBakedSceneProps;
-	completeBakedSceneProps << sceneProps;
+	completeBakedSceneProps << *sceneProps;
 	for (auto const &objectName : objectNames) {
 		const string prefix = "scene.objects." + objectName;
 

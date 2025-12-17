@@ -611,10 +611,10 @@ void ClothMaterial::Pdf(const HitPoint &hitPoint,
 void ClothMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Warp_Ks->AddReferencedTextures(referencedTexs, Warp_Ks);
-	Weft_Ks->AddReferencedTextures(referencedTexs, Weft_Ks);
-	Weft_Kd->AddReferencedTextures(referencedTexs, Weft_Kd);
-	Warp_Kd->AddReferencedTextures(referencedTexs, Warp_Kd);
+	Warp_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Kd->AddReferencedTextures(referencedTexs);
+	Warp_Kd->AddReferencedTextures(referencedTexs);
 }
 
 void ClothMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

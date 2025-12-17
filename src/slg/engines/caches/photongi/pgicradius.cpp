@@ -52,10 +52,11 @@ float PhotonGICache::EvaluateBestRadius() {
 
 	// The old default radius: 15cm
 	const float defaultRadius = .15f;
-	
+
 	PGICFilm2SceneRadiusValidator validator(*this);
 
-	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
+	return Film2SceneRadius(
+			scene.lock(), imagePlaneRadius, defaultRadius,
 			params.photon.maxPathDepth,
 			params.photon.timeStart, params.photon.timeEnd,
 			&validator);

@@ -190,10 +190,10 @@ u_int ImageMapCache::GetImageMapIndex(ImageMapConstPtr im) const {
 	throw runtime_error("Unknown image map: " + ToString(im));
 }
 
-void ImageMapCache::GetImageMaps(vector<ImageMapConstPtr > &ims) {
+void ImageMapCache::GetImageMaps(std::vector<ImageMapConstPtr > &ims) const {
 	ims.reserve(maps.size());
 
-	for(ImageMapPtr im: maps)
+	for(ImageMapConstPtr im: maps)
 		ims.push_back(im);
 }
 

@@ -245,7 +245,7 @@ private:
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
 
-	SceneConstPtr scene;
+	SceneConstWPtr scene;
 	const EnvLightSource *envLight;
 	ImageMapConstPtr luminanceMapImage;
 

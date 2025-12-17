@@ -397,7 +397,7 @@ public:
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType, WrapType wrapType);
 
-	const luxrays::Properties &ToProperties() const;
+	luxrays::PropertiesConstPtr ToProperties() const;
 	void Save(const std::string &fileName) const;
 
 	// Note: this method is not part of LuxCore API and it is used only internally
@@ -411,7 +411,7 @@ public:
 	friend class RenderSessionImpl;
 
 private:
-	mutable luxrays::Properties scenePropertiesCache;
+	mutable luxrays::PropertiesPtr scenePropertiesCache;
 
 	slg::ScenePtr scene;
 	CameraImplUPtr camera;
@@ -440,7 +440,7 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 	const luxrays::Properties &ToProperties() const;
 
-	Scene &GetScene() const;
+	ScenePtr GetScene() const override;
 
 	bool HasCachedKernels() const;
 

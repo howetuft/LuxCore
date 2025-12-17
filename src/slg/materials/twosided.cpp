@@ -210,16 +210,15 @@ bool TwoSidedMaterial::IsReferencing(MaterialConstPtr mat) const {
 }
 
 void TwoSidedMaterial::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats,
-	MaterialConstPtr self
+	std::unordered_set<MaterialConstPtr> &referencedMats
 ) const {
-	Material::AddReferencedMaterials(referencedMats, self);
+	Material::AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(frontMat);
-	frontMat->AddReferencedMaterials(referencedMats, frontMat);
+	frontMat->AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(backMat);
-	backMat->AddReferencedMaterials(referencedMats, backMat);
+	backMat->AddReferencedMaterials(referencedMats);
 }
 
 void TwoSidedMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {

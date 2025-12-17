@@ -240,10 +240,10 @@ int main(int argc, char *argv[]) {
 
 		if (removeUnused) {
 			// Remove unused Meshes, Image maps, materials and textures
-			config->GetScene().RemoveUnusedMeshes();
-			config->GetScene().RemoveUnusedImageMaps();
-			config->GetScene().RemoveUnusedMaterials();
-			config->GetScene().RemoveUnusedTextures();
+			config->GetScene()->RemoveUnusedMeshes();
+			config->GetScene()->RemoveUnusedImageMaps();
+			config->GetScene()->RemoveUnusedMaterials();
+			config->GetScene()->RemoveUnusedTextures();
 		}
 
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");

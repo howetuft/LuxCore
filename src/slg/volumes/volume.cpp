@@ -29,13 +29,13 @@ using namespace slg;
 // Volume
 //------------------------------------------------------------------------------
 
-void Volume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
+void Volume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	if (iorTex)
-		iorTex->AddReferencedTextures(referencedTexs, iorTex);
+		iorTex->AddReferencedTextures(referencedTexs);
 	if (volumeEmissionTex)
-		volumeEmissionTex->AddReferencedTextures(referencedTexs, volumeEmissionTex);
+		volumeEmissionTex->AddReferencedTextures(referencedTexs);
 }
 
 void Volume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

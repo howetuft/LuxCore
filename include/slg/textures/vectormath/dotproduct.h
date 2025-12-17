@@ -38,11 +38,11 @@ public:
 	virtual float Y() const { return 0.f; } // TODO
 	virtual float Filter() const { return 0.f; } // TODO
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-		tex1->AddReferencedTextures(referencedTexs, tex1);
-		tex2->AddReferencedTextures(referencedTexs, tex2);
+		tex1->AddReferencedTextures(referencedTexs);
+		tex2->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		tex1->AddReferencedImageMaps(referencedImgMaps);

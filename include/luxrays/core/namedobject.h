@@ -20,6 +20,7 @@
 #define	_LUXRAYS_NAMEDOBJECT_H
 
 #include <string>
+#include <iostream>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -53,10 +54,6 @@ private:
 
 	std::string name;
 };
-
-using NamedObjectPtr = std::shared_ptr<NamedObject>;
-using NamedObjectConstPtr = std::shared_ptr<const NamedObject>;
-using NamedObjectRef = NamedObject&;
 
 }
 

@@ -385,18 +385,18 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 void CarPaintMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
-	Ks1->AddReferencedTextures(referencedTexs, Ks1);
-	Ks2->AddReferencedTextures(referencedTexs, Ks2);
-	Ks3->AddReferencedTextures(referencedTexs, Ks3);
-	M1->AddReferencedTextures(referencedTexs, M1);
-	M2->AddReferencedTextures(referencedTexs, M2);
-	M3->AddReferencedTextures(referencedTexs, M3);
-	R1->AddReferencedTextures(referencedTexs, R1);
-	R2->AddReferencedTextures(referencedTexs, R2);
-	R3->AddReferencedTextures(referencedTexs, R3);
-	Ka->AddReferencedTextures(referencedTexs, Ka);
-	depth->AddReferencedTextures(referencedTexs, depth);
+	Kd->AddReferencedTextures(referencedTexs);
+	Ks1->AddReferencedTextures(referencedTexs);
+	Ks2->AddReferencedTextures(referencedTexs);
+	Ks3->AddReferencedTextures(referencedTexs);
+	M1->AddReferencedTextures(referencedTexs);
+	M2->AddReferencedTextures(referencedTexs);
+	M3->AddReferencedTextures(referencedTexs);
+	R1->AddReferencedTextures(referencedTexs);
+	R2->AddReferencedTextures(referencedTexs);
+	R3->AddReferencedTextures(referencedTexs);
+	Ka->AddReferencedTextures(referencedTexs);
+	depth->AddReferencedTextures(referencedTexs);
 }
 
 void CarPaintMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

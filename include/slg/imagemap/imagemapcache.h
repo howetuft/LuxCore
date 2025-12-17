@@ -52,7 +52,7 @@ public:
 	std::string GetSequenceFileName(ImageMapConstPtr im) const;
 	u_int GetImageMapIndex(ImageMapConstPtr im) const;
 
-	void GetImageMaps(std::vector<ImageMapConstPtr > &ims);
+	void GetImageMaps(std::vector<ImageMapConstPtr > &ims) const;
 	u_int GetSize()const { return static_cast<u_int>(mapByKey.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByKey.find(name) != mapByKey.end(); }
 

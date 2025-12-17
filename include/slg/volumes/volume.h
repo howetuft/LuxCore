@@ -55,7 +55,7 @@ public:
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const = 0;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs, TextureConstPtr self) const;
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
 	virtual luxrays::Properties ToProperties() const;

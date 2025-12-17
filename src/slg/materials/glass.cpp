@@ -268,16 +268,16 @@ void GlassMaterial::Pdf(const HitPoint &hitPoint,
 void GlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs, Kr);
-	Kt->AddReferencedTextures(referencedTexs, Kt);
+	Kr->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
 	if (exteriorIor)
-		exteriorIor->AddReferencedTextures(referencedTexs, exteriorIor);
+		exteriorIor->AddReferencedTextures(referencedTexs);
 	if (interiorIor)
-		interiorIor->AddReferencedTextures(referencedTexs, interiorIor);
+		interiorIor->AddReferencedTextures(referencedTexs);
 	if (filmThickness)
-		filmThickness->AddReferencedTextures(referencedTexs, filmThickness);
+		filmThickness->AddReferencedTextures(referencedTexs);
 	if (filmIor)
-		filmIor->AddReferencedTextures(referencedTexs, filmIor);
+		filmIor->AddReferencedTextures(referencedTexs);
 }
 
 void GlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

@@ -58,7 +58,10 @@ typedef enum {
 class SampleableSphericalFunction;
 class Volume;
 
-class Material : public luxrays::NamedObject {
+class Material :
+	public luxrays::NamedObject,
+	public std::enable_shared_from_this<Material>
+{
 public:
 	Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
 			TextureConstPtr emitted, TextureConstPtr bump);
@@ -205,8 +208,7 @@ public:
 		return (this == mat.get());
 	}
 	virtual void AddReferencedMaterials(
-		std::unordered_set<std::shared_ptr<const Material>> &referencedMats,
-		std::shared_ptr<const Material> self
+		std::unordered_set<std::shared_ptr<const Material>> &referencedMats
 	) const;
 	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;

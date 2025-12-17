@@ -52,7 +52,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs, TextureConstPtr self) const;
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
 
 	virtual luxrays::Properties ToProperties() const;

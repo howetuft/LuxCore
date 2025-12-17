@@ -447,7 +447,7 @@ void Scene::RemoveUnusedMaterials() {
 		auto obj = objDefs.GetSceneObject(i);
 		auto mat = dynamic_pointer_cast<const Material>(obj);
 		if (mat) {
-			obj->AddReferencedMaterials(referencedMats, mat);
+			mat->AddReferencedMaterials(referencedMats);
 		}
 	}
 

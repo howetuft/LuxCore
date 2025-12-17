@@ -171,14 +171,14 @@ void Metal2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  
 	Material::AddReferencedTextures(referencedTexs);
 
 	if (fresnelTex)
-		fresnelTex->AddReferencedTextures(referencedTexs, fresnelTex);
+		fresnelTex->AddReferencedTextures(referencedTexs);
 	if (n)
-		n->AddReferencedTextures(referencedTexs, n);
+		n->AddReferencedTextures(referencedTexs);
 	if (k)
-		k->AddReferencedTextures(referencedTexs, k);
+		k->AddReferencedTextures(referencedTexs);
 
-	nu->AddReferencedTextures(referencedTexs, nu);
-	nv->AddReferencedTextures(referencedTexs, nv);
+	nu->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
 }
 
 void Metal2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

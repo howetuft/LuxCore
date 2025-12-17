@@ -32,6 +32,7 @@ using CameraRef = Camera&;
 
 class Scene;
 using SceneConstPtr = std::shared_ptr<const Scene>;
+using SceneConstWPtr = std::weak_ptr<const Scene>;
 using ScenePtr = std::shared_ptr<Scene>;
 using SceneConstRef = const Scene&;
 

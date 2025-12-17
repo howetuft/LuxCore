@@ -110,7 +110,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 	// This is really used only by Windows for 64+ threads support
 	SetThreadGroupAffinity(threadIndex);
 
-	auto scene = sv.scene;
+	auto scene = sv.scene.lock();
 	auto camera = scene->camera;
 
 	// Initialize the sampler

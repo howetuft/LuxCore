@@ -71,7 +71,10 @@ typedef enum {
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
 
-class Texture : public luxrays::NamedObject {
+class Texture :
+	public luxrays::NamedObject,
+	public std::enable_shared_from_this<Texture>
+{
 public:
 	Texture() : NamedObject("texture") { }
 	virtual ~Texture() { }
@@ -90,10 +93,11 @@ public:
 	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(
-		std::unordered_set<std::shared_ptr<const Texture>>  &referencedTexs, std::shared_ptr<const Texture> self
+		std::unordered_set<std::shared_ptr<const Texture>>  &referencedTexs
 	) const {
-		referencedTexs.insert(self);
+		referencedTexs.insert(shared_from_this());
 	}
+
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 	}
 

@@ -85,6 +85,11 @@ using Matrix4x4ConstPtr = std::shared_ptr<Matrix4x4>;
 using Matrix4x4UPtr = std::unique_ptr<Matrix4x4>;
 using Matrix4x4ConstUPtr = std::unique_ptr<Matrix4x4>;
 
+class NamedObject;
+using NamedObjectPtr = std::shared_ptr<NamedObject>;
+using NamedObjectConstPtr = std::shared_ptr<const NamedObject>;
+using NamedObjectRef = NamedObject&;
+
 class Normal;
 using NormalPtr = std::shared_ptr<Normal>;
 using NormalConstPtr = std::shared_ptr<Normal>;

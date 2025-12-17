@@ -789,6 +789,7 @@ void CameraImpl::RotateDown(const float angle) const {
 SceneImpl::SceneImpl(luxrays::PropertiesConstPtr resizePolicyProps) {
 	camera = std::make_unique<CameraImpl>(*this);
 	scene = std::make_shared<slg::Scene>(resizePolicyProps);
+	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 	allocatedScene = true;
 }
 
@@ -798,11 +799,13 @@ SceneImpl::SceneImpl(
 ) {
 	camera = std::make_unique<CameraImpl>(*this);
 	scene = std::make_shared<slg::Scene>(props, resizePolicyProps);
+	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(const string &fileName, luxrays::PropertiesConstPtr resizePolicyProps) {
 	camera = std::make_unique<CameraImpl>(*this);
+	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 
 	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
@@ -823,6 +826,7 @@ SceneImpl::SceneImpl(std::shared_ptr<slg::Scene> scn) {
 	camera = std::make_unique<CameraImpl>(*this);
 	scene = scn;
 	allocatedScene = false;
+	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 }
 
 
@@ -901,7 +905,7 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 			(void *)uvs, (void *)cols, (void *)alphas);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
 			(Triangle *)vi, (Normal *)n,
@@ -926,7 +930,7 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
 	if (uvs) {
@@ -995,7 +999,7 @@ void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strands
 			useCameraPosition);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DefineStrands(shapeName, strandsFile,
 			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
@@ -1059,7 +1063,7 @@ void SceneImpl::Parse(PropertiesConstPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->Parse(props);
 
@@ -1072,7 +1076,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			ToArgString(transMat, 16), objectID);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	// I have to transpose the matrix
 	const Matrix4x4 mat(
@@ -1092,7 +1096,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			count, (void *)transMats, (void *)objectIDs);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	const float *transMat = transMats;
 	for (u_int i = 0; i < count; ++i) {
@@ -1122,7 +1126,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			steps, (void *)times, (void *)transMats, objectID);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	vector<float> tms(steps);
 	vector<Transform> trans(steps);
@@ -1156,7 +1160,7 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 			count, steps, (void *)times, (void *)transMats, (void *)objectIDs);
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	vector<float> tms(steps);
 	vector<Transform> trans(steps);
@@ -1192,7 +1196,7 @@ void SceneImpl::UpdateObjectTransformation(const std::string &objName, const flo
 	API_BEGIN("{}, {}", ToArgString(objName), ToArgString(transMat, 16));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	// I have to transpose the matrix
 	const Matrix4x4 mat(
@@ -1210,7 +1214,7 @@ void SceneImpl::UpdateObjectMaterial(const std::string &objName, const std::stri
 	API_BEGIN("{}, {}", ToArgString(objName), ToArgString(matName));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->UpdateObjectMaterial(objName, matName);
 
@@ -1221,7 +1225,7 @@ void SceneImpl::DeleteObject(const string &objName) {
 	API_BEGIN("{}", ToArgString(objName));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DeleteObject(objName);
 
@@ -1232,7 +1236,7 @@ void SceneImpl::DeleteObjects(std::vector<std::string> &objNames) {
 	API_BEGIN("{}", ToArgString(objNames));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DeleteObjects(objNames);
 
@@ -1243,7 +1247,7 @@ void SceneImpl::DeleteLight(const string &lightName) {
 	API_BEGIN("{}", ToArgString(lightName));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DeleteLight(lightName);
 
@@ -1254,7 +1258,7 @@ void SceneImpl::DeleteLights(std::vector<std::string> &lightNames) {
 	API_BEGIN("{}", ToArgString(lightNames));
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DeleteLights(lightNames);
 
@@ -1265,7 +1269,7 @@ void SceneImpl::RemoveUnusedImageMaps() {
 	API_BEGIN_NOARGS();
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->RemoveUnusedImageMaps();
 
@@ -1276,7 +1280,7 @@ void SceneImpl::RemoveUnusedTextures() {
 	API_BEGIN_NOARGS();
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->RemoveUnusedTextures();
 }
@@ -1285,7 +1289,7 @@ void SceneImpl::RemoveUnusedMaterials() {
 	API_BEGIN_NOARGS();
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->RemoveUnusedMaterials();
 
@@ -1294,7 +1298,7 @@ void SceneImpl::RemoveUnusedMaterials() {
 
 void SceneImpl::RemoveUnusedMeshes() {
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->RemoveUnusedMeshes();
 
@@ -1373,18 +1377,18 @@ void SceneImpl::DefineMesh(std::shared_ptr<ExtTriangleMesh> mesh) {
 	API_BEGIN("{}", (void *)mesh.get());
 
 	// Invalidate the scene properties cache
-	scenePropertiesCache.Clear();
+	scenePropertiesCache->Clear();
 
 	scene->DefineMesh(mesh);
 
 	API_END();
 }
 
-const Properties &SceneImpl::ToProperties() const {
+PropertiesConstPtr SceneImpl::ToProperties() const {
 	API_BEGIN_NOARGS();
 
-	if (!scenePropertiesCache.GetSize())
-		scenePropertiesCache << scene->ToProperties(true);
+	if (!scenePropertiesCache->GetSize())
+		*scenePropertiesCache << scene->ToProperties(true);
 
 	//API_RETURN("{}", ToArgString(scenePropertiesCache));
 	API_END();
@@ -1503,14 +1507,14 @@ const Properties &RenderConfigImpl::ToProperties() const {
 	return result;
 }
 
-Scene &RenderConfigImpl::GetScene() const {
+ScenePtr RenderConfigImpl::GetScene() const {
 	API_BEGIN_NOARGS();
 	
 	Scene &result = *scene;
 
 	API_RETURN("{}", (void *)&result);
 
-	return result;
+	return scene;
 }
 
 bool RenderConfigImpl::HasCachedKernels() const {
@@ -1769,7 +1773,7 @@ void RenderSessionImpl::EndSceneEdit() {
 	renderSession->EndSceneEdit();
 
 	// Invalidate the scene properties cache
-	renderConfig->scene->scenePropertiesCache.Clear();
+	renderConfig->scene->scenePropertiesCache->Clear();
 
 	API_END();
 }

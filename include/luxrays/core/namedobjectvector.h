@@ -27,6 +27,7 @@
 #include <boost/bimap/unordered_set_of.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/usings.h"
 #include "luxrays/core/namedobject.h"
 
 namespace luxrays {

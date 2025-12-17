@@ -83,7 +83,7 @@ void MatteMaterial::Pdf(const HitPoint &hitPoint,
 void MatteMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
+	Kd->AddReferencedTextures(referencedTexs);
 }
 
 void MatteMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

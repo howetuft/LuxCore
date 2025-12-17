@@ -58,12 +58,12 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 					app->session->BeginSceneEdit();
 
 					if (app->optMouseGrabMode) {
-						app->config->GetScene().GetCamera().RotateUp(.04f * distY * app->optRotateStep);
-						app->config->GetScene().GetCamera().RotateLeft(.04f * distX * app->optRotateStep);
+						app->config->GetScene()->GetCamera().RotateUp(.04f * distY * app->optRotateStep);
+						app->config->GetScene()->GetCamera().RotateLeft(.04f * distX * app->optRotateStep);
 					}
 					else {
-						app->config->GetScene().GetCamera().RotateDown(.04f * distY * app->optRotateStep);
-						app->config->GetScene().GetCamera().RotateRight(.04f * distX * app->optRotateStep);
+						app->config->GetScene()->GetCamera().RotateDown(.04f * distY * app->optRotateStep);
+						app->config->GetScene()->GetCamera().RotateRight(.04f * distX * app->optRotateStep);
 					};
 
 					app->session->EndSceneEdit();
@@ -93,12 +93,12 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 					app->session->BeginSceneEdit();
 
 					if (app->optMouseGrabMode) {
-						app->config->GetScene().GetCamera().TranslateLeft(.04f * distX * app->optMoveStep);
-						app->config->GetScene().GetCamera().TranslateForward(.04f * distY * app->optMoveStep);
+						app->config->GetScene()->GetCamera().TranslateLeft(.04f * distX * app->optMoveStep);
+						app->config->GetScene()->GetCamera().TranslateForward(.04f * distY * app->optMoveStep);
 					}
 					else {
-						app->config->GetScene().GetCamera().TranslateRight(.04f * distX * app->optMoveStep);
-						app->config->GetScene().GetCamera().TranslateBackward(.04f * distY * app->optMoveStep);
+						app->config->GetScene()->GetCamera().TranslateRight(.04f * distX * app->optMoveStep);
+						app->config->GetScene()->GetCamera().TranslateBackward(.04f * distY * app->optMoveStep);
 					}
 
 					app->session->EndSceneEdit();

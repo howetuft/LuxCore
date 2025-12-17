@@ -52,7 +52,7 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 void MirrorMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kr->AddReferencedTextures(referencedTexs, Kr);
+	Kr->AddReferencedTextures(referencedTexs);
 }
 
 void MirrorMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

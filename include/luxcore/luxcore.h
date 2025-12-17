@@ -64,6 +64,7 @@ namespace luxcore {
 
 class Scene;
 using ScenePtr = std::shared_ptr<Scene>;
+using SceneConstPtr = std::shared_ptr<const Scene>;
 
 class Film;
 using FilmPtr = std::shared_ptr<Film>;
@@ -1166,7 +1167,7 @@ public:
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	virtual const luxrays::Properties &ToProperties() const = 0;
+	virtual std::shared_ptr<const luxrays::Properties> ToProperties() const = 0;
 	/*!
 	 * \brief Serializes a Scene in a file.
 	 *
@@ -1278,7 +1279,7 @@ public:
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	virtual Scene &GetScene() const = 0;
+	virtual std::shared_ptr<Scene> GetScene() const = 0;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be

@@ -35,18 +35,18 @@ public:
 	virtual TextureType GetType() const { return POWER_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { 
-		return SafePow(base->Y(), exponent->Y()); 
+	virtual float Y() const {
+		return SafePow(base->Y(), exponent->Y());
 	}
-	virtual float Filter() const { 
-		return SafePow(base->Filter(), exponent->Filter()); 
+	virtual float Filter() const {
+		return SafePow(base->Filter(), exponent->Filter());
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-		base->AddReferencedTextures(referencedTexs, base);
-		exponent->AddReferencedTextures(referencedTexs, exponent);
+		base->AddReferencedTextures(referencedTexs);
+		exponent->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		base->AddReferencedImageMaps(referencedImgMaps);

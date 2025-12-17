@@ -79,7 +79,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshPtr srcMesh, const u_int destAOV
 
 	// Find duplicate vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+		auto& triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
 
 		return (DistanceSquared(
 					triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1),

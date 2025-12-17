@@ -287,7 +287,7 @@ void LuxCoreApp::MenuSampler() {
 void LuxCoreApp::MenuCamera() {
   if (session && ImGui::MenuItem("Print properties")) {
     const luxrays::Properties &cameraProps = session->GetRenderConfig()->
-        GetScene().ToProperties().GetAllProperties("scene.camera.");
+        GetScene()->ToProperties()->GetAllProperties("scene.camera.");
     LC_LOG("Current camera properties:" << endl << cameraProps.ToString());
   }
 }

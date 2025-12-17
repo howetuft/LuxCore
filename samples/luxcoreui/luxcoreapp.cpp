@@ -114,7 +114,7 @@ static int MaximumExtent(const float pMin[3], const float pMax[3]) {
 }
 void LuxCoreApp::UpdateMoveStep() {
 	float pMin[3], pMax[3];
-	config->GetScene().GetBBox(pMin, pMax);
+	config->GetScene()->GetBBox(pMin, pMax);
 	const int maxExtent = MaximumExtent(pMin, pMax);
 
 	const float worldSize = Max(pMax[maxExtent] - pMin[maxExtent], .001f);
@@ -347,10 +347,10 @@ void LuxCoreApp::StartRendering(
 	if (currentTool != TOOL_IMAGE_VIEW) {
 		// Delete scene.camera.screenwindow so frame buffer resize will
 		// automatically adjust the ratio
-		Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+		Properties cameraProps = config->GetScene()->ToProperties()->GetAllProperties("scene.camera");
 		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 		auto pprops = std::make_shared<Properties>(cameraProps);
-		config->GetScene().Parse(pprops);
+		config->GetScene()->Parse(pprops);
 
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);

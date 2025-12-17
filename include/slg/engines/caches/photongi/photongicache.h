@@ -335,7 +335,7 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	SceneConstPtr scene;
+	SceneConstWPtr scene;
 	PhotonGICacheParams params;
 
 	u_int threadCount;

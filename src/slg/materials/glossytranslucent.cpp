@@ -355,20 +355,20 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 void GlossyTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
-	Kt->AddReferencedTextures(referencedTexs, Kt);
-	Ks->AddReferencedTextures(referencedTexs, Ks);
-	Ks_bf->AddReferencedTextures(referencedTexs, Ks_bf);
-	nu->AddReferencedTextures(referencedTexs, nu);
-	nu_bf->AddReferencedTextures(referencedTexs, nu_bf);
-	nv->AddReferencedTextures(referencedTexs, nv);
-	nv_bf->AddReferencedTextures(referencedTexs, nv_bf);
-	Ka->AddReferencedTextures(referencedTexs, Ka);
-	Ka_bf->AddReferencedTextures(referencedTexs, Ka_bf);
-	depth->AddReferencedTextures(referencedTexs, depth);
-	depth_bf->AddReferencedTextures(referencedTexs, depth_bf);
-	index->AddReferencedTextures(referencedTexs, index);
-	index_bf->AddReferencedTextures(referencedTexs, index_bf);
+	Kd->AddReferencedTextures(referencedTexs);
+	Kt->AddReferencedTextures(referencedTexs);
+	Ks->AddReferencedTextures(referencedTexs);
+	Ks_bf->AddReferencedTextures(referencedTexs);
+	nu->AddReferencedTextures(referencedTexs);
+	nu_bf->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
+	nv_bf->AddReferencedTextures(referencedTexs);
+	Ka->AddReferencedTextures(referencedTexs);
+	Ka_bf->AddReferencedTextures(referencedTexs);
+	depth->AddReferencedTextures(referencedTexs);
+	depth_bf->AddReferencedTextures(referencedTexs);
+	index->AddReferencedTextures(referencedTexs);
+	index_bf->AddReferencedTextures(referencedTexs);
 }
 
 void GlossyTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

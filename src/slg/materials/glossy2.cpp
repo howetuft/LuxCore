@@ -283,13 +283,13 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 void Glossy2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Kd->AddReferencedTextures(referencedTexs, Kd);
-	Ks->AddReferencedTextures(referencedTexs, Ks);
-	nu->AddReferencedTextures(referencedTexs, nu);
-	nv->AddReferencedTextures(referencedTexs, nv);
-	Ka->AddReferencedTextures(referencedTexs, Ka);
-	depth->AddReferencedTextures(referencedTexs, depth);
-	index->AddReferencedTextures(referencedTexs, index);
+	Kd->AddReferencedTextures(referencedTexs);
+	Ks->AddReferencedTextures(referencedTexs);
+	nu->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
+	Ka->AddReferencedTextures(referencedTexs);
+	depth->AddReferencedTextures(referencedTexs);
+	index->AddReferencedTextures(referencedTexs);
 }
 
 void Glossy2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

@@ -437,24 +437,23 @@ bool GlossyCoatingMaterial::IsReferencing(MaterialConstPtr mat) const {
 }
 
 void GlossyCoatingMaterial::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats,
-	MaterialConstPtr self
+	std::unordered_set<MaterialConstPtr> &referencedMats
 ) const {
-	Material::AddReferencedMaterials(referencedMats, self);
+	Material::AddReferencedMaterials(referencedMats);
 
-	matBase->AddReferencedMaterials(referencedMats, matBase);
+	matBase->AddReferencedMaterials(referencedMats);
 }
 
 void GlossyCoatingMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matBase->AddReferencedTextures(referencedTexs);
-	Ks->AddReferencedTextures(referencedTexs, Ks);
-	nu->AddReferencedTextures(referencedTexs, nu);
-	nv->AddReferencedTextures(referencedTexs, nv);
-	Ka->AddReferencedTextures(referencedTexs, Ka);
-	depth->AddReferencedTextures(referencedTexs, depth);
-	index->AddReferencedTextures(referencedTexs, index);
+	Ks->AddReferencedTextures(referencedTexs);
+	nu->AddReferencedTextures(referencedTexs);
+	nv->AddReferencedTextures(referencedTexs);
+	Ka->AddReferencedTextures(referencedTexs);
+	depth->AddReferencedTextures(referencedTexs);
+	index->AddReferencedTextures(referencedTexs);
 }
 
 void GlossyCoatingMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {

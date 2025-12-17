@@ -982,9 +982,21 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 	}
 
 	if (sampler == state.eyeSampler)
-		RenderEyeSample(state.device, state.scene, state.film, state.eyeSampler, state.eyeSampleResults);
+		RenderEyeSample(
+			state.device,
+			state.scene.lock(),
+			state.film,
+			state.eyeSampler,
+			state.eyeSampleResults
+		);
 	else
-		RenderLightSample(state.device, state.scene, state.film, state.lightSampler, state.lightSampleResults);
+		RenderLightSample(
+			state.device,
+			state.scene.lock(),
+			state.film,
+			state.lightSampler,
+			state.lightSampleResults
+		);
 
 	// Variance clamping
 	ApplyVarianceClamp(state, *sampleResults);

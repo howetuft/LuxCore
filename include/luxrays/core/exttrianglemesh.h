@@ -82,7 +82,7 @@ using ExtInstanceTriangleMeshPtr = std::shared_ptr<ExtInstanceTriangleMesh>;
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
 	ExtMesh() : bevelRadius(0.f) { }
-	virtual ~ExtMesh() { }
+	virtual ~ExtMesh() = default;
 
 	virtual float GetBevelRadius() const { return bevelRadius; }
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,

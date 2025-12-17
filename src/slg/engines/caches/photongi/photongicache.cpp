@@ -39,7 +39,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PhotonGICache::PhotonGICache() :
-		scene(nullptr),
+		scene(),
 		visibilityParticlesKdTree(nullptr),
 		radiancePhotonsBVH(nullptr) ,
 		causticPhotonsBVH(nullptr) {

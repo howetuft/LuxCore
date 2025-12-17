@@ -81,7 +81,7 @@ protected:
 	virtual bool ProcessVisibilityParticle(const T &visibilityParticle, std::vector<T> &visibilityParticles,
 			IndexOctree<T> *particlesOctree, const float maxDistance2) const = 0;
 
-	SceneConstPtr scene;
+	SceneConstWPtr scene;
 	std::vector<T> &visibilityParticles;
 	const u_int maxPathDepth, maxSampleCount;	
 	const float targetHitRate, lookUpRadius, lookUpNormalAngle, timeStart, timeEnd;

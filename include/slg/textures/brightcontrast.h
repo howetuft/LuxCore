@@ -43,12 +43,12 @@ public:
 		return 0.f;  // TODO
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs, TextureConstPtr self) const {
-		Texture::AddReferencedTextures(referencedTexs, self);
+	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs, tex);
-		brightnessTex->AddReferencedTextures(referencedTexs, brightnessTex);
-		contrastTex->AddReferencedTextures(referencedTexs, contrastTex);
+		tex->AddReferencedTextures(referencedTexs);
+		brightnessTex->AddReferencedTextures(referencedTexs);
+		contrastTex->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
 		tex->AddReferencedImageMaps(referencedImgMaps);

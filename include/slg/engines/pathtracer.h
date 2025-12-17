@@ -57,7 +57,7 @@ public:
 	luxrays::IntersectionDevice *device;
 
 	Sampler *eyeSampler, *lightSampler;
-	SceneConstPtr scene;
+	SceneConstWPtr scene;
 	FilmPtr film;
 	const VarianceClamping *varianceClamping;
 	

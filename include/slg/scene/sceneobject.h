@@ -65,8 +65,7 @@ public:
 
 	void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;
 	void AddReferencedMaterials(
-		std::unordered_set<MaterialConstPtr> &referencedMats,
-		MaterialConstPtr self
+		std::unordered_set<MaterialConstPtr> &referencedMats
 	) const;
 	void AddReferencedMeshes(std::unordered_set<luxrays::ExtMeshConstPtr > &referencedMesh) const;
 

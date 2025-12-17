@@ -122,7 +122,7 @@ public:
 	
 protected:
 	virtual IndexOctree<DLSCVisibilityParticle> *AllocOctree() const {
-		return new DLSCOctree(visibilityParticles, scene->dataSet->GetBBox(),
+		return new DLSCOctree(visibilityParticles, scene.lock()->dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
