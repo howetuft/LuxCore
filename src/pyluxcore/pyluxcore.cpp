@@ -2397,13 +2397,13 @@ PYBIND11_MODULE(pyluxcore, m) {
   //py::class_<luxcore::detail::FilmImpl, std::shared_ptr<luxcore::detail::FilmImpl>>(m, "Film")
   py::class_<luxcore::detail::FilmImpl, py::smart_holder>(m, "Film")
     .def(py::init([](std::string s){ return luxcore::detail::FilmImpl::Create(s); }
-	), py::return_value_policy::move)
+	))
     .def(py::init([](
 		luxrays::PropertiesPtr props,
 		bool hasPixelNormalizedChannel,
 		bool hasScreenNormalizedChannel
 	) { return luxcore::detail::FilmImpl::Create(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel); }
-	), py::return_value_policy::move)
+	))
     //.def(py::init<std::string>([](std::string s){ return luxcore::detail::FilmImpl::Create(s);})
     //.def(py::init<luxrays::Properties, bool, bool>())
     .def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
@@ -2484,8 +2484,8 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::init(&SceneImpl::Create<std::string>),
 		py::keep_alive<1, 2>()
 	)
-    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, py::return_value_policy::move)
-    .def("GetCamera", &Scene_GetCamera, py::return_value_policy::move)
+    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, py::return_value_policy::reference_internal)
+    .def("GetCamera", &Scene_GetCamera, py::return_value_policy::reference_internal)
     .def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
     .def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
     .def("DefineImageMap", &Scene_DefineImageMap)
@@ -2517,7 +2517,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("IsMeshDefined", &luxcore::detail::SceneImpl::IsMeshDefined)
     .def("IsTextureDefined", &luxcore::detail::SceneImpl::IsTextureDefined)
     .def("IsMaterialDefined", &luxcore::detail::SceneImpl::IsMaterialDefined)
-    .def("Parse", &luxcore::detail::SceneImpl::Parse)
+    .def("Parse", &luxcore::detail::SceneImpl::Parse, py::keep_alive<1, 2>())
     .def("DuplicateObject", &Scene_DuplicateObject)
     .def("DuplicateObject", &Scene_DuplicateObjectMulti)
     .def("DuplicateObject", &Scene_DuplicateMotionObject)
@@ -2565,7 +2565,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Save", &luxcore::detail::RenderConfigImpl::Save)
     .def("Export", &luxcore::detail::RenderConfigImpl::Export)
     .def_static("LoadResumeFile", &RenderConfig_LoadResumeFile)
-    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, py::return_value_policy::move)
+    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, py::return_value_policy::reference_internal)
   ;
 
   //--------------------------------------------------------------------------
@@ -2609,14 +2609,14 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
     .def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
     .def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
-    .def("GetFilm", &RenderSession_GetFilm, py::return_value_policy::move)
+    .def("GetFilm", &RenderSession_GetFilm, py::return_value_policy::reference_internal)
     .def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
-    .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, py::return_value_policy::move)
+    .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, py::return_value_policy::reference_internal)
     .def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)
     .def("WaitForDone", &luxcore::detail::RenderSessionImpl::WaitForDone)
     .def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)
     .def("Parse", &luxcore::detail::RenderSessionImpl::Parse)
-    .def("GetRenderState", &RenderSession_GetRenderState, py::return_value_policy::move)
+    .def("GetRenderState", &RenderSession_GetRenderState, py::return_value_policy::reference_internal)
     .def("SaveResumeFile", &luxcore::detail::RenderSessionImpl::SaveResumeFile)
   ;
 
