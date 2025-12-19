@@ -40,61 +40,61 @@ void LuxCoreApp::ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, i
 	switch (key) {
 		case  GLFW_KEY_A: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().TranslateLeft(app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().TranslateLeft(app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_D: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().TranslateRight(app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().TranslateRight(app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_W: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().TranslateForward(app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().TranslateForward(app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_S: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().TranslateBackward(app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().TranslateBackward(app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_R: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().Translate(0.f, 0.f, app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().Translate(0.f, 0.f, app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_F: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().Translate(0.f, 0.f, -app->optMoveStep);
+			app->config.lock()->GetScene().GetCamera().Translate(0.f, 0.f, -app->optMoveStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_UP: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().RotateUp(app->optRotateStep);
+			app->config.lock()->GetScene().GetCamera().RotateUp(app->optRotateStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_DOWN: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().RotateDown(app->optRotateStep);
+			app->config.lock()->GetScene().GetCamera().RotateDown(app->optRotateStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_LEFT: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().RotateLeft(app->optRotateStep);
+			app->config.lock()->GetScene().GetCamera().RotateLeft(app->optRotateStep);
 			app->session->EndSceneEdit();
 			break;
 		}
 		case GLFW_KEY_RIGHT: {
 			app->session->BeginSceneEdit();
-			app->config->GetScene()->GetCamera().RotateRight(app->optRotateStep);
+			app->config.lock()->GetScene().GetCamera().RotateRight(app->optRotateStep);
 			app->session->EndSceneEdit();
 			break;
 		}
@@ -151,7 +151,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// For some test with lux-hdr scene
 
 				/*app->session->BeginSceneEdit();
-				app->session->GetRenderConfig().GetScene()->DeleteLight("infinitelight");
+				app->session->GetRenderConfig().GetScene().DeleteLight("infinitelight");
 				app->session->EndSceneEdit();*/
 
 				/*app->session->BeginSceneEdit();
@@ -171,7 +171,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->session->EndSceneEdit();*/
 				
 				/*app->session->BeginSceneEdit();
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell01.type = matte\n"
 					"scene.materials.shell01.kd = 0.1 0.1 0.1\n"
 					"scene.materials.shell01.emission = 10 10 10\n"
@@ -187,11 +187,11 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				t = t * RotateY(5.f);
 				t = t * RotateZ(5.f);
 				app->session->BeginSceneEdit();
-				app->config->GetScene()->UpdateObjectTransformation("luxshell", &t.m.m[0][0]);
+				app->config.lock()->GetScene().UpdateObjectTransformation("luxshell", &t.m.m[0][0]);
 				app->session->EndSceneEdit();*/
 
 				/*app->session->BeginSceneEdit();
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell01.type = matte\n"
 					"scene.materials.shell01.kd = 0.75 0.0 0.0\n"
 					"scene.objects.luxshell.material = shell01\n"
@@ -201,7 +201,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->session->EndSceneEdit();*/
 				
 				/*app->session->BeginSceneEdit();
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.shell.type = mattetranslucent\n"
 					"scene.materials.shell.kr = 0.25 0.0 0.0\n"
 					"scene.materials.shell.kt = 0.75 0.0 0.0\n"
@@ -211,7 +211,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				/*static bool pingPong = true;
 				app->session->BeginSceneEdit();
 				if (pingPong)
-					app->config->GetScene()->Parse(Properties().SetFromString(
+					app->config.lock()->GetScene().Parse(Properties().SetFromString(
 						"scene.lights.infinitelight.type = infinite\n"
 						"scene.lights.infinitelight.file = scenes/simple-mat/sky.exr\n"
 						"scene.lights.infinitelight.gamma = 1.0\n"
@@ -219,7 +219,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 						"scene.lights.infinitelight.storage = byte\n"
 						));
 				else
-					app->config->GetScene()->Parse(Properties().SetFromString(
+					app->config.lock()->GetScene().Parse(Properties().SetFromString(
 						"scene.lights.infinitelight.type = infinite\n"
 						"scene.lights.infinitelight.file = scenes/simple-mat/arch.exr\n"
 						"scene.lights.infinitelight.gamma = 1.0\n"
@@ -227,15 +227,15 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 						"scene.lights.infinitelight.storage = byte\n"
 						));
 				pingPong = !pingPong;
-				app->config->GetScene()->RemoveUnusedImageMaps();
-				app->config->GetScene()->RemoveUnusedTextures();
-				app->config->GetScene()->RemoveUnusedMaterials();
-				app->config->GetScene()->RemoveUnusedMeshes();
+				app->config.lock()->GetScene().RemoveUnusedImageMaps();
+				app->config.lock()->GetScene().RemoveUnusedTextures();
+				app->config.lock()->GetScene().RemoveUnusedMaterials();
+				app->config.lock()->GetScene().RemoveUnusedMeshes();
 				app->session->EndSceneEdit();*/
 				
 				/*static bool pingPong = true;
 				app->session->BeginSceneEdit();
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.lights.l1.type = mappoint\n"
 					"scene.lights.l1.position = " + (pingPong ? ToString(-3.f) : ToString(3.f)) + " -5.0 6.0\n"
 					"scene.lights.l1.gain = 250.0 250.0 250.0\n"
@@ -249,7 +249,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				static Vector target(0.f, 0.f, .4f);
 				orig += (orig - target) * -.2f;
 				app->session->BeginSceneEdit();
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.camera.type = orthographic\n"
 					"scene.camera.lookat.orig = " + ToString(orig.x)+" " + ToString(orig.y)+" " + ToString(orig.z)+"\n"
 					"scene.camera.lookat.target = " + ToString(target.x)+" " + ToString(target.y)+" " + ToString(target.z)+"\n"));
@@ -258,12 +258,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				/*app->session->BeginSceneEdit();
 				static float tx = 0.f;
 				tx += .5f;
-				app->config->GetScene()->Parse(Properties().SetFromString(
+				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.shapes.shape_box2.type = mesh\n"
 					"scene.shapes.shape_box2.ply = scenes/simple/simple-mat-cube2.ply\n"
 					"scene.shapes.shape_box2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 " + ToString(tx) + " 0 0 1\n"
 //					));
-//				app->config->GetScene()->Parse(Properties().SetFromString(
+//				app->config.lock()->GetScene().Parse(Properties().SetFromString(
 					"scene.materials.greenmatte.type = matte\n"
 					"scene.materials.greenmatte.kd = 0.0 0.57 0.0\n"
 					"scene.materials.greenmatte.emission = 0.0 4.0 0.0\n"

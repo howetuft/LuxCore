@@ -39,7 +39,7 @@ void StatsWindow::Draw() {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
 
 		auto session = app->session;
-		auto config = app->config;
+		auto& config = app->config;
 
 		const Properties &stats = session->GetStats();
 
@@ -55,12 +55,12 @@ void StatsWindow::Draw() {
 
 		// Rendering information
 		if (ImGui::CollapsingHeader("Rendering information", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-			const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
+			const string engineType = config.lock()->ToProperties().Get("renderengine.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Render engine:", "%s", engineType.c_str());
 
 			const string samplerName = ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL") ||
 				(engineType == "RTPATHOCL")) ?
-					"N/A" : config->ToProperties().Get("sampler.type").Get<string>();
+					"N/A" : config.lock()->ToProperties().Get("sampler.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
 			LuxCoreApp::ColoredLabelText("Rendering time:", "%dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
@@ -79,7 +79,7 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
+						config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
 						fps);
 			} else if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
@@ -90,12 +90,12 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
+						config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>(),
 						fps);
 			} else
 #endif
 			{
-				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>());
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>());
 			}
 			
 			const float convergence = stats.Get("stats.renderengine.convergence").Get<float>();

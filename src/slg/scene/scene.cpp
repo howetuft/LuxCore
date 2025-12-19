@@ -80,6 +80,9 @@ void Scene::Init(luxrays::PropertiesConstPtr resizePolicyProps) {
 }
 
 Scene::~Scene() {
+#ifndef NDEBUG
+	std::cerr << "Deleting scene\n";
+#endif
 	dataSet.reset();
 }
 

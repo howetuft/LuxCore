@@ -378,38 +378,38 @@ Camera::~Camera() {
 // Scene
 //------------------------------------------------------------------------------
 
-std::shared_ptr<Scene> Scene::Create(
+std::unique_ptr<Scene> Scene::Create(
 		luxrays::PropertiesConstPtr resizePolicyProps
 ) {
 	API_BEGIN("{}", (void *)resizePolicyProps.get());
 
-	auto result = std::make_shared<luxcore::detail::SceneImpl>(resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(resizePolicyProps);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::shared_ptr<Scene> Scene::Create(
+std::unique_ptr<Scene> Scene::Create(
 	luxrays::PropertiesConstPtr props,
 	luxrays::PropertiesConstPtr resizePolicyProps
 ) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)resizePolicyProps.get());
 
-	auto result = std::make_shared<luxcore::detail::SceneImpl>(props, resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(props, resizePolicyProps);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::shared_ptr<Scene> Scene::Create(
+std::unique_ptr<Scene> Scene::Create(
 	const string &fileName,
 	luxrays::PropertiesConstPtr resizePolicyProps
 ) {
 	API_BEGIN("{}, {}", ToArgString(fileName), (void *)resizePolicyProps.get());
 
-	auto result = std::make_shared<luxcore::detail::SceneImpl>(fileName, resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(fileName, resizePolicyProps);
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -484,32 +484,42 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 // RenderConfig
 //------------------------------------------------------------------------------
 
-std::shared_ptr<RenderConfig> RenderConfig::Create(
+std::unique_ptr<RenderConfig> RenderConfig::Create(
 	PropertiesConstPtr props,
-	ScenePtr scn
+	std::shared_ptr<luxcore::Scene> scn  // We take ownership of the input scene
 ) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)scn.get());
 
-	auto scnImpl = dynamic_pointer_cast<luxcore::detail::SceneImpl>(scn);
+	auto scnImpl = static_pointer_cast<luxcore::detail::SceneImpl>(scn);
 
-	auto result = std::make_shared<luxcore::detail::RenderConfigImpl>(props, scnImpl);
+	auto result = luxcore::detail::RenderConfigImpl::Create(props, scnImpl);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::shared_ptr<RenderConfig> RenderConfig::Create(const std::string &fileName) {
+std::unique_ptr<RenderConfig> RenderConfig::Create(PropertiesConstPtr props) {
+	API_BEGIN("{}", ToArgString(props));
+
+	auto result = luxcore::detail::RenderConfigImpl::Create(props);
+
+	API_RETURN("{}", (void *)result.get());
+
+	return result;
+}
+
+std::unique_ptr<RenderConfig> RenderConfig::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	auto result = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName);
+	auto result = luxcore::detail::RenderConfigImpl::Create(fileName);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::shared_ptr<RenderConfig> RenderConfig::Create(
+std::unique_ptr<RenderConfig> RenderConfig::Create(
 	const std::string &fileName,
 	std::shared_ptr<RenderState>& startState,  // In/out
 	std::shared_ptr<Film>& startFilm  // In/out
@@ -518,7 +528,11 @@ std::shared_ptr<RenderConfig> RenderConfig::Create(
 
 	std::shared_ptr<luxcore::detail::RenderStateImpl> ss;
 	std::shared_ptr<luxcore::detail::FilmImpl> sf;
-	auto rcfg = std::make_shared<luxcore::detail::RenderConfigImpl>(fileName, ss, sf);
+	auto rcfg = luxcore::detail::RenderConfigImpl::Create<
+		const std::string &,
+		std::shared_ptr<RenderStateImpl>& ,  // Out
+		std::shared_ptr<FilmImpl>& // Out
+	>(fileName, ss, sf);
 
 	startState = static_pointer_cast<luxcore::RenderState>(ss);
 	startFilm = static_pointer_cast<luxcore::Film>(sf);
@@ -561,32 +575,37 @@ RenderState::~RenderState() {
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSessionPtr RenderSession::Create(
-	std::shared_ptr<RenderConfig> config,
+RenderSessionUPtr RenderSession::Create(
+	RenderConfigPtr config,
 	std::shared_ptr<RenderState> * startState,
 	std::shared_ptr<Film> * startFilm
 ) {
 	API_BEGIN("{}, {}, {}", (void *)config.get(), (void *)startState->get(), (void *)startFilm->get());
 
-	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
-	auto startStateImpl = dynamic_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
-	auto startFilmImpl = dynamic_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm);
+	auto configImpl = static_pointer_cast<RenderConfigImpl>(config);
 
-	auto result = RenderSessionImpl::Create(configImpl, startStateImpl, startFilmImpl);
+	auto startStateImpl = static_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
+	auto startFilmImpl = static_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm);
+
+	auto result = RenderSessionImpl::Create(
+		configImpl,
+		startStateImpl,
+		startFilmImpl
+	);
 
 	API_RETURN("{}", ToArgString(result));
 
 	return result;
 }
 
-RenderSessionPtr RenderSession::Create(
+RenderSessionUPtr RenderSession::Create(
 		RenderConfigPtr config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 ) {
-	API_BEGIN("{}, {}, {}", (void *)config.get(), ToArgString(startStateFileName), ToArgString(startFilmFileName));
+	API_BEGIN("{}, {}, {}", (void*)config.get(), ToArgString(startStateFileName), ToArgString(startFilmFileName));
 
-	auto configImpl = dynamic_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
+	auto configImpl = static_pointer_cast<luxcore::detail::RenderConfigImpl>(config);
 
 	auto result = RenderSessionImpl::Create(configImpl, startStateFileName, startFilmFileName);
 

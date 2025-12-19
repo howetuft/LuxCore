@@ -38,14 +38,14 @@ SamplerWindow::SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") {
 }
 
 void SamplerWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("sampler");
+		props = config.lock()->ToProperties().GetAllProperties("sampler");
 	} catch(exception &ex) {
 		LA_LOG("Sampler parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("sampler");
+		props = config.lock()->GetProperties().GetAllProperties("sampler");
 	}
 }
 

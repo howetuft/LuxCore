@@ -41,14 +41,14 @@ AcceleratorWindow::AcceleratorWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Acc
 }
 
 void AcceleratorWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("accelerator");
+		props = config.lock()->ToProperties().GetAllProperties("accelerator");
 	} catch(exception &ex) {
 		LA_LOG("Accelerator parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("accelerator");
+		props = config.lock()->GetProperties().GetAllProperties("accelerator");
 	}
 }
 

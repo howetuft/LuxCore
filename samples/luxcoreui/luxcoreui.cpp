@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
       auto scene = Scene::Create();
       scene->Parse(sceneProps);
       renderConfigProps->Set(cmdLineProp);
-      config = RenderConfig::Create(renderConfigProps, scene);
+      config = RenderConfig::Create(renderConfigProps, std::move(scene));
       config->DeleteSceneOnExit();
     } else if (configFileNameExt == ".cfg") {
       // It is a LuxCore SDL file
@@ -203,10 +203,10 @@ int main(int argc, char *argv[]) {
 
     if (config && removeUnused) {
       // Remove unused Meshes, Image maps, materials and textures
-      config->GetScene()->RemoveUnusedMeshes();
-      config->GetScene()->RemoveUnusedImageMaps();
-      config->GetScene()->RemoveUnusedMaterials();
-      config->GetScene()->RemoveUnusedTextures();
+      config->GetScene().RemoveUnusedMeshes();
+      config->GetScene().RemoveUnusedImageMaps();
+      config->GetScene().RemoveUnusedMaterials();
+      config->GetScene().RemoveUnusedTextures();
     }
 
     if (!config && (startFilm || startRenderState))

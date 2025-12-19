@@ -104,14 +104,14 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 }
 
 void RenderEngineWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = GetAllRenderEngineProperties(config->ToProperties());
+		props = GetAllRenderEngineProperties(config.lock()->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("RenderEngine parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetAllRenderEngineProperties(config->GetProperties());
+		props = GetAllRenderEngineProperties(config.lock()->GetProperties());
 	}
 }
 

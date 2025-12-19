@@ -163,7 +163,7 @@ private:
 	HelpWindow helpWindow;
 	UserImportancePaintWindow userImportancePaintWindow;
 
-	std::shared_ptr<luxcore::RenderConfig> config;
+	std::weak_ptr<luxcore::RenderConfig> config;
 
 	std::shared_ptr<luxcore::RenderSession> session;
 

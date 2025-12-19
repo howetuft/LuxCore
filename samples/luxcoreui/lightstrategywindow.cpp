@@ -38,14 +38,14 @@ LightStrategyWindow::LightStrategyWindow(LuxCoreApp *a) : ObjectEditorWindow(a, 
 }
 
 void LightStrategyWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("lightstrategy");
+		props = config.lock()->ToProperties().GetAllProperties("lightstrategy");
 	} catch(exception &ex) {
 		LA_LOG("LightStrategy parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("lightstrategy");
+		props = config.lock()->GetProperties().GetAllProperties("lightstrategy");
 	}
 }
 

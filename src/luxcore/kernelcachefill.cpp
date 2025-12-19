@@ -33,7 +33,7 @@ using namespace luxcore::detail;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-static void CreateBox(auto scene, const string &objName, const string &meshName,
+static void CreateBox(auto const& scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
 	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
 	// Bottom face
@@ -255,7 +255,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");
 
-	auto config = RenderConfig::Create(cfgProps, scene);
+	RenderConfigPtr config = RenderConfig::Create(cfgProps, std::move(scene));
 	auto session = RenderSession::Create(config);
 
 	// Start the rendering

@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
 			throw runtime_error("You must specify a file to render");
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
-		ScenePtr scene;
+		std::unique_ptr<Scene> scene;
 		RenderConfigPtr config;
 		RenderStatePtr startRenderState;
 		FilmPtr startFilm;
@@ -216,10 +216,10 @@ int main(int argc, char *argv[]) {
 
 			renderConfigProps->Set(cmdLineProp);
 
-			scene = Scene::Create();
+			scene = luxcore::Scene::Create();
 			scene->Parse(sceneProps);
 			renderConfigProps->Set(cmdLineProp);
-			config = RenderConfig::Create(renderConfigProps, scene);
+			config = RenderConfig::Create(renderConfigProps, std::move(scene));
 		} else if (configFileNameExt == ".cfg") {
 			// It is a LuxCore SDL file
 			auto props = std::make_shared<Properties>(configFileName);
@@ -240,10 +240,10 @@ int main(int argc, char *argv[]) {
 
 		if (removeUnused) {
 			// Remove unused Meshes, Image maps, materials and textures
-			config->GetScene()->RemoveUnusedMeshes();
-			config->GetScene()->RemoveUnusedImageMaps();
-			config->GetScene()->RemoveUnusedMaterials();
-			config->GetScene()->RemoveUnusedTextures();
+			config->GetScene().RemoveUnusedMeshes();
+			config->GetScene().RemoveUnusedImageMaps();
+			config->GetScene().RemoveUnusedMaterials();
+			config->GetScene().RemoveUnusedTextures();
 		}
 
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");

@@ -43,14 +43,14 @@ Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const Properties &cfgProps
 }
 
 void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = GetOpenCLDeviceProperties(config->ToProperties());
+		props = GetOpenCLDeviceProperties(config.lock()->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("OCLDevice parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetOpenCLDeviceProperties(config->GetProperties());
+		props = GetOpenCLDeviceProperties(config.lock()->GetProperties());
 	}
 }
 

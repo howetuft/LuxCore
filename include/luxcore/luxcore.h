@@ -77,6 +77,7 @@ using RenderStatePtr = std::shared_ptr<RenderState>;
 
 class RenderSession;
 using RenderSessionPtr = std::shared_ptr<RenderSession>;
+using RenderSessionUPtr = std::unique_ptr<RenderSession>;
 
 #define LC_MESH_MAX_DATA_COUNT 8
 
@@ -797,7 +798,7 @@ public:
 	 *
 	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static std::shared_ptr<Scene> Create(
+	static std::unique_ptr<Scene> Create(
 			std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
 	);
 	/*!
@@ -806,7 +807,7 @@ public:
 	 * \param props are the Properties used to build the new Scene.
 	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static std::shared_ptr<Scene> Create(
+	static std::unique_ptr<Scene> Create(
 		std::shared_ptr<const luxrays::Properties> props,
 		std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
 	);
@@ -820,7 +821,7 @@ public:
 	 * This parameter has no effect when loading binary serialized binary
 	 * file.
 	 */
-	static std::shared_ptr<Scene> Create(
+	static std::unique_ptr<Scene> Create(
 		const std::string &fileName,
 		std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
 	);
@@ -1219,25 +1220,37 @@ template<> void CPP_API Scene::DefineImageMap<float>(const std::string &imgMapNa
 CPP_EXPORT class CPP_API RenderConfig {
 public:
 	/*!
-	 * \brief Create a new RenderConfig using the provided Properties and
-	 * (optional) Scene.
+	 * \brief Create a new RenderConfig using the provided Properties
 	 *
 	 * \param props are the Properties used to build the new RenderConfig.
-	 * \param scene is the Scene used to build the new RenderConfig. If specified,
+	 */
+	static std::unique_ptr<RenderConfig> Create(
+		std::shared_ptr<const luxrays::Properties> props
+	);
+
+	/*!
+	 * \brief Create a new RenderConfig using the provided Properties and
+	 *  Scene.
+	 *
+	 * \param props are the Properties used to build the new RenderConfig.
+	 * \param scene is the Scene used to build the new RenderConfig.
+	 * RenderConfig will take ownership of the scene
 	 * the Scene will not be deleted by the destructor. If NULL, the Scene will be
 	 * read from the file specified in the "scene.file" Property and deleted by
 	 * the destructor.
 	 */
-	static std::shared_ptr<RenderConfig> Create(
+	static std::unique_ptr<RenderConfig> Create(
 		std::shared_ptr<const luxrays::Properties> props,
-		ScenePtr scene = NULL);
+		std::shared_ptr<luxcore::Scene> scene
+	);
+
 	/*!
 	 * \brief Create a new RenderConfig using the provided binary file.
 	 *
 	 * \param fileName is the binary file used to build the new
 	 * RenderConfig. The extension for the binary format must be ".bcf".
 	 */
-	static std::shared_ptr<RenderConfig> Create(const std::string &fileName);
+	static std::unique_ptr<RenderConfig> Create(const std::string &fileName);
 	/*!
 	 * \brief Create a new RenderConfig using the provided resume binary file.
 	 *
@@ -1246,7 +1259,7 @@ public:
 	 * \param startState the reference to the render state will be returned here.
 	 * \param startFilm the reference to the film will be returned here.
 	 */
-	static std::shared_ptr<RenderConfig> Create(
+	static std::unique_ptr<RenderConfig> Create(
 		const std::string &fileName,
 		std::shared_ptr<RenderState> & startState,
 		std::shared_ptr<Film> & startFilm
@@ -1279,7 +1292,8 @@ public:
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	virtual std::shared_ptr<Scene> GetScene() const = 0;
+	virtual const Scene& GetScene() const = 0;
+	virtual Scene& GetScene() = 0;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -1395,8 +1409,8 @@ public:
 	 * \param startFilm is the optional Film to use to resume rendering. The
 	 * memory for Film is freed by RenderSession.
 	 */
-	static std::shared_ptr<RenderSession> Create(
-			std::shared_ptr<RenderConfig> config,
+	static std::unique_ptr<RenderSession> Create(
+			RenderConfigPtr config,
 			std::shared_ptr<RenderState> * startState = nullptr,
 			std::shared_ptr<Film> * startFilm = nullptr
 	);
@@ -1409,8 +1423,8 @@ public:
 	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
 	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
 	 */
-	static std::shared_ptr<RenderSession> Create(
-		std::shared_ptr<RenderConfig> config,
+	static std::unique_ptr<RenderSession> Create(
+		RenderConfigPtr config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
@@ -1423,7 +1437,7 @@ public:
 	 *
 	 * \return a reference to the RenderingConfig.
 	 */
-	virtual std::shared_ptr<RenderConfig> GetRenderConfig() = 0;
+	virtual RenderConfig& GetRenderConfig() = 0;
 
 	/*!
 	 * \brief Returns a pointer to the current RenderState. The session must be

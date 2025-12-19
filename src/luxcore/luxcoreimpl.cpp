@@ -786,14 +786,15 @@ void CameraImpl::RotateDown(const float angle) const {
 // SceneImpl
 //------------------------------------------------------------------------------
 
-SceneImpl::SceneImpl(luxrays::PropertiesConstPtr resizePolicyProps) {
+SceneImpl::SceneImpl(Private p, luxrays::PropertiesConstPtr resizePolicyProps) {
 	camera = std::make_unique<CameraImpl>(*this);
-	scene = std::make_shared<slg::Scene>(resizePolicyProps);
+	scene = std::make_unique<slg::Scene>(resizePolicyProps);
 	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 	allocatedScene = true;
 }
 
 SceneImpl::SceneImpl(
+	Private p,
 	luxrays::PropertiesConstPtr props,
 	luxrays::PropertiesConstPtr resizePolicyProps
 ) {
@@ -803,7 +804,11 @@ SceneImpl::SceneImpl(
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(const string &fileName, luxrays::PropertiesConstPtr resizePolicyProps) {
+SceneImpl::SceneImpl(
+	Private p,
+	const string &fileName,
+	luxrays::PropertiesConstPtr resizePolicyProps
+) {
 	camera = std::make_unique<CameraImpl>(*this);
 	scenePropertiesCache = std::make_shared<luxrays::Properties>();
 
@@ -822,7 +827,7 @@ SceneImpl::SceneImpl(const string &fileName, luxrays::PropertiesConstPtr resizeP
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(std::shared_ptr<slg::Scene> scn) {
+SceneImpl::SceneImpl(Private p, std::shared_ptr<slg::Scene> scn) {
 	camera = std::make_unique<CameraImpl>(*this);
 	scene = scn;
 	allocatedScene = false;
@@ -1429,36 +1434,42 @@ auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 //------------------------------------------------------------------------------
 
 RenderConfigImpl::RenderConfigImpl(
-	PropertiesConstPtr props,
-	std::shared_ptr<SceneImpl> scn
+	Private p,
+	PropertiesConstPtr props
 ) {
-	if (scn) {
-		scene = scn;
-		allocatedScene = false;
-		renderConfig = slg::RenderConfig::Create(props, scene->scene);
-	} else {
-		renderConfig = slg::RenderConfig::Create(props);
-		scene = std::make_shared<SceneImpl>(renderConfig->scene);
-		allocatedScene = true;
-	}
-}
-
-RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
-	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
-	scene = std::make_shared<SceneImpl>(renderConfig->scene);
+	renderConfig = slg::RenderConfig::Create(props);
+	scene = SceneImpl::Create(renderConfig->scene);
 	allocatedScene = true;
 }
 
 RenderConfigImpl::RenderConfigImpl(
+	Private p,
+	PropertiesConstPtr props,
+	SceneImplPtr scn
+) {
+	if (not scn) throw std::runtime_error("Null scene in RenderConfigImpl");
+	scene = scn;
+	allocatedScene = false;
+	renderConfig = slg::RenderConfig::Create(props, scene->scene);
+}
+
+RenderConfigImpl::RenderConfigImpl(Private p, const std::string &fileName) {
+	renderConfig = slg::RenderConfig::LoadSerialized(fileName);
+	scene = SceneImpl::Create(renderConfig->scene);
+	allocatedScene = true;
+}
+
+RenderConfigImpl::RenderConfigImpl(
+		Private p,
 		const std::string &fileName,
-		std::shared_ptr<RenderStateImpl>&  startState,
-		std::shared_ptr<FilmImpl>&  startFilm
+		std::shared_ptr<RenderStateImpl>& startState,
+		std::shared_ptr<FilmImpl>& startFilm
 ) {
 	SerializationInputFile sif(fileName);
 
 	// Read the render configuration and the scene
 	sif.GetArchive() >> renderConfig;
-	scene = std::make_shared<SceneImpl>(renderConfig->scene);
+	scene = SceneImpl::Create(renderConfig->scene);
 	allocatedScene = true;
 
 	// Read the render state
@@ -1507,14 +1518,24 @@ const Properties &RenderConfigImpl::ToProperties() const {
 	return result;
 }
 
-ScenePtr RenderConfigImpl::GetScene() const {
+const Scene& RenderConfigImpl::GetScene() const {
 	API_BEGIN_NOARGS();
-	
+
 	Scene &result = *scene;
 
 	API_RETURN("{}", (void *)&result);
 
-	return scene;
+	return result;
+}
+
+Scene& RenderConfigImpl::GetScene() {
+	API_BEGIN_NOARGS();
+
+	Scene &result = *scene;
+
+	API_RETURN("{}", (void *)&result);
+
+	return result;
 }
 
 bool RenderConfigImpl::HasCachedKernels() const {
@@ -1621,51 +1642,16 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
-RenderSessionImplUPtr RenderSessionImpl::Create(
-	RenderConfigImplPtr config,
-	RenderStateImplPtr& startState,
-	FilmImplStandalonePtr& startFilm
-) {
-	auto result = std::make_unique<RenderSessionImpl>(
-		Private(), config, startState, startFilm
-	);
-	result->InitFilm();
-	return result;
-}
-
-RenderSessionImplUPtr RenderSessionImpl::Create(
-	RenderConfigImplPtr config,
-	const std::string &startStateFileName,
-	const std::string &startFilmFileName
-) {
-	auto result = std::make_unique<RenderSessionImpl>(
-		Private(), config, startStateFileName, startFilmFileName
-	);
-	result->InitFilm();
-	return result;
-}
-
-RenderSessionImplUPtr RenderSessionImpl::Create(RenderConfigImplPtr config) {
-	auto result = std::make_unique<RenderSessionImpl>(
-		Private(),
-		config,
-		std::shared_ptr<RenderStateImpl>(nullptr),
-		std::shared_ptr<FilmImplStandalone>(nullptr)
-	);
-	result->InitFilm();
-	return result;
-}
 
 RenderSessionImpl::RenderSessionImpl(
 	Private priv,
-	std::shared_ptr<RenderConfigImpl> config,
+	RenderConfigImplPtr config,
 	std::shared_ptr<RenderStateImpl> startState,
 	std::shared_ptr<FilmImplStandalone> startFilm
 ) :
 	renderConfig(config)
 {
-	// Create session
-
+	// Create slg session
 	renderSession = std::make_unique<slg::RenderSession>(
 		*config->renderConfig,
 		startState ? startState->renderState : slg::RenderStatePtr(nullptr),
@@ -1687,7 +1673,7 @@ RenderSessionImpl::RenderSessionImpl(
 
 RenderSessionImpl::RenderSessionImpl(
 	Private priv,
-	std::shared_ptr<RenderConfigImpl> config,
+	RenderConfigImplPtr config,
 	const std::string &startStateFileName,
 	const std::string &startFilmFileName
 ) :
@@ -1709,14 +1695,12 @@ void RenderSessionImpl::InitFilm() {
 	film = std::make_shared<FilmImplSession>(*this);
 }
 
-std::shared_ptr<RenderConfig> RenderSessionImpl::GetRenderConfig() {
+RenderConfig & RenderSessionImpl::GetRenderConfig() {
 	API_BEGIN_NOARGS();
 
-	auto result = renderConfig;
+	API_RETURN("{}", (void *)renderConfig.lock().get());
 
-	API_RETURN("{}", (void *)result.get());
-
-	return result;
+	return *renderConfig.lock();
 }
 
 std::shared_ptr<RenderState> RenderSessionImpl::GetRenderState() {
@@ -1773,7 +1757,7 @@ void RenderSessionImpl::EndSceneEdit() {
 	renderSession->EndSceneEdit();
 
 	// Invalidate the scene properties cache
-	renderConfig->scene->scenePropertiesCache->Clear();
+	renderConfig.lock()->scene->scenePropertiesCache->Clear();
 
 	API_END();
 }

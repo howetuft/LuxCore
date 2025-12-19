@@ -37,14 +37,14 @@ Properties FilmRadianceGroupsWindow::GetFilmRadianceGroupsProperties(const Prope
 }
 
 void FilmRadianceGroupsWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = GetFilmRadianceGroupsProperties(config->ToProperties());
+		props = GetFilmRadianceGroupsProperties(config.lock()->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("FilmRadianceGroupsWindow parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetFilmRadianceGroupsProperties(config->GetProperties());
+		props = GetFilmRadianceGroupsProperties(config.lock()->GetProperties());
 	}
 }
 

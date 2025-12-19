@@ -33,14 +33,14 @@ HaltConditionsWindow::HaltConditionsWindow(LuxCoreApp *a) : ObjectEditorWindow(a
 }
 
 void HaltConditionsWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("batch.halt");
+		props = config.lock()->ToProperties().GetAllProperties("batch.halt");
 	} catch(exception &ex) {
 		LA_LOG("Halt conditions parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("batch.halt");
+		props = config.lock()->GetProperties().GetAllProperties("batch.halt");
 	}
 }
 

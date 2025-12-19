@@ -40,14 +40,14 @@ std::shared_ptr<Properties> EpsilonWindow::GetEpsilonProperties(
 }
 
 void EpsilonWindow::RefreshObjectProperties(Properties &props) {
-	auto config = app->config;
+	auto& config = app->config;
 	try {
-		props = *GetEpsilonProperties(config->ToProperties());
+		props = *GetEpsilonProperties(config.lock()->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("Epsilon parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = *GetEpsilonProperties(config->GetProperties());
+		props = *GetEpsilonProperties(config.lock()->GetProperties());
 	}
 }
 

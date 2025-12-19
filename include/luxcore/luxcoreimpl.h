@@ -41,6 +41,7 @@ using RenderSessionImplConstRef = const RenderSessionImpl &;
 
 class RenderConfigImpl;
 using RenderConfigImplPtr = std::shared_ptr<RenderConfigImpl>;
+using RenderConfigImplUPtr = std::unique_ptr<RenderConfigImpl>;
 
 class RenderStateImpl;
 using RenderStateImplPtr = std::shared_ptr<RenderStateImpl>;
@@ -48,6 +49,7 @@ using RenderStateImplPtr = std::shared_ptr<RenderStateImpl>;
 class SceneImpl;
 using SceneImplConstRef = const SceneImpl &;
 using SceneImplPtr = std::shared_ptr<SceneImpl>;
+using SceneImplUPtr = std::unique_ptr<SceneImpl>;
 
 class CameraImpl;
 using CameraImplPtr = std::shared_ptr<CameraImpl>;
@@ -287,14 +289,25 @@ private:
 //------------------------------------------------------------------------------
 
 class SceneImpl : public luxcore::Scene {
+
+	struct Private {};
+
 public:
-	SceneImpl(slg::ScenePtr scn);
-	SceneImpl(luxrays::PropertiesConstPtr resizePolicyProps = nullptr);
+	template<typename... Args>
+	static SceneImplUPtr Create(Args... args) {
+		return std::make_unique<SceneImpl>(Private(), std::forward<Args>(args)...);
+	}
+
+	// Constructors are private - please use factory
+	SceneImpl(Private, slg::ScenePtr scn);
+	SceneImpl(Private, luxrays::PropertiesConstPtr resizePolicyProps = nullptr);
 	SceneImpl(
+		Private,
 		luxrays::PropertiesConstPtr props,
 		luxrays::PropertiesConstPtr resizePolicyProps
 	);
 	SceneImpl(
+		Private,
 		const std::string &fileName,
 		luxrays::PropertiesConstPtr resizePolicyProps = nullptr
 	);
@@ -411,6 +424,7 @@ public:
 	friend class RenderSessionImpl;
 
 private:
+
 	mutable luxrays::PropertiesPtr scenePropertiesCache;
 
 	slg::ScenePtr scene;
@@ -424,13 +438,27 @@ private:
 
 
 class RenderConfigImpl : public luxcore::RenderConfig {
+	struct Private {};
 public:
+	// Factory
+	template<typename... Args>
+	static RenderConfigImplUPtr Create(Args... args) {
+		auto p = Private();
+		return std::make_unique<RenderConfigImpl>(
+			p, std::forward<Args>(args)...
+		);
+	}
+
+	// Constructors
+	RenderConfigImpl(Private, luxrays::PropertiesConstPtr props);
 	RenderConfigImpl(
+		Private,
 		luxrays::PropertiesConstPtr props,
-		SceneImplPtr scene = nullptr
+		SceneImplPtr scene
 	);
-	RenderConfigImpl(const std::string &fileName);
+	RenderConfigImpl(Private, const std::string &fileName);
 	RenderConfigImpl(
+		Private,
 		const std::string &fileName,
 		std::shared_ptr<RenderStateImpl>& startState,  // Out
 		std::shared_ptr<FilmImpl>& startFilm  // Out
@@ -440,7 +468,8 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 	const luxrays::Properties &ToProperties() const;
 
-	ScenePtr GetScene() const override;
+	const Scene& GetScene() const override;
+	Scene& GetScene() override;
 
 	bool HasCachedKernels() const;
 
@@ -463,10 +492,14 @@ public:
 
 
 private:
+	// The underlying slg object
 	std::unique_ptr<slg::RenderConfig> renderConfig;
-	std::shared_ptr<SceneImpl> scene;
+
+	// The (optional) scene
+	SceneImplPtr scene;
 	bool allocatedScene;
 };
+
 
 //------------------------------------------------------------------------------
 // RenderStateImpl
@@ -498,37 +531,31 @@ class RenderSessionImpl : public luxcore::RenderSession
 	struct Private{ explicit Private() = default; };
 
 public:
+	template<typename... Args>
+	static RenderSessionImplUPtr Create(Args... args) {
+		auto result = std::make_unique<RenderSessionImpl>(Private(), args...);
+		result->InitFilm();
+		return result;
 
-	static RenderSessionImplUPtr Create(
-		std::shared_ptr<RenderConfigImpl> config
-	);
-	static RenderSessionImplUPtr Create(
-		std::shared_ptr<RenderConfigImpl> config,
-		std::shared_ptr<RenderStateImpl>& startState,
-		std::shared_ptr<FilmImplStandalone>& startFilm
-	);
-	static RenderSessionImplUPtr Create(
-		std::shared_ptr<RenderConfigImpl> config,
-		const std::string &startStateFileName,
-		const std::string &startFilmFileName
-	);
+	}
 
 	// Public... but private constructors
 	// https://en.cppreference.com/w/cpp/memory/enable_shared_from_this.html
+	// Please use factory function
 	RenderSessionImpl(
 		Private priv,
-		std::shared_ptr<RenderConfigImpl> config,
+		RenderConfigImplPtr config,
 		std::shared_ptr<RenderStateImpl> startState = nullptr,
 		std::shared_ptr<FilmImplStandalone> startFilm = nullptr
 	);
 	RenderSessionImpl(
 		Private priv,
-		std::shared_ptr<RenderConfigImpl> config,
+		RenderConfigImplPtr config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
 
-	std::shared_ptr<RenderConfig> GetRenderConfig() override;
+	RenderConfig& GetRenderConfig() override;
 	std::shared_ptr<RenderState> GetRenderState() override;
 
 	void Start() override;
@@ -566,7 +593,8 @@ public:
 private:
 	// RenderSessionImpl is created by RenderConfigImpl
 	// It should be a reference, but it can't, due to serialization
-	std::shared_ptr<RenderConfigImpl> renderConfig;  // Back link
+	// So we use a raw pointer...
+	std::weak_ptr<RenderConfigImpl> renderConfig;  // Back link, not owned
 
 	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
 	// RenderSession must not be shared

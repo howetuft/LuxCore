@@ -229,7 +229,7 @@ void FilmChannelsWindow::DrawShowCheckBox(const string &label,
 }
 
 bool FilmChannelsWindow::HasDenoiser(const u_int index, string &denoiserPrefix) const {
-	const Properties &cfgProps = app->config->ToProperties();
+	const Properties &cfgProps = app->config.lock()->ToProperties();
 
 	vector<string> typeProps = cfgProps.GetAllNamesRE("film\\.imagepipelines\\." + ToString(index) + ".[0-9]+\\.type");
 
@@ -266,7 +266,7 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 
 						Properties &props = denoiserProps[i];
 						if (props.GetSize() == 0) {
-							const Properties &cfgProps = app->config->ToProperties();
+							const Properties &cfgProps = app->config.lock()->ToProperties();
 							props = cfgProps.GetAllProperties(denoiserPrefix);
 						}
 
@@ -328,7 +328,7 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 						LuxCoreApp::HelpMarker((denoiserPrefix + ".scales").c_str());
 
 						if (ImGui::Button("Apply")) {
-							const Properties &cfgProps = app->config->ToProperties();
+							const Properties &cfgProps = app->config.lock()->ToProperties();
 							auto newImagePipelineProps = std::make_shared<const Properties>
 							(
 								cfgProps.GetAllProperties(
