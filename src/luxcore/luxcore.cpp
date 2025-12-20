@@ -584,8 +584,12 @@ RenderSessionUPtr RenderSession::Create(
 
 	auto configImpl = static_pointer_cast<RenderConfigImpl>(config);
 
-	auto startStateImpl = static_pointer_cast<luxcore::detail::RenderStateImpl>(*startState);
-	auto startFilmImpl = static_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm);
+	auto startStateImpl = startState ?
+		static_pointer_cast<luxcore::detail::RenderStateImpl>(*startState) :
+		nullptr;
+	auto startFilmImpl = startFilm ?
+		static_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm) :
+		nullptr;
 
 	auto result = RenderSessionImpl::Create(
 		configImpl,

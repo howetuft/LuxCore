@@ -887,7 +887,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			// Build the next vertex path ray
 			//--------------------------------------------------------------
 
-			float bsdfPdf;
+			float bsdfPdf = 0.f;
 			Vector sampledDir;
 			BSDFEvent bsdfEvent;
 			float cosSampleDir;
