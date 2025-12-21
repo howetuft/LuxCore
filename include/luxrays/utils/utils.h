@@ -107,6 +107,14 @@ typedef unsigned int u_int;
 typedef unsigned long u_long;
 typedef unsigned long long u_longlong;
 
+// verify behaves like assert, but will not abort
+void __verify(const char * cond, const char * file, int line);
+#ifdef NDEBUG
+# define verify(EX)
+#else
+# define verify(EX) (void)((EX) || (__verify (#EX, __FILE__, __LINE__),0))
+#endif
+
 namespace luxrays {
 
 inline double WallClockTime() {

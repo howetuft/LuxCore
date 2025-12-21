@@ -168,6 +168,7 @@ set(LUXRAYS_SRCS
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/thread.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/properties.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxrays/utils/utils.cpp
   ${PROJECT_SOURCE_DIR}/deps/cuew/src/cuew.cpp
   ${PROJECT_SOURCE_DIR}/deps/clew/src/clew.cpp
 )
