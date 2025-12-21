@@ -74,7 +74,7 @@ void PathOCLBaseNativeRenderThread::StartRenderThread() {
 	threadDone = false;
 
 	// Create the thread for the rendering
-	renderThread = std::make_shared<std::jthread>(
+	renderThread = std::make_unique<luxrays::JThread>(
 		std::bind_front(&PathOCLBaseNativeRenderThread::RenderThreadImpl, this)
 	);
 	SetThreadName(renderThread, "LxPathOCLNative");

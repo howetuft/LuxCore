@@ -66,7 +66,7 @@ SceneVisibility<T>::TraceVisibilityThread::~TraceVisibilityThread() {
 
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::Start() {
-	renderThread = std::make_shared<std::jthread>(
+	renderThread = std::make_unique<luxrays::JThread>(
 		std::bind_front(&TraceVisibilityThread::RenderFunc, this)
 	);
 	SetThreadName(renderThread, "LxTrcVisibility");

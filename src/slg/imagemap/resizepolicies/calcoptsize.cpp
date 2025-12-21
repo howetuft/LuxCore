@@ -253,7 +253,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneCon
 		const vector<u_int> &imgMapsIndices) {
 	// Do a test render to establish the optimal image maps sizes
 	const size_t renderThreadCount = GetHardwareThreadCount();
-	std::vector<JThreadPtr> renderThreads(renderThreadCount);
+	std::vector<luxrays::JThreadPtr> renderThreads(renderThreadCount);
 	SLG_LOG("Optimal image map size preprocess thread count: " << renderThreadCount);
 
 	std::barrier threadsSyncBarrier(renderThreadCount, completion_t());
@@ -263,7 +263,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneCon
 	// Start the preprocessing threads
 	u_int workCounter = 0;
 	for (size_t i = 0; i < renderThreadCount; ++i)
-		renderThreads[i] = std::make_shared<std::jthread>(
+		renderThreads[i] = std::make_unique<luxrays::JThread>(
 			&RenderFunc, i, &imc, &imgMapsIndices,
 			&workCounter, scene, &sobolSharedData, &threadsSyncBarrier
 		);

@@ -42,12 +42,12 @@ public:
 
 protected:
 	void RTRenderFunc(std::stop_token stop_token);
-	virtual JThreadPtr AllocRenderThread() {
-		auto t = std::make_shared<std::jthread>(
+	virtual luxrays::JThreadPtr AllocRenderThread() {
+		auto t = std::make_unique<luxrays::JThread>(
 			std::bind_front(&RTPathCPURenderThread::RTRenderFunc, this)
 		);
 		luxrays::SetThreadName(t, "LxRTPathCPU");
-		return t;
+		return std::move(t);
 	}
 
 	virtual void StartRenderThread();

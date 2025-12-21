@@ -55,7 +55,7 @@ void luxrays::SetThreadGroupAffinity(const size_t threadIndex) {
 #endif
 }
 
-bool luxrays::SetThreadRRPriority(JThreadPtr thread, int pri) {
+bool luxrays::SetThreadRRPriority(const luxrays::JThreadPtr& thread, int pri) {
 #if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	{
 		const pthread_t tid = (pthread_t)thread->native_handle();
@@ -84,7 +84,7 @@ bool luxrays::SetThreadRRPriority(JThreadPtr thread, int pri) {
 }
 
 
-void luxrays::SetThreadName(JThreadPtr thread, const std::string name) {
+void luxrays::SetThreadName(const luxrays::JThreadPtr& thread, const std::string name) {
 #if defined (__GNUC__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 	{
 		auto handle = thread->native_handle();

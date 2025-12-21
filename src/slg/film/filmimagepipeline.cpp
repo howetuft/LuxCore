@@ -131,7 +131,7 @@ void Film::AsyncExecuteImagePipeline(const u_int index) {
 
 	isAsyncImagePipelineRunning = true;
 
-	imagePipelineThread = std::make_shared<std::jthread>(&Film::ExecuteImagePipelineThreadImpl, this, index);
+	imagePipelineThread = std::make_unique<luxrays::JThread>(&Film::ExecuteImagePipelineThreadImpl, this, index);
 	SetThreadName(imagePipelineThread, "LxImagePipeline");
 }
 

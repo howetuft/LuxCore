@@ -109,7 +109,7 @@ typedef struct Film2SceneRadiusThreadParams {
 	u_int maxPathDepth;
 	float timeStart, timeEnd;
 	const Film2SceneRadiusValidator *validator;
-	
+
 	float accumulatedRadiusSize;
 	u_int radiusSizeCount;
 } Film2SceneRadiusThreadParams;
@@ -274,7 +274,7 @@ float Film2SceneRadius(SceneConstPtr scene,
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
 
 	std::vector<Film2SceneRadiusThreadParams> params(renderThreadCount);
-	std::vector<JThreadPtr> renderThreads(renderThreadCount);
+	std::vector<luxrays::JThreadPtr> renderThreads(renderThreadCount);
 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		params[i].threadIndex = i;
@@ -286,7 +286,7 @@ float Film2SceneRadius(SceneConstPtr scene,
 		params[i].timeEnd = timeEnd;
 		params[i].validator = validator;
 
-		renderThreads[i] = std::make_shared<std::jthread>(
+		renderThreads[i] = std::make_unique<luxrays::JThread>(
 			&Film2SceneRadiusThread, boost::ref(params[i])
 		);
 		SetThreadName(renderThreads[i], "LxFlm2ScnRadius");

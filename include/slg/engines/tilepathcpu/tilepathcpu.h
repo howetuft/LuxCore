@@ -45,12 +45,12 @@ public:
 	friend class TilePathCPURenderEngine;
 
 private:
-	virtual JThreadPtr AllocRenderThread() {
-		auto t = std::make_shared<std::jthread>(
+	virtual luxrays::JThreadPtr AllocRenderThread() {
+		auto t = std::make_unique<luxrays::JThread>(
 			std::bind_front(&TilePathCPURenderThread::RenderFunc, this)
 		);
 		luxrays::SetThreadName(t, "LxTilePathCPU");
-		return t;
+		return std::move(t);
 	}
 
 	void RenderFunc(std::stop_token stop_token);

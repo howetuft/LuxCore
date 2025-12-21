@@ -73,12 +73,12 @@ protected:
 		return a * a; // Power heuristic
 	}
 
-	virtual JThreadPtr AllocRenderThread() {
-		auto t = std::make_shared<std::jthread>(
+	virtual luxrays::JThreadPtr AllocRenderThread() {
+		auto t = std::make_unique<luxrays::JThread>(
 			std::bind_front(&BiDirCPURenderThread::RenderFunc, this)
 		);
 		luxrays::SetThreadName(t, "LxBiDirCPU");
-		return t;
+		return std::move(t);
 	}
 
 	void AOVWarmUp(std::stop_token stop_token, luxrays::RandomGenerator *rndGen);

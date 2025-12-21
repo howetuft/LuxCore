@@ -27,7 +27,6 @@
 
 namespace slg {
 
-using JThreadPtr = std::shared_ptr<std::jthread>;
 
 template <class T>
 class SceneVisibility {
@@ -72,7 +71,7 @@ protected:
 		u_int &visibilityCacheHits;
 		bool &visibilityWarmUp;
 
-		JThreadPtr renderThread;
+		luxrays::JThreadPtr renderThread;
 	};
 
 	virtual IndexOctree<T> *AllocOctree() const = 0;

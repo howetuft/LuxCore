@@ -59,7 +59,7 @@ void TracePhotonsThread::Start() {
 	indirectPhotons.clear();
 	causticPhotons.clear();
 
-	renderThread = std::make_shared<std::jthread>(
+	renderThread = std::make_unique<luxrays::JThread>(
 		std::bind_front(&TracePhotonsThread::RenderFunc, this)
 	);
 	SetThreadName(renderThread, "LxTracePhotons");

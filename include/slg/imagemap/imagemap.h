@@ -36,6 +36,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/usings.h"
 #include "slg/usings.h"
 #include "slg/core/colorspace.h"
 #include "slg/utils/halfserialization.h"
@@ -1018,11 +1019,11 @@ protected:
 			ar & enabled;
 		}
 
-		std::map<std::jthread::id, ThreadData *> threadInfo;
+		std::map<luxrays::JThread::id, ThreadData *> threadInfo;
 
 		std::mutex classLock;
 	};
-	
+
 	// Used by serialization
 	ImageMap();
 

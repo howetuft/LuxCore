@@ -22,11 +22,11 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/devices/nativeintersectiondevice.h"
+#include "luxrays/usings.h"
 #include "slg/slg.h"
 
 namespace slg {
 
-using JThreadPtr = std::shared_ptr<std::jthread>;
 
 class PathOCLBaseRenderEngine;
 
@@ -63,7 +63,7 @@ protected:
 	PathOCLBaseRenderEngine *renderEngine;
 	luxrays::NativeIntersectionDevice *intersectionDevice;
 
-	JThreadPtr renderThread;
+	luxrays::JThreadPtr renderThread;
 
 	bool started, editMode, threadDone;
 };
