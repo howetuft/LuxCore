@@ -165,7 +165,7 @@ private:
 
 	std::weak_ptr<luxcore::RenderConfig> config;
 
-	std::shared_ptr<luxcore::RenderSession> session;
+	std::unique_ptr<luxcore::RenderSession> session;
 
 	GLuint renderFrameBufferTexID;
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;

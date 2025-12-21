@@ -38,8 +38,8 @@ void StatsWindow::Draw() {
 	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
 
-		auto session = app->session;
-		auto& config = app->config;
+		const auto& session = app->session;
+		const auto& config = app->config;
 
 		const Properties &stats = session->GetStats();
 
@@ -68,7 +68,7 @@ void StatsWindow::Draw() {
 			int frameBufferWidth, frameBufferHeight;
 			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
 			LuxCoreApp::ColoredLabelText("Screen resolution:", "%d x %d", frameBufferWidth, frameBufferHeight);
-			
+
 #if defined(LUXRAYS_ENABLE_OPENCL)
 			if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
