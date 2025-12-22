@@ -334,7 +334,7 @@ protected:
 	cl_context oclContext;
 	cl_command_queue oclQueue;
 
-	luxrays::oclKernelCache *kernelCache;
+	std::unique_ptr<luxrays::oclKernelCache> kernelCache;
 };
 
 }

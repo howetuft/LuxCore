@@ -124,12 +124,13 @@ OpenCLDevice::OpenCLDevice(
 	oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
 	CHECK_OCL_ERROR(error);
 
-	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION);
+	kernelCache = std::make_unique<oclKernelPersistentCache>("LUXRAYS_" LUXRAYS_VERSION);
 }
 
 OpenCLDevice::~OpenCLDevice() {
-	delete kernelCache;
-
+	
+	if (oclQueue)
+		CHECK_OCL_ERROR(clReleaseCommandQueue(oclQueue));
 	if (oclContext)
 		CHECK_OCL_ERROR(clReleaseContext(oclContext));
 }
@@ -146,9 +147,12 @@ void OpenCLDevice::Start() {
 void OpenCLDevice::Stop() {
 	HardwareDevice::Stop();
 
-	if (oclQueue)
+	if (oclQueue) {
 		CHECK_OCL_ERROR(clReleaseCommandQueue(oclQueue));
+		oclQueue = nullptr;
+	}
 }
+
 
 //------------------------------------------------------------------------------
 // Kernels handling for hardware (aka GPU) only applications
@@ -172,7 +176,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
-	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache)->GetApplicationName()));
+	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache.get())->GetApplicationName()));
         
 
 	const string oclProgramSource =
