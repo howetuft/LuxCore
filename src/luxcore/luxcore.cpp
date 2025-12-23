@@ -486,7 +486,7 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 
 std::unique_ptr<RenderConfig> RenderConfig::Create(
 	PropertiesConstPtr props,
-	std::shared_ptr<luxcore::Scene> scn  // We take ownership of the input scene
+	std::shared_ptr<luxcore::Scene> scn  // We don't take ownership of the input scene
 ) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)scn.get());
 

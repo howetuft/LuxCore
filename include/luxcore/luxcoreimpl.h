@@ -464,6 +464,8 @@ public:
 		std::shared_ptr<FilmImpl>& startFilm  // Out
 	);
 
+	virtual ~RenderConfigImpl() = default;
+
 	const luxrays::Properties &GetProperties() const;
 	const luxrays::Property GetProperty(const std::string &name) const;
 	const luxrays::Properties &ToProperties() const;

@@ -1265,6 +1265,8 @@ public:
 		std::shared_ptr<Film> & startFilm
 	);
 
+	virtual ~RenderConfig() = default;
+
 	/*!
 	 * \brief Returns a reference to the Properties used to create the RenderConfig.
 	 *
