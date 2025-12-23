@@ -18,7 +18,6 @@
 
 MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 
-
 ################################################################################
 #
 # Check and configure cmake
@@ -85,10 +84,19 @@ OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
 
+# Sanitization (optional)
 IF(DEFINED ENV{LUX_SANITIZE})
   MESSAGE(STATUS "Compiling with sanitizer (ASAN)")
-  add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
-  add_link_options(-fsanitize=undefined)
+  add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
+  IF(UNIX)
+    add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=undefined)
+  ENDIF()
+  IF(MSVC)
+      add_compile_definitions(_DISABLE_VECTOR_ANNOTATION)
+      add_compile_definitions(_DISABLE_STRING_ANNOTATION)
+  ENDIF()
 ENDIF()
 
 # Fundamental settings
