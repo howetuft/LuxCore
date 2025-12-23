@@ -132,7 +132,34 @@ install(
       WORLD_READ WORLD_EXECUTE
 )
 
-# Install pdb file (if msvc and debug)
+# Windows: install asan, if required
+IF(DEFINED ENV{LUX_SANITIZE} AND MSVC)
+    include(ImplibUtils)
+    find_library(ASAN_IMPLIB "clang_rt.asan_dynamic-x86_64")
+    implib_to_dll(ASAN_IMPLIB)
+    #set(CMAKE_LIBRARY_PATH "${CMAKE_LIBRARY_PATH};${ASAN_LIBRARY_PATH}")
+    add_library(ASAN SHARED IMPORTED)
+    set_target_properties(ASAN PROPERTIES
+        IMPORTED_LOCATION ${ASAN_LIBRARY}
+        IMPORTED_IMPLIB ${ASAN_IMPLIB}
+    )
+    cmake_path(GET ASAN_LIBRARY STEM LAST_ONLY ASAN_STEM)
+    cmake_path(GET ASAN_LIBRARY PARENT_PATH ASAN_PATH)
+    cmake_path(APPEND ASAN_PDB "${ASAN_PATH}" "${ASAN_STEM}.pdb")
+    MESSAGE(STATUS "Installing ${ASAN_LIBRARY} ${ASAN_STEM}.pdb")
+    install(
+        FILES "${ASAN_LIBRARY}" "${ASAN_PDB}"
+        COMPONENT luxcore
+        DESTINATION bin
+    )
+    #install(
+        #FILES "$<TARGET_PDB_FILE:ASAN>"
+        #COMPONENT luxcore
+        #DESTINATION bin
+    #)
+ENDIF()
+
+# Windows: Install pdb file (if msvc and debug)
 if(MSVC)
   install(FILES "$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:luxcore>>"
     COMPONENT luxcore
