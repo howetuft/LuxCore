@@ -327,11 +327,13 @@ void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 }
 
 void OpenCLDevice::FlushQueue() {
-	CHECK_OCL_ERROR(clFlush(oclQueue));
+	if (oclQueue)
+		CHECK_OCL_ERROR(clFlush(oclQueue));
 }
 
 void OpenCLDevice::FinishQueue() {
-	CHECK_OCL_ERROR(clFinish(oclQueue));
+	if (oclQueue)
+		CHECK_OCL_ERROR(clFinish(oclQueue));
 }
 
 //------------------------------------------------------------------------------
