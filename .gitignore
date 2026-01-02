@@ -9,6 +9,7 @@ doc/
 generated/
 lib/
 nbproject/
+.cache/
 deps/perceptualdiff-master/libpdiff.a
 samples/(benchsimple|smallluxgpu)/(Debug|Release)/
 samples/luxcoreui/deps/glfw-3.1.1/src/glfw_config.h

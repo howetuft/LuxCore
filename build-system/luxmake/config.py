@@ -2,14 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Config command."""
+"""Config command.
+
+This command has also been extended to export compile commands for CMake
+(`compile_commands.json` file), mainly for syntaxic checkers.
+"""
 
 from .constants import INSTALL_DIR, SOURCE_DIR, BINARY_DIR
-from .utils import run_cmake, fail
+from .utils import run_cmake, fail, logger
 
 
 def config(
-    _,
+    args,
 ):
     """CMake config."""
     # Check whether presets exist
@@ -21,10 +25,17 @@ def config(
             str(presets.absolute()),
         )
 
-    # Run command
+    # Prepare and run command
     cmd = [
         "--preset conan-default",
         f"-DCMAKE_INSTALL_PREFIX={str(INSTALL_DIR)}",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         f"-S {str(SOURCE_DIR)}",
     ]
     run_cmake(cmd)
+
+    # Info
+    compile_commands_file = BINARY_DIR / "build" / "compile_commands.json"
+    logger.info(
+        "Compile commands file generated at: '%s'", compile_commands_file
+    )

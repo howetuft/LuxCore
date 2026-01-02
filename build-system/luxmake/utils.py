@@ -65,7 +65,7 @@ def run_cmake(
     """Run cmake statement."""
     cmake_app = ensure_cmake_app()
     args = [cmake_app] + args
-    logger.debug(args)
+    logger.debug(' '.join(args))
     res = subprocess.run(
         args,
         shell=False,
