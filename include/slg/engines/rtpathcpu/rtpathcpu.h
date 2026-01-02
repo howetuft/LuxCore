@@ -57,7 +57,7 @@ class RTPathCPUSampler;
 
 class RTPathCPURenderEngine : public PathCPURenderEngine {
 public:
-	RTPathCPURenderEngine(RenderConfigConstRef cfg);
+	RTPathCPURenderEngine(RenderConfigRef cfg);
 	~RTPathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -74,7 +74,7 @@ public:
 	static RenderEngineType GetObjectType() { return RTPATHCPU; }
 	static std::string GetObjectTag() { return "RTPATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class PathCPURenderEngine;
 	friend class RTPathCPURenderThread;

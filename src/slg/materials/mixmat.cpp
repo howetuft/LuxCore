@@ -26,11 +26,16 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
-MixMaterial::MixMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		MaterialConstPtr mA, MaterialConstPtr mB, TextureConstPtr mix) :
-			Material(frontTransp, backTransp, emitted, bump),
-			matA(mA), matB(mB), mixFactor(mix) {
+MixMaterial::MixMaterial(
+	OptionalPtr<const Texture> frontTransp,
+	OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted,
+	OptionalPtr<const Texture> bump,
+	MaterialConstRef mA,
+	MaterialConstRef mB,
+	OptionalPtr<const Texture> mix) :
+	Material(frontTransp, backTransp, emitted, bump),
+	matA(mA), matB(mB), mixFactor(mix) {
 	Preprocess();
 }
 
@@ -67,7 +72,7 @@ void MixMaterial::Preprocess() {
 	isDelta = IsDeltaImpl();
 }
 
-VolumeConstPtr MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+OptionalPtr<const Volume> MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
 		return interiorVolume;
@@ -82,7 +87,7 @@ VolumeConstPtr MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 	}
 }
 
-VolumeConstPtr MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+OptionalPtr<const Volume> MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (exteriorVolume)
 		return exteriorVolume;
@@ -263,8 +268,8 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
 
 	// Sample the first material, evaluate the second
-	MaterialConstPtr matFirst = sampleMatA ? matA : matB;
-	MaterialConstPtr matSecond = sampleMatA ? matB : matA;
+	auto matFirst = sampleMatA ? matA : matB;
+	auto matSecond = sampleMatA ? matB : matA;
 
 	HitPoint &hitPoint1 = sampleMatA ? hitPointA : hitPointB;
 	HitPoint &hitPoint2 = sampleMatA ? hitPointB : hitPointA;
@@ -348,7 +353,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 }
 
-void MixMaterial::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat) {
+void MixMaterial::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
 	if (matA == oldMat)
 		matA = newMat;
 
@@ -361,24 +366,24 @@ void MixMaterial::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialCons
 	Preprocess();
 }
 
-bool MixMaterial::IsReferencing(MaterialConstPtr mat) const {
+bool MixMaterial::IsReferencing(MaterialConstRef mat) const {
 	return matA == mat || matA->IsReferencing(mat) ||
 		matB == mat || matB->IsReferencing(mat);
 }
 
 void MixMaterial::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats
+	std::unordered_set<const Material *> &referencedMats
 ) const {
 	Material::AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(matA);
+	referencedMats.insert(matA.ptr());
 	matA->AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(matB);
+	referencedMats.insert(matB.ptr());
 	matB->AddReferencedMaterials(referencedMats);
 }
 
-void MixMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void MixMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matA->AddReferencedTextures(referencedTexs);
@@ -386,7 +391,7 @@ void MixMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &re
 	mixFactor->AddReferencedTextures(referencedTexs);
 }
 
-void MixMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void MixMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	if (mixFactor == oldTex)
 		mixFactor = newTex;
 

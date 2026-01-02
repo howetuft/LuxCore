@@ -29,7 +29,7 @@ namespace slg {
 
 class MakeFloat3Texture : public Texture {
 public:
-	MakeFloat3Texture(TextureConstPtr tex1, TextureConstPtr tex2, TextureConstPtr tex3) 
+	MakeFloat3Texture(TextureRef tex1, TextureRef tex2, TextureRef tex3) 
 		: tex1(tex1), tex2(tex2), tex3(tex3) { }
 	virtual ~MakeFloat3Texture() { }
 
@@ -41,20 +41,20 @@ public:
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex1->AddReferencedTextures(referencedTexs);
-		tex2->AddReferencedTextures(referencedTexs);
-		tex3->AddReferencedTextures(referencedTexs);
+		GetTexture1().AddReferencedTextures(referencedTexs);
+		GetTexture2().AddReferencedTextures(referencedTexs);
+		GetTexture3().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex1->AddReferencedImageMaps(referencedImgMaps);
-		tex2->AddReferencedImageMaps(referencedImgMaps);
-		tex3->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture1().AddReferencedImageMaps(referencedImgMaps);
+		GetTexture2().AddReferencedImageMaps(referencedImgMaps);
+		GetTexture3().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
@@ -63,16 +63,16 @@ public:
 			tex3 = newTex;
 	}
 
-	TextureConstPtr GetTexture1() const { return tex1; }
-	TextureConstPtr GetTexture2() const { return tex2; }
-	TextureConstPtr GetTexture3() const { return tex3; }
+	TextureConstRef GetTexture1() const { return tex1; }
+	TextureConstRef GetTexture2() const { return tex2; }
+	TextureConstRef GetTexture3() const { return tex3; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex1;
-	TextureConstPtr tex2;
-	TextureConstPtr tex3;
+	std::reference_wrapper<Texture> tex1;
+	std::reference_wrapper<Texture> tex2;
+	std::reference_wrapper<Texture> tex3;
 };
 
 }

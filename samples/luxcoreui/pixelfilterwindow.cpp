@@ -43,12 +43,12 @@ PixelFilterWindow::PixelFilterWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Pix
 void PixelFilterWindow::RefreshObjectProperties(Properties &props) {
 	auto& config = app->config;
 	try {
-		props = config.lock()->ToProperties().GetAllProperties("film.filter");
+		props = config->ToProperties().GetAllProperties("film.filter");
 	} catch(exception &ex) {
 		LA_LOG("PixelFilter parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config.lock()->GetProperties().GetAllProperties("film.filter");
+		props = config->GetProperties().GetAllProperties("film.filter");
 	}
 }
 

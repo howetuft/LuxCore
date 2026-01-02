@@ -43,7 +43,7 @@ using namespace nlohmann;
 // Scene FileSaver render engine
 //------------------------------------------------------------------------------
 
-FileSaverRenderEngine::FileSaverRenderEngine(RenderConfigConstRef rcfg) :
+FileSaverRenderEngine::FileSaverRenderEngine(RenderConfigRef rcfg) :
 		RenderEngine(rcfg) {
 }
 
@@ -52,16 +52,16 @@ void FileSaverRenderEngine::InitFilm() {
 }
 
 void FileSaverRenderEngine::StartLockLess() {
-	auto cfg = renderConfig.cfg;
+	auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	renderEngineType = cfg->Get(GetDefaultProps().Get("filesaver.renderengine.type")).Get<string>();
-	exportFormat = cfg->Get(GetDefaultProps().Get("filesaver.format")).Get<string>();
-	directoryName = cfg->Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
-	fileName = cfg->Get(GetDefaultProps().Get("filesaver.filename")).Get<string>();
+	renderEngineType = cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type")).Get<string>();
+	exportFormat = cfg.Get(GetDefaultProps().Get("filesaver.format")).Get<string>();
+	directoryName = cfg.Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
+	fileName = cfg.Get(GetDefaultProps().Get("filesaver.filename")).Get<string>();
 	
 	SaveScene();
 }
@@ -95,7 +95,7 @@ static string Base64Encode(const char *data, const size_t size) {
 }
 
 void FileSaverRenderEngine::ExportSceneGLTF(
-	RenderConfigConstRef renderConfig,
+	RenderConfigRef renderConfig,
 	const string &fileName
 ) {
 	SLG_LOG("[FileSaverRenderEngine] Export glTF scene file: " << fileName);
@@ -156,7 +156,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		{ "wrapT", 0x812F } // GL_CLAMP_TO_EDGE
 	}));
 
-	const u_int sceneObjectsCount =  renderConfig.scene->objDefs.GetSize();
+	const u_int sceneObjectsCount =  renderConfig.GetScene().objDefs.GetSize();
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < sceneObjectsCount; ++i) {
 		if (WallClockTime() - lastPrint > 2.0) {
@@ -164,19 +164,19 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			lastPrint = WallClockTime();
 		}
 
-		auto scnObj = renderConfig.scene->objDefs.GetSceneObject(i);
-		auto mesh = scnObj->GetExtMesh();
+		auto& scnObj = renderConfig.GetScene().objDefs.GetSceneObject(i);
+		auto& mesh = scnObj.GetExtMesh();
 		// TODO: other mesh types
-		if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+		if (mesh.GetType() != TYPE_EXT_TRIANGLE)
 			continue;
 
-		auto triMesh = static_pointer_cast<const ExtTriangleMesh>(mesh);
+		auto& triMesh = static_cast<const ExtTriangleMesh&>(mesh);
 
 		//----------------------------------------------------------------------
 		// Add vertices buffer
 
-		const size_t encodedVerticesSize = sizeof(Point) * triMesh->GetTotalVertexCount();
-		const string encodedVertices = Base64Encode((const char *)triMesh->GetVertices(),
+		const size_t encodedVerticesSize = sizeof(Point) * triMesh.GetTotalVertexCount();
+		const string encodedVertices = Base64Encode((const char *)triMesh.GetVertices(),
 				encodedVerticesSize);
 
 		j["buffers"].push_back(json::object({
@@ -195,14 +195,14 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 		// Add vertices accessor
 
-		const BBox meshBBox = triMesh->GetBBox();
+		const BBox& meshBBox = triMesh.GetBBox();
 
 		const u_int verticesAccessorIndex = j["accessors"].size();
 		j["accessors"].push_back(json::object({
 			{ "bufferView", j["bufferViews"].size() - 1 },
 			{ "byteOffset", 0 },
 			{ "componentType", 0x1406 }, // GL_FLOAT
-			{ "count", triMesh->GetTotalVertexCount() },
+			{ "count", triMesh.GetTotalVertexCount() },
 			{ "type", "VEC3" },
 			{ "max", { meshBBox.pMax.x, meshBBox.pMax.y, meshBBox.pMax.z } },
 			{ "min", { meshBBox.pMin.x, meshBBox.pMin.y, meshBBox.pMin.z } }
@@ -212,10 +212,10 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		// Add vertex UVs
 
 		u_int vertexUVsAccessorIndex = NULL_INDEX;
-		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
-			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh->GetTotalVertexCount();
+		if (scnObj.HasBakeMap(COMBINED) && triMesh.HasUVs(scnObj.GetBakeMapUVIndex())) {
+			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh.GetTotalVertexCount();
 			const string encodedVertexUVs = Base64Encode(
-					(const char *)(triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()]),
+					(const char *)(triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()]),
 					encodedVertexUVsSize);
 
 			j["buffers"].push_back(json::object({
@@ -236,8 +236,8 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 			UV minUV(numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
 			UV maxUV(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
-			UV *uv = triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()];
-			for (u_int uvIndex = 0; uvIndex < triMesh->GetTotalVertexCount(); ++uvIndex) {
+			UV *uv = triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()];
+			for (u_int uvIndex = 0; uvIndex < triMesh.GetTotalVertexCount(); ++uvIndex) {
 				minUV.u = Min(minUV.u, uv[uvIndex].u);
 				minUV.v = Min(minUV.v, uv[uvIndex].v);
 
@@ -250,7 +250,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 				{ "bufferView", j["bufferViews"].size() - 1 },
 				{ "byteOffset", 0 },
 				{ "componentType", 0x1406 }, // GL_FLOAT
-				{ "count", triMesh->GetTotalVertexCount() },
+				{ "count", triMesh.GetTotalVertexCount() },
 				{ "type", "VEC2" },
 				{ "max", { maxUV.u, maxUV.v } },
 				{ "min", { minUV.u, minUV.v } }
@@ -260,8 +260,8 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		//----------------------------------------------------------------------
 		// Add triangle indices buffer
 
-		const size_t encodedTrianglesSize = sizeof(Triangle) * triMesh->GetTotalTriangleCount();
-		const string encodedTriangles = Base64Encode((const char *)triMesh->GetTriangles(),
+		const size_t encodedTrianglesSize = sizeof(Triangle) * triMesh.GetTotalTriangleCount();
+		const string encodedTriangles = Base64Encode((const char *)triMesh.GetTriangles(),
 				encodedTrianglesSize);
 
 		j["buffers"].push_back(json::object({
@@ -285,9 +285,9 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			{ "bufferView", j["bufferViews"].size() - 1 },
 			{ "byteOffset", 0 },
 			{ "componentType", 0x1405 }, // GL_UNSIGNED_INT
-			{ "count", triMesh->GetTotalTriangleCount() * 3 },
+			{ "count", triMesh.GetTotalTriangleCount() * 3 },
 			{ "type", "SCALAR" },
-			{ "max", { triMesh->GetTotalVertexCount() - 1 } },
+			{ "max", { triMesh.GetTotalVertexCount() - 1 } },
 			{ "min", { 0 } }
 		}));
 
@@ -314,7 +314,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			// Add only vertex position
 			j["meshes"][meshIndex]["primitives"][0]["attributes"] = json::object({
 				{ "POSITION", verticesAccessorIndex }
-			});			
+			});	
 		}
 
 		//----------------------------------------------------------------------
@@ -322,20 +322,20 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 		// 0 is the default material for not baked object
 		u_int materialIndex = 0;
-		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
+		if (scnObj.HasBakeMap(COMBINED) && triMesh.HasUVs(scnObj.GetBakeMapUVIndex())) {
 			// Write the image to file
 
-			auto imgMap = scnObj->GetBakeMap();
+			auto imgMap = scnObj.GetBakeMap();
 			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".png";
 			SDL_LOG("  Saving image map: " << imgMapFileName << " (channels: " << imgMap->GetChannelCount() << ")");
 			imgMap->WriteImage(imgMapFileName);
-			
+
 			// Create the image
 			const u_int imageIndex = j["images"].size();
 			j["images"].push_back(json::object({
 				{ "uri", imgMap->GetName() + ".png" }
 			}));
-	
+
 			// Create the texture
 			const u_int textureIndex = j["textures"].size();
 			j["textures"].push_back(json::object({
@@ -346,7 +346,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			// Create the baked material
 			materialIndex = j["materials"].size();
 			j["materials"].push_back(json::object({
-				{ "name", scnObj->GetName() + "Material" },
+				{ "name", scnObj.GetName() + "Material" },
 				{ "pbrMetallicRoughness", json::object({
 					{ "baseColorFactor", { 1.0, 1.0, 1.0, 1.0 } },
 					{ "baseColorTexture", json::object({
@@ -416,7 +416,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 	gltfFile.close();
 }
 
-void FileSaverRenderEngine::ExportScene(RenderConfigConstRef renderConfig,
+void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 		const string &directoryName, const string &renderEngineType) {
 	SLG_LOG("[FileSaverRenderEngine] Export directory: " << directoryName);
 
@@ -435,16 +435,16 @@ void FileSaverRenderEngine::ExportScene(RenderConfigConstRef renderConfig,
 		const std::string cfgFileName = (dirPath / "render.cfg").generic_string();
 		SLG_LOG("[FileSaverRenderEngine] Config file name: " << cfgFileName);
 
-		auto cfg = renderConfig.cfg;
+		auto& cfg = renderConfig.GetConfig();
 
 		// Overwrite the scene file name
-		cfg->Set(Property("scene.file")("scene.scn"));
+		cfg.Set(Property("scene.file")("scene.scn"));
 		// Set render engine type
-		cfg->Set(Property("renderengine.type")(renderEngineType));
+		cfg.Set(Property("renderengine.type")(renderEngineType));
 		// Remove FileSaver Option
-		cfg->Delete("filesaver.directory");
+		cfg.Delete("filesaver.directory");
 
-		cfg->Save(cfgFileName);
+		cfg.Save(cfgFileName);
 	}
 
 	//--------------------------------------------------------------------------
@@ -454,7 +454,7 @@ void FileSaverRenderEngine::ExportScene(RenderConfigConstRef renderConfig,
 	{
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
-		Properties props = renderConfig.scene->ToProperties(false);
+		Properties props = renderConfig.GetScene().ToProperties(false);
 
 		// Write the scene file
 		props.Save(sceneFileName);
@@ -466,20 +466,20 @@ void FileSaverRenderEngine::ExportScene(RenderConfigConstRef renderConfig,
 	{
 		// Write the image map information
 		SDL_LOG("Saving image maps information:");
-		vector<ImageMapConstPtr > ims;
-		renderConfig.scene->imgMapCache.GetImageMaps(ims);
+		std::vector<std::reference_wrapper<const ImageMap>> ims;
+		renderConfig.GetScene().imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
 			// Avoid to save ImageMapTexture::randomImageMap
-			if (ims[i] != ImageMapTexture::randomImageMap) {
-				const string fileName = (dirPath / renderConfig.scene->imgMapCache.GetSequenceFileName(ims[i])).generic_string();
+			if (&ims[i].get() != ImageMapTexture::randomImageMap.get()) {
+				const string fileName = (dirPath / renderConfig.GetScene().imgMapCache.GetSequenceFileName(ims[i])).generic_string();
 				SDL_LOG("  " + fileName);
-				ims[i]->WriteImage(fileName);
+				ims[i].get().WriteImage(fileName);
 			}
 		}
 
 		// Write the mesh information
 		SDL_LOG("Saving meshes information:");
-		const u_int meshCount =  renderConfig.scene->extMeshCache.GetSize();
+		const u_int meshCount =  renderConfig.GetScene().extMeshCache.GetSize();
 		double lastPrint = WallClockTime();
 		for (u_int i = 0; i < meshCount; ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
@@ -487,16 +487,16 @@ void FileSaverRenderEngine::ExportScene(RenderConfigConstRef renderConfig,
 				lastPrint = WallClockTime();
 			}
 
-			auto mesh = renderConfig.scene->extMeshCache.GetExtMesh(i);
+			auto& mesh = renderConfig.GetScene().extMeshCache.GetExtMesh(i);
 			// The only meshes I need to save are the real one. The others (instances, etc.)
 			// will reference only true one.
-			if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+			if (mesh.GetType() != TYPE_EXT_TRIANGLE)
 				continue;
 
-			const string fileName = (dirPath / renderConfig.scene->extMeshCache.GetSequenceFileName(mesh)).generic_string();
+			const string fileName = (dirPath / renderConfig.GetScene().extMeshCache.GetSequenceFileName(mesh)).generic_string();
 
 			//SDL_LOG("  " + fileName);
-			mesh->Save(fileName);
+			mesh.Save(fileName);
 		}
 	}
 }
@@ -513,7 +513,7 @@ Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
 }
 
-RenderEngine *FileSaverRenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *FileSaverRenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new FileSaverRenderEngine(rcfg);
 }
 

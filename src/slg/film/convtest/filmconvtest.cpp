@@ -161,5 +161,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void FilmConvTest::serialize(LuxOutputArchive &ar, const u_int version);
 template void FilmConvTest::serialize(LuxInputArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void FilmConvTest::serialize(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

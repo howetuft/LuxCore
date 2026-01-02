@@ -240,4 +240,6 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void FilmNoiseEstimation::serialize(LuxOutputArchive &ar, const u_int version);
 template void FilmNoiseEstimation::serialize(LuxInputArchive &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxInputArchiveText &ar, const u_int version);
 }// vim: autoindent noexpandtab tabstop=4 shiftwidth=4

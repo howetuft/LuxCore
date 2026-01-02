@@ -24,6 +24,7 @@
 
 #include "luxrays/core/namedobjectvector.h"
 #include "slg/scene/sceneobject.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -39,23 +40,26 @@ public:
 	bool IsSceneObjectDefined(const std::string &name) const {
 		return objs.IsObjDefined(name);
 	}
-	void DefineSceneObject(SceneObjectPtr m);
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, MaterialConstPtr newMat) const;
-	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, SceneObjectConstPtr obj) const;
+	std::tuple<SceneObject&, SceneObjectUPtr> DefineSceneObject(SceneObjectUPtr&& m);
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, MaterialConstRef newMat) const;
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, SceneObjectConstRef obj) const;
 
-	SceneObjectConstPtr GetSceneObject(const std::string &name) const {
-		return dynamic_pointer_cast<const SceneObject>(objs.GetObj(name));
+	SceneObjectConstRef GetSceneObject(const std::string &name) const {
+		return dynamic_cast<SceneObjectConstRef>(objs.GetObj(name));
 	}
-	SceneObjectPtr GetSceneObject(const std::string &name) {
-		return dynamic_pointer_cast<SceneObject>(objs.GetObj(name));
+	SceneObjectRef GetSceneObject(const std::string &name) {
+		return dynamic_cast<SceneObjectRef>(objs.GetObj(name));
 	}
-	SceneObjectConstPtr GetSceneObject(const u_int index) const {
-		return dynamic_pointer_cast<const SceneObject>(objs.GetObj(index));
+	SceneObjectConstRef GetSceneObject(const u_int index) const {
+		return dynamic_cast<SceneObjectConstRef>(objs.GetObj(index));
+	}
+	SceneObjectRef GetSceneObject(const u_int index) {
+		return dynamic_cast<SceneObjectRef>(objs.GetObj(index));
 	}
 	u_int GetSceneObjectIndex(const std::string &name) const {
 		return objs.GetIndex(name);
 	}
-	u_int GetSceneObjectIndex(SceneObjectConstPtr so) const {
+	u_int GetSceneObjectIndex(SceneObjectConstRef so) const {
 		return objs.GetIndex(so);
 	}
 
@@ -67,13 +71,13 @@ public:
 	}
 
 	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialPtr newMat);
+	void UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat);
 	// Update any reference to oldMesh with newMesh. It returns also the
 	// list of modified objects
 	void UpdateMeshReferences(
-		luxrays::ExtMeshConstPtr oldMesh,
-		luxrays::ExtMeshPtr newMesh,
-		std::unordered_set<SceneObjectConstPtr> &modifiedObjsList
+		luxrays::ExtMeshConstRef oldMesh,
+		luxrays::ExtMeshRef newMesh,
+		std::unordered_set<const SceneObject *> &modifiedObjsList
 	);
 
 	void DeleteSceneObject(const std::string &name) {
@@ -83,7 +87,9 @@ public:
 	void DeleteSceneObjects(const std::vector<std::string> &names) {
 		objs.DeleteObjs(names);
 	}
-  
+ 
+	friend class slg::ExtMeshCache;
+
 private:
 	luxrays::NamedObjectVector objs;
 

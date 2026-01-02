@@ -27,9 +27,9 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RoughMatteTranslucentMaterial::RoughMatteTranslucentMaterial(
-		TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr refl, TextureConstPtr trans, TextureConstPtr s) :
+		OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> refl, OptionalPtr<const Texture> trans, OptionalPtr<const Texture> s) :
 			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans), sigma(s) {
 }
 
@@ -214,7 +214,7 @@ void RoughMatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 }
 
-void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -222,7 +222,7 @@ void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<Tex
 	sigma->AddReferencedTextures(referencedTexs);
 }
 
-void RoughMatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void RoughMatteTranslucentMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

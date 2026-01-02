@@ -19,7 +19,10 @@
 #ifndef _SLG_BANDTEX_H
 #define	_SLG_BANDTEX_H
 
+#include "slg/imagemap/imagemap.h"
 #include "slg/textures/texture.h"
+#include "slg/usings.h"
+#include <functional>
 
 namespace slg {
 
@@ -36,7 +39,7 @@ public:
 	} InterpolationType;
 
 	BandTexture(const InterpolationType interp,
-			TextureConstPtr amnt,
+			TextureRef amnt,
 			const std::vector<float> &os,
 			const std::vector<luxrays::Spectrum> &vs) :
 			interpType(interp), amount(amnt), offsets(os), values(vs) { }
@@ -48,24 +51,27 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(
+		std::unordered_set<const Texture *>  &referencedTexs
+	) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		amount->AddReferencedTextures(referencedTexs);
+		GetAmount().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		amount->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetAmount().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
-		if (amount == oldTex)
-			amount = newTex;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
+		if (GetAmount() == oldTex) amount = newTex;
 	}
 
 	InterpolationType GetInterpolationType() const { return interpType; }
-	TextureConstPtr GetAmountTexture() const { return amount; }
+	TextureConstRef GetAmountTexture() const { return amount; }
 	const std::vector<float> &GetOffsets() const { return offsets; }
 	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
+	TextureConstRef GetAmount() const { return amount; }
+	TextureRef GetAmount() { return amount; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -75,7 +81,7 @@ public:
 private:
 	const InterpolationType interpType;
 
-	TextureConstPtr amount;
+	std::reference_wrapper<Texture> amount;
 	const std::vector<float> offsets;
 	const std::vector<luxrays::Spectrum> values; 
 };

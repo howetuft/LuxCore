@@ -21,6 +21,7 @@
 
 #include <ostream>
 
+#include "luxrays/usings.h"
 #include "slg/slg.h"
 
 namespace slg {
@@ -44,36 +45,42 @@ class PathVolumeInfo {
 public:
 	PathVolumeInfo();
 
-	VolumeConstPtr GetCurrentVolume() const { return currentVolume; }
-	VolumeConstPtr GetVolume(const u_int i) const { return volumeList[i]; }
+	VolumeConstRef GetCurrentVolume() const { return *currentVolume; }
+	bool HasCurrentVolume() const { return bool(currentVolume); }
+	VolumeConstRef GetVolume(const u_int i) const { return *volumeList[i]; }
 	const u_int GetListSize() const { return volumeListSize; }
 
-	void AddVolume(VolumeConstPtr vol);
-	void RemoveVolume(VolumeConstPtr vol);
-	void SetCurrentVolume(VolumeConstPtr vol) { currentVolume = vol; }
+	void AddVolume(OptionalPtr<const Volume> vol);
+	void RemoveVolume(OptionalPtr<const Volume> vol);
+	void SetCurrentVolume(OptionalPtr<const Volume> vol) { currentVolume = vol; }
+	void SetVolume(const u_int i, OptionalPtr<const Volume> vol) { volumeList[i] = vol; }
 
-	VolumeConstPtr SimulateRemoveVolume(VolumeConstPtr vol) const;
-	VolumeConstPtr SimulateAddVolume(VolumeConstPtr vol) const;
+	OptionalPtr<const Volume> SimulateRemoveVolume(OptionalPtr<const Volume> vol) const;
+	OptionalPtr<const Volume> SimulateAddVolume(OptionalPtr<const Volume>) const;
 
 	void SetScatteredStart(const bool v) { scatteredStart = v; }
 	bool IsScatteredStart() const { return scatteredStart; }
-	
+
 	void Update(const BSDFEvent eventType, const BSDF &bsdf);
 	bool ContinueToTrace(const BSDF &bsdf) const;
 
-	void SetHitPointVolumes(HitPoint &hitPoint,
-		VolumeConstPtr matInteriorVolume,
-		VolumeConstPtr matExteriorVolume,
-		VolumeConstPtr defaultWorldVolume) const;
+	void SetHitPointVolumes(
+		HitPoint &hitPoint,
+		OptionalPtr<const Volume> matInteriorVolume,
+		OptionalPtr<const Volume> matExteriorVolume,
+		OptionalPtr<const Volume> defaultWorldVolume
+	) const;
 
 private:
-	static bool CompareVolumePriorities(VolumeConstPtr vol1, VolumeConstPtr vol2);
+	static bool CompareVolumePriorities(
+		OptionalPtr<const Volume> vol1,
+		OptionalPtr<const Volume> vol2);
 
-	VolumeConstPtr currentVolume;
+	OptionalPtr<const Volume> currentVolume;
 	// Using a fixed array here mostly to have the same code as the OpenCL implementation
-	VolumeConstPtr volumeList[PATHVOLUMEINFO_SIZE];
+	std::array<OptionalPtr<const Volume>, PATHVOLUMEINFO_SIZE> volumeList;
 	u_int volumeListSize;
-	
+
 	bool scatteredStart;
 };
 

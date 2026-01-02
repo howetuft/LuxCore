@@ -19,7 +19,9 @@
 #ifndef _SLG_HETEROGENOUSVOL_H
 #define	_SLG_HETEROGENOUSVOL_H
 
+#include "luxrays/usings.h"
 #include "slg/volumes/volume.h"
+#include <functional>
 
 namespace slg {
 
@@ -29,9 +31,11 @@ namespace slg {
 
 class HeterogeneousVolume : public Volume {
 public:
-	HeterogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
-			TextureConstPtr a, TextureConstPtr s,
-			TextureConstPtr g, const float stepSize, const u_int maxStepsCount,
+	HeterogeneousVolume(
+			TextureConstRef iorTex,
+			OptionalPtr<const Texture> emiTex,
+			TextureConstRef a, TextureConstRef s,
+			TextureConstRef g, const float stepSize, const u_int maxStepsCount,
 			const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
@@ -55,14 +59,14 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
-	TextureConstPtr GetSigmaA() const { return sigmaA; }
-	TextureConstPtr GetSigmaS() const { return sigmaS; }
-	TextureConstPtr GetG() const { return schlickScatter.g; }
+	TextureConstRef GetSigmaA() const { return sigmaA; }
+	TextureConstRef GetSigmaS() const { return sigmaS; }
+	TextureConstRef GetG() const { return schlickScatter.GetG(); }
 	float GetStepSize() const { return stepSize; }
 	u_int GetMaxStepsCount() const { return maxStepsCount; }
 	bool IsMultiScattering() const { return multiScattering; }
@@ -72,7 +76,7 @@ protected:
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
 
 private:
-	TextureConstPtr sigmaA, sigmaS;
+	std::reference_wrapper<const Texture> sigmaA, sigmaS;
 	SchlickScatter schlickScatter;
 	float stepSize;
 	u_int maxStepsCount;

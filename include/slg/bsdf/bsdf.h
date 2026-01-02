@@ -23,6 +23,7 @@
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/usings.h"
 #include "slg/lights/light.h"
 #include "slg/lights/trianglelight.h"
 #include "slg/materials/material.h"
@@ -51,22 +52,23 @@ class Scene;
 class BSDF {
 public:
 	// An empty BSDF
-	BSDF() : material(NULL) { };
+	BSDF() { };
 
 	// A BSDF initialized from a ray hit
 	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
-		SceneConstPtr scene, const luxrays::Ray &ray,
+		SceneConstRef scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
-		const PathVolumeInfo *volInfo) {
+		const PathVolumeInfo *volInfo)
+	{
 		assert (!rayHit.Miss());
 		Init(fixedFromLight, throughShadowTransparency, scene,
 				ray, rayHit, passThroughEvent, volInfo);
 	}
 	// A BSDF initialized with a point on a surface
-	BSDF(SceneConstPtr scene,
+	BSDF(SceneConstRef scene,
 		const u_int meshIndex, const u_int triangleIndex,
 		const luxrays::Point &surfacePoint,
-		const float surfacePointBary1, const float surfacePointBary2, 
+		const float surfacePointBary1, const float surfacePointBary2,
 		const float time,
 		const float passThroughEvent, const PathVolumeInfo *volInfo) {
 		Init(scene, meshIndex, triangleIndex,
@@ -75,32 +77,37 @@ public:
 	}
 	// A BSDF initialized with a volume scattering point
 	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
-		SceneConstPtr scene, const luxrays::Ray &ray,
-		VolumeConstPtr volume, const float t, const float passThroughEvent) {
+		SceneConstRef scene, const luxrays::Ray &ray,
+		VolumeConstRef volume, const float t, const float passThroughEvent) {
 		Init(fixedFromLight, throughShadowTransparency,
 				scene, ray, volume, t, passThroughEvent);
 	}
 
 	// Used when hitting a surface
-	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		SceneConstPtr scene, const luxrays::Ray &ray,
-		const luxrays::RayHit &rayHit, const float passThroughEvent,
-		const PathVolumeInfo *volInfo);
+	void Init(
+		const bool fixedFromLight,
+		const bool throughShadowTransparency,
+		SceneConstRef scene,
+		const luxrays::Ray &ray,
+		const luxrays::RayHit &rayHit,
+		const float passThroughEvent,
+		const PathVolumeInfo *volInfo
+	);
 	// Used when have a point of a surface
-	void Init(SceneConstPtr scene,
+	void Init(SceneConstRef scene,
 		const u_int meshIndex, const u_int triangleIndex,
 		const luxrays::Point &surfacePoint,
-		const float surfacePointBary1, const float surfacePointBary2, 
+		const float surfacePointBary1, const float surfacePointBary2,
 		const float time,
 		const float passThroughEvent, const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
-		SceneConstPtr scene, const luxrays::Ray &ray,
-		VolumeConstPtr volume, const float t, const float passThroughEvent);
+		SceneConstRef scene, const luxrays::Ray &ray,
+		VolumeConstRef volume, const float t, const float passThroughEvent);
 
 	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);
 	
-	bool IsEmpty() const { return (material == NULL); }
+	bool IsEmpty() const { return (not material.has_value()); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
@@ -109,7 +116,14 @@ public:
 	bool IsShadowCatcher() const { return material->IsShadowCatcher(); }
 	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsCameraInvisible() const;
-	bool IsVolume() const { return dynamic_pointer_cast<const Volume>(material) != NULL; }
+	bool IsVolume() const {
+		try {
+			dynamic_cast<const Volume &>(*material);
+		} catch (const std::bad_cast& e) {
+			return false;
+		}
+		return true;
+	}
 	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsHoldout() const { return material->IsHoldout(); }
 	bool IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
@@ -118,10 +132,16 @@ public:
 	const std::string &GetMaterialName() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
-	VolumeConstPtr GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
-	VolumeConstPtr GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
+
+	OptionalPtr<const Volume> GetMaterialInteriorVolume() const {
+		return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
+	}
+	OptionalPtr<const Volume> GetMaterialExteriorVolume() const {
+		return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
+	}
+
 	float GetGlossiness() const { return material->GetGlossiness(); }
-	SceneObjectConstPtr GetSceneObject() const { return sceneObject; }
+	SceneObjectConstRef GetSceneObject() const { return *sceneObject; }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 	MaterialType GetMaterialType() const { return material->GetType(); }
@@ -145,7 +165,7 @@ public:
 
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
-	LightSourceConstPtr GetLightSource() const { return triangleLightSource; }
+	OptionalPtr<const LightSource> GetLightSource() const { return triangleLightSource; }
 
 	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
 		if (IsVolume())
@@ -164,9 +184,13 @@ public:
 	HitPoint hitPoint;
 
 private:
-	SceneObjectConstPtr sceneObject;
-	MaterialConstPtr material;
-	TriangleLightConstPtr triangleLightSource; // != NULL only if it is an area light
+	// Nota: following properties are intrisecally const. However, due to
+	// design particulars, they are not initialized in constructor, but in
+	// Init(). Therefore they have to be modifiable somehow, thus the mutable
+	// attribute (not fully satisfying, however).
+	mutable OptionalPtr<const SceneObject> sceneObject;  // Optional reference, owned by scene
+	mutable OptionalPtr<const Material> material;  // Optional reference, owned by scene
+	mutable OptionalPtr<const TriangleLight> triangleLightSource; // != NULL only if it is an area light, optional, owned by scen
 	luxrays::Frame frame;
 };
 

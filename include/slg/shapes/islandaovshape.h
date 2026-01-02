@@ -27,15 +27,14 @@ namespace slg {
 
 class IslandAOVShape : public Shape {
 public:
-	IslandAOVShape(luxrays::ExtTriangleMeshPtr srcMesh, const u_int dataIndex);
+	IslandAOVShape(luxrays::ExtTriangleMeshRef srcMesh, const u_int dataIndex);
 	virtual ~IslandAOVShape();
 
-	virtual ShapeType GetType() const { return ISLANDAOV; }
+	virtual ShapeType GetType() const override { return ISLANDAOV; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	luxrays::ExtTriangleMeshPtr mesh;
 };
 
 }

@@ -30,7 +30,7 @@ using namespace slg;
 // PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-PathCPURenderEngine::PathCPURenderEngine(RenderConfigConstRef rcfg) :
+PathCPURenderEngine::PathCPURenderEngine(RenderConfigRef rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr),
 		lightSampleSplatter(nullptr), lightSamplerSharedData(nullptr) {
 }
@@ -44,12 +44,12 @@ void PathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
-	const bool hybridBackForwardEnable = renderConfig.cfg->Get(PathTracer::GetDefaultProps().
+	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
 		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
 	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
@@ -59,24 +59,24 @@ RenderStatePtr PathCPURenderEngine::GetRenderState() {
 }
 
 void PathCPURenderEngine::StartLockLess() {
-	auto cfg = renderConfig.cfg;
+	auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
 	if (GetType() == RTPATHCPU) {
-		const string samplerType = cfg->Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+		const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 		if (samplerType != "RTPATHCPUSAMPLER")
 			throw runtime_error("RTPATHCPU render engine can use only RTPATHCPUSAMPLER");
 	} else
-		CheckSamplersForNoTile(RenderEngineType2String(GetType()), *cfg);
+		CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	const string samplerType = cfg->Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
+	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 	if (GetType() == RTPATHCPU) {
 		if (samplerType != "RTPATHCPUSAMPLER")
 			throw runtime_error("RTPATHCPU render engine can use only RTPATHCPUSAMPLER");
@@ -107,7 +107,7 @@ void PathCPURenderEngine::StartLockLess() {
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
-			photonGICache->SetScene(renderConfig.scene);
+			photonGICache->SetScene(renderConfig.GetScene());
 
 		startRenderState = nullptr;
 	}
@@ -118,7 +118,7 @@ void PathCPURenderEngine::StartLockLess() {
 
 	// note: photonGICache could have been restored from the render state
 	if ((GetType() != RTPATHCPU) && !photonGICache) {
-		photonGICache = PhotonGICache::FromProperties(renderConfig.scene, *cfg);
+		photonGICache = PhotonGICache::FromProperties(renderConfig.GetScene(), cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
@@ -180,7 +180,7 @@ Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *PathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new PathCPURenderEngine(rcfg);
 }
 

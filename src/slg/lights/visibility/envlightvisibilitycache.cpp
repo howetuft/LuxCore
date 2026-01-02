@@ -104,17 +104,22 @@ void ELVCOctree::GetNearestEntryImpl(const IndexOctreeNode *node, const BBox &no
 // Env. light visibility cache builder
 //------------------------------------------------------------------------------
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
-		ImageMapPtr li, const ELVCParams &p) :
-		scene(scn), envLight(envl), luminanceMapImage(li), params(p),
-		cacheEntriesBVH(nullptr) {
+EnvLightVisibilityCache::EnvLightVisibilityCache(
+	SceneConstRef scn, const EnvLightSource *envl, ImageMapUPtr&& li, const ELVCParams &p
+) :
+	scene(scn),
+	envLight(envl),
+	luminanceMapImage(std::move(li)),
+	params(p),
+	cacheEntriesBVH(nullptr)
+{
 	assert (luminanceMapImage);
 
 	mapWidth = luminanceMapImage->GetWidth();
 	mapHeight = luminanceMapImage->GetHeight();
 }
 
-EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstPtr scn, const EnvLightSource *envl,
+EnvLightVisibilityCache::EnvLightVisibilityCache(SceneConstRef scn, const EnvLightSource *envl,
 		const u_int width, const u_int height, const ELVCParams &p) :
 		scene(scn), envLight(envl), luminanceMapImage(nullptr), params(p),
 		cacheEntriesBVH(nullptr), mapWidth(width), mapHeight(height) {
@@ -192,7 +197,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	
 	ELVCFilm2SceneRadiusValidator validator(*this);
 
-	return Film2SceneRadius(scene.lock(), imagePlaneRadius, defaultRadius,
+	return Film2SceneRadius(scene, imagePlaneRadius, defaultRadius,
 			params.visibility.maxPathDepth,
 			0.f, 1.f,
 			&validator);
@@ -207,7 +212,7 @@ namespace slg {
 class ELVCSceneVisibility : public SceneVisibility<ELVCVisibilityParticle> {
 public:
 	ELVCSceneVisibility(EnvLightVisibilityCache &cache) :
-		SceneVisibility(cache.scene.lock(), cache.visibilityParticles,
+		SceneVisibility(cache.scene, cache.visibilityParticles,
 				cache.params.visibility.maxPathDepth, cache.params.visibility.maxSampleCount,
 				cache.params.visibility.targetHitRate,
 				cache.params.visibility.lookUpRadius, cache.params.visibility.lookUpNormalAngle,
@@ -218,7 +223,7 @@ public:
 	
 protected:
 	virtual IndexOctree<ELVCVisibilityParticle> *AllocOctree() const {
-		return new ELVCOctree(visibilityParticles, scene.lock()->dataSet->GetBBox(),
+		return new ELVCOctree(visibilityParticles, scene.dataSet->GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 
@@ -283,7 +288,10 @@ void EnvLightVisibilityCache::TraceVisibilityParticles() {
 // Build cache entries
 //------------------------------------------------------------------------------
 
-void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapConstPtr luminanceMapImageScaled) {
+void EnvLightVisibilityCache::BuildCacheEntry(
+	const u_int entryIndex,
+	const ImageMapUPtr& luminanceMapImageScaled
+) {
 	//const double t1 = WallClockTime();
 
 	const ELVCVisibilityParticle &visibilityParticle = visibilityParticles[entryIndex];
@@ -297,11 +305,12 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 	cacheEntry.visibilityMap = nullptr;
 
 	// Allocate the map storage
-	ImageMapPtr visibilityMapImage(ImageMap::AllocImageMap(1,
-			tilesXCount, tilesYCount, ImageMapConfig()));
-	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
-	fill(visibilityMap, visibilityMap + tilesXCount * tilesYCount, 0.f);
-	vector<u_int> sampleCount(tilesXCount * tilesYCount, 0);
+	ImageMapUPtr visibilityMapImage(
+		ImageMap::AllocImageMap(1, tilesXCount, tilesYCount, ImageMapConfig())
+	);
+	float *visibilityMap = (float *)visibilityMapImage->GetStorage().GetPixelsData();
+	std::fill(visibilityMap, visibilityMap + tilesXCount * tilesYCount, 0.f);
+	std::vector<u_int> sampleCount(tilesXCount * tilesYCount, 0);
 
 	// Trace all shadow rays
 	const u_int totSamples = tilesXCount * tilesYCount * params.map.tileSampleCount;
@@ -365,16 +374,16 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene.lock()->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+		if (!scene.Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 
 			visibilityMap[pixelIndex] += connectionThroughput.Y();
 		}
-		
+
 		sampleCount[pixelIndex] += 1;
 	}
-	
+
 	//const double t2 = WallClockTime();
 
 	for (u_int y = 0; y < tilesYCount; ++y) {
@@ -387,7 +396,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 
 	// Filter the map
 	const u_int mapPixelCount = tilesXCount * tilesYCount;
-	vector<float> tmpBuffer(mapPixelCount);
+	std::vector<float> tmpBuffer(mapPixelCount);
 	GaussianBlur3x3FilterPlugin::ApplyBlurFilter(tilesXCount, tilesYCount,
 				&visibilityMap[0], &tmpBuffer[0],
 				.5f, 1.f, .5f);
@@ -441,7 +450,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 	}
 
 	if (luminanceMapImageScaled) {
-		const ImageMapStorage *luminanceMapStorageScaled = luminanceMapImageScaled->GetStorage();
+		const ImageMapStorage& luminanceMapStorageScaled =
+			luminanceMapImageScaled->GetStorage();
 
 		// For some debug, save the map to a file
 		/*if (entryIndex % 30 == 0) {
@@ -469,11 +479,11 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 
 		float luminanceMaxVal = 0.f;
 		for (u_int i = 0; i < mapPixelCount; ++i)
-			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorageScaled->GetFloat(i));
+			luminanceMaxVal = Max(visibilityMaxVal, luminanceMapStorageScaled.GetFloat(i));
 
 		const float invLuminanceMaxVal = 1.f / luminanceMaxVal;
 		for (u_int i = 0; i < mapPixelCount; ++i) {
-			const float normalizedLumiVal = luminanceMapStorageScaled->GetFloat(i) * invLuminanceMaxVal;
+			const float normalizedLumiVal = luminanceMapStorageScaled.GetFloat(i) * invLuminanceMaxVal;
 
 			visibilityMap[i] *= normalizedLumiVal;
 		}
@@ -510,16 +520,23 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, ImageMapCo
 }
 
 void EnvLightVisibilityCache::BuildCacheEntries() {
-	SLG_LOG("EnvLightVisibilityCache building cache entries: " << visibilityParticles.size());
+	SLG_LOG(
+		"EnvLightVisibilityCache building cache entries: "
+		<< visibilityParticles.size()
+	);
 
 	// Scale the luminance image map to the requested size
-	ImageMapPtr luminanceMapImageScaled(nullptr);
+	ImageMapUPtr luminanceMapImageScaled;
 	if (luminanceMapImage) {
 		// Scale the image
 		//luminanceMapImageScaled.reset(ImageMap::Resample(luminanceMapImage, 1,
 				//tilesXCount, tilesYCount));
-		luminanceMapImageScaled = ImageMap::Resample(luminanceMapImage, 1,
-				tilesXCount, tilesYCount);
+		luminanceMapImageScaled = ImageMap::Resample(
+			*luminanceMapImage,
+			1,
+			tilesXCount,
+			tilesYCount
+		);
 		luminanceMapImageScaled->Preprocess();
 	}
 
@@ -587,9 +604,9 @@ void EnvLightVisibilityCache::BuildTileDistributions() {
 				const u_int index = x + y * params.map.tileWidth;
 				const u_int mapX = tileX * params.map.tileWidth + x;
 				const u_int mapY = tileY * params.map.tileHeight + y;
-				
+
 				if ((mapX < mapWidth) && (mapY < mapHeight))
-					tileLuminance[index] = luminanceMapImage->GetStorage()->GetFloat(mapX, mapY);
+					tileLuminance[index] = luminanceMapImage->GetStorage().GetFloat(mapX, mapY);
 				else
 					tileLuminance[index] = 0.f;
 			}

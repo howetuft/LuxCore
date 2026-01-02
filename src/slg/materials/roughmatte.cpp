@@ -26,9 +26,9 @@ using namespace slg;
 // Rough matte material
 //------------------------------------------------------------------------------
 
-RoughMatteMaterial::RoughMatteMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr col, TextureConstPtr s) :
+RoughMatteMaterial::RoughMatteMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> col, OptionalPtr<const Texture> s) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(col), sigma(s) {
 }
 
@@ -103,14 +103,14 @@ void RoughMatteMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 }
 
-void RoughMatteMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void RoughMatteMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
 	sigma->AddReferencedTextures(referencedTexs);
 }
 
-void RoughMatteMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void RoughMatteMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kd == oldTex)

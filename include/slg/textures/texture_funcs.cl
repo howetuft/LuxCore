@@ -35,8 +35,8 @@ OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValueSlowPath(const uint texIndex,
 	const size_t gid = get_global_id(0);
 	__global float *evalStack = &texEvalStacks[gid * maxTextureEvalStackSize];
 
-	const uint evalFloatOpStartIndex = startTex->evalFloatOpStartIndex;
-	const uint evalFloatOpLength = startTex->evalFloatOpLength;
+	const uint evalFloatOpStartIndex = startTex.evalFloatOpStartIndex;
+	const uint evalFloatOpLength = startTex.evalFloatOpLength;
 
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
 	printf("texIndex=%d evalFloatOpStartIndex=%d evalFloatOpLength=%d\n", texIndex, evalFloatOpStartIndex, evalFloatOpLength);
@@ -71,7 +71,7 @@ OPENCL_FORCE_INLINE float Texture_GetFloatValue(const uint texIndex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global const Texture* restrict tex = &texs[texIndex];
-	switch (tex->type) {
+	switch (tex.type) {
 		//----------------------------------------------------------------------
 		// Fast paths
 		//----------------------------------------------------------------------
@@ -106,8 +106,8 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValueSlowPath(const uint texIn
 	const size_t gid = get_global_id(0);
 	__global float *evalStack = &texEvalStacks[gid * maxTextureEvalStackSize];
 
-	const uint evalSpectrumOpStartIndex = startTex->evalSpectrumOpStartIndex;
-	const uint evalSpectrumOpLength = startTex->evalSpectrumOpLength;
+	const uint evalSpectrumOpStartIndex = startTex.evalSpectrumOpStartIndex;
+	const uint evalSpectrumOpLength = startTex.evalSpectrumOpLength;
 
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
 	printf("texIndex=%d evalSpectrumOpStartIndex=%d evalSpectrumOpLength=%d\n", texIndex, evalSpectrumOpStartIndex, evalSpectrumOpLength);
@@ -143,7 +143,7 @@ OPENCL_FORCE_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	__global const Texture* restrict tex = &texs[texIndex];
-	switch (tex->type) {
+	switch (tex.type) {
 		//----------------------------------------------------------------------
 		// Fast paths
 		//----------------------------------------------------------------------
@@ -179,8 +179,8 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex,
 	const size_t gid = get_global_id(0);
 	__global float *evalStack = &texEvalStacks[gid * maxTextureEvalStackSize];
 
-	const uint evalBumpOpStartIndex = startTex->evalBumpOpStartIndex;
-	const uint evalBumpOpLength = startTex->evalBumpOpLength;
+	const uint evalBumpOpStartIndex = startTex.evalBumpOpStartIndex;
+	const uint evalBumpOpLength = startTex.evalBumpOpLength;
 
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
 	printf("texIndex=%d evalSpectrumOpStartIndex=%d evalSpectrumOpLength=%d\n", texIndex, evalBumpOpStartIndex, evalBumpOpLength);

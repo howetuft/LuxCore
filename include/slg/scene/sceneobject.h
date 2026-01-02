@@ -24,6 +24,7 @@
 #include "luxrays/utils/properties.h"
 #include "slg/materials/material.h"
 #include "slg/scene/extmeshcache.h"
+#include <functional>
 
 namespace slg {
 
@@ -43,48 +44,58 @@ typedef enum {
 
 class SceneObject : public luxrays::NamedObject {
 public:
-	SceneObject(luxrays::ExtMeshPtr m, MaterialConstPtr mt, const u_int id,
-			const bool invisib) : NamedObject("obj"), mesh(m), mat(mt), objID(id),
-			bakeMap(nullptr), cameraInvisible(invisib) { }
+	SceneObject(
+		luxrays::ExtMeshRef m,
+		MaterialRef mt,
+		const u_int id,
+		const bool invisib)
+	: NamedObject("obj"), mesh(m), mat(mt), objID(id), bakeMap(std::nullopt), cameraInvisible(invisib)
+	{ }
 	virtual ~SceneObject() { }
 
-	luxrays::ExtMeshConstPtr GetExtMesh() const { return mesh; }
-	luxrays::ExtMeshPtr GetExtMesh() { return mesh; }
-	MaterialConstPtr GetMaterial() const { return mat; }
+	luxrays::ExtMeshConstRef GetExtMesh() const { return mesh; }
+	luxrays::ExtMeshRef GetExtMesh() { return mesh; }
+	MaterialConstRef GetMaterial() const { return mat; }
+	MaterialRef GetMaterial() { return mat; }
 	u_int GetID() const { return objID; }
 	bool IsCameraInvisible() const { return cameraInvisible; }
 
-	void SetMaterial(MaterialConstPtr newMat) { mat = newMat; }
+	void SetMaterial(MaterialRef newMat) {
+		mat = newMat;
+	}
 
-	bool HasBakeMap(const BakeMapType type) const { return (bakeMap != nullptr) && (bakeMapType == type); }
+	bool HasBakeMap(const BakeMapType type) const { return (bakeMap.has_value()) && (bakeMapType == type); }
 	BakeMapType GetBakeMapType() const { return bakeMapType; }
-	void SetBakeMap(ImageMapConstPtr map, const BakeMapType type, const u_int uvIndex);
-	ImageMapConstPtr GetBakeMap() const { return bakeMap; }
+	void SetBakeMap(ImageMapConstRef map, const BakeMapType type, const u_int uvIndex);
+	auto GetBakeMap() const { return bakeMap; }
 	u_int GetBakeMapUVIndex() const { return bakeMapUVIndex; }
 	luxrays::Spectrum GetBakeMapValue(const luxrays::UV &uv) const;
 
-	void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;
+	void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
 	void AddReferencedMaterials(
-		std::unordered_set<MaterialConstPtr> &referencedMats
+		std::unordered_set<const Material *> &referencedMats
 	) const;
-	void AddReferencedMeshes(std::unordered_set<luxrays::ExtMeshConstPtr > &referencedMesh) const;
+	void AddReferencedMeshes(std::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const;
 
 	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat);
+	void UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat);
 
 	// Update any reference to oldMesh with newMesh. It returns also if the
 	// referenced mesh has been updated or not.
-	bool UpdateMeshReference(luxrays::ExtMeshConstPtr oldMesh, luxrays::ExtMeshPtr newMesh);
+	bool UpdateMeshReference(luxrays::ExtMeshConstRef oldMesh, luxrays::ExtMeshRef newMesh);
 
 	luxrays::Properties ToProperties(const ExtMeshCache &extMeshCache,
 			const bool useRealFileName) const;
 
+	luxrays::ExtMeshConstRef GetMesh() const { return mesh; }
+	luxrays::ExtMeshRef GetMesh() { return mesh; }
+
 private:
-	luxrays::ExtMeshPtr mesh;
-	MaterialConstPtr mat;
+	std::reference_wrapper<luxrays::ExtMesh> mesh;
+	std::reference_wrapper<Material> mat;  // Owned by the scene
 	const u_int objID;
 
-	ImageMapConstPtr bakeMap;
+	OptionalPtr<const ImageMap> bakeMap;
 	BakeMapType bakeMapType;
 	u_int bakeMapUVIndex;
 

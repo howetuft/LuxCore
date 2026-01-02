@@ -63,18 +63,18 @@ DataSet::~DataSet() {
 		it->second.reset();
 }
 
-TriangleMeshID DataSet::Add(MeshConstPtr mesh) {
+TriangleMeshID DataSet::Add(MeshConstRef mesh) {
 	assert (!preprocessed);
 
 	const TriangleMeshID id = meshes.size();
-	meshes.push_back(mesh);
+	meshes.push_back(&mesh);
 
-	totalVertexCount += mesh->GetTotalVertexCount();
-	totalTriangleCount += mesh->GetTotalTriangleCount();
+	totalVertexCount += mesh.GetTotalVertexCount();
+	totalTriangleCount += mesh.GetTotalTriangleCount();
 
-	if ((mesh->GetType() == TYPE_TRIANGLE_INSTANCE) || (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE))
+	if ((mesh.GetType() == TYPE_TRIANGLE_INSTANCE) || (mesh.GetType() == TYPE_EXT_TRIANGLE_INSTANCE))
 		hasInstances = true;
-	else if ((mesh->GetType() == TYPE_TRIANGLE_MOTION) || (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION))
+	else if ((mesh.GetType() == TYPE_TRIANGLE_MOTION) || (mesh.GetType() == TYPE_EXT_TRIANGLE_MOTION))
 		hasMotionBlur = true;
 
 	return id;
@@ -98,7 +98,7 @@ void DataSet::UpdateBBoxes() {
 		// Just initialize with some default value to avoid problems
 		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
 	} else {
-		for(MeshConstPtr m: meshes)
+		for(const Mesh * m: meshes)
 			bbox = Union(bbox, m->GetBBox());
 	}
 	bsphere = bbox.BoundingSphere();

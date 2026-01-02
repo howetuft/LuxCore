@@ -1,3 +1,5 @@
+debug.scene.parse.print = 1
+debug.renderconfig.parse.print = 1
 scene.camera.lookat.orig = 0.5 -1.4 1.7
 scene.camera.lookat.target = 0.0 0.0 0.4
 ################################################################################

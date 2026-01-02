@@ -21,6 +21,7 @@
 
 #include <string>
 
+#include "luxrays/usings.h"
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 
@@ -28,16 +29,15 @@ namespace slg {
 
 class SimplifyShape : public Shape {
 public:
-	SimplifyShape(CameraConstPtr camera, luxrays::ExtTriangleMeshPtr srcMesh,
+	SimplifyShape(OptionalPtr<const Camera> camera, luxrays::ExtTriangleMeshRef srcMesh,
 			const float target, const float edgeScreenSize, const bool preserveBorder);
 	virtual ~SimplifyShape();
 
-	virtual ShapeType GetType() const { return SIMPLIFY; }
+	virtual ShapeType GetType() const override { return SIMPLIFY; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	luxrays::ExtTriangleMeshPtr mesh;
 };
 
 }

@@ -25,7 +25,7 @@
 OPENCL_FORCE_NOT_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
  		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+		__global const TextureMapping3D mapping TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
  
 	float result = 0.f;
@@ -74,14 +74,14 @@ OPENCL_FORCE_NOT_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoi
 
 OPENCL_FORCE_NOT_INLINE float BlenderBlendTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
-		const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderBlendTexture_Evaluate(hitPoint, type, direction, contrast, bright, mapping TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 BlenderBlendTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
-		const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderBlendTexture_Evaluate(hitPoint, type, direction, contrast, bright, mapping TEXTURES_PARAM));
 }
@@ -97,17 +97,17 @@ OPENCL_FORCE_NOT_INLINE void BlenderBlendTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderBlendTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderBlend.type, texture->blenderBlend.direction,
-					texture->blenderBlend.contrast, texture->blenderBlend.bright,
-					&texture->blenderBlend.mapping TEXTURES_PARAM);
+					texture.blenderBlend.type, texture.blenderBlend.direction,
+					texture.blenderBlend.contrast, texture.blenderBlend.bright,
+					&texture.blenderBlend.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderBlendTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderBlend.type, texture->blenderBlend.direction,
-					texture->blenderBlend.contrast, texture->blenderBlend.bright,
-					&texture->blenderBlend.mapping TEXTURES_PARAM);
+					texture.blenderBlend.type, texture.blenderBlend.direction,
+					texture.blenderBlend.contrast, texture.blenderBlend.bright,
+					&texture.blenderBlend.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -135,7 +135,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderBlendTexture_EvalOp(
 
 OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
-		const float contrast, const float bright, const bool hard, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
@@ -150,7 +150,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPo
 OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
 		const float contrast, const float bright, const bool hard,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderCloudsTexture_Evaluate(hitPoint, noisebasis, noisesize, noisedepth,
 			contrast, bright, hard, mapping TEXTURES_PARAM);
@@ -159,7 +159,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_ConstEvaluateFloat(__global c
 OPENCL_FORCE_NOT_INLINE float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
 		const float contrast, const float bright, const bool hard,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderCloudsTexture_Evaluate(hitPoint, noisebasis, noisesize, noisedepth,
 			contrast, bright, hard, mapping TEXTURES_PARAM));
@@ -176,19 +176,19 @@ OPENCL_FORCE_NOT_INLINE void BlenderCloudsTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderCloudsTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderClouds.noisebasis, texture->blenderClouds.noisesize,
-					texture->blenderClouds.noisedepth, texture->blenderClouds.contrast,
-					texture->blenderClouds.bright, texture->blenderClouds.hard,
-					&texture->blenderClouds.mapping TEXTURES_PARAM);
+					texture.blenderClouds.noisebasis, texture.blenderClouds.noisesize,
+					texture.blenderClouds.noisedepth, texture.blenderClouds.contrast,
+					texture.blenderClouds.bright, texture.blenderClouds.hard,
+					&texture.blenderClouds.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderCloudsTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderClouds.noisebasis, texture->blenderClouds.noisesize,
-					texture->blenderClouds.noisedepth, texture->blenderClouds.contrast,
-					texture->blenderClouds.bright, texture->blenderClouds.hard,
-					&texture->blenderClouds.mapping TEXTURES_PARAM);
+					texture.blenderClouds.noisebasis, texture.blenderClouds.noisesize,
+					texture.blenderClouds.noisedepth, texture.blenderClouds.contrast,
+					texture.blenderClouds.bright, texture.blenderClouds.hard,
+					&texture.blenderClouds.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -218,7 +218,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderDistortedNoiseTexture_Evaluate(__global con
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis,
 		const float distortion, const float noisesize,
 		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
@@ -240,7 +240,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderDistortedNoiseTexture_ConstEvaluateFloat(__
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis,
 		const float distortion, const float noisesize,
 		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderDistortedNoiseTexture_Evaluate(hitPoint, noisedistortion, noisebasis, distortion, noisesize,
 			contrast, bright, mapping TEXTURES_PARAM);
@@ -250,7 +250,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderDistortedNoiseTexture_ConstEvaluateSpectru
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis,
 		const float distortion, const float noisesize,
 		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderDistortedNoiseTexture_Evaluate(hitPoint, noisedistortion, noisebasis, distortion, noisesize,
 			contrast, bright, mapping TEXTURES_PARAM));
@@ -267,19 +267,19 @@ OPENCL_FORCE_NOT_INLINE void BlenderDistortedNoiseTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderDistortedNoiseTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderDistortedNoise.noisedistortion, texture->blenderDistortedNoise.noisebasis,
-					texture->blenderDistortedNoise.distortion, texture->blenderDistortedNoise.noisesize,
-					texture->blenderDistortedNoise.contrast, texture->blenderDistortedNoise.bright,
-					&texture->blenderDistortedNoise.mapping TEXTURES_PARAM);
+					texture.blenderDistortedNoise.noisedistortion, texture.blenderDistortedNoise.noisebasis,
+					texture.blenderDistortedNoise.distortion, texture.blenderDistortedNoise.noisesize,
+					texture.blenderDistortedNoise.contrast, texture.blenderDistortedNoise.bright,
+					&texture.blenderDistortedNoise.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderDistortedNoiseTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderDistortedNoise.noisedistortion, texture->blenderDistortedNoise.noisebasis,
-					texture->blenderDistortedNoise.distortion, texture->blenderDistortedNoise.noisesize,
-					texture->blenderDistortedNoise.contrast, texture->blenderDistortedNoise.bright,
-					&texture->blenderDistortedNoise.mapping TEXTURES_PARAM);
+					texture.blenderDistortedNoise.noisedistortion, texture.blenderDistortedNoise.noisebasis,
+					texture.blenderDistortedNoise.distortion, texture.blenderDistortedNoise.noisesize,
+					texture.blenderDistortedNoise.contrast, texture.blenderDistortedNoise.bright,
+					&texture.blenderDistortedNoise.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -307,7 +307,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderDistortedNoiseTexture_EvalOp(
 
 OPENCL_FORCE_NOT_INLINE float3 BlenderMagicTexture_Evaluate(__global const HitPoint *hitPoint,
 		const int noisedepth, const float turbulence, const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 	float3 s;
@@ -398,7 +398,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMagicTexture_Evaluate(__global const HitPo
 OPENCL_FORCE_NOT_INLINE float BlenderMagicTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const int noisedepth, const float turbulence,
 		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	float3 result = BlenderMagicTexture_Evaluate(hitPoint, noisedepth, turbulence,
 			contrast, bright, mapping TEXTURES_PARAM);
@@ -409,7 +409,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderMagicTexture_ConstEvaluateFloat(__global co
 OPENCL_FORCE_NOT_INLINE float3 BlenderMagicTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const int noisedepth, const float turbulence,
 		const float contrast, const float bright,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderMagicTexture_Evaluate(hitPoint, noisedepth, turbulence, contrast,
 			bright, mapping TEXTURES_PARAM);
@@ -426,17 +426,17 @@ OPENCL_FORCE_NOT_INLINE void BlenderMagicTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderMagicTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderMagic.noisedepth, texture->blenderMagic.turbulence,
-					texture->blenderMagic.contrast, texture->blenderMagic.bright,
-					&texture->blenderMagic.mapping TEXTURES_PARAM);
+					texture.blenderMagic.noisedepth, texture.blenderMagic.turbulence,
+					texture.blenderMagic.contrast, texture.blenderMagic.bright,
+					&texture.blenderMagic.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderMagicTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderMagic.noisedepth, texture->blenderMagic.turbulence,
-					texture->blenderMagic.contrast, texture->blenderMagic.bright,
-					&texture->blenderMagic.mapping TEXTURES_PARAM);
+					texture.blenderMagic.noisedepth, texture.blenderMagic.turbulence,
+					texture.blenderMagic.contrast, texture.blenderMagic.bright,
+					&texture.blenderMagic.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -467,7 +467,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderMarbleTexture_Evaluate(__global const HitPo
 		const BlenderNoiseBase noisebasis2, const float noisesize,
 		const float turbulence, const int noisedepth,
 		const float contrast, const float bright,
-		const bool hard, __global const TextureMapping3D *mapping
+		const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
@@ -502,7 +502,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderMarbleTexture_ConstEvaluateFloat(__global c
 		const BlenderNoiseBase noisebasis2, const float noisesize, 
 		const float turbulence, const int noisedepth,
 		const float contrast, const float bright,
-		const bool hard, __global const TextureMapping3D *mapping
+		const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderMarbleTexture_Evaluate(hitPoint, type, noisebasis, noisebasis2,
 			noisesize, turbulence, noisedepth, contrast, bright, hard, mapping
@@ -515,7 +515,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMarbleTexture_ConstEvaluateSpectrum(__glob
 		const BlenderNoiseBase noisebasis2, const float noisesize, 
 		const float turbulence, const int noisedepth,
 		const float contrast, const float bright, 
-		const bool hard, __global const TextureMapping3D *mapping
+		const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderMarbleTexture_Evaluate(hitPoint, type, noisebasis, noisebasis2,
 			noisesize, turbulence, noisedepth, contrast, bright, hard, mapping
@@ -533,23 +533,23 @@ OPENCL_FORCE_NOT_INLINE void BlenderMarbleTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderMarbleTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderMarble.type, texture->blenderMarble.noisebasis,
-					texture->blenderMarble.noisebasis2, texture->blenderMarble.noisesize,
-					texture->blenderMarble.turbulence, texture->blenderMarble.noisedepth,
-					texture->blenderMarble.contrast, texture->blenderMarble.bright,
-					texture->blenderMarble.hard,
-					&texture->blenderMagic.mapping TEXTURES_PARAM);
+					texture.blenderMarble.type, texture.blenderMarble.noisebasis,
+					texture.blenderMarble.noisebasis2, texture.blenderMarble.noisesize,
+					texture.blenderMarble.turbulence, texture.blenderMarble.noisedepth,
+					texture.blenderMarble.contrast, texture.blenderMarble.bright,
+					texture.blenderMarble.hard,
+					&texture.blenderMagic.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderMarbleTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderMarble.type, texture->blenderMarble.noisebasis,
-					texture->blenderMarble.noisebasis2, texture->blenderMarble.noisesize,
-					texture->blenderMarble.turbulence, texture->blenderMarble.noisedepth,
-					texture->blenderMarble.contrast, texture->blenderMarble.bright,
-					texture->blenderMarble.hard,
-					&texture->blenderMagic.mapping TEXTURES_PARAM);
+					texture.blenderMarble.type, texture.blenderMarble.noisebasis,
+					texture.blenderMarble.noisebasis2, texture.blenderMarble.noisesize,
+					texture.blenderMarble.turbulence, texture.blenderMarble.noisedepth,
+					texture.blenderMarble.contrast, texture.blenderMarble.bright,
+					texture.blenderMarble.hard,
+					&texture.blenderMagic.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -579,7 +579,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderMusgraveTexture_Evaluate(__global const Hit
 		const BlenderMusgraveType type, const BlenderNoiseBasis noisebasis,
 		const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 		
 	float scale = 1.f;
@@ -619,7 +619,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderMusgraveTexture_ConstEvaluateFloat(__global
 		const BlenderMusgraveType type, const BlenderNoiseBasis noisebasis,
 		const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderMusgraveTexture_Evaluate(hitPoint, type, noisebasis, dimension, intensity, lacunarity,
 			offset, gain, octaves, noisesize, contrast, bright, mapping
@@ -630,7 +630,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__gl
 		const BlenderMusgraveType type,	const BlenderNoiseBasis noisebasis,
 		const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderMusgraveTexture_Evaluate(hitPoint, type, noisebasis, dimension, intensity, lacunarity,
 			offset, gain, octaves, noisesize, contrast, bright, mapping
@@ -648,25 +648,25 @@ OPENCL_FORCE_NOT_INLINE void BlenderMusgraveTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderMusgraveTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis,
-					texture->blenderMusgrave.dimension, texture->blenderMusgrave.intensity,
-					texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
-					texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves,
-					texture->blenderMusgrave.noisesize, texture->blenderMusgrave.contrast,
-					texture->blenderMusgrave.bright,
-					&texture->blenderMusgrave.mapping TEXTURES_PARAM);
+					texture.blenderMusgrave.type, texture.blenderMusgrave.noisebasis,
+					texture.blenderMusgrave.dimension, texture.blenderMusgrave.intensity,
+					texture.blenderMusgrave.lacunarity, texture.blenderMusgrave.offset,
+					texture.blenderMusgrave.gain, texture.blenderMusgrave.octaves,
+					texture.blenderMusgrave.noisesize, texture.blenderMusgrave.contrast,
+					texture.blenderMusgrave.bright,
+					&texture.blenderMusgrave.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderMusgraveTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis,
-					texture->blenderMusgrave.dimension, texture->blenderMusgrave.intensity,
-					texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
-					texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves,
-					texture->blenderMusgrave.noisesize, texture->blenderMusgrave.contrast,
-					texture->blenderMusgrave.bright,
-					&texture->blenderMusgrave.mapping TEXTURES_PARAM);
+					texture.blenderMusgrave.type, texture.blenderMusgrave.noisebasis,
+					texture.blenderMusgrave.dimension, texture.blenderMusgrave.intensity,
+					texture.blenderMusgrave.lacunarity, texture.blenderMusgrave.offset,
+					texture.blenderMusgrave.gain, texture.blenderMusgrave.octaves,
+					texture.blenderMusgrave.noisesize, texture.blenderMusgrave.contrast,
+					texture.blenderMusgrave.bright,
+					&texture.blenderMusgrave.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -700,7 +700,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderNoiseTexture_Evaluate(__global const HitPoi
 
 	float div = 3.f;
 
-	float ran = hitPoint->passThroughEvent;
+	float ran = hitPoint.passThroughEvent;
 	float val = Floor2UInt(ran * 4.f);
 	
 	int loop = noisedepth;
@@ -744,15 +744,15 @@ OPENCL_FORCE_NOT_INLINE void BlenderNoiseTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderNoiseTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderNoise.noisedepth, texture->blenderNoise.bright,
-					texture->blenderNoise.contrast);
+					texture.blenderNoise.noisedepth, texture.blenderNoise.bright,
+					texture.blenderNoise.contrast);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderNoiseTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderNoise.noisedepth, texture->blenderNoise.bright,
-					texture->blenderNoise.contrast);
+					texture.blenderNoise.noisedepth, texture.blenderNoise.bright,
+					texture.blenderNoise.contrast);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -781,7 +781,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderNoiseTexture_EvalOp(
 OPENCL_FORCE_NOT_INLINE float BlenderStucciTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderStucciType type, const BlenderNoiseBasis noisebasis,
 		const float noisesize, const float turbulence, const float contrast,
-		const float bright, const bool hard, __global const TextureMapping3D *mapping
+		const float bright, const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 	
@@ -815,7 +815,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderStucciTexture_Evaluate(__global const HitPo
 OPENCL_FORCE_NOT_INLINE float BlenderStucciTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const BlenderStucciType type, const BlenderNoiseBasis noisebasis,
 		const float noisesize, const float turbulence, const float contrast,
-		const float bright, const bool hard, __global const TextureMapping3D *mapping
+		const float bright, const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return BlenderStucciTexture_Evaluate(hitPoint, type, noisebasis, noisesize, turbulence,
 			contrast, bright, hard, mapping
@@ -825,7 +825,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderStucciTexture_ConstEvaluateFloat(__global c
 OPENCL_FORCE_NOT_INLINE float3 BlenderStucciTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const BlenderStucciType type, const BlenderNoiseBasis noisebasis,
 		const float noisesize, const float turbulence, const float contrast,
-		const float bright, const bool hard, __global const TextureMapping3D *mapping
+		const float bright, const bool hard, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderStucciTexture_Evaluate(hitPoint, type, noisebasis, noisesize, turbulence,
 			contrast, bright, hard, mapping TEXTURES_PARAM));
@@ -842,21 +842,21 @@ OPENCL_FORCE_NOT_INLINE void BlenderStucciTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderStucciTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderStucci.type, texture->blenderStucci.noisebasis,
-					texture->blenderStucci.noisesize, texture->blenderStucci.turbulence,
-					texture->blenderStucci.contrast, texture->blenderStucci.bright,
-					texture->blenderStucci.hard,
-					&texture->blenderStucci.mapping TEXTURES_PARAM);
+					texture.blenderStucci.type, texture.blenderStucci.noisebasis,
+					texture.blenderStucci.noisesize, texture.blenderStucci.turbulence,
+					texture.blenderStucci.contrast, texture.blenderStucci.bright,
+					texture.blenderStucci.hard,
+					&texture.blenderStucci.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderStucciTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderStucci.type, texture->blenderStucci.noisebasis,
-					texture->blenderStucci.noisesize, texture->blenderStucci.turbulence,
-					texture->blenderStucci.contrast, texture->blenderStucci.bright,
-					texture->blenderStucci.hard,
-					&texture->blenderStucci.mapping TEXTURES_PARAM);
+					texture.blenderStucci.type, texture.blenderStucci.noisebasis,
+					texture.blenderStucci.noisesize, texture.blenderStucci.turbulence,
+					texture.blenderStucci.contrast, texture.blenderStucci.bright,
+					texture.blenderStucci.hard,
+					&texture.blenderStucci.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -886,7 +886,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderWoodTexture_Evaluate(__global const HitPoin
 		const BlenderWoodType type, const BlenderNoiseBase noisebasis2,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence,
 		const float contrast, const float bright, const bool hard,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+		__global const TextureMapping3D mapping TEXTURES_PARAM_DECL) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
 	float wood = 0.f;
@@ -949,7 +949,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderWoodTexture_ConstEvaluateFloat(__global con
 		const BlenderWoodType type, const BlenderNoiseBase noisebasis2,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence,
 		const float contrast, const float bright, const bool hard,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+		__global const TextureMapping3D mapping TEXTURES_PARAM_DECL) {
 	return BlenderWoodTexture_Evaluate(hitPoint, type, noisebasis2, noisebasis,
 		noisesize, turbulence, contrast, bright, hard, mapping TEXTURES_PARAM);
 }
@@ -958,7 +958,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderWoodTexture_ConstEvaluateSpectrum(__global
 		const BlenderWoodType type, const BlenderNoiseBase noisebasis2, 
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence,
 		const float contrast, const float bright, const bool hard,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+		__global const TextureMapping3D mapping TEXTURES_PARAM_DECL) {
     return TO_FLOAT3(BlenderWoodTexture_Evaluate(hitPoint, type, noisebasis2, noisebasis,
 		noisesize, turbulence, contrast, bright, hard, mapping TEXTURES_PARAM));
 }
@@ -974,21 +974,21 @@ OPENCL_FORCE_NOT_INLINE void BlenderWoodTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderWoodTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderWood.type, texture->blenderWood.noisebasis2,
-					texture->blenderWood.noisebasis, texture->blenderWood.noisesize,
-					texture->blenderWood.turbulence, texture->blenderWood.contrast,
-					texture->blenderWood.bright, texture->blenderWood.hard,
-					&texture->blenderWood.mapping TEXTURES_PARAM);
+					texture.blenderWood.type, texture.blenderWood.noisebasis2,
+					texture.blenderWood.noisebasis, texture.blenderWood.noisesize,
+					texture.blenderWood.turbulence, texture.blenderWood.contrast,
+					texture.blenderWood.bright, texture.blenderWood.hard,
+					&texture.blenderWood.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderWoodTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderWood.type, texture->blenderWood.noisebasis2,
-					texture->blenderWood.noisebasis, texture->blenderWood.noisesize,
-					texture->blenderWood.turbulence, texture->blenderWood.contrast,
-					texture->blenderWood.bright, texture->blenderWood.hard,
-					&texture->blenderWood.mapping TEXTURES_PARAM);
+					texture.blenderWood.type, texture.blenderWood.noisebasis2,
+					texture.blenderWood.noisebasis, texture.blenderWood.noisesize,
+					texture.blenderWood.turbulence, texture.blenderWood.contrast,
+					texture.blenderWood.bright, texture.blenderWood.hard,
+					&texture.blenderWood.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}
@@ -1017,7 +1017,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderWoodTexture_EvalOp(
 OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint *hitPoint,
 		const DistanceMetric distancemetric, const float feature_weight1, const float feature_weight2, 
 		const float feature_weight3, const float feature_weight4, const float noisesize, const float intensity,
-		const float exponent, const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float exponent, const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
     float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
 	float scale = 1.f;
@@ -1047,7 +1047,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitP
 
 OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,	const DistanceMetric distancemetric, const float feature_weight1, 
 		const float feature_weight2, const float feature_weight3, const float feature_weight4, const float noisesize, const float intensity,
-		const float exponent, const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float exponent, const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {	
 	return BlenderVoronoiTexture_Evaluate(hitPoint, distancemetric, feature_weight1, feature_weight2, feature_weight3, feature_weight4,
 		noisesize, intensity, exponent, contrast, bright, mapping
@@ -1056,7 +1056,7 @@ OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_ConstEvaluateFloat(__global 
  
 OPENCL_FORCE_NOT_INLINE float3 BlenderVoronoiTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint, const DistanceMetric distancemetric, const float feature_weight1,
 		const float feature_weight2, const float feature_weight3, const float feature_weight4, const float noisesize, const float intensity,
-		const float exponent, const float contrast, const float bright, __global const TextureMapping3D *mapping
+		const float exponent, const float contrast, const float bright, __global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	return TO_FLOAT3(BlenderVoronoiTexture_Evaluate(hitPoint, distancemetric, feature_weight1, feature_weight2, feature_weight3, feature_weight4,
 		noisesize, intensity, exponent, contrast, bright, mapping
@@ -1074,23 +1074,23 @@ OPENCL_FORCE_NOT_INLINE void BlenderVoronoiTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = BlenderVoronoiTexture_ConstEvaluateFloat(hitPoint,
-					texture->blenderVoronoi.distancemetric, texture->blenderVoronoi.feature_weight1,
-					texture->blenderVoronoi.feature_weight2, texture->blenderVoronoi.feature_weight3,
-					texture->blenderVoronoi.feature_weight4, texture->blenderVoronoi.noisesize,
-					texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
-					texture->blenderVoronoi.contrast, texture->blenderVoronoi.bright,
-					&texture->blenderVoronoi.mapping TEXTURES_PARAM);
+					texture.blenderVoronoi.distancemetric, texture.blenderVoronoi.feature_weight1,
+					texture.blenderVoronoi.feature_weight2, texture.blenderVoronoi.feature_weight3,
+					texture.blenderVoronoi.feature_weight4, texture.blenderVoronoi.noisesize,
+					texture.blenderVoronoi.intensity, texture.blenderVoronoi.exponent,
+					texture.blenderVoronoi.contrast, texture.blenderVoronoi.bright,
+					&texture.blenderVoronoi.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = BlenderVoronoiTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->blenderVoronoi.distancemetric, texture->blenderVoronoi.feature_weight1,
-					texture->blenderVoronoi.feature_weight2, texture->blenderVoronoi.feature_weight3,
-					texture->blenderVoronoi.feature_weight4, texture->blenderVoronoi.noisesize,
-					texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
-					texture->blenderVoronoi.contrast, texture->blenderVoronoi.bright,
-					&texture->blenderVoronoi.mapping TEXTURES_PARAM);
+					texture.blenderVoronoi.distancemetric, texture.blenderVoronoi.feature_weight1,
+					texture.blenderVoronoi.feature_weight2, texture.blenderVoronoi.feature_weight3,
+					texture.blenderVoronoi.feature_weight4, texture.blenderVoronoi.noisesize,
+					texture.blenderVoronoi.intensity, texture.blenderVoronoi.exponent,
+					texture.blenderVoronoi.contrast, texture.blenderVoronoi.bright,
+					&texture.blenderVoronoi.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}

@@ -20,6 +20,7 @@
 #define	_SLG_BILERPTEX_H
 
 #include "slg/textures/texture.h"
+#include <functional>
 
 namespace slg {
 
@@ -29,7 +30,12 @@ namespace slg {
 
 class BilerpTexture : public Texture {
 public:
-	BilerpTexture(TextureConstPtr tex00, TextureConstPtr tex01, TextureConstPtr tex10, TextureConstPtr tex11) : t00(tex00), t01(tex01), t10(tex10), t11(tex11) { }
+	BilerpTexture(
+		TextureConstRef tex00,
+		TextureConstRef tex01,
+		TextureConstRef tex10,
+		TextureConstRef tex11
+	) : t00(tex00), t01(tex01), t10(tex10), t11(tex11) {}
 	virtual ~BilerpTexture() { }
 
 	virtual TextureType GetType() const { return BILERP_TEX; }
@@ -38,20 +44,23 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const;
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
-	TextureConstPtr GetTexture00() const { return t00; }
-	TextureConstPtr GetTexture01() const { return t01; }
-	TextureConstPtr GetTexture10() const { return t10; }
-	TextureConstPtr GetTexture11() const { return t11; }
+	TextureConstRef GetTexture00() const { return t00; }
+	TextureConstRef GetTexture01() const { return t01; }
+	TextureConstRef GetTexture10() const { return t10; }
+	TextureConstRef GetTexture11() const { return t11; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::Properties ToProperties(
+		const ImageMapCache &imgMapCache, const bool useRealFileName
+	) const;
 
 private:
-	TextureConstPtr t00, t01, t10, t11;
+	// Referenced textures. Constness is guaranteed, but rebinding is possible
+	std::reference_wrapper<const Texture> t00, t01, t10, t11;
 };
 
 }

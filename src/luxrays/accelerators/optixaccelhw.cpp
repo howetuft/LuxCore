@@ -118,21 +118,21 @@ public:
 		vector<OptixInstance> optixInstances;
 		vector<OptixAabb> optixBBs;
 		
-		auto uniqueMeshTraversableHandle = map<MeshConstPtr , OptixTraversableHandle,
-				function<bool(MeshConstPtr , MeshConstPtr )>>{
-			[](MeshConstPtr p0, MeshConstPtr p1) {
+		auto uniqueMeshTraversableHandle = map<const Mesh * , OptixTraversableHandle,
+				function<bool(const Mesh * , const Mesh * )>>{
+			[](const Mesh * p0, const Mesh * p1) {
 				return p0 < p1;
 			}
 		};
 
 		bool usesMotionBlur = false;
 		for (u_int i = 0; i < optixAccel.meshes.size(); ++i) {
-			MeshConstPtr mesh = optixAccel.meshes[i];
-			
+			auto mesh = optixAccel.meshes[i];
+
 			switch (mesh->GetType()) {
 				case TYPE_TRIANGLE:
 				case TYPE_EXT_TRIANGLE: {
-					auto tm = dynamic_pointer_cast<const TriangleMesh>(mesh);
+					auto& tm = dynamic_cast<const TriangleMesh &>(*mesh);
 
 					OptixTraversableHandle handle;
 					HardwareDeviceBuffer *outputBuffer = nullptr;
@@ -160,14 +160,14 @@ public:
 				}
 				case TYPE_TRIANGLE_INSTANCE:
 				case TYPE_EXT_TRIANGLE_INSTANCE: {
-					auto itm = dynamic_pointer_cast<const InstanceTriangleMesh>(mesh);
+					auto& itm = dynamic_cast<const InstanceTriangleMesh &>(*mesh);
 
 					// Check if a OptixTraversableHandle has already been created
-					auto it = uniqueMeshTraversableHandle.find(itm->GetTriangleMesh());
+					auto it = uniqueMeshTraversableHandle.find(&itm.GetTriangleMesh());
 
 					OptixTraversableHandle instancedMeshHandle;
 					if (it == uniqueMeshTraversableHandle.end()) {
-						auto instancedMesh = itm->GetTriangleMesh();
+						auto& instancedMesh = itm.GetTriangleMesh();
 
 						// Create a new OptixTraversableHandle
 						HardwareDeviceBuffer *outputBuffer = nullptr;
@@ -175,7 +175,7 @@ public:
 						optixOutputBuffers.push_back(outputBuffer);
 
 						// Add to the listed of created handles
-						uniqueMeshTraversableHandle[instancedMesh] = instancedMeshHandle;
+						uniqueMeshTraversableHandle[&instancedMesh] = instancedMeshHandle;
 					} else
 						instancedMeshHandle = it->second;
 					
@@ -187,7 +187,7 @@ public:
 
 					// Set transform matrix
 					Transform local2World;
-					itm->GetLocal2World(0.f, local2World);
+					itm.GetLocal2World(0.f, local2World);
 
 					optixInstance.transform[0] = local2World.m.m[0][0];
 					optixInstance.transform[1] = local2World.m.m[0][1];
@@ -209,14 +209,14 @@ public:
 				}
 				case TYPE_TRIANGLE_MOTION:
 				case TYPE_EXT_TRIANGLE_MOTION: {
-					auto mtm = dynamic_pointer_cast<const MotionTriangleMesh>(mesh);
+					auto& mtm = dynamic_cast<const MotionTriangleMesh &>(*mesh);
 
 					// Check if a OptixTraversableHandle has already been created
-					auto it = uniqueMeshTraversableHandle.find(mtm->GetTriangleMesh());
+					auto it = uniqueMeshTraversableHandle.find(&mtm.GetTriangleMesh());
 
 					OptixTraversableHandle instancedMeshHandle;
 					if (it == uniqueMeshTraversableHandle.end()) {
-						auto instancedMesh = mtm->GetTriangleMesh();
+						auto& instancedMesh = mtm.GetTriangleMesh();
 
 						// Create a new OptixTraversableHandle
 						HardwareDeviceBuffer *outputBuffer = nullptr;
@@ -224,13 +224,13 @@ public:
 						optixOutputBuffers.push_back(outputBuffer);
 
 						// Add to the listed of created handles
-						uniqueMeshTraversableHandle[instancedMesh] = instancedMeshHandle;
+						uniqueMeshTraversableHandle[&instancedMesh] = instancedMeshHandle;
 					} else
 						instancedMeshHandle = it->second;
 
 					// Create the motion blur traversable
 
-					const MotionSystem &ms = mtm->GetMotionSystem();
+					const MotionSystem &ms = mtm.GetMotionSystem();
 
 					const size_t transformSizeInBytes = sizeof(OptixMatrixMotionTransform) +
 							(ms.times.size() - 2) * 12 * sizeof(float);
@@ -243,7 +243,7 @@ public:
 					motionTransform->motionOptions.flags = OPTIX_MOTION_FLAG_NONE;
 
 					float *ptr = &motionTransform->transform[0][0];
-					for (auto const t : ms.times) {
+					for (auto& t : ms.times) {
 						const Matrix4x4 m = ms.SampleInverse(t);
 
 						*ptr++ = m.m[0][0];
@@ -585,18 +585,18 @@ public:
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
 private:
-	void BuildTraversable(TriangleMeshConstPtr mesh,
+	void BuildTraversable(TriangleMeshConstRef mesh,
 			OptixTraversableHandle &handle,
 			HardwareDeviceBuffer **outputBuffer) {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
 		// Allocate CUDA vertices buffer
 		HardwareDeviceBuffer *vertsBuff = nullptr;
-		cudaDevice->AllocBufferRO(&vertsBuff, mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
+		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices(), sizeof(Point) * mesh.GetTotalVertexCount());
 
 		// Allocate CUDA triangle vertices indices buffer
 		HardwareDeviceBuffer *trisBuff = nullptr;
-		cudaDevice->AllocBufferRO(&trisBuff, mesh->GetTriangles(), sizeof(Triangle) * mesh->GetTotalTriangleCount());
+		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
 
 		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
 
@@ -604,11 +604,11 @@ private:
 		OptixBuildInput buildInput = {};
 		buildInput.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
 		buildInput.triangleArray.vertexBuffers = &(((CUDADeviceBuffer *)vertsBuff)->GetCUDADevicePointer());
-		buildInput.triangleArray.numVertices = mesh->GetTotalVertexCount();
+		buildInput.triangleArray.numVertices = mesh.GetTotalVertexCount();
 		buildInput.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
 		buildInput.triangleArray.vertexStrideInBytes = sizeof(Point);
 		buildInput.triangleArray.indexBuffer = ((CUDADeviceBuffer *)trisBuff)->GetCUDADevicePointer();
-		buildInput.triangleArray.numIndexTriplets = mesh->GetTotalTriangleCount();
+		buildInput.triangleArray.numIndexTriplets = mesh.GetTotalTriangleCount();
 		buildInput.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
 		buildInput.triangleArray.indexStrideInBytes = sizeof(Triangle);
 		buildInput.triangleArray.preTransform = 0;

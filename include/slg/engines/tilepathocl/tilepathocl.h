@@ -84,7 +84,7 @@ protected:
 
 class TilePathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	TilePathOCLRenderEngine(RenderConfigConstRef cfg, const bool supportsNativeThreads);
+	TilePathOCLRenderEngine(RenderConfigRef cfg, const bool supportsNativeThreads);
 	virtual ~TilePathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -105,7 +105,7 @@ public:
 	static RenderEngineType GetObjectType() { return TILEPATHOCL; }
 	static std::string GetObjectTag() { return "TILEPATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class TilePathOCLRenderThread;
 	friend class TilePathNativeRenderThread;

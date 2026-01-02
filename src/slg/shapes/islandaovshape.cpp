@@ -29,20 +29,20 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex) {
-	SDL_LOG("IslandAOV shape " << srcMesh->GetName());
+IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex) {
+	SDL_LOG("IslandAOV shape " << srcMesh.GetName());
 
 	const double startTime = WallClockTime();
 
-	const u_int vertexCount = srcMesh->GetTotalVertexCount();
-	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const u_int vertexCount = srcMesh.GetTotalVertexCount();
+	const u_int triCount = srcMesh.GetTotalTriangleCount();
+	const Triangle *tris = srcMesh.GetTriangles();
 	SDL_LOG("IslandAOV shape vertex count: " << vertexCount);
 	SDL_LOG("IslandAOV shape triangle count: " << triCount);
 
 	// Built a mapping to have all very near vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
-		auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+		auto& triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
 
 		const Point v1 = triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1);
 		const Point v2 = triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex2);
@@ -50,7 +50,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 		return (DistanceSquared(v1, v2) < DEFAULT_EPSILON_STATIC);
 	};
 	vector<u_int> uniqueVertices;
-	const u_int uniqueVertCount = srcMesh->GetUniqueVerticesMapping(uniqueVertices, compareVerts);
+	const u_int uniqueVertCount = srcMesh.GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("IslandAOV shape has " << uniqueVertCount << " unique vertices over " << vertexCount);
 
 	vector<u_int> triangleIndices(triCount);
@@ -107,7 +107,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 	
 	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
-	mesh = srcMesh->Copy();
+	mesh = srcMesh.Copy();
 	mesh->DeleteTriAOV(dataIndex);
 	mesh->SetTriAOV(dataIndex, &triAOV[0]);
 
@@ -118,7 +118,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshPtr srcMesh, const u_int dataIndex
 IslandAOVShape::~IslandAOVShape() {
 }
 
-ExtTriangleMeshPtr IslandAOVShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr IslandAOVShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

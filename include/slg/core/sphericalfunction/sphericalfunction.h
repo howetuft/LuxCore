@@ -22,6 +22,7 @@
 #include "luxrays/utils/mcdistribution.h"
 #include "slg/core/sphericalfunction/photometricdataies.h"
 #include "slg/textures/texture.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -70,15 +71,26 @@ public:
 class ImageMapSphericalFunction : public SphericalFunction {
 public:
 	ImageMapSphericalFunction();
-	ImageMapSphericalFunction(ImageMapConstPtr imgMap);
 
-	void SetImageMap(ImageMapConstPtr imgMap);
-	ImageMapConstPtr GetImageMap() const { return imgMap; }
-	
+	ImageMapSphericalFunction(ImageMapUPtr&& imgMap);
+	ImageMapSphericalFunction(OptionalPtr<const ImageMap> imgMap);
+
+	void SetImageMap(ImageMapUPtr&& imgMap);
+	void SetImageMap(OptionalPtr<ImageMap> imgMap);
+
+	ImageMapConstRef GetImageMap() const { return *imgMap; }
+
 	virtual luxrays::Spectrum Evaluate(const float phi, const float theta) const;
 
 protected:
-	ImageMapConstPtr imgMap;
+
+	// The (optional) internal ImageMap.
+	// Warning: keep this declaration **before** imgMap declaration.
+	// This is of first importance for correct initialization order. See here:
+	// https://en.cppreference.com/w/cpp/language/initializer_list.html#Initialization_order
+	ImageMapUPtr internalImgMap;  // ImageMapSphericalFunction can have its own ImageMap
+								  //
+	OptionalPtr<const ImageMap> imgMap;
 };
 
 /**
@@ -166,7 +178,7 @@ public:
 			const u_int xRes = 512, const u_int yRes = 256);
 	~IESSphericalFunction();
 
-	static ImageMapPtr IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
+	static ImageMapUPtr IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
 			const u_int xRes = 512, const u_int yRes = 256);
 };
 

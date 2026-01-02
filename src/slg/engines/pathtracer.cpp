@@ -22,6 +22,7 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/metropolis.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
@@ -34,7 +35,7 @@ using namespace slg;
 PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		const SamplerUPtr& eSampler,
 		const SamplerUPtr& lSampler,
-		SceneConstPtr scn, FilmPtr flm,
+		SceneConstRef scn, FilmPtr flm,
 		const VarianceClamping *varClamping,
 		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
@@ -131,7 +132,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 //------------------------------------------------------------------------------
 
 PathTracer::DirectLightResult PathTracer::DirectLightSampling(
-		luxrays::IntersectionDevice *device, SceneConstPtr scene,
+		luxrays::IntersectionDevice *device, SceneConstRef scene,
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
@@ -140,16 +141,15 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		const bool useBSDFEVal) const {
 	if (!bsdf.IsDelta()) {
 		// Select the light strategy to use
-		LightStrategyConstPtr lightStrategy;
-		if (bsdf.IsShadowCatcherOnlyInfiniteLights())
-			lightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
-		else
-			lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
-		
+		auto& lightStrategy =
+			bsdf.IsShadowCatcherOnlyInfiniteLights() ?
+			scene.lightDefs.GetInfiniteLightStrategy() :
+			scene.lightDefs.GetIlluminateLightStrategy();
+
 		// Pick a light source to sample
 		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 		float lightPickPdf;
-		auto light = lightStrategy->SampleLights(
+		auto light = lightStrategy.SampleLights(
 			scene,
 			u0,
 			bsdf.hitPoint.p,
@@ -161,8 +161,9 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		if (light) {
 			Ray shadowRay;
 			float directPdfW;
-			Spectrum lightRadiance = light->Illuminate(scene, bsdf,
-					time, u1, u2, u3, shadowRay, directPdfW);
+			Spectrum lightRadiance = light->Illuminate(
+				scene, bsdf, time, u1, u2, u3, shadowRay, directPdfW
+			);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 			if (!lightRadiance.Black()) {
@@ -197,7 +198,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					// Create a new PathVolumeInfo for the path to the light source
 					PathVolumeInfo volInfo = pathInfo.volume;
 					// Check if the light source is visible
-					if (!scene->Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+					if (!scene.Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
@@ -223,7 +224,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 							// Note: I have to avoid MIS on the last path vertex
 							const bool misEnabled = !sampleResult->lastPathVertex &&
 								(light->IsEnvironmental() || light->IsIntersectable()) &&
-								CheckDirectHitVisibilityFlags(light, directLightDepthInfo, event) &&
+								CheckDirectHitVisibilityFlags(*light, directLightDepthInfo, event) &&
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
@@ -255,30 +256,31 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 	return NOT_VISIBLE;
 }
 
-bool PathTracer::CheckDirectHitVisibilityFlags(LightSourceConstPtr lightSource, const PathDepthInfo &depthInfo,
+bool PathTracer::CheckDirectHitVisibilityFlags(LightSourceConstRef lightSource, const PathDepthInfo &depthInfo,
 		const BSDFEvent lastBSDFEvent) const {
 	if (depthInfo.depth == 0)
 		return true;
 
-	if ((lastBSDFEvent & DIFFUSE) && lightSource->IsVisibleIndirectDiffuse())
+	if ((lastBSDFEvent & DIFFUSE) && lightSource.IsVisibleIndirectDiffuse())
 		return true;
-	if ((lastBSDFEvent & GLOSSY) && lightSource->IsVisibleIndirectGlossy())
+	if ((lastBSDFEvent & GLOSSY) && lightSource.IsVisibleIndirectGlossy())
 		return true;
-	if ((lastBSDFEvent & SPECULAR) && lightSource->IsVisibleIndirectSpecular())
+	if ((lastBSDFEvent & SPECULAR) && lightSource.IsVisibleIndirectSpecular())
 		return true;
 
 	return false;
 }
 
-void PathTracer::DirectHitFiniteLight(SceneConstPtr scene,
+void PathTracer::DirectHitFiniteLight(SceneConstRef scene,
 		const EyePathInfo &pathInfo,
 		const Spectrum &pathThroughput, const Ray &ray,
 		const float distance, const BSDF &bsdf,
 		SampleResult *sampleResult) const {
+
 	auto lightSource = bsdf.GetLightSource();
 
 	// Check if the light source is visible according the settings
-	if (!CheckDirectHitVisibilityFlags(lightSource, pathInfo.depth, pathInfo.lastBSDFEvent) ||
+	if (!CheckDirectHitVisibilityFlags(*lightSource, pathInfo.depth, pathInfo.lastBSDFEvent) ||
 			// If the material is shadow transparent, Direct Light sampling
 			// will take care of transporting all emitted light
 			bsdf.hitPoint.throughShadowTransparency)
@@ -290,13 +292,14 @@ void PathTracer::DirectHitFiniteLight(SceneConstPtr scene,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
-			auto lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
-			const float lightPickProb = lightStrategy->SampleLightPdf(lightSource,
-					ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
+			auto& lightStrategy = scene.lightDefs.GetIlluminateLightStrategy();
+			const float lightPickProb = lightStrategy.SampleLightPdf(
+				*lightSource,
+				ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
 			// This is a specific check to avoid fireflies with DLSC
 			if ((lightPickProb == 0.f) && lightSource->IsDirectLightSamplingEnabled() &&
-					(lightStrategy->GetType() == TYPE_DLS_CACHE))
+					(lightStrategy.GetType() == TYPE_DLS_CACHE))
 				return;
 
 			const float directPdfW = PdfAtoW(directPdfA, distance,
@@ -311,7 +314,7 @@ void PathTracer::DirectHitFiniteLight(SceneConstPtr scene,
 	}
 }
 
-void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
+void PathTracer::DirectHitInfiniteLight(SceneConstRef scene,
 		const EyePathInfo &pathInfo, const Spectrum &pathThroughput,
 		const Ray &ray, const BSDF *bsdf, SampleResult *sampleResult) const {
 	// If the material is shadow transparent, Direct Light sampling
@@ -319,17 +322,17 @@ void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
 	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
 		return;
 
-	for(auto envLight: scene->lightDefs.GetEnvLightSources()) {
+	for(auto& envLight: scene.lightDefs.GetEnvLightSources()) {
 		// Check if the light source is visible according the settings
 		if (!CheckDirectHitVisibilityFlags(envLight, pathInfo.depth, pathInfo.lastBSDFEvent))
 			continue;
 
 		float directPdfW;
-		const Spectrum envRadiance = envLight->GetRadiance(scene, bsdf, -ray.d, &directPdfW);
+		const Spectrum envRadiance = envLight.GetRadiance(scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
 			if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
-				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
+				const float lightPickProb = scene.lightDefs.GetIlluminateLightStrategy().
 						SampleLightPdf(envLight, ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
 				// MIS between BSDF sampling and direct light sampling
@@ -337,12 +340,12 @@ void PathTracer::DirectHitInfiniteLight(SceneConstPtr scene,
 			} else
 				weight = 1.f;
 
-			sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
+			sampleResult->AddEmission(envLight.GetID(), pathThroughput, weight * envRadiance);
 		}
 	}	
 }
 
-void PathTracer::GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film, Ray &eyeRay,
+void PathTracer::GenerateEyeRay(CameraConstRef camera, FilmConstPtr film, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler& sampler, SampleResult &sampleResult) const {
 	const float filmX = sampler.GetSample(0);
 	const float filmY = sampler.GetSample(1);
@@ -368,9 +371,9 @@ void PathTracer::GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film, Ray &e
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
 	const float timeSample = sampler.GetSample(4);
-	const float time = camera->GenerateRayTime(timeSample);
+	const float time = camera.GenerateRayTime(timeSample);
 
-	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+	camera.GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler.GetSample(2), sampler.GetSample(3));
 }
 
@@ -379,7 +382,7 @@ void PathTracer::GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film, Ray &e
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyePath(IntersectionDevice *device,
-		SceneConstPtr scene, Sampler& sampler, EyePathInfo &pathInfo,
+		SceneConstRef scene, Sampler& sampler, EyePathInfo &pathInfo,
 		Ray &eyeRay,  const luxrays::Spectrum &eyeTroughput,
 		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
@@ -404,7 +407,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
 		const float passThrough = sampler.GetSample(sampleOffset);
-		const bool hit = scene->Intersect(device,
+		const bool hit = scene.Intersect(device,
 				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 				&pathInfo.volume, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -669,7 +672,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 void PathTracer::RenderEyeSample(
 	IntersectionDevice *device,
-	SceneConstPtr scene, FilmConstPtr film,
+	SceneConstRef scene, FilmConstPtr film,
 	Sampler& sampler,
 	vector<SampleResult> &sampleResults
 ) const {
@@ -677,7 +680,7 @@ void PathTracer::RenderEyeSample(
 
 	EyePathInfo pathInfo;
 	Ray eyeRay;
-	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
+	GenerateEyeRay(scene.GetCamera(), film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
 
 	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, Spectrum(1.f), sampleResults);
 }
@@ -698,7 +701,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device,
-		SceneConstPtr scene,
+		SceneConstRef scene,
 		FilmConstPtr film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
@@ -715,11 +718,11 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 	Vector eyeDir;
 	float eyeDistance = 0;
 	Point lensPoint = pathInfo.lensPoint;
-    if (scene->camera->GetType() == Camera::ORTHOGRAPHIC){
+    if (scene.GetCamera().GetType() == Camera::ORTHOGRAPHIC){
 		// Orthographic camera need to be handled separately,
 		// lensPoint can not be pre-calculated in this case
 		Point p = bsdf.hitPoint.p;
-		eyeDir = scene->camera->GetDir();
+		eyeDir = scene.GetCamera().GetDir();
 		// calculate distance from vertex to camera plane
 		const float D = -eyeDir.x*lensPoint.x - eyeDir.y*lensPoint.y - eyeDir.z*lensPoint.z;
 		eyeDistance = eyeDir.x*p.x + eyeDir.y*p.y + eyeDir.z*p.z + D;
@@ -729,7 +732,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 			0.f,
 			eyeDistance,
 			time);
-		sampleSuccess = scene->camera->ProjectToImage(&eyeRay, &filmX, &filmY);
+		sampleSuccess = scene.GetCamera().ProjectToImage(&eyeRay, &filmX, &filmY);
 	} else {
 		eyeDir = Vector(bsdf.hitPoint.p - lensPoint);
 		eyeDistance = eyeDir.Length();
@@ -739,7 +742,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 			0.f,
 			eyeDistance,
 			time);
-		sampleSuccess = scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY);
+		sampleSuccess = scene.GetCamera().GetSamplePosition(&eyeRay, &filmX, &filmY);
 	}
 
 	if (sampleSuccess) {
@@ -762,12 +765,12 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 			Spectrum connectionThroughput;
 			// Create a new PathVolumeInfo for the path to the light source
 			PathVolumeInfo volInfo = pathInfo.volume;
-			if (!scene->Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene.Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				float fluxToRadianceFactor;
-				scene->camera->GetPDF(eyeRay, eyeDistance, filmX, filmY, nullptr, &fluxToRadianceFactor);
+				scene.GetCamera().GetPDF(eyeRay, eyeDistance, filmX, filmY, nullptr, &fluxToRadianceFactor);
 
 				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
 				sampleResult.filmX = filmX;
@@ -798,7 +801,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderLightSample(IntersectionDevice *device,
-		SceneConstPtr scene, FilmConstPtr film,
+		SceneConstRef scene, FilmConstPtr film,
 		Sampler& sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
 	sampleResults.clear();
@@ -806,11 +809,11 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 	Spectrum lightPathFlux;
 
 	const float timeSample = sampler.GetSample(8);
-	const float time = scene->camera->GenerateRayTime(timeSample);
+	const float time = scene.GetCamera().GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;
-	LightSourceConstPtr light = scene->lightDefs.GetEmitLightStrategy()->
+	auto light = scene.lightDefs.GetEmitLightStrategy().
 			SampleLights(scene, sampler.GetSample(0), &lightPickPdf);
 
 	if (light) {
@@ -832,7 +835,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 
 		/*
 		// Sample a point on the camera lens
-		if (!scene->camera->SampleLens(time, sampler.GetSample(6), sampler.GetSample(7),
+		if (!scene.GetCamera().SampleLens(time, sampler.GetSample(6), sampler.GetSample(7),
 				&pathInfo.lensPoint))
 			return;
 		*/
@@ -847,7 +850,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY, &pathInfo.volume, sampler.GetSample(sampleOffset),
+			const bool hit = scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY, &pathInfo.volume, sampler.GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf,
 					&connectionThroughput);
 			if (!hit) {
@@ -869,7 +872,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			// Try to connect the light path vertex with the eye
 			//--------------------------------------------------------------
 
-			scene->camera->SampleLens(time, sampler.GetSample(6), sampler.GetSample(7),
+			scene.GetCamera().SampleLens(time, sampler.GetSample(6), sampler.GetSample(7),
 				&pathInfo.lensPoint);
 
 			if (ConnectToEyeCallBack){
@@ -978,7 +981,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 	if (sampler == state.eyeSampler)
 		RenderEyeSample(
 			state.device,
-			state.scene.lock(),
+			state.scene,
 			state.film,
 			*state.eyeSampler,
 			state.eyeSampleResults
@@ -986,7 +989,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 	else
 		RenderLightSample(
 			state.device,
-			state.scene.lock(),
+			state.scene,
 			state.film,
 			*state.lightSampler,
 			state.lightSampleResults
@@ -1003,22 +1006,22 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 //------------------------------------------------------------------------------
 
 void PathTracer::ParseOptions(
-	luxrays::PropertiesConstPtr cfg,
+	luxrays::PropertiesConstRef cfg,
 	const luxrays::Properties &defaultProps
 ) {
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg->Get(defaultProps.Get("path.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg->Get(defaultProps.Get("path.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg->Get(defaultProps.Get("path.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg->Get(defaultProps.Get("path.pathdepth.specular")).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("path.pathdepth.specular")).Get<int>());
 
 	// For compatibility with the past
-	if (cfg->IsDefined("path.maxdepth") &&
-			!cfg->IsDefined("path.pathdepth.total") &&
-			!cfg->IsDefined("path.pathdepth.diffuse") &&
-			!cfg->IsDefined("path.pathdepth.glossy") &&
-			!cfg->IsDefined("path.pathdepth.specular")) {
-		const u_int maxDepth = Max(0, cfg->Get("path.maxdepth").Get<int>());
+	if (cfg.IsDefined("path.maxdepth") &&
+			!cfg.IsDefined("path.pathdepth.total") &&
+			!cfg.IsDefined("path.pathdepth.diffuse") &&
+			!cfg.IsDefined("path.pathdepth.glossy") &&
+			!cfg.IsDefined("path.pathdepth.specular")) {
+		const u_int maxDepth = Max(0, cfg.Get("path.maxdepth").Get<int>());
 		maxPathDepth.depth = maxDepth;
 		maxPathDepth.diffuseDepth = maxDepth;
 		maxPathDepth.glossyDepth = maxDepth;
@@ -1026,30 +1029,30 @@ void PathTracer::ParseOptions(
 	}
 
 	// Russian Roulette settings
-	rrDepth = (u_int)Max(1, cfg->Get(defaultProps.Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg->Get(defaultProps.Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
+	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg->Get(Property("path.clamping.radiance.maxvalue")(0.0)).Get<double>();
-	if (cfg->IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg->Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<double>();
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.0)).Get<double>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<double>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 
-	forceBlackBackground = cfg->Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
+	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
 	
-	hybridBackForwardEnable = cfg->Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
+	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
 	// hybridBackForwardGlossinessThreshold is used by LIGHTCPU when PSR is enabled
 	// so I have always to set the value
 	hybridBackForwardGlossinessThreshold = .05f;
 	if (hybridBackForwardEnable) {
-		hybridBackForwardPartition = Clamp(cfg->Get(defaultProps.Get("path.hybridbackforward.partition")).Get<double>(), 0.0, 1.0);
-		hybridBackForwardGlossinessThreshold = Clamp(cfg->Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<double>(), 0.0, 1.0);
+		hybridBackForwardPartition = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.partition")).Get<double>(), 0.0, 1.0);
+		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<double>(), 0.0, 1.0);
 	}
 
 	// Albedo AOV settings
-	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg->Get(defaultProps.Get("path.albedospecular.type")).Get<string>());
-	albedoSpecularGlossinessThreshold = Max(cfg->Get(defaultProps.Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(defaultProps.Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(defaultProps.Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
 
 	// Update eye sample size
 	eyeSampleBootSize = 5;

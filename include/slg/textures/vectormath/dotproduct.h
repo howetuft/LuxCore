@@ -29,7 +29,7 @@ namespace slg {
 
 class DotProductTexture : public Texture {
 public:
-	DotProductTexture(TextureConstPtr t1, TextureConstPtr t2) : tex1(t1), tex2(t2) { }
+	DotProductTexture(TextureRef t1, TextureRef t2) : tex1(t1), tex2(t2) { }
 	virtual ~DotProductTexture() { }
 
 	virtual TextureType GetType() const { return DOT_PRODUCT_TEX; }
@@ -38,32 +38,32 @@ public:
 	virtual float Y() const { return 0.f; } // TODO
 	virtual float Filter() const { return 0.f; } // TODO
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex1->AddReferencedTextures(referencedTexs);
-		tex2->AddReferencedTextures(referencedTexs);
+		GetTexture1().AddReferencedTextures(referencedTexs);
+		GetTexture2().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex1->AddReferencedImageMaps(referencedImgMaps);
-		tex2->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture1().AddReferencedImageMaps(referencedImgMaps);
+		GetTexture2().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
 			tex2 = newTex;
 	}
 
-	TextureConstPtr GetTexture1() const { return tex1; }
-	TextureConstPtr GetTexture2() const { return tex2; }
+	TextureConstRef GetTexture1() const { return tex1; }
+	TextureConstRef GetTexture2() const { return tex2; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex1;
-	TextureConstPtr tex2;
+	std::reference_wrapper<Texture> tex1;
+	std::reference_wrapper<Texture> tex2;
 
 	inline float Dot(const luxrays::Spectrum &v1, const luxrays::Spectrum &v2) const {
 		return v1.c[0] * v2.c[0] + v1.c[1] * v2.c[1] + v1.c[2] * v2.c[2];

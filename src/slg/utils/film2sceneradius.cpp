@@ -25,6 +25,7 @@
 #include "slg/samplers/sobol.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/film2sceneradius.h"
+#include "slg/usings.h"
 #include "slg/utils/pathdepthinfo.h"
 #include "slg/engines/renderengine.h"
 
@@ -39,37 +40,37 @@ using namespace slg;
 
 namespace slg {
 
-static void GenerateEyeRay(CameraConstPtr camera, Ray &eyeRay,
+static void GenerateEyeRay(CameraConstRef camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult,
 		float &dpdx, float &dpdy, const float imagePlaneRadius,
 		const float timeStart, const float timeEnd) {
 	// Evaluate the delta x/y over the image plane in pixel
 
-	const float imagePlaneDeltaX = camera->filmWidth * imagePlaneRadius;
-	const float imagePlaneDeltaY = camera->filmHeight * imagePlaneRadius;
+	const float imagePlaneDeltaX = camera.filmWidth * imagePlaneRadius;
+	const float imagePlaneDeltaY = camera.filmHeight * imagePlaneRadius;
 
 	// Evaluate the camera ray
 
 	// I intentionally ignore film sub-region to not have the estimated best
 	// radius affected by border rendering
-	sampleResult.filmX = sampler->GetSample(0) * (camera->filmWidth - 1);
-	sampleResult.filmY = sampler->GetSample(1) * (camera->filmHeight - 1);
+	sampleResult.filmX = sampler->GetSample(0) * (camera.filmWidth - 1);
+	sampleResult.filmY = sampler->GetSample(1) * (camera.filmHeight - 1);
 
 	const float timeSample = sampler->GetSample(4);
 	const float time = (timeStart <= timeEnd) ?
 		Lerp(timeSample, timeStart, timeEnd) :
-		camera->GenerateRayTime(timeSample);
+		camera.GenerateRayTime(timeSample);
 
 	const float u0 = sampler->GetSample(2);
 	const float u1 = sampler->GetSample(3);
 
-	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
+	camera.GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, &volInfo, u0, u1);
 	
 	// I'm lacking the support for true ray differentials in camera object
 	// interface so I resort to this simple method 
 
-	if (camera->GetType() == Camera::ORTHOGRAPHIC) {
+	if (camera.GetType() == Camera::ORTHOGRAPHIC) {
 		dpdx = 1.f / imagePlaneDeltaX;
 		dpdy = 1.f / imagePlaneDeltaY;
 	} else {
@@ -77,14 +78,14 @@ static void GenerateEyeRay(CameraConstPtr camera, Ray &eyeRay,
 
 		Ray eyeRayDeltaX;
 		PathVolumeInfo volInfoDeltaX;
-		camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
+		camera.GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
 				&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
 
 		// Evaluate the camera ray + imagePlaneDeltaY
 
 		Ray eyeRayDeltaY;
 		PathVolumeInfo volInfoDeltaY;
-		camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
+		camera.GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
 				&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
 
 		const float t0 = 0.f;
@@ -99,12 +100,13 @@ static void GenerateEyeRay(CameraConstPtr camera, Ray &eyeRay,
 
 // To work around std::jthread() 10 arguments limit
 typedef struct Film2SceneRadiusThreadParams {
-	Film2SceneRadiusThreadParams() : accumulatedRadiusSize(0.f), radiusSizeCount(0) {
-	}
+	Film2SceneRadiusThreadParams(SceneConstRef p_scene)
+		: accumulatedRadiusSize(0.f), radiusSizeCount(0), scene(p_scene)
+	{}
 
 	u_int threadIndex;
 	u_int workSize;
-	SceneConstPtr scene;
+	std::reference_wrapper<const Scene> scene;
 	float imagePlaneRadius;
 	u_int maxPathDepth;
 	float timeStart, timeEnd;
@@ -126,7 +128,9 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	auto camera = params.scene->camera;
+	SceneConstRef scene = params.scene;  // This is a cast, actually
+
+	auto& camera = scene.GetCamera();
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + params.threadIndex);
@@ -181,7 +185,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = params.scene->Intersect(nullptr,
+			const bool hit = scene.Intersect(nullptr,
 					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -264,22 +268,26 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	}
 }
 
-float Film2SceneRadius(SceneConstPtr scene,
-		const float imagePlaneRadius, const float defaultRadius,
-		const u_int maxPathDepth, const float timeStart, const float timeEnd,
-		const Film2SceneRadiusValidator *validator) {
+float Film2SceneRadius(
+	SceneConstRef scene,
+	const float imagePlaneRadius,
+	const float defaultRadius,
+	const u_int maxPathDepth,
+	const float timeStart,
+	const float timeEnd,
+	const Film2SceneRadiusValidator *validator
+) {
 	const size_t renderThreadCount = GetHardwareThreadCount();
 
 	// Render 16 passes at 256 * 256 resolution
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
 
-	std::vector<Film2SceneRadiusThreadParams> params(renderThreadCount);
+	std::vector<Film2SceneRadiusThreadParams> params(renderThreadCount, scene);
 	std::vector<luxrays::JThreadPtr> renderThreads(renderThreadCount);
 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		params[i].threadIndex = i;
 		params[i].workSize = workSize;
-		params[i].scene = scene;
 		params[i].imagePlaneRadius = imagePlaneRadius;
 		params[i].maxPathDepth = maxPathDepth;
 		params[i].timeStart = timeStart;
@@ -287,7 +295,7 @@ float Film2SceneRadius(SceneConstPtr scene,
 		params[i].validator = validator;
 
 		renderThreads[i] = std::make_unique<luxrays::JThread>(
-			&Film2SceneRadiusThread, boost::ref(params[i])
+			&Film2SceneRadiusThread, std::ref(params[i])
 		);
 		SetThreadName(renderThreads[i], "LxFlm2ScnRadius");
 	}

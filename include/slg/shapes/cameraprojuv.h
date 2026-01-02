@@ -27,16 +27,15 @@ namespace slg {
 
 class CameraProjUVShape : public Shape {
 public:
-	CameraProjUVShape(luxrays::ExtTriangleMeshPtr mesh, const u_int uvIndex);
+	CameraProjUVShape(luxrays::ExtTriangleMeshConstRef mesh, const u_int uvIndex);
 	virtual ~CameraProjUVShape();
 
-	virtual ShapeType GetType() const { return CAMERAPROJUV; }
-	
+	virtual ShapeType GetType() const override { return CAMERAPROJUV; }
+
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
 	const u_int uvIndex;
-	luxrays::ExtTriangleMeshPtr mesh;
 };
 
 }

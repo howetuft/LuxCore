@@ -48,7 +48,7 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfigConstRef cfg) :
+RenderEngine::RenderEngine(RenderConfigRef cfg) :
 	bootStrapSeed(131), seedBaseGenerator(131), renderConfig(cfg) {
 	pixelFilter = NULL;
 	film = NULL;
@@ -57,8 +57,8 @@ RenderEngine::RenderEngine(RenderConfigConstRef cfg) :
 	editMode = false;
 	pauseMode = false;
 
-	if (renderConfig.cfg->IsDefined("renderengine.seed")) {
-		const u_int seed = Max(1u, renderConfig.cfg->Get("renderengine.seed").Get<u_int>());
+	if (renderConfig.GetConfig().IsDefined("renderengine.seed")) {
+		const u_int seed = Max(1u, renderConfig.GetConfig().Get("renderengine.seed").Get<u_int>());
 		seedBaseGenerator.init(seed);
 	}
 	GenerateNewSeedBase();
@@ -110,10 +110,15 @@ void RenderEngine::Start(FilmPtr flm, std::mutex *flmMutex) {
 	MachineEpsilon::SetMax(epsilonMax);
 
 	// Force a complete preprocessing
-	auto scene = renderConfig.scene;
-	scene->editActions.AddAllAction();
-	scene->Preprocess(*ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
-			IsRTMode());
+	SceneRef& scene = renderConfig.GetScene();
+	scene.editActions.AddAllAction();
+	scene.Preprocess(
+		*ctx,
+		film->GetWidth(),
+		film->GetHeight(),
+		film->GetSubRegion(),
+		IsRTMode()
+	);
 
 	// InitFilm() has to be called after scene preprocessing
 	InitFilm();
@@ -168,7 +173,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	assert (editMode);
 
 	// Pre-process scene data
-	renderConfig.scene->Preprocess(*ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+	renderConfig.GetScene().Preprocess(*ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
 			IsRTMode());
 
 	// Reset halt conditions
@@ -262,8 +267,8 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
 
-RenderEngineUPtr RenderEngine::FromProperties(RenderConfigConstRef rcfg) {
-	const string type = rcfg.cfg->Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+RenderEngineUPtr RenderEngine::FromProperties(RenderConfigRef rcfg) {
+	const string type = rcfg.GetConfig().Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	RenderEngineRegistry::FromProperties func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
 		return std::unique_ptr<RenderEngine>(func(rcfg));

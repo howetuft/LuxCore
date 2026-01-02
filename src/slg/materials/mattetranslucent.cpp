@@ -26,9 +26,9 @@ using namespace slg;
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-MatteTranslucentMaterial::MatteTranslucentMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr refl, TextureConstPtr trans) :
+MatteTranslucentMaterial::MatteTranslucentMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> refl, OptionalPtr<const Texture> trans) :
 			Material(frontTransp, backTransp, emitted, bump),
 			Kr(refl), Kt(trans) {
 }
@@ -184,14 +184,14 @@ void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 }
 
-void MatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void MatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
 }
 
-void MatteTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void MatteTranslucentMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kr == oldTex)

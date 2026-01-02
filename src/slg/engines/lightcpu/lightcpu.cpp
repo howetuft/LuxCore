@@ -18,6 +18,7 @@
 
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/lightcpu/lightcpurenderstate.h"
+#include "slg/cameras/camera.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -26,9 +27,9 @@ using namespace slg;
 // LightCPURenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfigConstRef rcfg) :
+LightCPURenderEngine::LightCPURenderEngine(RenderConfigRef rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr) {
-	if (rcfg.scene->camera->GetType() == Camera::STEREO)
+	if (rcfg.GetScene().GetCamera().GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 }
 
@@ -38,7 +39,7 @@ LightCPURenderEngine::~LightCPURenderEngine() {
 
 void LightCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
 	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
@@ -48,13 +49,13 @@ RenderStatePtr LightCPURenderEngine::GetRenderState() {
 }
 
 void LightCPURenderEngine::StartLockLess() {
-	const auto cfg = renderConfig.cfg;
+	const auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	CheckSamplersForNoTile(RenderEngineType2String(GetType()), *cfg);
+	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -113,7 +114,7 @@ Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg);
 }
 
-RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new LightCPURenderEngine(rcfg);
 }
 

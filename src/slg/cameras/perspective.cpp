@@ -36,7 +36,7 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
-		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
+		bokehDistributionImageMap(std::nullopt), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
@@ -47,7 +47,7 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		ProjectiveCamera(camType, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
-		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
+		bokehDistributionImageMap(std::nullopt), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
@@ -96,7 +96,7 @@ void PerspectiveCamera::InitCameraData() {
 			for (u_int x = 0; x < distributionWidth; ++x) {
 				const u_int index = x + y * distributionWidth;
 
-				data[index] = bokehDistributionImageMap->GetStorage()->GetFloat(index);
+				data[index] = bokehDistributionImageMap->GetStorage().GetFloat(index);
 			}
 		}
 
@@ -289,7 +289,8 @@ Properties PerspectiveCamera::ToProperties(const ImageMapCache &imgMapCache, con
 
 	if (bokehDistributionImageMap) {
 		const string fileName = useRealFileName ?
-			bokehDistributionImageMap->GetName() : imgMapCache.GetSequenceFileName(bokehDistributionImageMap);
+			bokehDistributionImageMap->GetName() :
+			imgMapCache.GetSequenceFileName(*bokehDistributionImageMap);
 		props.Set(Property("scene.camera.bokeh.distribution.image")(fileName));
 	}
 

@@ -20,6 +20,7 @@
 #define	_SLG_HOMOGENOUSVOL_H
 
 #include "slg/volumes/volume.h"
+#include <functional>
 
 namespace slg {
 
@@ -29,9 +30,11 @@ namespace slg {
 
 class HomogeneousVolume : public Volume {
 public:
-	HomogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
-			TextureConstPtr a, TextureConstPtr s,
-			TextureConstPtr g, const bool multiScattering);
+	HomogeneousVolume(
+		TextureConstRef iorTex,
+		OptionalPtr<const Texture> emiTex,
+		TextureConstRef a, TextureConstRef s,
+		TextureConstRef g, const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
@@ -54,14 +57,14 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
-	TextureConstPtr GetSigmaA() const { return sigmaA; }
-	TextureConstPtr GetSigmaS() const { return sigmaS; }
-	TextureConstPtr GetG() const { return schlickScatter.g; }
+	TextureConstRef GetSigmaA() const { return sigmaA; }
+	TextureConstRef GetSigmaS() const { return sigmaS; }
+	TextureConstRef GetG() const { return schlickScatter.GetG(); }
 	bool IsMultiScattering() const { return multiScattering; }
 
 	static float Scatter(const float u, const bool scatterAllowed, const float segmentLength,
@@ -74,7 +77,7 @@ protected:
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
 
 private:
-	TextureConstPtr sigmaA, sigmaS;
+	std::reference_wrapper<const Texture> sigmaA, sigmaS;
 	SchlickScatter schlickScatter;
 	const bool multiScattering;
 };

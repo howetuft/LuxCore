@@ -43,6 +43,8 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
 template void Tile::serialize(LuxInputArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxOutputArchiveText &ar, const unsigned int version);
+template void Tile::serialize(LuxInputArchiveText &ar, const unsigned int version);
 }
 
 //------------------------------------------------------------------------------
@@ -90,6 +92,8 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Tile::save(LuxOutputArchive &ar, const u_int version) const;
 template void Tile::load(LuxInputArchive &ar, const u_int version);
+template void Tile::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void Tile::load(LuxInputArchiveText &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -168,5 +172,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void TileRepository::save(LuxOutputArchive &ar, const u_int version) const;
 template void TileRepository::load(LuxInputArchive &ar, const unsigned int version);
+template void TileRepository::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void TileRepository::load(LuxInputArchiveText &ar, const unsigned int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

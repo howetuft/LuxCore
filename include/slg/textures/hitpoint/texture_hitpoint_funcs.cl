@@ -45,14 +45,14 @@ OPENCL_FORCE_NOT_INLINE void HitPointColorTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = HitPointColorTexture_ConstEvaluateFloat(hitPoint,
-					texture->hitPointColor.dataIndex
+					texture.hitPointColor.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = HitPointColorTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->hitPointColor.dataIndex
+					texture.hitPointColor.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
@@ -103,14 +103,14 @@ OPENCL_FORCE_NOT_INLINE void HitPointAlphaTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = HitPointAlphaTexture_ConstEvaluateFloat(hitPoint,
-					texture->hitPointAlpha.dataIndex
+					texture.hitPointAlpha.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = HitPointAlphaTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->hitPointAlpha.dataIndex
+					texture.hitPointAlpha.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
@@ -189,14 +189,14 @@ OPENCL_FORCE_NOT_INLINE void HitPointGreyTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = HitPointGreyTexture_ConstEvaluateFloat(hitPoint,
-					texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
+					texture.hitPointGrey.dataIndex, texture.hitPointGrey.channelIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = HitPointGreyTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
+					texture.hitPointGrey.dataIndex, texture.hitPointGrey.channelIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
@@ -247,14 +247,14 @@ OPENCL_FORCE_NOT_INLINE void HitPointVertexAOVTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = HitPointVertexAOVTexture_ConstEvaluateFloat(hitPoint,
-					texture->hitPointVertexAOV.dataIndex
+					texture.hitPointVertexAOV.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = HitPointVertexAOVTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->hitPointVertexAOV.dataIndex
+					texture.hitPointVertexAOV.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
@@ -305,14 +305,14 @@ OPENCL_FORCE_NOT_INLINE void HitPointTriangleAOVTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_FLOAT: {
 			const float eval = HitPointTriangleAOVTexture_ConstEvaluateFloat(hitPoint,
-					texture->hitPointTriangleAOV.dataIndex
+					texture.hitPointTriangleAOV.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
 		case EVAL_SPECTRUM: {
 			const float3 eval = HitPointTriangleAOVTexture_ConstEvaluateSpectrum(hitPoint,
-					texture->hitPointTriangleAOV.dataIndex
+					texture.hitPointTriangleAOV.dataIndex
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
@@ -341,11 +341,11 @@ OPENCL_FORCE_NOT_INLINE void HitPointTriangleAOVTexture_EvalOp(
 
 OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	// This method doesn't really make sense for a vector - just return the first element
-	return hitPoint->shadeN.x;
+	return hitPoint.shadeN.x;
 }
 
 OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	return MAKE_FLOAT3(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
+	return MAKE_FLOAT3(hitPoint.shadeN.x, hitPoint.shadeN.y, hitPoint.shadeN.z);
 }
 
 OPENCL_FORCE_NOT_INLINE void ShadingNormalTexture_EvalOp(

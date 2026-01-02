@@ -19,7 +19,11 @@
 #include <memory>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/scene/scene.h"
@@ -34,22 +38,24 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Scene)
 
-ScenePtr Scene::LoadSerialized(const std::string &fileName) {
+using ScenePtr = std::shared_ptr<Scene>;
+
+SceneUPtr Scene::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	ScenePtr scene;
+	SceneUPtr scene;
 	sif.GetArchive() >> scene;
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized scene: " + fileName);
 
-	return scene;
+	return std::move(scene);
 }
 
-void Scene::SaveSerialized(const std::string &fileName, SceneConstPtr scene) {
+void Scene::SaveSerialized(const std::string &fileName, SceneUPtr&& scene) {
 	SerializationOutputFile sof(fileName);
 
-	sof.GetArchive() << scene;
+	sof.GetArchive() << std::move(scene);
 
 	if (!sof.IsGood())
 		throw runtime_error("Error while saving serialized scene: " + fileName);
@@ -96,5 +102,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Scene::save(LuxOutputArchive &ar, const u_int version) const;
 template void Scene::load(LuxInputArchive &ar, const u_int version);
+template void Scene::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void Scene::load(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

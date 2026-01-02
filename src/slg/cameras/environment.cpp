@@ -92,7 +92,7 @@ void EnvironmentCamera::GenerateRay(const float time,
 		Ray *ray, PathVolumeInfo *volInfo,
 		const float u0, const float u1) const {
 	InitRay(ray, filmX, filmY);
-	volInfo->AddVolume(volume);
+	if (HasVolume()) volInfo->AddVolume(GetVolume());
 
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither);

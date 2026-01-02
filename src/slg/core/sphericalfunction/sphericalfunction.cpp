@@ -28,19 +28,29 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ImageMapSphericalFunction::ImageMapSphericalFunction() {
-	imgMap = NULL;
 }
 
-ImageMapSphericalFunction::ImageMapSphericalFunction(ImageMapConstPtr map) {
-	SetImageMap(map);
-}
+ImageMapSphericalFunction::ImageMapSphericalFunction(ImageMapUPtr&& map) :
+	internalImgMap(std::move(map)),
+	imgMap(*internalImgMap)
+{}
 
-void ImageMapSphericalFunction::SetImageMap(ImageMapConstPtr map) {
+ImageMapSphericalFunction::ImageMapSphericalFunction(
+	OptionalPtr<const ImageMap> map
+) :
+	imgMap(map)
+{}
+
+void ImageMapSphericalFunction::SetImageMap(ImageMapUPtr&& map) {
+	internalImgMap = std::move(map);
+	imgMap = *internalImgMap;
+}
+void ImageMapSphericalFunction::SetImageMap(OptionalPtr<ImageMap> map) {
 	imgMap = map;
 }
 
 Spectrum ImageMapSphericalFunction::Evaluate(const float phi, const float theta) const {
-	return imgMap->GetSpectrum(UV(phi * INV_TWOPI, theta * INV_PI));
+	return GetImageMap().GetSpectrum(UV(phi * INV_TWOPI, theta * INV_PI));
 }
 
 //------------------------------------------------------------------------------
@@ -117,23 +127,30 @@ float SampleableSphericalFunction::Average() const {
 // IESSphericalFunction
 //------------------------------------------------------------------------------
 
-IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES &data, const bool flipZ,
-		const u_int xRes, const u_int yRes) {
-	SetImageMap(IES2ImageMap(data, flipZ));
+IESSphericalFunction::IESSphericalFunction(
+	const PhotometricDataIES &data,
+	const bool flipZ,
+	const u_int xRes,
+	const u_int yRes
+) {
+	SetImageMap(std::move(IES2ImageMap(data, flipZ)));
 }
 
 IESSphericalFunction::~IESSphericalFunction() {
 }
 
-ImageMapPtr IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
-			const u_int xRes, const u_int yRes) {
+ImageMapUPtr IESSphericalFunction::IES2ImageMap(
+	const PhotometricDataIES &data,
+	const bool flipZ,
+	const u_int xRes, const u_int yRes
+) {
 	// This should be a warning but I have no way to emit that kind of information here
 	if (data.m_PhotometricType != PhotometricDataIES::PHOTOMETRIC_TYPE_C)
 		throw runtime_error("Unsupported photometric type IES file: " + ToString(data.m_PhotometricType));
 
-	vector<double> vertAngles = data.m_VerticalAngles;
-	vector<double> horizAngles = data.m_HorizontalAngles;
-	vector<vector<double> > values = data.m_CandelaValues;
+	std::vector<double> vertAngles = data.m_VerticalAngles;
+	std::vector<double> horizAngles = data.m_HorizontalAngles;
+	std::vector<std::vector<double> > values = data.m_CandelaValues;
 
 	// Add a begin/end vertical angle with 0 emission if necessary
 	if (vertAngles[0] < 0.) {
@@ -229,7 +246,7 @@ ImageMapPtr IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, c
 
 	// Resample the irregular functions
 	auto imgMap = ImageMap::AllocImageMap(1, xRes, yRes, ImageMapConfig());
-	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
+	float *img = (float *)imgMap->GetStorage().GetPixelsData();
 
 	for (u_int y = 0; y < yRes; ++y) {
 		const float t = (y + .5f) / yRes;
@@ -241,10 +258,10 @@ ImageMapPtr IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, c
 			const u_int u1 = Floor2UInt(u);
 			const u_int u2 = min(nVFuncs - 1, u1 + 1);
 			const float du = u - u1;
-			
+
 			const float value = Lerp(du, vFuncs[u1]->Eval(t), vFuncs[u2]->Eval(t));
 			assert(!isnan(value) && !isinf(value));
-			img[x + tgtY * xRes] = value;			
+			img[x + tgtY * xRes] = value;
 		}
 	}
 	delete uFunc;

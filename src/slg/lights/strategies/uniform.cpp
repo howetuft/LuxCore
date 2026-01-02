@@ -27,11 +27,11 @@ using namespace slg;
 // LightStrategyUniform
 //------------------------------------------------------------------------------
 
-void LightStrategyUniform::Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
+void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene->lightDefs.GetSize();
+	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -39,23 +39,23 @@ void LightStrategyUniform::Preprocess(SceneConstPtr scene, const LightStrategyTa
 	lightPower.reserve(lightCount);
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto l = scene->lightDefs.GetLightSource(i);
+		auto& l = scene.lightDefs.GetLightSource(i);
 
 		switch (taskType) {
 			case TASK_EMIT: {
-				lightPower.push_back(l->GetImportance());
+				lightPower.push_back(l.GetImportance());
 				break;
 			}
 			case TASK_ILLUMINATE: {
-				if (l->IsDirectLightSamplingEnabled())
-					lightPower.push_back(l->GetImportance());
+				if (l.IsDirectLightSamplingEnabled())
+					lightPower.push_back(l.GetImportance());
 				else
 					lightPower.push_back(0.f);
 				break;
 			}
 			case TASK_INFINITE_ONLY: {
-				if (l->IsInfinite())
-					lightPower.push_back(l->GetImportance());
+				if (l.IsInfinite())
+					lightPower.push_back(l.GetImportance());
 				else
 					lightPower.push_back(0.f);
 				break;
@@ -76,8 +76,8 @@ Properties LightStrategyUniform::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
 }
 
-LightStrategyPtr LightStrategyUniform::FromProperties(const Properties &cfg) {
-	return std::make_shared<LightStrategyUniform>();
+LightStrategyUPtr LightStrategyUniform::FromProperties(const Properties &cfg) {
+	return std::make_unique<LightStrategyUniform>();
 }
 
 const Properties &LightStrategyUniform::GetDefaultProps() {

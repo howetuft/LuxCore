@@ -29,7 +29,7 @@ using namespace slg;
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : sceneObject(NULL), 
+TriangleLight::TriangleLight() : sceneObject(std::nullopt), 
 		meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f) {
@@ -43,7 +43,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 		case DLS_AUTO: {
 			// Check the number of triangles and disable direct light sampling for mesh
 			// with too many elements
-			return (sceneObject->GetExtMesh()->GetTotalTriangleCount() > 256) ? false : true;
+			return (sceneObject->GetExtMesh().GetTotalTriangleCount() > 256) ? false : true;
 		}
 		case DLS_ENABLED:
 			return true;
@@ -54,7 +54,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 	}
 }
 
-float TriangleLight::GetPower(SceneConstPtr scene) const {
+float TriangleLight::GetPower(SceneConstRef scene) const {
 	const float emittedRadianceY = lightMaterial->GetEmittedRadianceY(invMeshArea);
 
 	if (lightMaterial->GetEmittedTheta() == 0.f)
@@ -66,19 +66,19 @@ float TriangleLight::GetPower(SceneConstPtr scene) const {
 }
 
 void TriangleLight::Preprocess() {
-	auto mesh = sceneObject->GetExtMesh();
+	auto& mesh = sceneObject->GetExtMesh();
 
 	Transform localToWorld;
-	mesh->GetLocal2World(0.f, localToWorld);
+	mesh.GetLocal2World(0.f, localToWorld);
 
-	triangleArea = mesh->GetTriangleArea(localToWorld, triangleIndex);
+	triangleArea = mesh.GetTriangleArea(localToWorld, triangleIndex);
 	invTriangleArea = 1.f / triangleArea;
 
-	meshArea = mesh->GetMeshArea(localToWorld);
+	meshArea = mesh.GetMeshArea(localToWorld);
 	invMeshArea = 1.f / meshArea;
 }
 
-Spectrum TriangleLight::Emit(SceneConstPtr scene,
+Spectrum TriangleLight::Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
@@ -112,21 +112,21 @@ Spectrum TriangleLight::Emit(SceneConstPtr scene,
 		return Spectrum();
 	emissionPdfW *= invTriangleArea;
 
-	auto mesh = sceneObject->GetExtMesh();
+	auto& mesh = sceneObject->GetExtMesh();
 
 	// Build a temporary HitPoint
 	HitPoint tmpHitPoint;
-	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+	mesh.GetLocal2World(time, tmpHitPoint.localToWorld);
 
 	// Origin
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
 
 	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
 			scene, meshIndex, triangleIndex,
-			samplePoint, Vector(mesh->GetGeometryNormal(tmpHitPoint.localToWorld, triangleIndex)),
+			samplePoint, Vector(mesh.GetGeometryNormal(tmpHitPoint.localToWorld, triangleIndex)),
 			b1, b2,
 			passThroughEvent);
 	// Add bump?
@@ -154,7 +154,7 @@ Spectrum TriangleLight::Emit(SceneConstPtr scene,
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
-Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+Spectrum TriangleLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -166,14 +166,14 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	// Compute the sample point and direction
 	//--------------------------------------------------------------------------
 
-	auto mesh = sceneObject->GetExtMesh();
+	auto& mesh = sceneObject->GetExtMesh();
 
 	HitPoint tmpHitPoint;
-	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+	mesh.GetLocal2World(time, tmpHitPoint.localToWorld);
 
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	mesh.Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
 
 	Vector sampleDir = samplePoint - bsdf.hitPoint.p;
 	const float distanceSquared = sampleDir.LengthSquared();
@@ -254,30 +254,30 @@ Spectrum TriangleLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
 
-bool TriangleLight::IsAlwaysInShadow(SceneConstPtr scene,
+bool TriangleLight::IsAlwaysInShadow(SceneConstRef scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
-	auto mesh = sceneObject->GetExtMesh();
+	auto& mesh = sceneObject->GetExtMesh();
 
 	// This would be the correct code but BlendLuxCore is currently always
 	// exporting the normals so I resort to the following trick
-	/*if (mesh->HasNormals())
+	/*if (mesh.HasNormals())
 		return false;
 	else {
-		const float cosTheta = Dot(n, mesh->GetShadeNormal(0.f, triangleIndex, 0));
+		const float cosTheta = Dot(n, mesh.GetShadeNormal(0.f, triangleIndex, 0));
 
 		return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 	}*/
 
 	//	It is to hard to say if motion blur is enabled
-	if ((mesh->GetType() == TYPE_TRIANGLE_MOTION) || (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION))
+	if ((mesh.GetType() == TYPE_TRIANGLE_MOTION) || (mesh.GetType() == TYPE_EXT_TRIANGLE_MOTION))
 		return false;
 
 	Transform localToWorld;
-	mesh->GetLocal2World(0.f, localToWorld);
+	mesh.GetLocal2World(0.f, localToWorld);
 
 	// I use the shading normal of the first vertex for this test (see above)
-	const Normal triNormal = mesh->HasNormals() ?
-		mesh->GetShadeNormal(localToWorld, triangleIndex, 0) : mesh->GetGeometryNormal(localToWorld, triangleIndex);
+	const Normal triNormal = mesh.HasNormals() ?
+		mesh.GetShadeNormal(localToWorld, triangleIndex, 0) : mesh.GetGeometryNormal(localToWorld, triangleIndex);
 	const float cosTheta = Dot(n, triNormal);
 
 	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);

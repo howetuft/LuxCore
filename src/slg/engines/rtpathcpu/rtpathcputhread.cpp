@@ -94,7 +94,7 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 			(static_cast<RTPathCPUSampler *>(sampler.get()))->Reset(engine->film);
 		}
 
-		pathTracer.RenderEyeSample(device, engine->renderConfig.scene,
+		pathTracer.RenderEyeSample(device, engine->renderConfig.GetScene(),
 				engine->film, *sampler, sampleResults);
 
 		// Variance clamping

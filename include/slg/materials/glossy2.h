@@ -29,10 +29,10 @@ namespace slg {
 
 class Glossy2Material : public Material {
 public:
-	Glossy2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr kd, TextureConstPtr ks, TextureConstPtr u, TextureConstPtr v,
-			TextureConstPtr ka, TextureConstPtr d, TextureConstPtr i, const bool mbounce, const bool doublesided);
+	Glossy2Material(TexRef frontTransp, TexRef backTransp,
+			TexRef emitted, TexRef bump,
+			TexRef kd, TexRef ks, TexRef u, TexRef v,
+			TexRef ka, TexRef d, TexRef i, const bool mbounce, const bool doublesided);
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; }
@@ -50,29 +50,29 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKd() const { return Kd; }
-	TextureConstPtr GetKs() const { return Ks; }
-	TextureConstPtr GetNu() const { return nu; }
-	TextureConstPtr GetNv() const { return nv; }
-	TextureConstPtr GetKa() const { return Ka; }
-	TextureConstPtr GetDepth() const { return depth; }
-	TextureConstPtr GetIndex() const { return index; }
+	TexRef GetKd() const { return Kd; }
+	TexRef GetKs() const { return Ks; }
+	TexRef GetNu() const { return nu; }
+	TexRef GetNv() const { return nv; }
+	TexRef GetKa() const { return Ka; }
+	TexRef GetDepth() const { return depth; }
+	TexRef GetIndex() const { return index; }
 	const bool IsMultibounce () const { return multibounce; }
 	const bool IsDoubleSided () const { return doublesided; }
 
 private:
-	TextureConstPtr Kd;
-	TextureConstPtr Ks;
-	TextureConstPtr nu;
-	TextureConstPtr nv;
-	TextureConstPtr Ka;
-	TextureConstPtr depth;
-	TextureConstPtr index;
+	TexRef Kd;
+	TexRef Ks;
+	TexRef nu;
+	TexRef nv;
+	TexRef Ka;
+	TexRef depth;
+	TexRef index;
 	const bool multibounce;
 	const bool doublesided;
 };

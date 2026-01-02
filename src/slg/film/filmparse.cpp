@@ -660,7 +660,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			} else if (type == "BACKGROUND_IMG") {
 				auto im = ImageMap::FromProperties(props, prefix);
 
-				imagePipeline->AddPlugin(new BackgroundImgPlugin(im));
+				imagePipeline->AddPlugin(new BackgroundImgPlugin(std::move(im)));
 			} else if (type == "BLOOM") {
 				const float radius = Clamp(props.Get(Property(prefix + ".radius")(.07)).Get<double>(), 0.0, 1.0);
 				const float weight = Clamp(props.Get(Property(prefix + ".weight")(.25)).Get<double>(), 0.0, 1.0);

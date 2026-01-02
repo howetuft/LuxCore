@@ -39,18 +39,18 @@ public:
 	bool alreadyFound;
 };
 
-EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
+EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshRef srcMesh,
 		const u_int destAOVIndex0, const u_int destAOVIndex1, const u_int destAOVIndex2) {
 	assert (destAOVIndex0 < EXTMESH_MAX_DATA_COUNT);
 	assert (destAOVIndex1 < EXTMESH_MAX_DATA_COUNT);
 	assert (destAOVIndex2 < EXTMESH_MAX_DATA_COUNT);
 
-	SDL_LOG("EdgeDetectorAOV " << srcMesh->GetName());
+	SDL_LOG("EdgeDetectorAOV " << srcMesh.GetName());
 
 	const double startTime = WallClockTime();
 
-	const Triangle *tris = srcMesh->GetTriangles();
-	const u_int triCount = srcMesh->GetTotalTriangleCount();
+	const Triangle *tris = srcMesh.GetTriangles();
+	const u_int triCount = srcMesh.GetTotalTriangleCount();
 
 	// Build the edge information
 	vector<Edge> edges;
@@ -64,8 +64,8 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 
 	auto IsSameVertex = [&](const u_int v0, const u_int v1) {
 		return DistanceSquared(
-					srcMesh->GetVertex(Transform::TRANS_IDENTITY, v0),
-					srcMesh->GetVertex(Transform::TRANS_IDENTITY, v1)) < DEFAULT_EPSILON_STATIC;
+					srcMesh.GetVertex(Transform::TRANS_IDENTITY, v0),
+					srcMesh.GetVertex(Transform::TRANS_IDENTITY, v1)) < DEFAULT_EPSILON_STATIC;
 	};
 
 	auto IsSameEdge = [&](const u_int edge0Index, const u_int edge1Index) {
@@ -79,7 +79,7 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 			((IsSameVertex(e0v0, e1v0) && IsSameVertex(e0v1, e1v1)) ||
 				(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0))) &&
 			// Check if it is not a smoothed edge by interpolated normals
-			(!srcMesh->HasNormals() || !(((e0v0 == e1v0) && (e0v1 == e1v1)) || ((e0v0 == e1v1) && (e0v1 == e1v0))));
+			(!srcMesh.HasNormals() || !(((e0v0 == e1v0) && (e0v1 == e1v1)) || ((e0v0 == e1v1) && (e0v1 == e1v0))));
 	};
 
 	for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
@@ -93,8 +93,8 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 				// It is a candidate
 
 				// Check the triangles normals
-				const Normal edge0Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e0.tri);
-				const Normal edge1Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e1.tri);
+				const Normal edge0Normal = srcMesh.GetGeometryNormal(Transform::TRANS_IDENTITY, e0.tri);
+				const Normal edge1Normal = srcMesh.GetGeometryNormal(Transform::TRANS_IDENTITY, e1.tri);
 
 				if (AbsDot(edge0Normal, edge1Normal) < 1.f - DEFAULT_EPSILON_STATIC) {
 					// Mark as detected
@@ -110,7 +110,7 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 
 	// Create the processed mesh
 	
-	mesh = srcMesh->Copy();
+	mesh = srcMesh.Copy();
 
 	float *aovEdge[3];
 	aovEdge[0] = new float[triCount];
@@ -133,7 +133,7 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshPtr srcMesh,
 EdgeDetectorAOVShape::~EdgeDetectorAOVShape() {
 }
 
-ExtTriangleMeshPtr EdgeDetectorAOVShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr EdgeDetectorAOVShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

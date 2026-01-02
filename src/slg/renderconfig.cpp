@@ -26,6 +26,7 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/unique_ptr.hpp>
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/usings.h"
 #include "slg/renderconfig.h"
@@ -58,51 +59,101 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Helpers
+//------------------------------------------------------------------------------
+
+static void PrintConfig(PropertiesConstPtr props) {
+
+	if (not props) return;
+
+	SLG_LOG("Configuration: ");
+	const auto& keys = props->GetAllNames();
+	for (const auto& key : keys)
+		SLG_LOG("  " << props->Get(key));
+
+	SLG_FileNameResolver.Print();
+}
+
+
+//------------------------------------------------------------------------------
 // RenderConfig
 //------------------------------------------------------------------------------
 
 static std::mutex defaultPropertiesMutex;
 static std::unique_ptr<Properties> defaultProperties;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
+//BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 
-RenderConfigUPtr RenderConfig::Create(luxrays::PropertiesConstPtr props, ScenePtr scene) {
-	return std::make_unique<RenderConfig>(Private(), props, scene);
-}
 
-RenderConfig::RenderConfig(Private p, PropertiesConstPtr props, ScenePtr scn) : cfg(std::make_shared<Properties>()), scene(scn) {
+// Case #1: a scene is provided by caller
+RenderConfig::RenderConfig(Private p, PropertiesConstPtr props, SceneRef scn)
+	:
+	cfg(std::make_shared<Properties>()),
+	sceneRef(scn)
+{
 	InitDefaultProperties();
 
-	SLG_LOG("Configuration: ");
-	const vector<string> &keys = props->GetAllNames();
-	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
-		SLG_LOG("  " << props->Get(*i));
+	PrintConfig(props);
 
-	SLG_FileNameResolver.Print();
-
-	// Set the Scene
-	if (scn) {
-		scene = scn;
-		allocatedScene = false;
-	} else {
-		// Create the Scene
-		const string defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
-		const string sceneFileName = SLG_FileNameResolver.ResolveFile(props->Get(Property("scene.file")(defaultSceneName)).Get<string>());
-
-		SDL_LOG("Reading scene: " << sceneFileName);
-		scene = std::make_shared<Scene>(
-			std::make_shared<Properties>(sceneFileName),
-			props
+	if (!GetScene().HasCamera()) {
+		throw std::runtime_error(
+			"You can not build a RenderConfig with a scene not including a camera"
 		);
-		allocatedScene = true;
 	}
 
-	if (!scene->camera)
-		throw runtime_error("You can not build a RenderConfig with a scene not including a camera");
-	
 	// Parse the configuration
 	Parse(*props);
 }
+
+
+// Case #2: no scene is provided by caller, RenderConfig has to create one
+RenderConfig::RenderConfig(Private p, PropertiesConstPtr props)
+	:
+	cfg(std::make_shared<Properties>()),
+	sceneRef(NullScene)  // Temporary, awaiting scene construction
+{
+	InitDefaultProperties();
+
+	assert(props);
+
+	PrintConfig(props);
+
+	// No scene has been provided by caller, create one
+	const auto defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
+	const auto sceneFileName = SLG_FileNameResolver.ResolveFile(
+		props->Get(Property("scene.file")(defaultSceneName)).Get<string>()
+	);
+
+	SDL_LOG("Reading scene: " << sceneFileName);
+	internalScene = std::make_unique<Scene>(
+		std::make_shared<Properties>(sceneFileName),
+		props
+	);
+	sceneRef = *internalScene;
+
+	if (!GetScene().HasCamera()) {
+		throw std::runtime_error(
+			"You can not build a RenderConfig with a scene not including a camera"
+		);
+	}
+
+	// Parse the configuration
+	Parse(*props);
+}
+
+// Special private constructor for deserialization
+RenderConfig::RenderConfig(
+	PropertiesPtr p_cfg, SceneRef p_scn, SceneUPtr&& p_internalscene
+) :
+	cfg(p_cfg),
+	sceneRef(p_scn),
+	internalScene(std::move(p_internalscene))
+{
+	if (internalScene) {
+		sceneRef = *internalScene;
+	}
+}
+
 
 void RenderConfig::InitDefaultProperties() {
 	// Check if I have to initialize the default Properties
@@ -117,6 +168,7 @@ void RenderConfig::InitDefaultProperties() {
 	}
 }
 
+
 const Properties &RenderConfig::GetDefaultProperties() {
 	InitDefaultProperties();
 
@@ -126,7 +178,10 @@ const Properties &RenderConfig::GetDefaultProperties() {
 
 bool RenderConfig::HasCachedKernels() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const string type = cfg->Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+	const string type = GetConfig().Get(
+		Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())
+	).Get<string>();
+
 	if ((type == "PATHOCL") ||
 			(type == "RTPATHOCL") ||
 			(type == "TILEPATHOCL")) {
@@ -145,8 +200,7 @@ const Property RenderConfig::GetProperty(const string &name) const {
 void RenderConfig::Parse(const Properties &props) {
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
 	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
-	assert(cfg);
-	if (cfg->Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
+	if (GetConfig().Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
 		SDL_LOG("====================RenderConfig::Parse()======================"
 				<< endl <<
 				props);
@@ -156,10 +210,10 @@ void RenderConfig::Parse(const Properties &props) {
 	// Reset the properties cache
 	propsCache.Clear();
 
-	cfg->Set(props);
+	GetConfig().Set(props);
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
 	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
-	scene->enableParsePrint = cfg->Get(Property("debug.scene.parse.print")(false)).Get<bool>();
+	GetScene().enableParsePrint = GetConfig().Get(Property("debug.scene.parse.print")(false)).Get<bool>();
 
 	UpdateFilmProperties(props);
 
@@ -170,24 +224,24 @@ void RenderConfig::Parse(const Properties &props) {
 	// the render engine
 
 	// Light strategy
-	scene->lightDefs.SetLightStrategy(*cfg);
+	GetScene().lightDefs.SetLightStrategy(*cfg);
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
 	u_int *subRegion = Film::GetFilmSize(*cfg, &filmFullWidth, &filmFullHeight, filmSubRegion) ?
 		filmSubRegion : NULL;
-	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
+	GetScene().GetCamera().Update(filmFullWidth, filmFullHeight, subRegion);
 }
 
 void RenderConfig::DeleteAllFilmImagePipelinesProperties() {
-	cfg->DeleteAll(cfg->GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
-	cfg->DeleteAll(cfg->GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*")); 
+	GetConfig().DeleteAll(GetConfig().GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
+	GetConfig().DeleteAll(GetConfig().GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*")); 
 }
 
 void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
 	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
-	if (cfg->Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
+	if (GetConfig().Get(Property("debug.renderconfig.parse.print")(false)).Get<bool>()) {
 		SDL_LOG("=============RenderConfig::UpdateFilmProperties()==============" << endl <<
 				props);
 		SDL_LOG("===============================================================");
@@ -200,8 +254,8 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	if (props.HaveNamesRE("film\\.imagepipeline\\.[0-9]+\\.type") ||
 			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\.type")) {
 		// Delete the old image pipeline properties
-		cfg->DeleteAll(cfg->GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
-		cfg->DeleteAll(cfg->GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*"));
+		GetConfig().DeleteAll(GetConfig().GetAllNamesRE("film\\.imagepipeline\\.[0-9]+\\..*"));
+		GetConfig().DeleteAll(GetConfig().GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.[0-9]+\\..*"));
 
 		// Update the RenderConfig properties with the new image pipeline definition
 		std::regex reOldSyntax("film\\.imagepipeline\\.[0-9]+\\..*");
@@ -209,7 +263,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		for(string propName: props.GetAllNames()) {
 			if (std::regex_match(propName, reOldSyntax) ||
 					std::regex_match(propName, reNewSyntax))
-				cfg->Set(props.Get(propName));
+				GetConfig().Set(props.Get(propName));
 		}
 		
 		// Reset the properties cache
@@ -223,15 +277,15 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	if (props.HaveNames("film.imagepipeline.radiancescales.") ||
 			props.HaveNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*")) {
 		// Delete the old image pipeline properties
-		cfg->DeleteAll(cfg->GetAllNames("film.imagepipeline.radiancescales."));
-		cfg->DeleteAll(cfg->GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*"));
+		GetConfig().DeleteAll(GetConfig().GetAllNames("film.imagepipeline.radiancescales."));
+		GetConfig().DeleteAll(GetConfig().GetAllNamesRE("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*"));
 
 		// Update the RenderConfig properties with the new image pipeline definition
 		std::regex reNewSyntax("film\\.imagepipelines\\.[0-9]+\\.radiancescales\\..*");
 		for(string propName: props.GetAllNames()) {
 			if (propName.starts_with("film.imagepipeline.radiancescales.") ||
 					std::regex_match(propName, reNewSyntax))
-				cfg->Set(props.Get(propName));
+				GetConfig().Set(props.Get(propName));
 		}
 
 		// Reset the properties cache
@@ -244,12 +298,12 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 
 	if (props.HaveNames("film.outputs.")) {
 		// Delete old radiance groups scale properties
-		cfg->DeleteAll(cfg->GetAllNames("film.outputs."));
+		GetConfig().DeleteAll(GetConfig().GetAllNames("film.outputs."));
 		
 		// Update the RenderConfig properties with the new outputs definition properties
 		for(string propName: props.GetAllNames()) {
 			if (propName.starts_with("film.outputs."))
-				cfg->Set(props.Get(propName));
+				GetConfig().Set(props.Get(propName));
 		}
 
 		// Reset the properties cache
@@ -264,9 +318,9 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 	const bool filmHeightDefined = props.IsDefined("film.height");
 	if (filmWidthDefined || filmHeightDefined) {
 		if (filmWidthDefined)
-			cfg->Set(props.Get("film.width"));
+			GetConfig().Set(props.Get("film.width"));
 		if (filmHeightDefined)
-			cfg->Set(props.Get("film.height"));
+			GetConfig().Set(props.Get("film.height"));
 		
 		// Reset the properties cache
 		propsCache.Clear();
@@ -277,7 +331,7 @@ void RenderConfig::Delete(const string &prefix) {
 	// Reset the properties cache
 	propsCache.Clear();
 
-	cfg->DeleteAll(cfg->GetAllNames(prefix));
+	GetConfig().DeleteAll(GetConfig().GetAllNames(prefix));
 }
 
 Filter *RenderConfig::AllocPixelFilter() const {
@@ -314,11 +368,11 @@ std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 	return Sampler::FromProperties(props, rndGen, film, flmSplatter, *sharedData);
 }
 
-RenderEngineUPtr RenderConfig::AllocRenderEngine() const {
+RenderEngineUPtr RenderConfig::AllocRenderEngine() {
 #if defined(LUXRAYS_DISABLE_OPENCL)
 	// This is a specific test for OpenCL-less version in order to print
 	// a more clear error
-	const string type = cfg->Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+	const string type = GetConfig().Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	if ((type == "PATHOCL") ||
 			(type == "RTPATHOCL") ||
 			(type == "TILEPATHOCL"))
@@ -403,6 +457,11 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 // Serialization methods
 //------------------------------------------------------------------------------
 
+
+//------------------------------------------------------------------------------
+// Serialization entry points
+//------------------------------------------------------------------------------
+
 RenderConfigUPtr RenderConfig::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
@@ -410,7 +469,9 @@ RenderConfigUPtr RenderConfig::LoadSerialized(const std::string &fileName) {
 	sif.GetArchive() >> renderConfig;
 
 	if (!sif.IsGood())
-		throw runtime_error("Error while loading serialized render configuration: " + fileName);
+		throw runtime_error(
+			"Error while loading serialized render configuration: " + fileName
+		);
 
 	return renderConfig;
 }
@@ -440,11 +501,17 @@ void RenderConfig::SaveSerialized(
 	renderConfig->saveAdditionalCfg.Clear();
 
 	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized render configuration: " + fileName);
+		throw runtime_error(
+			"Error while saving serialized render configuration: " + fileName
+		);
 
 	sof.Flush();
 
-	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	SLG_LOG(
+		"Render configuration saved: "
+		<< (sof.GetPosition() / 1024)
+		<< " Kbytes"
+	);
 }
 
 // Save serialized method - reference argument
@@ -464,38 +531,78 @@ void RenderConfig::SaveSerialized(
 	renderConfig.saveAdditionalCfg.Clear();
 
 	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized render configuration: " + fileName);
+		throw runtime_error(
+			"Error while saving serialized render configuration: " + fileName
+		);
 
 	sof.Flush();
 
-	SLG_LOG("Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	SLG_LOG(
+		"Render configuration saved: " << (sof.GetPosition() / 1024) << " Kbytes"
+	);
 }
 
+//------------------------------------------------------------------------------
+// Non-default constructor handlers
+//------------------------------------------------------------------------------
 
-template<class Archive> void RenderConfig::save(Archive &ar, const unsigned int version) const {
-	Properties completeCfg;
-	completeCfg.Set(*cfg);
-	completeCfg.Set(saveAdditionalCfg);
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::RenderConfig)
 
-	ar & completeCfg;
-	ar & scene;
+template<class Archive>
+void slg::RenderConfig::save_construct_data(
+    Archive & ar, const RenderConfig * t, const unsigned int file_version
+) {
+    // save data required to construct instance
+
+	// Save Configuration
+	PropertiesPtr completeCfg;
+	completeCfg->Set(*t->cfg);
+	completeCfg->Set(t->saveAdditionalCfg);
+	ar << t->cfg;
+
+	// Save internal Scene
+	ar << t->internalScene;
+
+    // Save SceneRef (as a pointer)
+    ar << & t->sceneRef;
 }
 
-template<class Archive>	void RenderConfig::load(Archive &ar, const unsigned int version) {
-	// In case there is an error while reading the archive
-	scene = NULL;
-	allocatedScene = true;
+template<class Archive>
+void slg::RenderConfig::load_construct_data(
+    Archive & ar, RenderConfig * t, const unsigned int file_version
+) {
+    // retrieve data from archive required to construct new instance
+    // create and load data through pointer to object
+    // tracking handles issues of duplicates.
+	PropertiesPtr cfg;
+	ar >> cfg;
 
-	ar & cfg;
-	ar & scene;
+	SceneUPtr sptr;
+	ar >> sptr;
 
-	// Reset the properties cache
-	propsCache.Clear();
+	Scene * sref;  // Load reference as a pointer
+	ar >> sref;
+
+    // invoke inplace constructor to initialize instance of RenderConfig
+	::new(t) RenderConfig(cfg, *sref, std::move(sptr));  // NB: this is a placement new
+
+}
+
+template<typename Archive>
+void slg::RenderConfig::serialize(Archive& ar, const unsigned int version) {
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void RenderConfig::save(LuxOutputArchive &ar, const u_int version) const;
-template void RenderConfig::load(LuxInputArchive &ar, const u_int version);
+template void RenderConfig::serialize(LuxOutputArchive &ar, const u_int version);
+template void RenderConfig::serialize(LuxInputArchive &ar, const u_int version);
+template void RenderConfig::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void RenderConfig::serialize(LuxInputArchiveText &ar, const u_int version);
+
+template void RenderConfig::load_construct_data(LuxInputArchive &ar, RenderConfig *, const u_int version);
+template void RenderConfig::save_construct_data(LuxOutputArchive &ar, const RenderConfig *, const u_int version);
+template void RenderConfig::load_construct_data(LuxInputArchiveText &ar, RenderConfig *, const u_int version);
+template void RenderConfig::save_construct_data(LuxOutputArchiveText &ar, const RenderConfig *, const u_int version);
 }
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

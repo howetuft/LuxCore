@@ -27,37 +27,43 @@ using namespace slg;
 // DistributionLightStrategy
 //------------------------------------------------------------------------------
 
-LightSourcePtr DistributionLightStrategy::SampleLights(
-		SceneConstPtr scene,
+OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
+		SceneConstRef scene,
 		const float u,
 		const Point &p, const Normal &n,
 		const bool isVolume,
-		float *pdf) const {
+		float *pdf
+) const {
 	return SampleLights(scene, u, pdf);
 }
 
-float DistributionLightStrategy::SampleLightPdf(LightSourceConstPtr light,
-		const Point &p, const Normal &n, const bool isVolume) const {
+float DistributionLightStrategy::SampleLightPdf(
+	LightSourceConstRef light,
+	const Point &p,
+	const Normal &n,
+	const bool isVolume
+) const {
 	if (lightsDistribution)
-		return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
+		return lightsDistribution->PdfDiscrete(light.lightSceneIndex);
 	else
 		return 0.f;
 }
 
-LightSourcePtr DistributionLightStrategy::SampleLights(
-		SceneConstPtr scene,
-		const float u,
-		float *pdf ) const {
+OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
+	SceneConstRef scene,
+	const float u,
+	float *pdf
+) const {
 	if (lightsDistribution) {
 		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-		//assert ((lightIndex >= 0) && (lightIndex < scene.lightDefs.GetSize()));
+		assert ((lightIndex >= 0) && (lightIndex < scene.lightDefs.GetSize()));
 
 		if (*pdf > 0.f)
-			return scene->lightDefs.GetLightSource(lightIndex);
+			return scene.lightDefs.GetLightSource(lightIndex);
 		else
-			return nullptr;
+			return std::nullopt;
 	} else
-		return nullptr;
+		return std::nullopt;
 }
 
 Properties DistributionLightStrategy::ToProperties() const {

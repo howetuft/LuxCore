@@ -39,26 +39,27 @@ public:
 		const SampleableSphericalFunction **funcData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_MAPPOINT; }
-	virtual float GetPower(SceneConstPtr scene) const;
+	virtual float GetPower(SceneConstRef scene) const;
 
-	virtual luxrays::Spectrum Emit(SceneConstPtr scene,
+	virtual luxrays::Spectrum Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		luxrays::Ray &ray, float &emissionPdfW,
 		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-    virtual luxrays::Spectrum Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+    virtual luxrays::Spectrum Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr> &referencedImgMaps) const {
-		referencedImgMaps.insert(imageMap);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		const ImageMap * imgMapPtr = imageMap ? &imageMap.value().get() : nullptr;
+		referencedImgMaps.insert(imgMapPtr);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	ImageMapConstPtr imageMap;
+	OptionalPtr<const ImageMap> imageMap;
 
 private:
 	SampleableSphericalFunction *func;

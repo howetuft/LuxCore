@@ -287,7 +287,7 @@ private:
 StrendsShape::StrendsShape(SceneConstRef scene,
 		const cyHairFile *hairFile, const TessellationType tesselType,
 		const u_int aMaxDepth, const float aError, const u_int sSideCount,
-		const bool sCapBottom, const bool sCapTop, const bool useCamPos) : mesh(NULL) {
+		const bool sCapBottom, const bool sCapTop, const bool useCamPos) {
 	adaptiveMaxDepth = aMaxDepth;
 	adaptiveError = aError;
 	solidSideCount = sSideCount;
@@ -298,8 +298,11 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 	const cyHairFileHeader &header = hairFile->GetHeader();
 	if (header.hair_count == 0)
 		throw runtime_error("Empty strands shape are not supported");
-	if (useCameraPosition && !scene.camera)
-		throw runtime_error("The scene camera must be defined in order to enable strands useCameraPosition flag");
+	if (useCameraPosition && !scene.HasCamera())
+		throw runtime_error(
+			"The scene.GetCamera() must be defined "
+			"in order to enable strands useCameraPosition flag"
+		);
 
 	SLG_LOG("Refining " << header.hair_count << " strands");
 	const double start = WallClockTime();
@@ -428,7 +431,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 			}
 		}
 
-		mesh = std::make_shared<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
+		mesh = std::make_unique<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
 				newMeshVerts, newMeshTris, newMeshNorms, newMeshUVs,
 				newMeshCols, newMeshTransps);
 	} else
@@ -449,8 +452,8 @@ void StrendsShape::TessellateRibbon(SceneConstRef scene,
 	const u_int baseOffset = meshVerts.size();
 
 	const Point cameraPosition =
-		(useCameraPosition && (scene.camera->GetType() == Camera::PERSPECTIVE)) ?
-		(dynamic_pointer_cast<PerspectiveCamera>(scene.camera))->orig :
+		(useCameraPosition && (scene.GetCamera().GetType() == Camera::PERSPECTIVE)) ?
+		(dynamic_cast<const PerspectiveCamera&>(scene.GetCamera())).orig :
 		Point();
 
 	Vector previousDir;
@@ -737,7 +740,7 @@ void StrendsShape::TessellateSolid(SceneConstRef scene,
 StrendsShape::~StrendsShape() {
 }
 
-ExtTriangleMeshPtr StrendsShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr StrendsShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

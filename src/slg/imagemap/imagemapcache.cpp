@@ -22,6 +22,7 @@
 #include "slg/core/sdl.h"
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/textures/imagemaptex.h"
+#include "slg/usings.h"
 
 using namespace std;
 using namespace luxrays;
@@ -81,18 +82,19 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-ImageMapPtr ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg,
-		const bool applyResizePolicy) {
+ImageMapRef ImageMapCache::GetImageMap(
+	const string &fileName, const ImageMapConfig &imgCfg, const bool applyResizePolicy
+) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
 	// Check if the image map has been already defined
-	std::unordered_map<std::string, ImageMapPtr >::const_iterator it = mapByKey.find(key);
+	auto it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
 		//SDL_LOG("Cached defined image map: " << fileName);
-		ImageMapPtr im = (it->second);
-		return im;
+		auto im = (it->second);
+		return im.get();
 	}
 
 	// Check if it is a reference to a file
@@ -101,69 +103,73 @@ ImageMapPtr ImageMapCache::GetImageMap(const string &fileName, const ImageMapCon
 
 	if (it != mapByKey.end()) {
 		//SDL_LOG("Cached file image map: " << fileName);
-		ImageMapPtr im = (it->second);
-		return im;
+		auto im = (it->second);
+		return im.get();
 	}
 
 	// I haven't yet loaded the file
 
-	ImageMapPtr im;
+	ImageMapUPtr im;
 	if (applyResizePolicy) {
 		// Scale the image if required
 		bool toApply;
 		im = resizePolicy->ApplyResizePolicy(fileName, imgCfg, toApply);
-		
+
 		resizePolicyToApply.push_back(toApply);
 	} else {
-		im = std::make_shared<ImageMap>(fileName, imgCfg);
+		im = std::make_unique<ImageMap>(fileName, imgCfg);
 
 		resizePolicyToApply.push_back(false);
 	}
-	
-	mapByKey.insert(make_pair(key, im));
-	mapNames.push_back(fileName);
-	maps.push_back(im);
 
-	return im;
+	auto& imRef = AppendImageMap(ImageMapSPtr(std::move(im)), fileName, key);
+
+	return std::ref(imRef);
 }
 
-void ImageMapCache::DefineImageMap(ImageMapPtr im) {
-	const string &name = im->GetName();
+ImageMapRef ImageMapCache::DefineImageMap(ImageMapUPtr&& im) {
+	// Move im into a shared_ptr
+	auto ims = ImageMapSPtr(std::move(im));
+
+	return DefineImageMap(ims);
+}
+
+ImageMapRef ImageMapCache::DefineImageMap(ImageMapSPtr im) {
+	const string name = im->GetName();
 
 	SDL_LOG("Define ImageMap: " << name);
 
 	// Compose the cache key
 	const string key = GetCacheKey(name);
 
-	std::unordered_map<std::string, ImageMapPtr >::const_iterator it = mapByKey.find(key);
+	auto it = mapByKey.find(key);
+
 	if (it == mapByKey.end()) {
-		// Add the new image definition
-		mapByKey.insert(make_pair(key, im));
-		mapNames.push_back(name);
-		maps.push_back(im);
-		
-		resizePolicyToApply.push_back(false);
+		// Append to container
+		auto& imRef = AppendImageMap(im, name, key);
+		return std::ref(imRef);
 	} else {
 		// Overwrite the existing image definition
-		const u_int index = GetImageMapIndex(it->second);
-		maps[index] = im;
+		const u_int index = GetImageMapIndex(it->second.get());
+		std::swap(maps[index], im);
 
 		resizePolicyToApply[index] = false;
 
 		// I have to modify mapByName for last or it iterator would be modified
 		// otherwise (it->second would point to the new ImageMap and not to the old one)
 		mapByKey.erase(key);
-		mapByKey.insert(make_pair(key, im));
+		mapByKey.insert(make_pair(key, std::ref(*maps[index])));
+		return std::ref(*maps[index]);
 	}
 }
 
-void ImageMapCache::DeleteImageMap(ImageMapConstPtr im) {
-	for (std::unordered_map<std::string, ImageMapPtr >::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
-		if (it->second == im) {
+void ImageMapCache::DeleteImageMap(ImageMapConstRef im) {
+	for (auto it = mapByKey.begin(); it != mapByKey.end(); ++it) {
+		if (&it->second.get() == &im) {
 			mapByKey.erase(it);
 
 			for (u_int i = 0; i < maps.size(); ++i) {
-				if (maps[i] == im) {
+				if (&*maps[i] == &im) {
 					mapNames.erase(mapNames.begin() + i);
 					maps.erase(maps.begin() + i);
 					resizePolicyToApply.erase(resizePolicyToApply.begin() + i);
@@ -176,28 +182,31 @@ void ImageMapCache::DeleteImageMap(ImageMapConstPtr im) {
 	}
 }
 
-string ImageMapCache::GetSequenceFileName(ImageMapConstPtr im) const {
+string ImageMapCache::GetSequenceFileName(ImageMapConstRef im) const {
 	return ("imagemap-" + ((boost::format("%05d") % GetImageMapIndex(im)).str()) +
-			"." + im->GetFileExtension());
+			"." + im.GetFileExtension());
 }
 
-u_int ImageMapCache::GetImageMapIndex(ImageMapConstPtr im) const {
+u_int ImageMapCache::GetImageMapIndex(ImageMapConstRef im) const {
 	for (u_int i = 0; i < maps.size(); ++i) {
-		if (maps[i] == im)
+		if (&*maps[i] == &im)
 			return i;
 	}
 
-	throw runtime_error("Unknown image map: " + ToString(im));
+	throw runtime_error("Unknown image map: " + ToString(&im));
+}
+u_int ImageMapCache::GetImageMapIndex(OptionalPtr<const ImageMap> p) const {
+	return GetImageMapIndex(*p);
 }
 
-void ImageMapCache::GetImageMaps(std::vector<ImageMapConstPtr > &ims) const {
+void ImageMapCache::GetImageMaps(std::vector<std::reference_wrapper<const ImageMap>> &ims) const {
 	ims.reserve(maps.size());
 
-	for(ImageMapConstPtr im: maps)
-		ims.push_back(im);
+	for(auto& im: maps)
+		ims.push_back(std::ref(*im));
 }
 
-void ImageMapCache::Preprocess(SceneConstPtr scene, const bool useRTMode) {
+void ImageMapCache::Preprocess(SceneConstRef scene, const bool useRTMode) {
 	resizePolicy->Preprocess(*this, scene, useRTMode);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

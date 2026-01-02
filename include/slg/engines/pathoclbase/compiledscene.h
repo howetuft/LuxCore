@@ -31,12 +31,13 @@
 #include "slg/lights/strategies/dlscache.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
 #include "slg/engines/pathtracer.h"
+#include "slg/cameras/camera.h"
 
 namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(SceneConstPtr scn, const PathTracer *pt);
+	CompiledScene(SceneConstRef scn, const PathTracer *pt);
 	~CompiledScene();
 	
 	void SetMaxMemPageSize(const size_t maxSize);
@@ -138,7 +139,7 @@ public:
 
 private:
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
-	u_int CompileImageMap(ImageMapConstPtr im);
+	u_int CompileImageMap(ImageMapConstRef im);
 
 	void CompileCamera();
 	void CompileSceneObjects();
@@ -157,11 +158,11 @@ private:
 	void CompileMaterials();
 	void CompileTextureMapping2D(
 		slg::ocl::TextureMapping2D *mapping,
-		std::shared_ptr<const TextureMapping2D> m
+		TextureMapping2DConstRef m
 	);
 	void CompileTextureMapping3D(
 		slg::ocl::TextureMapping3D *mapping,
-		std::shared_ptr<const TextureMapping3D> m
+		TextureMapping3DConstRef m
 	);
 	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex);
 	u_int CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType);
@@ -170,14 +171,14 @@ private:
 	void CompileImageMaps();
 	void CompileLights();
 
-	void CompileDLSC(std::shared_ptr<const LightStrategyDLSCache> dlscLightStrategy);
-	void CompileELVC(const EnvLightVisibilityCache *visibilityMapCache);
+	void CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy);
+	void CompileELVC(OptionalPtr<const EnvLightVisibilityCache> visibilityMapCache);
 	void CompileLightStrategy();
 	
 	void CompilePhotonGI();
 	void CompilePathTracer();
 
-	SceneConstPtr scene;
+	SceneConstRef scene;
 	const PathTracer *pathTracer;
 
 	size_t maxMemPageSize;

@@ -86,7 +86,8 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	// Setup PathTracer thread state
 	PathTracerThreadState pathTracerThreadState(device,
 			eyeSampler, lightSampler,
-			engine->renderConfig.scene, engine->film,
+			engine->renderConfig.GetScene(),
+			engine->film,
 			&varianceClamping);
 
 	//--------------------------------------------------------------------------

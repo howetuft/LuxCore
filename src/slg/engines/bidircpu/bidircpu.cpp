@@ -19,6 +19,7 @@
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidircpu/bidircpurenderstate.h"
 #include "slg/samplers/sobol.h"
+#include "slg/cameras/camera.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -28,10 +29,10 @@ using namespace std;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigConstRef rcfg) :
+BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigRef rcfg) :
 		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr),
 		photonGICache(nullptr) {
-	if (rcfg.scene->camera->GetType() == Camera::STEREO)
+	if (rcfg.GetScene().GetCamera().GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
 	lightPathsCount = 1;
@@ -50,34 +51,34 @@ RenderStatePtr BiDirCPURenderEngine::GetRenderState() {
 }
 
 void BiDirCPURenderEngine::StartLockLess() {
-	auto cfg = renderConfig.cfg;
+	auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	CheckSamplersForNoTile(RenderEngineType2String(GetType()), *cfg);
+	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = (u_int)Max(1, cfg->Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
-	maxLightPathDepth = (u_int)Max(1, cfg->Get(GetDefaultProps().Get("light.maxdepth")).Get<int>());
+	maxEyePathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
+	maxLightPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>());
 	
-	rrDepth = (u_int)Max(1, cfg->Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg->Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
+	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = cfg->Get(Property("path.clamping.radiance.maxvalue")(0.0)).Get<double>();
-	if (cfg->IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg->Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<double>();
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.0)).Get<double>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<double>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 
 	// Albedo AOV settings
-	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg->Get(GetDefaultProps().Get("path.albedospecular.type")).Get<string>());
-	albedoSpecularGlossinessThreshold = Max(cfg->Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(GetDefaultProps().Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -101,7 +102,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
-			photonGICache->SetScene(renderConfig.scene);
+			photonGICache->SetScene(renderConfig.GetScene());
 
 		startRenderState = nullptr;
 	}
@@ -112,7 +113,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 
 	// note: photonGICache could have been restored from the render state
 	if (!photonGICache) {
-		photonGICache = PhotonGICache::FromProperties(renderConfig.scene, *cfg);
+		photonGICache = PhotonGICache::FromProperties(renderConfig.GetScene(), cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
@@ -123,7 +124,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 	// Albedo and Normal AOV warm up settings
 	//--------------------------------------------------------------------------
 
-	aovWarmupSPP = Max(0u, cfg->Get(GetDefaultProps().Get("path.aovs.warmup.spp")).Get<u_int>());
+	aovWarmupSPP = Max(0u, cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")).Get<u_int>());
 	if (!film->HasChannel(Film::ALBEDO) && !film->HasChannel(Film::AVG_SHADING_NORMAL))
 		aovWarmupSPP = 0;
 	if (aovWarmupSPP > 0)
@@ -140,7 +141,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 void BiDirCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
 	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
@@ -174,7 +175,7 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			PhotonGICache::ToProperties(cfg);
 }
 
-RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new BiDirCPURenderEngine(rcfg);
 }
 

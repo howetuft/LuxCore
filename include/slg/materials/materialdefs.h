@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "luxrays/core/namedobjectvector.h"
+#include "luxrays/usings.h"
 #include "slg/materials/material.h"
 
 namespace slg {
@@ -39,19 +40,31 @@ public:
 	bool IsMaterialDefined(const std::string &name) const {
 		return mats.IsObjDefined(name);
 	}
-	void DefineMaterial(MaterialPtr m);
+	std::tuple<MaterialRef&, MaterialUPtr> DefineMaterial(MaterialUPtr&& m);
 
-	MaterialConstPtr GetMaterial(const std::string &name) const {
-		return dynamic_pointer_cast<const Material>(mats.GetObj(name));
+	// References
+	auto& GetMaterial(const std::string &name) const {
+		return static_cast<MaterialConstRef>(mats.GetObj(name));
 	}
-	MaterialConstPtr GetMaterial(const u_int index) const {
-		return dynamic_pointer_cast<const Material>(mats.GetObj(index));
+	auto& GetMaterial(const u_int index) const {
+		return dynamic_cast<MaterialConstRef>(mats.GetObj(index));
 	}
+	auto& GetMaterial(const std::string &name) {
+		return static_cast<MaterialRef>(mats.GetObj(name));
+	}
+	auto& GetMaterial(const u_int index) {
+		return dynamic_cast<MaterialRef>(mats.GetObj(index));
+	}
+
+	// Indices
 	u_int GetMaterialIndex(const std::string &name) const {
 		return mats.GetIndex(name);
 	}
-	u_int GetMaterialIndex(MaterialConstPtr m) const {
+	u_int GetMaterialIndex(MaterialConstRef m) const {
 		return mats.GetIndex(m);
+	}
+	u_int GetMaterialIndex(OptionalPtr<const Material> m) const {
+		return mats.GetIndex(*m);  // Will throw if nullopt
 	}
 
 	u_int GetSize() const {
@@ -66,12 +79,12 @@ public:
 		mats.DeleteObj(name);
 	}
 
-	void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
  
 	void GetMaterialSortedNames(std::vector<std::string> &names) const;
 
 private:
-	void GetMaterialSortedNamesImpl(MaterialConstPtr m, std::vector<std::string> &names,
+	void GetMaterialSortedNamesImpl(MaterialConstRef m, std::vector<std::string> &names,
 			std::unordered_set<std::string> &doneNames) const;
 
 	luxrays::NamedObjectVector mats;

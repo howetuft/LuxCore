@@ -29,10 +29,10 @@ namespace slg {
 
 class VelvetMaterial : public Material {
 public:
-	VelvetMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr kd, TextureConstPtr p1, TextureConstPtr p2, TextureConstPtr p3,
-			TextureConstPtr thickness);
+	VelvetMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+			OptionalPtr<const Texture> kd, OptionalPtr<const Texture> p1, OptionalPtr<const Texture> p2, OptionalPtr<const Texture> p3,
+			OptionalPtr<const Texture> thickness);
 
 	virtual MaterialType GetType() const { return VELVET; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
@@ -50,23 +50,23 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKd() const { return Kd; }
-	TextureConstPtr GetP1() const { return P1; }
-	TextureConstPtr GetP2() const { return P2; }
-	TextureConstPtr GetP3() const { return P3; }
-	TextureConstPtr GetThickness() const { return Thickness; }
+	OptionalPtr<const Texture> GetKd() const { return Kd; }
+	OptionalPtr<const Texture> GetP1() const { return P1; }
+	OptionalPtr<const Texture> GetP2() const { return P2; }
+	OptionalPtr<const Texture> GetP3() const { return P3; }
+	OptionalPtr<const Texture> GetThickness() const { return Thickness; }
 
 private:
-	TextureConstPtr Kd;
-	TextureConstPtr P1;
-	TextureConstPtr P2;
-	TextureConstPtr P3;
-	TextureConstPtr Thickness;
+	OptionalPtr<const Texture> Kd;
+	OptionalPtr<const Texture> P1;
+	OptionalPtr<const Texture> P2;
+	OptionalPtr<const Texture> P3;
+	OptionalPtr<const Texture> Thickness;
 };
 
 }

@@ -25,6 +25,7 @@
 #include <cmath>
 #include <limits>
 #include <iomanip>
+#include <memory>
 
 
 #if defined (__linux__)
@@ -357,7 +358,30 @@ inline bool IsValid(float a) {
 	return !isnan(a) && !isinf(a) && (a >= 0.f);
 }
 
-}
+
+// Helpers to cast unique_ptr from base class to derived class
+template <typename D, typename B>  // Derived, Base
+std::unique_ptr<D> dynamic_uptr_cast(std::unique_ptr<B>&& basePtr) {
+    // Static assertion to ensure Derived is a subclass of Base
+    static_assert(
+		std::is_base_of<B, D>::value,
+		"Derived must be a subclass of Base"
+	);
+
+	if (!basePtr) {
+		return std::unique_ptr<D>();
+	}
+
+	D* castPtr = dynamic_cast<D*>(basePtr.release());
+    if (!castPtr) {
+        throw std::bad_cast(); // Handle invalid cast
+    }
+
+	return std::unique_ptr<D>(castPtr);
+};
+
+
+}  // namespace luxrays
 
 #endif	/* _LUXRAYS_UTILS_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

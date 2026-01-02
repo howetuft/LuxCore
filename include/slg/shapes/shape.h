@@ -55,14 +55,22 @@ public:
 
 	virtual ShapeType GetType() const = 0;
 
-	// Note: this method can be called only once and the object is not usable
-	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtTriangleMeshPtr Refine(SceneConstRef scene);
+	// Shape::Refine is the main method of the API. It is intended to be called
+	// during shape parsing (see Scene::ParseShapes)
+	// Note: it can be called only once and the object is not usable anymore
+	// (it is moved to caller)
+	luxrays::ExtTriangleMeshUPtr Refine(SceneConstRef scene);
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene) = 0;
+	// RefineImpl implements refining for derived classes. It is called by
+	// Shape::Refine under the hood.
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) = 0;
 
 	bool refined;
+
+	// Derived classes store the shape which they construct into a
+	// std::unique_ptr usually named 'mesh', that they define on their own.
+	luxrays::ExtTriangleMeshUPtr mesh;
 };
 
 }

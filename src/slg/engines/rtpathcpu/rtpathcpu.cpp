@@ -28,7 +28,7 @@ using namespace slg;
 // RTPathCPURenderEngine
 //------------------------------------------------------------------------------
 
-RTPathCPURenderEngine::RTPathCPURenderEngine(RenderConfigConstRef rcfg) :
+RTPathCPURenderEngine::RTPathCPURenderEngine(RenderConfigRef rcfg) :
 		PathCPURenderEngine(rcfg) {
 	threadsSyncBarrier = new std::barrier(renderThreads.size() + 1, completion_t());
 }
@@ -38,9 +38,9 @@ RTPathCPURenderEngine::~RTPathCPURenderEngine() {
 }
 
 void RTPathCPURenderEngine::StartLockLess() {
-	auto cfg = renderConfig.cfg;
-	zoomFactor = (u_int)Max(1, cfg->Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")).Get<int>());
-	zoomWeight = Max(0.0001, cfg->Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight")).Get<double>());
+	auto& cfg = renderConfig.GetConfig();
+	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")).Get<int>());
+	zoomWeight = Max(0.0001, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight")).Get<double>());
 
 	threadsPauseMode = false;
 	firstFrameDone = false;
@@ -152,7 +152,7 @@ Properties RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight"));
 }
 
-RenderEngine *RTPathCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *RTPathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new RTPathCPURenderEngine(rcfg);
 }
 

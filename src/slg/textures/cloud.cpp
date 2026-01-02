@@ -26,12 +26,12 @@ using namespace slg;
 // Cloud texture
 //------------------------------------------------------------------------------
 
-CloudTexture::CloudTexture(TextureMapping3DConstPtr mp, const float r, const float noiseScale, const float t,
+CloudTexture::CloudTexture(TextureMapping3DUPtr&& mp, const float r, const float noiseScale, const float t,
 	const float sharp, const float v, const float baseflatness, const u_int octaves, const float o, const float offset,
 	const u_int numspheres, const float spheresize) : radius(r), numSpheres(numspheres), sphereSize(spheresize),
 													  sharpness(sharp), baseFlatness(baseflatness), variability(v),
 													  omega(o), firstNoiseScale(noiseScale), noiseOffset(offset),
-													  turbulenceAmount(t), numOctaves(octaves), mapping(mp) {
+													  turbulenceAmount(t), numOctaves(octaves), mapping(std::move(mp)) {
 	
 	cumulus = numSpheres > 0;
 	baseFadeDistance = 1.f - baseFlatness;

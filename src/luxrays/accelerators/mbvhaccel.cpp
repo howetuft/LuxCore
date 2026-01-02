@@ -50,11 +50,11 @@ MBVHAccel::~MBVHAccel() {
 	}
 }
 
-bool MBVHAccel::MeshPtrCompare(MeshConstPtr p0, MeshConstPtr p1) {
+bool MBVHAccel::MeshPtrCompare(const Mesh * p0, const Mesh * p1) {
 	return p0 < p1;
 }
 
-void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVertexCount,
+void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
 	assert (!initialized);
 
@@ -79,13 +79,17 @@ void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVerte
 	const u_int nLeafs = meshes.size();
 	LR_LOG(ctx, "Building Multilevel Bounding Volume Hierarchy: " << nLeafs << " leafs");
 
-	vector<u_int> leafsIndex;
-	vector<u_int> leafsTransformIndex;
-	vector<u_int> leafsMotionSystemIndex;
+	std::vector<u_int> leafsIndex;
+	std::vector<u_int> leafsTransformIndex;
+	std::vector<u_int> leafsMotionSystemIndex;
 
 	leafsIndex.reserve(nLeafs);
 
-	map<MeshConstPtr , u_int, bool (*)(MeshConstPtr , MeshConstPtr )> uniqueLeafIndexByMesh(MeshPtrCompare);
+	std::map<
+		const Mesh *,
+		u_int,
+		bool (*)(const Mesh *, const Mesh *)
+	> uniqueLeafIndexByMesh(MeshPtrCompare);
 
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -95,13 +99,13 @@ void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVerte
 			lastPrint = now;
 		}
 
-		MeshConstPtr mesh = meshes[i];
+		const Mesh * mesh = meshes[i];
 
 		switch (mesh->GetType()) {
 			case TYPE_TRIANGLE:
 			case TYPE_EXT_TRIANGLE: {
 				BVHAccel *leaf = new BVHAccel(ctx);
-				std::deque<MeshConstPtr > mlist(1, mesh);
+				std::deque<const Mesh * > mlist(1, mesh);
 				leaf->Init(mlist, mesh->GetTotalVertexCount(), mesh->GetTotalTriangleCount());
 
 				const u_int uniqueLeafIndex = uniqueLeafs.size();
@@ -114,22 +118,25 @@ void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVerte
 			}
 			case TYPE_TRIANGLE_INSTANCE:
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				auto itm = dynamic_pointer_cast<const InstanceTriangleMesh>(mesh);
+				auto& itm = dynamic_cast<const InstanceTriangleMesh&>(*mesh);
 
 				// Check if a BVH has already been created
-				map<MeshConstPtr , u_int, bool (*)(MeshConstPtr , MeshConstPtr )>::iterator it =
-						uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
+				auto it = uniqueLeafIndexByMesh.find(&itm.GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
-					auto instancedMesh = itm->GetTriangleMesh();
+					auto& instancedMesh = itm.GetTriangleMesh();
 
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx);
-					std::deque<MeshConstPtr > mlist(1, instancedMesh);
-					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
+					std::deque<const Mesh *> mlist(1, &instancedMesh);
+					leaf->Init(
+						mlist,
+						instancedMesh.GetTotalVertexCount(),
+						instancedMesh.GetTotalTriangleCount()
+					);
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[instancedMesh] = uniqueLeafIndex;
+					uniqueLeafIndexByMesh[&instancedMesh] = uniqueLeafIndex;
 					uniqueLeafs.push_back(leaf);
 					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
@@ -138,27 +145,27 @@ void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVerte
 				}
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
-				uniqueLeafsTransform.push_back(&itm->GetTransformation());
+				uniqueLeafsTransform.push_back(&itm.GetTransformation());
 				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
 			case TYPE_TRIANGLE_MOTION:
 			case TYPE_EXT_TRIANGLE_MOTION: {
-				auto mtm = dynamic_pointer_cast<const MotionTriangleMesh>(mesh);
+				auto& mtm = dynamic_cast<const MotionTriangleMesh&>(*mesh);
 
 				// Check if a BVH has already been created
-				auto it = uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
+				auto it = uniqueLeafIndexByMesh.find(&mtm.GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
-					auto motionMesh = mtm->GetTriangleMesh();
+					auto& motionMesh = mtm.GetTriangleMesh();
 
 					// Create a new BVH
 					BVHAccel *leaf = new BVHAccel(ctx);
-					std::deque<MeshConstPtr > mlist(1, motionMesh);
-					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
+					std::deque<const Mesh * > mlist(1, &motionMesh);
+					leaf->Init(mlist, motionMesh.GetTotalVertexCount(), motionMesh.GetTotalTriangleCount());
 
 					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[motionMesh] = uniqueLeafIndex;
+					uniqueLeafIndexByMesh[&motionMesh] = uniqueLeafIndex;
 					uniqueLeafs.push_back(leaf);
 					leafsIndex.push_back(uniqueLeafIndex);
 				} else {
@@ -167,7 +174,7 @@ void MBVHAccel::Init(const deque<MeshConstPtr > &ms, const u_longlong totalVerte
 				}
 
 				leafsMotionSystemIndex.push_back(uniqueLeafsMotionSystem.size());
-				uniqueLeafsMotionSystem.push_back(&mtm->GetMotionSystem());
+				uniqueLeafsMotionSystem.push_back(&mtm.GetMotionSystem());
 				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
@@ -292,7 +299,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			if (insideLeafTree) {
 				// I'm inside a leaf tree, I have to check the triangle
 				const u_int absoluteMeshIndex = node.triangleLeaf.meshIndex + currentMeshOffset;
-				MeshConstPtr currentMesh = meshes[absoluteMeshIndex];
+				const Mesh * currentMesh = meshes[absoluteMeshIndex];
 				// I use currentMesh->GetVertices() in order to have access to not
 				// transformed vertices in the case of instances
 				const Point *vertices = currentMesh->GetVertices();

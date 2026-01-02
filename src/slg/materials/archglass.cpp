@@ -28,15 +28,26 @@ using namespace slg;
 // Architectural glass material
 //------------------------------------------------------------------------------
 
-ArchGlassMaterial::ArchGlassMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr refl, TextureConstPtr trans,
-		TextureConstPtr exteriorIorFact, TextureConstPtr interiorIorFact,
-		TextureConstPtr filmThickness, TextureConstPtr filmIor) :
-			Material(frontTransp, backTransp, emitted, bump),
-			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
-			filmThickness(filmThickness), filmIor(filmIor) {
-}
+ArchGlassMaterial::ArchGlassMaterial(
+	OptionalPtr<const Texture> frontTransp,
+	OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted,
+	OptionalPtr<const Texture> bump,
+	OptionalPtr<const Texture> refl,
+	OptionalPtr<const Texture> trans,
+	OptionalPtr<const Texture> exteriorIorFact,
+	OptionalPtr<const Texture> interiorIorFact,
+	OptionalPtr<const Texture> filmThickness,
+	OptionalPtr<const Texture> filmIor
+) :
+	Material(frontTransp, backTransp, emitted, bump),
+	Kr(refl),
+	Kt(trans),
+	exteriorIor(exteriorIorFact),
+	interiorIor(interiorIorFact),
+	filmThickness(filmThickness),
+	filmIor(filmIor)
+{}
 
 Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
@@ -148,7 +159,7 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 		*event = SPECULAR | TRANSMIT;
 		*pdfW = threshold;
-		
+
 		result = trans;
 	} else {
 		// Reflect
@@ -171,10 +182,10 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 
-	Vector transLocalSampledDir; 
+	Vector transLocalSampledDir;
 	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir,
 			kt, nc, nt, &transLocalSampledDir);
-	
+
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 	Vector reflLocalSampledDir;
@@ -188,11 +199,11 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
 			float threshold = transFilter / (reflFilter + transFilter);
-			
+
 			// A place an upper and lower limit to not under sample
 			// reflection or transmission
 			threshold = Clamp(threshold, .25f, .75f);
-			
+
 			if (passThroughEvent < threshold) {
 				// Transmit
 				return trans / threshold;
@@ -213,7 +224,9 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	}
 }
 
-void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void ArchGlassMaterial::AddReferencedTextures(
+	std::unordered_set<const Texture *> &referencedTexs
+) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -228,8 +241,10 @@ void ArchGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr
 		filmIor->AddReferencedTextures(referencedTexs);
 }
 
-void ArchGlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
-	Material::UpdateTextureReferences(oldTex, newTex);
+void ArchGlassMaterial::UpdateTextureReferences(
+	OptionalPtr<const Texture> oldTex, OptionalPtr<Texture> newTex
+) {
+	Material::UpdateTextureReferences(*oldTex, *newTex);
 
 	if (Kr == oldTex)
 		Kr = newTex;

@@ -30,12 +30,12 @@ using namespace slg;
 // LuxRender RoughGlass material porting.
 //------------------------------------------------------------------------------
 
-RoughGlassMaterial::RoughGlassMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr refl, TextureConstPtr trans,
-		TextureConstPtr exteriorIorFact, TextureConstPtr interiorIorFact,
-		TextureConstPtr u, TextureConstPtr v,
-		TextureConstPtr filmThickness, TextureConstPtr filmIor) :
+RoughGlassMaterial::RoughGlassMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> refl, OptionalPtr<const Texture> trans,
+		OptionalPtr<const Texture> exteriorIorFact, OptionalPtr<const Texture> interiorIorFact,
+		OptionalPtr<const Texture> u, OptionalPtr<const Texture> v,
+		OptionalPtr<const Texture> filmThickness, OptionalPtr<const Texture> filmIor) :
 			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans),
 			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v),
 			filmThickness(filmThickness), filmIor(filmIor) {
@@ -333,7 +333,7 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -350,7 +350,7 @@ void RoughGlassMaterial::AddReferencedTextures(std::unordered_set<TextureConstPt
 		filmIor->AddReferencedTextures(referencedTexs);
 }
 
-void RoughGlassMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void RoughGlassMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

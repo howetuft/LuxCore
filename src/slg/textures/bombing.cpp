@@ -31,11 +31,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float BombingTexture::Y() const {
-		return Lerp(bulletMaskTex->Y(), backgroundTex->Y(), bulletTex->Y());
+		return Lerp(GetBulletMaskTex().Y(), GetBackgroundTex().Y(), GetBulletTex().Y());
 }
 
 float BombingTexture::Filter() const {
-	return Lerp(bulletMaskTex->Filter(), backgroundTex->Filter(), bulletTex->Filter());
+	return Lerp(GetBulletMaskTex().Filter(), GetBackgroundTex().Filter(), GetBulletTex().Filter());
 }
 
 float BombingTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -43,7 +43,7 @@ float BombingTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Spectrum backgroundValue = backgroundTex->GetSpectrumValue(hitPoint);
+	const Spectrum backgroundValue = GetBackgroundTex().GetSpectrumValue(hitPoint);
 
 	const UV uv = mapping->Map(hitPoint);
 
@@ -54,7 +54,7 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	Spectrum result = backgroundValue;
 	float resultPriority = -1.f;
 
-	const ImageMapStorage *randomImageMapStorage =  ImageMapTexture::randomImageMap->GetStorage();
+	auto& randomImageMapStorage =  ImageMapTexture::randomImageMap->GetStorage();
 	const u_int randomImageMapWidth = ImageMapTexture::randomImageMap->GetWidth();
 	const u_int randomImageMapHeight = ImageMapTexture::randomImageMap->GetHeight();
 
@@ -66,7 +66,7 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			// Pick cell random values
 			const u_int randomImageMapStorageIndex = (((int)currentCell.u) % (randomImageMapWidth / 2)) * 2 +
 					(((int)currentCell.v) % randomImageMapHeight) * randomImageMapWidth;
-			const Spectrum noise0 = randomImageMapStorage->GetSpectrum(randomImageMapStorageIndex);
+			const Spectrum noise0 = randomImageMapStorage.GetSpectrum(randomImageMapStorageIndex);
 
 			const float currentCellRandomOffsetX = noise0.c[0];
 			const float currentCellRandomOffsetY = noise0.c[1];
@@ -80,7 +80,7 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			UV bulletUV(currentCellOffset.u - currentCellRandomOffsetX, currentCellOffset.v - currentCellRandomOffsetY);
 
 			// Pick some more cell random values
-			const Spectrum noise1 = randomImageMapStorage->GetSpectrum(randomImageMapStorageIndex + 1);
+			const Spectrum noise1 = randomImageMapStorage.GetSpectrum(randomImageMapStorageIndex + 1);
 			const float currentCellRandomRotate = noise1.c[0];
 			const float currentCellRandomScale = noise1.c[1];
 			const float currentCellRandomBullet = noise1.c[2];
@@ -115,8 +115,8 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 
 			hitPointTmp.defaultUV = bulletUV;
 
-			const Spectrum bulletValue = bulletTex->GetSpectrumValue(hitPointTmp);
-			const float maskValue = bulletMaskTex->GetFloatValue(hitPointTmp);
+			const Spectrum bulletValue = GetBulletTex().GetSpectrumValue(hitPointTmp);
+			const float maskValue = GetBulletMaskTex().GetFloatValue(hitPointTmp);
 			
 			if (maskValue > 0.f) {
 				resultPriority = currentCellRandomPriority;
@@ -128,26 +128,26 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return result;
 }
 
-void BombingTexture::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void BombingTexture::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Texture::AddReferencedTextures(referencedTexs);
 
-	backgroundTex->AddReferencedTextures(referencedTexs);
-	bulletTex->AddReferencedTextures(referencedTexs);
-	bulletMaskTex->AddReferencedTextures(referencedTexs);
+	GetBackgroundTex().AddReferencedTextures(referencedTexs);
+	GetBulletTex().AddReferencedTextures(referencedTexs);
+	GetBulletMaskTex().AddReferencedTextures(referencedTexs);
 }
 
-void BombingTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-	backgroundTex->AddReferencedImageMaps(referencedImgMaps);
-	bulletTex->AddReferencedImageMaps(referencedImgMaps);
-	bulletMaskTex->AddReferencedImageMaps(referencedImgMaps);
+void BombingTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	GetBackgroundTex().AddReferencedImageMaps(referencedImgMaps);
+	GetBulletTex().AddReferencedImageMaps(referencedImgMaps);
+	GetBulletMaskTex().AddReferencedImageMaps(referencedImgMaps);
 }
 
-void BombingTexture::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
-	if (backgroundTex == oldTex)
+void BombingTexture::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
+	if (GetBackgroundTex() == oldTex)
 		backgroundTex = newTex;
-	if (bulletTex == oldTex)
+	if (GetBulletTex() == oldTex)
 		bulletTex = newTex;
-	if (bulletMaskTex == oldTex)
+	if (GetBulletMaskTex() == oldTex)
 		bulletMaskTex = newTex;
 }
 
@@ -156,9 +156,9 @@ Properties BombingTexture::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("bombing"));
-	props.Set(Property("scene.textures." + name + ".background")(backgroundTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bullet")(bulletTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bullet.mask")(bulletMaskTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".background")(GetBackgroundTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".bullet")(GetBulletTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".bullet.mask")(GetBulletMaskTex().GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".bullet.randomscale.range")(randomScaleFactor));
 	props.Set(Property("scene.textures." + name + ".bullet.randomrotation.enable")(useRandomRotation));
 	props.Set(Property("scene.textures." + name + ".bullet.count")(multiBulletCount));

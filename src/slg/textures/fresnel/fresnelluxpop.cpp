@@ -33,7 +33,7 @@ using namespace slg;
 // Fresnel LuxPop texture
 //------------------------------------------------------------------------------
 
-std::shared_ptr<FresnelTexture> slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
+FresnelTextureUPtr slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
 	const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".file")("luxpop.nk")).Get<string>());
 
 	ifstream fs;
@@ -78,6 +78,6 @@ std::shared_ptr<FresnelTexture> slg::AllocFresnelLuxPopTex(const Properties &pro
 	const RGBColor Nrgb = colorSpace.ToRGBConstrained(N.ToNormalizedXYZ());
 	const RGBColor Krgb = colorSpace.ToRGBConstrained(K.ToNormalizedXYZ());
 
-	return std::make_shared<FresnelConstTexture>(Nrgb, Krgb);
+	return std::make_unique<FresnelConstTexture>(Nrgb, Krgb);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

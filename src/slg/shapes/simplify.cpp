@@ -24,10 +24,12 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
@@ -192,22 +194,22 @@ public:
 
 	~Simplify() {
 	}
-	
-	ExtTriangleMeshPtr GetExtMesh() const {
+
+	ExtTriangleMeshUPtr GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
 		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
-		
+
 		Normal *newNorms = nullptr;
 		if (hasNormals) {
 			newNorms = new Normal[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newNorms[i] = vertices[i].norm;
 		}
-		
+
 		UV *newUVs = nullptr;
 		if (hasUVs) {
 			newUVs = new UV[vertCount];
@@ -221,14 +223,14 @@ public:
 			for (u_int i = 0; i < vertCount; ++i)
 				newCols[i] = vertices[i].col;
 		}
-		
+
 		float *newAlphas = nullptr;
 		if (hasAlphas) {
 			newAlphas = new float[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
 				newAlphas[i] = vertices[i].alpha;
 		}
-		
+
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			assert (triangles[i].v[0] < vertCount);
@@ -240,12 +242,12 @@ public:
 			assert (triangles[i].v[2] < vertCount);
 			newTris[i].v[2] = triangles[i].v[2];
 		}
-		
-		return std::make_shared<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
+
+		return std::make_unique<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
 				newUVs, newCols, newAlphas);
 	}
 
-	void Decimate(const float targetTriangleCount, CameraConstPtr scnCamera,
+	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,
 			const float screenSize, const bool border) {
 		preserveBorder = border;
 		camera = scnCamera;
@@ -309,7 +311,7 @@ private:
 	struct SimplifyRef {
 		u_int tid, tvertex;
 	};
-	
+
 	class SimplifyRefErrCompare {
 	public:
 		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
@@ -326,7 +328,7 @@ private:
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
 
-	CameraConstPtr camera;
+	OptionalPtr<const Camera> camera;
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
@@ -390,7 +392,7 @@ private:
 		const float triAlpha2 = vertices[t.v[2]].alpha;
 
 		// Not flipped, so remove edge
-		v0.p = p;		
+		v0.p = p;
 		v0.q = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
@@ -880,24 +882,24 @@ private:
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh,
+SimplifyShape::SimplifyShape(OptionalPtr<const Camera> camera, ExtTriangleMeshRef srcMesh,
 		const float target, const float edgeScreenSize, const bool preserveBorder) {
-	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
+	SDL_LOG("Simplify shape " << srcMesh.GetName() << " with target " << target);
 
 	if ((edgeScreenSize > 0.f) && !camera)
-		throw runtime_error("The scene camera must be defined in order to enable simplify edgescreensize option");
+		throw runtime_error("The scene.GetCamera() must be defined in order to enable simplify edgescreensize option");
 
 	const float startTime = WallClockTime();
 
-	const u_int targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
+	const u_int targetCount = Max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
 	/*srcMesh->Save("debug-start.ply");
 	ExtTriangleMesh *debugMeshStart = ScreenProjection(*camera, *srcMesh);
 	debugMeshStart->Save("debug-start-proj.ply");
 	delete debugMeshStart;*/
 
-	Simplify simplify(*srcMesh);
-	simplify.Decimate(targetCount, camera, edgeScreenSize, preserveBorder);
+	Simplify simplify(srcMesh);
+	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
 	/*srcMesh->Save("debug-end.ply");
@@ -905,7 +907,7 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh,
 	debugMeshEnd->Save("debug-end-proj.ply");
 	delete debugMeshEnd;*/
 
-	SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
+	SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 
 	// For some debugging
 	//mesh->Save("debug.ply");
@@ -917,7 +919,7 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh,
 SimplifyShape::~SimplifyShape() {
 }
 
-ExtTriangleMeshPtr SimplifyShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr SimplifyShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

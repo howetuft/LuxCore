@@ -24,8 +24,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-MeshShape::MeshShape(ExtTriangleMeshPtr m) {
-	mesh = m;
+MeshShape::MeshShape(ExtTriangleMeshUPtr&& m) {
+	mesh = std::move(m);
 }
 
 MeshShape::MeshShape(const string &fileName) {
@@ -43,7 +43,7 @@ void MeshShape::ApplyTransform(const Transform &trans) {
 	mesh->ApplyTransform(trans);
 }
 
-ExtTriangleMeshPtr MeshShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr MeshShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

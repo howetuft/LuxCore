@@ -30,14 +30,14 @@ float BandTexture::Y() const {
 	switch (interpType) {
 		case NONE: {
 			float ret = offsets[0] * values[0].Y();
-			for (u_int i = 0; i < offsets.size() - 1; ++i)
+			for (u_int i = 0; i < GetOffsets().size() - 1; ++i)
 				ret += (offsets[i + 1] - offsets[i]) * values[i].Y();
 			return ret;
 		}
 		case CUBIC: // Just an approximation
 		case LINEAR: {
 			float ret = offsets[0] * values[0].Y();
-			for (u_int i = 0; i < offsets.size() - 1; ++i)
+			for (u_int i = 0; i < GetOffsets().size() - 1; ++i)
 				ret += .5f * (offsets[i + 1] - offsets[i]) *
 					(values[i + 1].Y() + values[i].Y());
 			return ret;
@@ -51,14 +51,14 @@ float BandTexture::Filter() const {
 	switch (interpType) {
 		case NONE: {
 			float ret = offsets[0] * values[0].Filter();
-			for (u_int i = 0; i < offsets.size() - 1; ++i)
+			for (u_int i = 0; i < GetOffsets().size() - 1; ++i)
 				ret += (offsets[i + 1] - offsets[i]) * values[i].Filter();
 			return ret;
 		}
 		case CUBIC: // Just an approximation
 		case LINEAR: {
 			float ret = offsets[0] * values[0].Filter();
-			for (u_int i = 0; i < offsets.size() - 1; ++i)
+			for (u_int i = 0; i < GetOffsets().size() - 1; ++i)
 				ret += .5f * (offsets[i + 1] - offsets[i]) *
 					(values[i + 1].Y() + values[i].Filter());
 			return ret;
@@ -73,16 +73,16 @@ float BandTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float a = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float a = Clamp(GetAmount().GetFloatValue(hitPoint), 0.f, 1.f);
 
-	if (a < offsets.front())
-		return values.front();
-	if (a >= offsets.back())
-		return values.back();
+	if (a < GetOffsets().front())
+		return GetValues().front();
+	if (a >= GetOffsets().back())
+		return GetValues().back();
 	// upper_bound is not available on OpenCL
-	//const u_int p = upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
+	//const u_int p = upper_bound(GetOffsets().begin(), GetOffsets().end(), a) - GetOffsets().begin();
 	int p = 0;
-	for (; p < (int)offsets.size(); ++p) {
+	for (; p < (int)GetOffsets().size(); ++p) {
 		if (a < offsets[p])
 			break;
 	}
@@ -95,7 +95,7 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		case LINEAR:
 			return Lerp(factor,	values[p - 1], values[p]);
 		case CUBIC:
-			return Cerp(factor,	values[Max<int>(p - 2, 0)], values[p - 1], values[p], values[Min<int>(p + 1, values.size() - 1)]);
+			return Cerp(factor,	values[Max<int>(p - 2, 0)], values[p - 1], values[p], values[Min<int>(p + 1, GetValues().size() - 1)]);
 		default:
 			return Spectrum();
 	}
@@ -107,9 +107,9 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache, const boo
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("band"));
 	props.Set(Property("scene.textures." + name + ".interpolation")(InterpolationType2String(interpType)));
-	props.Set(Property("scene.textures." + name + ".amount")(amount->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".amount")(GetAmount().GetSDLValue()));
 
-	for (u_int i = 0; i < offsets.size(); ++i) {
+	for (u_int i = 0; i < GetOffsets().size(); ++i) {
 		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
 		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
 	}

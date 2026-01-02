@@ -29,10 +29,10 @@ using namespace slg;
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-Glossy2Material::Glossy2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr kd, TextureConstPtr ks, TextureConstPtr u, TextureConstPtr v,
-		TextureConstPtr ka, TextureConstPtr d, TextureConstPtr i, const bool mbounce, const bool doublesided) :
+Glossy2Material::Glossy2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v,
+		OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d, OptionalPtr<const Texture> i, const bool mbounce, const bool doublesided) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce), doublesided (doublesided) {
 	glossiness = ComputeGlossiness(nu, nv);
@@ -280,7 +280,7 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void Glossy2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void Glossy2Material::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -292,7 +292,7 @@ void Glossy2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr> 
 	index->AddReferencedTextures(referencedTexs);
 }
 
-void Glossy2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void Glossy2Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

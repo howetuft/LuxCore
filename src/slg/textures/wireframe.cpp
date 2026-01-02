@@ -60,13 +60,13 @@ bool WireFrameTexture::Evaluate(const HitPoint &hitPoint) const {
 }
 
 float WireFrameTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return Evaluate(hitPoint) ? borderTex->GetFloatValue(hitPoint) :
-		insideTex->GetFloatValue(hitPoint);
+	return Evaluate(hitPoint) ? GetBorderTex().GetFloatValue(hitPoint) :
+		GetInsideTex().GetFloatValue(hitPoint);
 }
 
 Spectrum WireFrameTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Evaluate(hitPoint) ? borderTex->GetSpectrumValue(hitPoint) :
-		insideTex->GetSpectrumValue(hitPoint);
+	return Evaluate(hitPoint) ? GetBorderTex().GetSpectrumValue(hitPoint) :
+		GetInsideTex().GetSpectrumValue(hitPoint);
 }
 
 Properties WireFrameTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -74,8 +74,8 @@ Properties WireFrameTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("wireframe"));
-	props.Set(Property("scene.textures." + name + ".border")(borderTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".border")(GetBorderTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
 
 	return props;
 }

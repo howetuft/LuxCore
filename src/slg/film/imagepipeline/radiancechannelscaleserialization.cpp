@@ -52,5 +52,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void RadianceChannelScale::save(LuxOutputArchive &ar, const u_int version) const;
 template void RadianceChannelScale::load(LuxInputArchive &ar, const u_int version);
+template void RadianceChannelScale::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void RadianceChannelScale::load(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

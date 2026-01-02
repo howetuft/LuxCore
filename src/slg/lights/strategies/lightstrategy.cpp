@@ -28,8 +28,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
-	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
-	
+	const string type = cfg.Get(
+		Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())
+	).Get<string>();
+
 	return String2LightStrategyType(type);
 }
 
@@ -38,24 +40,32 @@ LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
 //------------------------------------------------------------------------------
 
 Properties LightStrategy::ToProperties(const Properties &cfg) {
-	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+	const string type = cfg.Get(
+		Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())
+	).Get<string>();
 
 	LightStrategyRegistry::ToProperties func;
 
 	if (LightStrategyRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
 		return func(cfg);
 	} else
-		throw runtime_error("Unknown light strategy type in LightStrategy::ToProperties(): " + type);
+		throw runtime_error(
+			"Unknown light strategy type in LightStrategy::ToProperties(): " + type
+		);
 }
 
-LightStrategyPtr LightStrategy::FromProperties(const Properties &cfg) {
-	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+LightStrategyUPtr LightStrategy::FromProperties(const Properties &cfg) {
+	const string type = cfg.Get(
+		Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())
+	).Get<string>();
 
 	LightStrategyRegistry::FromProperties func;
 	if (LightStrategyRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
 		return func(cfg);
 	else
-		throw runtime_error("Unknown filter type in LightStrategy::FromProperties(): " + type);
+		throw runtime_error(
+			"Unknown filter type in LightStrategy::FromProperties(): " + type
+		);
 }
 
 string LightStrategy::FromPropertiesOCL(const Properties &cfg) {
@@ -67,7 +77,11 @@ LightStrategyType LightStrategy::String2LightStrategyType(const string &type) {
 	if (LightStrategyRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown light strategy type in LightStrategy::String2LightStrategyType(): " + type);
+		throw runtime_error(
+			std::string("Unknown light strategy type in ")
+			+ std::string("LightStrategy::String2LightStrategyType(): ")
+			+ type
+		);
 }
 
 string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
@@ -75,7 +89,11 @@ string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
 	if (LightStrategyRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown light strategy type in LightStrategy::LightStrategyType2String(): " + ToString(type));
+		throw runtime_error(
+			std::string("Unknown light strategy type in ")
+			+ std::string("LightStrategy::LightStrategyType2String(): ")
+			+ ToString(type)
+		);
 }
 
 const Properties &LightStrategy::GetDefaultProps() {

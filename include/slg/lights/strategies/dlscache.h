@@ -40,22 +40,25 @@ public:
 	LightStrategyDLSCache(const DLSCParams &params);
 	virtual ~LightStrategyDLSCache();
 
-	virtual void Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode);
 	
 	// Used for direct light sampling
-	virtual LightSourcePtr SampleLights(
-			SceneConstPtr scene,
+	virtual OptionalPtr<LightSource> SampleLights(
+			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			float *pdf) const;
-	virtual float SampleLightPdf(LightSourceConstPtr light,
+
+	virtual float SampleLightPdf(LightSourceConstRef light,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 
 	// Used for light emission
-	virtual LightSourcePtr SampleLights(SceneConstPtr scene, const float u, float *pdf) const;
+	virtual OptionalPtr<LightSource> SampleLights(
+		SceneConstRef scene, const float u, float *pdf
+	) const;
 
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -63,7 +66,7 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 	// Used for OpenCL data translation
-	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy.GetLightsDistribution(); }
+	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy->GetLightsDistribution(); }
 	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
 	bool UseRTMode() const { return useRTMode; }
 	float GetEntryRadius() const { return DLSCache.GetParams().visibility.lookUpRadius; }
@@ -76,13 +79,13 @@ public:
 	static LightStrategyType GetObjectType() { return TYPE_DLS_CACHE; }
 	static std::string GetObjectTag() { return "DLS_CACHE"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static LightStrategyPtr FromProperties(const luxrays::Properties &cfg);
+	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategyTask taskType;
-	LightStrategyLogPower distributionStrategy;
+	OptionalPtr<LightStrategyLogPower> distributionStrategy;
 	DirectLightSamplingCache DLSCache;
 
 	bool useRTMode;

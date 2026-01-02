@@ -29,6 +29,7 @@
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/engines/caches/photongi/tracephotonsthread.h"
 #include "slg/utils/pathinfo.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;
@@ -39,13 +40,13 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PhotonGICache::PhotonGICache() :
-		scene(),
+		scene(slg::NullScene),
 		visibilityParticlesKdTree(nullptr),
 		radiancePhotonsBVH(nullptr) ,
 		causticPhotonsBVH(nullptr) {
 }
 
-PhotonGICache::PhotonGICache(SceneConstPtr scn, const PhotonGICacheParams &p) :
+PhotonGICache::PhotonGICache(SceneConstRef scn, const PhotonGICacheParams &p) :
 		scene(scn), params(p),
 		visibilityParticlesKdTree(nullptr),
 		radiancePhotonsBVH(nullptr) ,
@@ -64,7 +65,7 @@ PhotonGICache::~PhotonGICache() {
 
 bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
-	
+
 	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
 			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.glossinessUsageThreshold)))
 		return false;
@@ -599,4 +600,6 @@ string PhotonGICache::DebugType2String(const PhotonGIDebugType type) {
 			throw runtime_error("Unsupported wrap type in PhotonGICache::DebugType2String(): " + ToString(type));
 	}
 }
+
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

@@ -38,11 +38,11 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 // LuxCoreApp
 //------------------------------------------------------------------------------
 
-LuxCoreApp::LuxCoreApp(std::shared_ptr<luxcore::RenderConfig> renderConfig) :
+LuxCoreApp::LuxCoreApp(RenderConfigPtr & renderConfig) :
 		// Note: isOpenCLAvailable and isCUDAAvailable have to be initialized before
 		// ObjectEditorWindow constructors call (it is used by RenderEngineWindow).
-		isOpenCLAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>()),
-		isCUDAAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>()),
+		isOpenCLAvailable(GetPlatformDesc()->Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>()),
+		isCUDAAvailable(GetPlatformDesc()->Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>()),
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
@@ -115,7 +115,7 @@ static int MaximumExtent(const float pMin[3], const float pMax[3]) {
 }
 void LuxCoreApp::UpdateMoveStep() {
 	float pMin[3], pMax[3];
-	config.lock()->GetScene().GetBBox(pMin, pMax);
+	config->GetScene().GetBBox(pMin, pMax);
 	const int maxExtent = MaximumExtent(pMin, pMax);
 
 	const float worldSize = Max(pMax[maxExtent] - pMin[maxExtent], .001f);
@@ -125,13 +125,13 @@ void LuxCoreApp::UpdateMoveStep() {
 void LuxCoreApp::SetRefreshInterval(int interval) {
     auto props = std::make_shared<Properties>();
     props->Set(Property("screen.refresh.interval")(interval));
-    config.lock()->Parse(props);
+    config->Parse(props);
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
 
 
-	const unsigned int screenRefreshInterval = config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
+	const unsigned int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
 
 	if (screenRefreshInterval >= 1000) SetRefreshInterval(screenRefreshInterval + 1000);
 	else if (screenRefreshInterval >= 100)
@@ -141,7 +141,7 @@ void LuxCoreApp::IncScreenRefreshInterval() {
 }
 
 void LuxCoreApp::DecScreenRefreshInterval() {
-	const unsigned int screenRefreshInterval = config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
+	const unsigned int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>();
 	if (screenRefreshInterval > 1000)
 		SetRefreshInterval(Max(1000u, screenRefreshInterval - 1000));
 	else if (screenRefreshInterval > 100)
@@ -166,7 +166,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config.lock()->ToProperties().Get("renderengine.type").Get<string>()) {
+	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>()) {
 		Properties props;
 		if (engineType == "RTPATHCPU") {
 			props <<
@@ -203,7 +203,7 @@ void LuxCoreApp::RenderConfigParse(std::shared_ptr<const luxrays::Properties> pr
 
 	// Change the configuration
 	try {
-		config.lock()->Parse(props);
+		config->Parse(props);
 	} catch(exception &ex) {
 		LA_LOG("RenderConfig fatal parse error: " << endl << ex.what());
 		// I can not recover from a RenderConfig parse error: I would have to create
@@ -278,8 +278,9 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 
 			auto scene = ScenePtr(Scene::Create());
 			scene->Parse(sceneProps);
+			PropertiesPtr ptr = renderConfigProps;
 			config = RenderConfigPtr(RenderConfig::Create(renderConfigProps, scene));
-			config.lock()->DeleteSceneOnExit();
+			config->DeleteSceneOnExit();
 
 			StartRendering();
 		} else if (ext == ".cfg") {
@@ -307,7 +308,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 		session.reset();
 		session = nullptr;
 		config.reset();
-		config = std::shared_ptr<RenderConfig>();
+		config = std::unique_ptr<RenderConfig>();
 	}
 
 	popupMenuBar = true;
@@ -322,9 +323,9 @@ void LuxCoreApp::StartRendering(
 		session.reset();
 	}
 
-	const string engineType = config.lock()->ToProperties().Get("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (engineType.starts_with("RT")) {
-		if (config.lock()->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() > 25)
+		if (config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() > 25)
 			SetRefreshInterval(25);
 		optRealTimeMode = true;
 		// Reset the dropped frames counter
@@ -333,7 +334,7 @@ void LuxCoreApp::StartRendering(
 	} else
 		optRealTimeMode = false;
 
-	const string toolTypeStr = config.lock()->ToProperties().Get("screen.tool.type").Get<string>();
+	const string toolTypeStr = config->ToProperties().Get("screen.tool.type").Get<string>();
 	if (toolTypeStr == "OBJECT_SELECTION")
 		currentTool = TOOL_OBJECT_SELECTION;
 	else if (toolTypeStr == "IMAGE_VIEW")
@@ -348,10 +349,10 @@ void LuxCoreApp::StartRendering(
 	if (currentTool != TOOL_IMAGE_VIEW) {
 		// Delete scene.camera.screenwindow so frame buffer resize will
 		// automatically adjust the ratio
-		Properties cameraProps = config.lock()->GetScene().ToProperties()->GetAllProperties("scene.camera");
+		Properties cameraProps = config->GetScene().ToProperties()->GetAllProperties("scene.camera");
 		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 		auto pprops = std::make_shared<Properties>(cameraProps);
-		config.lock()->GetScene().Parse(pprops);
+		config->GetScene().Parse(pprops);
 
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
@@ -362,13 +363,13 @@ void LuxCoreApp::StartRendering(
 			Property("film.width")(filmWidth) <<
 			Property("film.height")(filmHeight);
 	auto pcfgProps = std::make_shared<Properties>(cfgProps);
-	config.lock()->Parse(pcfgProps);
+	config->Parse(pcfgProps);
 
-	LA_LOG("RenderConfig has cached kernels: " << (config.lock()->HasCachedKernels() ? "True" : "False"));
+	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
 
 	// TODO
 	//try {
-		session = RenderSession::Create(config.lock(), &startState, &startFilm);
+		session = RenderSession::Create(config, &startState, &startFilm);
 
 		// Re-start the rendering
 		session->Start();

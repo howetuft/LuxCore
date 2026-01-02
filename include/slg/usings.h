@@ -22,28 +22,29 @@
 #pragma once
 
 #include <memory>
+#include "luxrays/usings.h"
 
 namespace slg {
 
 class Camera;
-using CameraPtr = std::shared_ptr<Camera>;
-using CameraConstPtr = std::shared_ptr<const Camera>;
+using CameraUPtr = std::unique_ptr<Camera>;
 using CameraRef = Camera&;
+using CameraConstRef = const Camera&;
 
 class Scene;
-using SceneConstPtr = std::shared_ptr<const Scene>;
-using SceneConstWPtr = std::weak_ptr<const Scene>;
-using ScenePtr = std::shared_ptr<Scene>;
+using SceneUPtr = std::unique_ptr<Scene>;
+using SceneConstUPtr = std::unique_ptr<const Scene>;
 using SceneConstRef = const Scene&;
+using SceneRef = Scene&;
 
 class SceneObject;
 using SceneObjectRef = SceneObject&;
-using SceneObjectPtr = std::shared_ptr<SceneObject>;
-using SceneObjectConstPtr = std::shared_ptr<const SceneObject>;
+using SceneObjectConstRef = const SceneObject&;
+using SceneObjectUPtr = std::unique_ptr<SceneObject>;
+using SceneObjectConstUPtr = std::unique_ptr<const SceneObject>;
 
 class Shape;
-using ShapeConstPtr = std::shared_ptr<const Shape>;
-using ShapePtr = std::shared_ptr<Shape>;
+using ShapeUPtr = std::unique_ptr<Shape>;
 
 class Film;
 using FilmPtr = std::shared_ptr<Film>;
@@ -52,29 +53,51 @@ using FilmConstRef = const Film&;
 using FilmRef = Film&;
 
 class ImageMap;
-using ImageMapConstPtr = std::shared_ptr<const ImageMap>;
-using ImageMapPtr = std::shared_ptr<ImageMap>;
+using ImageMapConstRef = const ImageMap&;
+using ImageMapRef = ImageMap&;
+using ImageMapConstUPtr = std::unique_ptr<const ImageMap>;
+using ImageMapUPtr = std::unique_ptr<ImageMap>;
+using ImageMapConstSPtr = std::shared_ptr<const ImageMap>;
+using ImageMapSPtr = std::shared_ptr<ImageMap>;
+
+class ImageMapStorage;
+using ImageMapStorageUPtr = std::unique_ptr<ImageMapStorage>;
+using ImageMapStorageRef = ImageMapStorage&;
+using ImageMapStorageConstRef = const ImageMapStorage&;
 
 class LightSource;
 using LightSourceConstPtr = std::shared_ptr<const LightSource>;
 using LightSourcePtr = std::shared_ptr<LightSource>;
-
-class EnvLightSource;
-using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
-using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
-
-class LightStrategy;
-using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
-using LightStrategyPtr = std::shared_ptr<LightStrategy>;
+using LightSourceUPtr = std::unique_ptr<LightSource>;
+using LightSourceRef = LightSource&;
+using LightSourceConstRef = const LightSource&;
 
 class TriangleLight;
 using TriangleLightConstPtr = std::shared_ptr<const TriangleLight>;
 using TriangleLightPtr = std::shared_ptr<TriangleLight>;
+using TriangleLightConstUPtr = std::unique_ptr<const TriangleLight>;
+using TriangleLightUPtr = std::unique_ptr<TriangleLight>;
+using TriangleLightRef = TriangleLight&;
+using TriangleLightConstRef = const TriangleLight&;
+
+class EnvLightSource;
+using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
+using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
+using EnvLightSourceUPtr = std::unique_ptr<EnvLightSource>;
+using EnvLightSourceRef = EnvLightSource&;
+
+class LightStrategy;
+using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
+using LightStrategyPtr = std::shared_ptr<LightStrategy>;
+using LightStrategyUPtr = std::unique_ptr<LightStrategy>;
+using LightStrategyConstRef = const LightStrategy&;
 
 class Material;
 using MaterialRef = Material&;
-using MaterialPtr = std::shared_ptr<Material>;
-using MaterialConstPtr = std::shared_ptr<const Material>;
+using MaterialConstRef = const Material&;
+using MaterialUPtr = std::unique_ptr<Material>;
+using MaterialConstUPtr = std::unique_ptr<const Material>;
+using MatRef = OptionalPtr<const Material>;  // This is just for convenience
 
 class RenderConfig;
 using RenderConfigConstPtr = std::shared_ptr<const RenderConfig>;
@@ -104,29 +127,39 @@ using RenderEnginePtr = std::shared_ptr<RenderEngine>;
 using RenderEngineUPtr = std::unique_ptr<RenderEngine>;
 
 class Texture;
-using TexturePtr = std::shared_ptr<Texture>;
-using TextureConstPtr = std::shared_ptr<const Texture>;
+using TextureUPtr = std::unique_ptr<Texture>;
 using TextureRef = Texture&;
+using TextureConstRef = const Texture&;
 
 class FresnelTexture;
-using FresnelTextureConstPtr = std::shared_ptr<const FresnelTexture>;
+using FresnelTextureUPtr = std::unique_ptr<FresnelTexture>;
+using FresnelTextureConstRef = const FresnelTexture &;
+
+class ImageMapTexture;
+using ImageMapTextureUPtr = std::unique_ptr<ImageMapTexture>;
 
 class TextureMapping2D;
-using TextureMapping2DPtr = std::shared_ptr<TextureMapping2D>;
-using TextureMapping2DConstPtr = std::shared_ptr<const TextureMapping2D>;
+using TextureMapping2DUPtr = std::unique_ptr<TextureMapping2D>;
+using TextureMapping2DRef = TextureMapping2D&;
+using TextureMapping2DConstRef = const TextureMapping2D&;
 
 class TextureMapping3D;
-using TextureMapping3DPtr = std::shared_ptr<TextureMapping3D>;
-using TextureMapping3DConstPtr = std::shared_ptr<const TextureMapping3D>;
+using TextureMapping3DUPtr = std::unique_ptr<TextureMapping3D>;
+using TextureMapping3DRef = TextureMapping3D&;
+using TextureMapping3DConstRef = const TextureMapping3D&;
 
 class Volume;
-using VolumePtr = std::shared_ptr<Volume>;
-using VolumeConstPtr = std::shared_ptr<const Volume>;
+using VolumeUPtr = std::unique_ptr<Volume>;
+//using VolumePtr = std::shared_ptr<Volume>;
+//using VolumeConstPtr = std::shared_ptr<const Volume>;
 using VolumeRef = Volume&;
 using VolumeConstRef = const Volume&;
 
 class Sampler;
 using SamplerUPtr = std::unique_ptr<Sampler>;
+
+class SamplerSharedData;
+using SamplerSharedDataUPtr = std::unique_ptr<SamplerSharedData>;
 
 }  // namespace slg
 

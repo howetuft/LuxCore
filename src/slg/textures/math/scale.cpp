@@ -27,18 +27,18 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float ScaleTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex1->GetFloatValue(hitPoint) * tex2->GetFloatValue(hitPoint);
+	return GetTexture1().GetFloatValue(hitPoint) * GetTexture2().GetFloatValue(hitPoint);
 }
 
 Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
+	return GetTexture1().GetSpectrumValue(hitPoint) * GetTexture2().GetSpectrumValue(hitPoint);
 }
 
 Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	const Vector u = Normalize(hitPoint.dpdu);
 	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
 
-	const Normal n1 = tex1->Bump(hitPoint, sampleDistance);
+	const Normal n1 = GetTexture1().Bump(hitPoint, sampleDistance);
 	const float nn1 = Dot(n1, hitPoint.shadeN);
 	float du1, dv1;
 	if (nn1 != 0.f) {
@@ -49,7 +49,7 @@ Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 		dv1 = 0.f;
 	}
 
-	const Normal n2 = tex2->Bump(hitPoint, sampleDistance);
+	const Normal n2 = GetTexture2().Bump(hitPoint, sampleDistance);
 	const float nn2 = Dot(n2, hitPoint.shadeN);
 	float du2, dv2;
 	if (nn2 != 0.f) {
@@ -60,8 +60,8 @@ Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 		dv2 = 0.f;
 	}
 
-	const float t1 = tex1->GetFloatValue(hitPoint);
-	const float t2 = tex2->GetFloatValue(hitPoint);
+	const float t1 = GetTexture1().GetFloatValue(hitPoint);
+	const float t2 = GetTexture2().GetFloatValue(hitPoint);
 
 	const float du = du1 * t2 + t1 * du2;
 	const float dv = dv1 * t2 + t1 * dv2;
@@ -74,8 +74,8 @@ Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("scale"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
 
 	return props;
 }

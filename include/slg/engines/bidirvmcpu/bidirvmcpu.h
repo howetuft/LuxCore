@@ -113,7 +113,7 @@ private:
 
 class BiDirVMCPURenderEngine : public BiDirCPURenderEngine {
 public:
-	BiDirVMCPURenderEngine(RenderConfigConstRef cfg);
+	BiDirVMCPURenderEngine(RenderConfigRef cfg);
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -125,7 +125,7 @@ public:
 	static RenderEngineType GetObjectType() { return BIDIRVMCPU; }
 	static std::string GetObjectTag() { return "BIDIRVMCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class BiDirVMCPURenderThread;
 

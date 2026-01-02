@@ -45,12 +45,12 @@ Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const Properties &cfgProps
 void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
 	auto& config = app->config;
 	try {
-		props = GetOpenCLDeviceProperties(config.lock()->ToProperties());
+		props = GetOpenCLDeviceProperties(config->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("OCLDevice parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetOpenCLDeviceProperties(config.lock()->GetProperties());
+		props = GetOpenCLDeviceProperties(config->GetProperties());
 	}
 }
 
@@ -70,7 +70,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	try {
 		// Get the list of intersection devices
-		const Properties oclDevDescs = GetOpenCLDeviceDescs();
+		const auto& oclDevDescs = *GetOpenCLDeviceDescs();
 		const vector<string> oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
 
 		// Get the device selection string

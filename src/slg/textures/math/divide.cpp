@@ -27,38 +27,38 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float DivideTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const float value2 = tex2->GetFloatValue(hitPoint);
+	const float value2 = GetTexture2().GetFloatValue(hitPoint);
 	if (value2 == 0.f)
 		return 0.f;
 		
-	const float value1 = tex1->GetFloatValue(hitPoint);
+	const float value1 = GetTexture1().GetFloatValue(hitPoint);
 	return value1 / value2;
 }
 
 Spectrum DivideTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Spectrum value2 = tex2->GetSpectrumValue(hitPoint);
+	const Spectrum value2 = GetTexture2().GetSpectrumValue(hitPoint);
 	if (value2.Black())
 		return Spectrum(0.f);
 	
-	const Spectrum value1 = tex1->GetSpectrumValue(hitPoint);
+	const Spectrum value1 = GetTexture1().GetSpectrumValue(hitPoint);
 	return value1 / value2;
 }
 
 float DivideTexture::Y() const {
-	const float Y2 = tex2->Y();
+	const float Y2 = GetTexture2().Y();
 	if (Y2 == 0.f)
 		return 0.f;
 		
-	const float Y1 = tex1->Y();
+	const float Y1 = GetTexture1().Y();
 	return Y1 / Y2;
 }
 
 float DivideTexture::Filter() const {
-	const float filter2 = tex2->Filter();
+	const float filter2 = GetTexture2().Filter();
 	if (filter2 == 0.f)
 		return 0.f;
 		
-	const float filter1 = tex1->Filter();
+	const float filter1 = GetTexture1().Filter();
 	return filter1 / filter2;
 }
 
@@ -67,8 +67,8 @@ Properties DivideTexture::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("divide"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
 
 	return props;
 }

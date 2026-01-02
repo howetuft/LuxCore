@@ -27,16 +27,14 @@ namespace slg {
 
 class EdgeDetectorAOVShape : public Shape {
 public:
-	EdgeDetectorAOVShape(luxrays::ExtTriangleMeshPtr srcMesh,
+	EdgeDetectorAOVShape(luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int destAOVIndex0, const u_int destAOVIndex1, const u_int destAOVIndex2);
 	virtual ~EdgeDetectorAOVShape();
 
-	virtual ShapeType GetType() const { return EDGEDETECTORAOV; }
+	virtual ShapeType GetType() const override { return EDGEDETECTORAOV; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
-
-	luxrays::ExtTriangleMeshPtr mesh;
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 };
 
 }

@@ -34,7 +34,7 @@ public:
 
 // This function estimates the value of a scene radius starting from film plane
 // radius (without material ray differential support)
-extern float Film2SceneRadius(SceneConstPtr scene,
+extern float Film2SceneRadius(SceneConstRef scene,
 		const float imagePlaneRadius, const float defaultRadius,
 		const u_int maxPathDepth, const float timeStart, const float timeEnd,
 		const Film2SceneRadiusValidator *validator = nullptr);

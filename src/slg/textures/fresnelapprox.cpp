@@ -55,35 +55,35 @@ Spectrum FresnelApproxK(const Spectrum &Fr) {
 }
 
 float FresnelApproxNTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return FresnelApproxN(tex->GetFloatValue(hitPoint));
+	return FresnelApproxN(GetTexture().GetFloatValue(hitPoint));
 }
 
 Spectrum FresnelApproxNTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return FresnelApproxN(tex->GetSpectrumValue(hitPoint));
+	return FresnelApproxN(GetTexture().GetSpectrumValue(hitPoint));
 }
 
 float FresnelApproxNTexture::Y() const {
-	return FresnelApproxN(tex->Y());
+	return FresnelApproxN(GetTexture().Y());
 }
 
 float FresnelApproxNTexture::Filter() const {
-	return FresnelApproxN(tex->Filter());
+	return FresnelApproxN(GetTexture().Filter());
 }
 
 float FresnelApproxKTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return FresnelApproxK(tex->GetFloatValue(hitPoint));
+	return FresnelApproxK(GetTexture().GetFloatValue(hitPoint));
 }
 
 Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return FresnelApproxK(tex->GetSpectrumValue(hitPoint));
+	return FresnelApproxK(GetTexture().GetSpectrumValue(hitPoint));
 }
 
 float FresnelApproxKTexture::Y() const {
-	return FresnelApproxK(tex->Y());
+	return FresnelApproxK(GetTexture().Y());
 }
 
 float FresnelApproxKTexture::Filter() const {
-	return FresnelApproxK(tex->Filter());
+	return FresnelApproxK(GetTexture().Filter());
 }
 
 Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -91,7 +91,7 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
 
 	return props;
 }
@@ -101,7 +101,7 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
 
 	return props;
 }

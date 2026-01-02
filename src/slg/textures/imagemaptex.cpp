@@ -18,6 +18,7 @@
 
 #include "luxrays/core/geometry/matrix3x3.h"
 
+#include "slg/usings.h"
 #include "slg/textures/imagemaptex.h"
 #include "luxrays/core/randomgen.h"
 
@@ -29,22 +30,20 @@ using namespace slg;
 // Static random image map used by some texture
 //------------------------------------------------------------------------------
 
-static std::shared_ptr<ImageMap> AllocRandomImageMap(const u_int size) {
-	ImageMapPtr randomImageMap(ImageMap::AllocImageMap(3, size, size,
-			ImageMapConfig())
-	);
+ImageMapUPtr ImageMapTexture::AllocRandomImageMap(const u_int size) {
 
-	// Initialized the random image map
+	// Initialize the random image map
+	auto randomImageMap = ImageMap::AllocImageMap(3, size, size, ImageMapConfig());
+
 
 	RandomGenerator rndGen(123);
-	float *randomMapData = (float *)randomImageMap->GetStorage()->GetPixelsData();
+	float *randomMapData = (float *)randomImageMap->GetStorage().GetPixelsData();
 	for (u_int i = 0; i < 3 * size * size; ++i)
 		randomMapData[i] = rndGen.floatValue();
-	
+
 	return randomImageMap;
 }
 
-ImageMapPtr ImageMapTexture::randomImageMap(AllocRandomImageMap(512));
 
 //------------------------------------------------------------------------------
 // Histogram-preserving Blending for Randomized Texture Tiling functions
@@ -163,9 +162,9 @@ Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
 	const Spectrum noise = randomImageMap->GetSpectrum(noiseP);
 	const UV pos = UV(.25f, .25f) + UV(noise.c[0], noise.c[1]) * .5f + offset;
 
-	Spectrum YCbCr = RGBToYCbCr(imageMap->GetSpectrum(pos));
+	Spectrum YCbCr = RGBToYCbCr(GetImageMap().GetSpectrum(pos));
 	
-	YCbCr.c[0] = randomizedTilingLUT->GetFloat(UV(YCbCr.c[0], .5f));
+	YCbCr.c[0] = GetRandomizedTilingLUT().GetFloat(UV(YCbCr.c[0], .5f));
 
 	return YCbCr;
 }
@@ -256,7 +255,7 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
     // float W = sqrtf(uvWeights.x * uvWeights.x + uvWeights.y * uvWeights.y + uvWeights.z * uvWeights.z);
     // YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], W);
 
-	YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
+	YCbCr.c[0] = GetRandomizedTilingInvLUT().GetFloat(UV(YCbCr.c[0], .5f));
 
 	return YCbCrToRGB(YCbCr);
 }
@@ -265,26 +264,42 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-std::shared_ptr<ImageMapTexture>
-ImageMapTexture::AllocImageMapTexture(const string &texName,
-		ImageMapCache &imgMapCache, ImageMapConstPtr img, TextureMapping2DConstPtr mp,
-		const float g, const bool rt) {
-	auto imt = std::make_shared<ImageMapTexture>(texName, img, mp, g, rt);
+ImageMapTextureUPtr
+ImageMapTexture::AllocImageMapTexture(
+	const string &texName,
+	ImageMapCache &imgMapCache,
+	ImageMapConstRef img,
+	TextureMapping2DUPtr&& mp,
+	const float g,
+	const bool rt
+) {
+	auto imt = std::make_unique<ImageMapTexture>(texName, img, std::move(mp), g, rt);
 
 	if (rt) {
 		// I need to add the LUTs to the ImageMapCache
-		imgMapCache.DefineImageMap(imt->randomizedTilingLUT);
-		imgMapCache.DefineImageMap(imt->randomizedTilingInvLUT);
+		imt->refRandomizedTilingLUT = &imgMapCache.DefineImageMap(
+			std::move(imt->randomizedTilingLUT)
+		);
+		imt->refRandomizedTilingInvLUT = &imgMapCache.DefineImageMap(
+			std::move(imt->randomizedTilingInvLUT)
+		);
 	}
 
 	return imt;
 }
 
-ImageMapTexture::ImageMapTexture(const string &texName,
-		ImageMapConstPtr img, TextureMapping2DConstPtr mp,
-		const float g, const bool rt) :
-		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
-		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
+ImageMapTexture::ImageMapTexture(
+	const string &texName,
+	ImageMapConstRef img,
+	TextureMapping2DUPtr&& mp,
+	const float g,
+	const bool rt
+) :
+	imageMap(img),
+	mapping(std::move(mp)),
+	gain(g),
+	randomizedTiling(rt)
+{
 	SetName(texName);
 
 	if (randomizedTiling) {
@@ -292,13 +307,13 @@ ImageMapTexture::ImageMapTexture(const string &texName,
 
 		vector<u_int> histogram(RT_HISTOGRAM_SIZE, 0);
 
-		const u_int width = img->GetWidth();
-		const u_int height = img->GetHeight();
+		const u_int width = img.GetWidth();
+		const u_int height = img.GetHeight();
 		const u_int pixelsCount = width * height;
 
 		for (u_int i = 0; i < pixelsCount; ++i) {
 			// Read the pixel RGB
-			const Spectrum rgb = imageMap->GetStorage()->GetSpectrum(i);
+			const Spectrum rgb = GetImageMap().GetStorage().GetSpectrum(i);
 
 			// RGB to YCbCr color space transformation
 			const Spectrum ycbcr = RGBToYCbCr(rgb);
@@ -323,18 +338,18 @@ ImageMapTexture::ImageMapTexture(const string &texName,
 					ImageMapStorage::WrapType::CLAMP,
 					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		randomizedTilingLUT->SetName(this->GetName() + "_#_randomizedTilingLUT");
-		float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
+		float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage().GetPixelsData();
 		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
 			randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
 
-		// Initialize randomized tiling LUT
+		// Initialize randomized tiling inverse LUT
 		randomizedTilingInvLUT = ImageMap::AllocImageMap(1, RT_LUT_SIZE, 1,
 				ImageMapConfig(1.f,
 					ImageMapStorage::StorageType::FLOAT,
 					ImageMapStorage::WrapType::CLAMP,
 					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		randomizedTilingInvLUT->SetName(this->GetName() + "_#_randomizedTilingInvLUT");
-		float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
+		float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage().GetPixelsData();
 
 		for (u_int i = 0; i < RT_LUT_SIZE; ++i) {
 			const float f = (i + .5f) / RT_LUT_SIZE;
@@ -357,18 +372,18 @@ ImageMapTexture::~ImageMapTexture() {
 	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 
-void ImageMapTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-	referencedImgMaps.insert(imageMap);
+void ImageMapTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	referencedImgMaps.insert(&imageMap);
 	if (randomizedTilingLUT)
-		referencedImgMaps.insert(randomizedTilingLUT);
+		referencedImgMaps.insert(refRandomizedTilingLUT);
 	if (randomizedTilingInvLUT)
-		referencedImgMaps.insert(randomizedTilingInvLUT);
+		referencedImgMaps.insert(refRandomizedTilingInvLUT);
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const UV pos = mapping->Map(hitPoint);
 
-	const float value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos).Y() : imageMap->GetFloat(pos);
+	const float value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos).Y() : GetImageMap().GetFloat(pos);
 
 	return gain * value;
 }
@@ -376,14 +391,14 @@ float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const UV pos = mapping->Map(hitPoint);
 
-	const Spectrum value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos) : imageMap->GetSpectrum(pos);
+	const Spectrum value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos) : GetImageMap().GetSpectrum(pos);
 
 	return gain * value;
 }
 
 Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	UV dst, du, dv;
-	dst = imageMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
+	dst = GetImageMap().GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
 
 	UV duv;
 	duv.u = gain * (dst.u * du.u + dst.v * du.v);
@@ -405,10 +420,10 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
 	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
 
 	const string fileName = useRealFileName ?
-		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+		GetImageMap().GetName() : imgMapCache.GetSequenceFileName(imageMap);
 	props.Set(Property("scene.textures." + name + ".file")(fileName));
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
-	props.Set(imageMap->ToProperties("scene.textures." + name, false));
+	props.Set(GetImageMap().ToProperties("scene.textures." + name, false));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 	props.Set(Property("scene.textures." + name + ".randomizedtiling.enable")(randomizedTiling));
 

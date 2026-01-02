@@ -44,7 +44,7 @@ public:
 
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
 
-	virtual void Init(const std::deque<MeshConstPtr > &meshes,
+	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
 
@@ -56,7 +56,7 @@ public:
 	friend class MBVHKernel;
 
 private:
-	static bool MeshPtrCompare(MeshConstPtr , MeshConstPtr );
+	static bool MeshPtrCompare(const Mesh *, const Mesh *);
 
 	void UpdateRootBVH();
 
@@ -74,7 +74,7 @@ private:
 	std::vector<const MotionSystem *> uniqueLeafsMotionSystem;
 	
 	const Context & ctx;
-	std::deque<MeshConstPtr > meshes;
+	std::deque<const Mesh * > meshes;
 
 	bool initialized;
 };

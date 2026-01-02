@@ -100,9 +100,9 @@ void CPURenderThread::WaitForDone() const {
 // CPURenderEngine
 //------------------------------------------------------------------------------
 
-CPURenderEngine::CPURenderEngine(RenderConfigConstRef cfg) : RenderEngine(cfg) {
+CPURenderEngine::CPURenderEngine(RenderConfigRef cfg) : RenderEngine(cfg) {
 	// I have to use u_int because Property::Get<size_t>() is not defined
-	const size_t renderThreadCount =  Max<u_int>(1u, cfg.cfg->Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
+	const size_t renderThreadCount =  Max<u_int>(1u, cfg.GetConfig().Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -206,7 +206,7 @@ CPUNoTileRenderThread::~CPUNoTileRenderThread() {
 // CPUNoTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfigConstRef cfg) : CPURenderEngine(cfg) {
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfigRef cfg) : CPURenderEngine(cfg) {
 	samplerSharedData = NULL;
 }
 
@@ -284,7 +284,7 @@ void CPUTileRenderThread::StartRenderThread() {
 // CPUTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUTileRenderEngine::CPUTileRenderEngine(RenderConfigConstRef cfg) : CPURenderEngine(cfg) {
+CPUTileRenderEngine::CPUTileRenderEngine(RenderConfigRef cfg) : CPURenderEngine(cfg) {
 	tileRepository = NULL;
 }
 

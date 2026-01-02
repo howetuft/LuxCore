@@ -29,7 +29,7 @@ namespace slg {
 
 class UVTexture : public Texture {
 public:
-	UVTexture(TextureMapping2DConstPtr mp) : mapping(mp) { }
+	UVTexture(TextureMapping2DUPtr&& mp) : mapping(std::move(mp)) { }
 
 	virtual TextureType GetType() const { return UV_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
@@ -41,12 +41,12 @@ public:
 		return luxrays::Spectrum(.5f, .5f, 0.f).Filter();
 	}
 
-	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
+	TextureMapping2DConstRef GetTextureMapping() const { return *mapping; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureMapping2DConstPtr mapping;
+	TextureMapping2DUPtr mapping;
 };
 
 }

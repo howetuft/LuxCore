@@ -28,7 +28,7 @@ using namespace slg;
 // Bevel texture
 //------------------------------------------------------------------------------
 
-BevelTexture::BevelTexture(TextureConstPtr t, const float r) : tex(t), radius(r) {
+BevelTexture::BevelTexture(TextureConstRef t, const float r) : tex(t), radius(r) {
 }
 
 BevelTexture::~BevelTexture() {

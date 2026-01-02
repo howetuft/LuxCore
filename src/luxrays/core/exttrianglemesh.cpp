@@ -20,6 +20,7 @@
 #include <fstream>
 #include <cstring>
 #include <execution>
+#include <span>
 
 #include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -289,27 +290,27 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
-void ExtTriangleMesh::CopyAOV(ExtTriangleMeshPtr destMesh) const {
+void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (HasVertexAOV(i)) {
 			float *v = new float[vertCount];
 			copy(&vertAOV[i][0], &vertAOV[i][0] + vertCount, v);
 
-			destMesh->DeleteVertexAOV(i);
-			destMesh->SetVertexAOV(i, v);
+			destMesh.DeleteVertexAOV(i);
+			destMesh.SetVertexAOV(i, v);
 		}
 
 		if (HasTriAOV(i)) {
 			float *t = new float[triCount];
 			copy(&triAOV[i][0], &triAOV[i][0] + triCount, t);
 
-			destMesh->DeleteTriAOV(i);
-			destMesh->SetTriAOV(i, t);
+			destMesh.DeleteTriAOV(i);
+			destMesh.SetTriAOV(i, t);
 		}
 	}
 }
 
-ExtTriangleMeshPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
@@ -355,17 +356,17 @@ ExtTriangleMeshPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshT
 			as[i] = meshAlphas ? (*meshAlphas)[i] : nullptr;
 	}
 
-	auto m =  std::make_shared<ExtTriangleMesh>(vertCount, triCount,
+	auto m =  std::make_unique<ExtTriangleMesh>(vertCount, triCount,
 			vs, ts, ns, &us, &cs, &as, bRadius);
 	m->SetLocal2World(appliedTrans);
 
 	// Copy AOV too
-	CopyAOV(m);
+	CopyAOV(*m);
 
 	return m;
 }
 
-ExtTriangleMeshPtr ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+ExtTriangleMeshUPtr ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) const {
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
@@ -385,14 +386,17 @@ ExtTriangleMeshPtr ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris
 	return CopyExt(meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas, bRadius);
 }
 
-ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr > &meshes,
-		const vector<Transform> *trans) {
+ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
+	std::span<std::reference_wrapper<const ExtTriangleMesh>> meshes,
+	std::optional<std::span<Transform>> trans
+) {
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
-	for (auto mesh : meshes) {
-		totalVertexCount += mesh->GetTotalVertexCount();
-		totalTriangleCount += mesh->GetTotalTriangleCount();
+	for (auto& meshref : meshes) {
+		const ExtTriangleMesh& mesh = meshref;
+		totalVertexCount += mesh.GetTotalVertexCount();
+		totalTriangleCount += mesh.GetTotalTriangleCount();
 	}
 
 	assert (totalVertexCount > 0);
@@ -409,31 +413,32 @@ ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr >
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshVertAOV;
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshTriAOV;
 
-	if (meshes[0]->HasNormals())
+	ExtTriangleMeshConstRef mesh0 = meshes[0];
+	if (mesh0.HasNormals())
 		meshNormals = new Normal[totalVertexCount];
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (meshes[0]->HasUVs(i))
+		if (mesh0.HasUVs(i))
 			meshUVs[i] = new UV[totalVertexCount];
 		else
 			meshUVs[i] = nullptr;
 
-		if (meshes[0]->HasColors(i))
+		if (mesh0.HasColors(i))
 			meshCols[i] = new Spectrum[totalVertexCount];
 		else
 			meshCols[i] = nullptr;
 
-		if (meshes[0]->HasAlphas(i))
+		if (mesh0.HasAlphas(i))
 			meshAlphas[i] = new float[totalVertexCount];
 		else
 			meshAlphas[i] = nullptr;
 
-		if (meshes[0]->HasVertexAOV(i))
+		if (mesh0.HasVertexAOV(i))
 			meshVertAOV[i] = new float[totalVertexCount];
 		else
 			meshVertAOV[i] = nullptr;
 
-		if (meshes[0]->HasTriAOV(i))
+		if (mesh0.HasTriAOV(i))
 			meshTriAOV[i] = new float[totalTriangleCount];
 		else
 			meshTriAOV[i] = nullptr;
@@ -442,7 +447,7 @@ ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr >
 	u_int vIndex = 0;
 	u_int iIndex = 0;
 	for (u_int meshIndex = 0; meshIndex < meshes.size(); ++meshIndex) {
-		ExtTriangleMeshConstPtr mesh = meshes[meshIndex];
+		ExtTriangleMeshConstRef mesh = meshes[meshIndex];
 		const Transform *transformation = trans ? &((*trans)[meshIndex]) : nullptr;
 
 		// It is a ExtTriangleMesh so I can use Transform::TRANS_IDENTITY everywhere
@@ -450,71 +455,71 @@ ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr >
 
 		// Copy the mesh vertices
 		if (transformation) {
-			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshVertices[i + vIndex] = (*transformation) * mesh->GetVertex(Transform::TRANS_IDENTITY, i);
+			for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+				meshVertices[i + vIndex] = (*transformation) * mesh.GetVertex(Transform::TRANS_IDENTITY, i);
 		} else {
-			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshVertices[i + vIndex] = mesh->GetVertex(Transform::TRANS_IDENTITY, i);			
+			for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+				meshVertices[i + vIndex] = mesh.GetVertex(Transform::TRANS_IDENTITY, i);			
 		}
 
 		// Copy the mesh normals
-		if (meshes[0]->HasNormals() != mesh->HasNormals())
+		if (mesh0.HasNormals() != mesh.HasNormals())
 			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of normal definitions");
-		if (meshes[0]->HasNormals()) {
+		if (mesh0.HasNormals()) {
 			if (transformation) {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshNormals[i + vIndex] = Normalize((*transformation) * mesh->GetShadeNormal(Transform::TRANS_IDENTITY, i));
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshNormals[i + vIndex] = Normalize((*transformation) * mesh.GetShadeNormal(Transform::TRANS_IDENTITY, i));
 			} else {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshNormals[i + vIndex] = mesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshNormals[i + vIndex] = mesh.GetShadeNormal(Transform::TRANS_IDENTITY, i);
 			}
 		}
 
 		for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {
 			// Copy the mesh uvs
-			if (meshes[0]->HasUVs(dataIndex) != mesh->HasUVs(dataIndex))
+			if (mesh0.HasUVs(dataIndex) != mesh.HasUVs(dataIndex))
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of UV definitions");
-			if (meshes[0]->HasUVs(dataIndex)) {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshUVs[dataIndex][i + vIndex] = mesh->GetUV(i, dataIndex);
+			if (mesh0.HasUVs(dataIndex)) {
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshUVs[dataIndex][i + vIndex] = mesh.GetUV(i, dataIndex);
 			}
 
 			// Copy the mesh colors
-			if (meshes[0]->HasColors(dataIndex) != mesh->HasColors(dataIndex))
+			if (mesh0.HasColors(dataIndex) != mesh.HasColors(dataIndex))
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of color definitions");
-			if (meshes[0]->HasColors(dataIndex)) {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshCols[dataIndex][i + vIndex] = mesh->GetColor(i, dataIndex);
+			if (mesh0.HasColors(dataIndex)) {
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshCols[dataIndex][i + vIndex] = mesh.GetColor(i, dataIndex);
 			}
 
 			// Copy the mesh alphas
-			if (meshes[0]->HasAlphas(dataIndex) != mesh->HasAlphas(dataIndex))
+			if (mesh0.HasAlphas(dataIndex) != mesh.HasAlphas(dataIndex))
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of alpha definitions");
-			if (meshes[0]->HasAlphas(dataIndex)) {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshAlphas[dataIndex][i + vIndex] = mesh->GetAlpha(i, dataIndex);
+			if (mesh0.HasAlphas(dataIndex)) {
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshAlphas[dataIndex][i + vIndex] = mesh.GetAlpha(i, dataIndex);
 			}
 
 			// Copy the mesh vertex AOV
-			if (meshes[0]->HasVertexAOV(dataIndex) != mesh->HasVertexAOV(dataIndex))
+			if (mesh0.HasVertexAOV(dataIndex) != mesh.HasVertexAOV(dataIndex))
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of vertex AOV definitions");
-			if (meshes[0]->HasVertexAOV(dataIndex)) {
-				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshVertAOV[dataIndex][i + vIndex] = mesh->GetVertexAOV(i, dataIndex);
+			if (mesh0.HasVertexAOV(dataIndex)) {
+				for (u_int i = 0; i < mesh.GetTotalVertexCount(); ++i)
+					meshVertAOV[dataIndex][i + vIndex] = mesh.GetVertexAOV(i, dataIndex);
 			}
 
 			// Copy the mesh triangle AOV
-			if (meshes[0]->HasTriAOV(dataIndex) != mesh->HasTriAOV(dataIndex))
+			if (mesh0.HasTriAOV(dataIndex) != mesh.HasTriAOV(dataIndex))
 				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of triangle AOV definitions");
-			if (meshes[0]->HasTriAOV(dataIndex)) {
-				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-					meshTriAOV[dataIndex][i + vIndex] = mesh->GetTriAOV(i, dataIndex);
+			if (mesh0.HasTriAOV(dataIndex)) {
+				for (u_int i = 0; i < mesh.GetTotalTriangleCount(); ++i)
+					meshTriAOV[dataIndex][i + vIndex] = mesh.GetTriAOV(i, dataIndex);
 			}
 		}
 
 		// Translate mesh indices
-		const Triangle *tris = mesh->GetTriangles();
-		for (u_int j = 0; j < mesh->GetTotalTriangleCount(); j++) {
+		const Triangle *tris = mesh.GetTriangles();
+		for (u_int j = 0; j < mesh.GetTotalTriangleCount(); j++) {
 			meshTris[iIndex].v[0] = tris[j].v[0] + vIndex;
 			meshTris[iIndex].v[1] = tris[j].v[1] + vIndex;
 			meshTris[iIndex].v[2] = tris[j].v[2] + vIndex;
@@ -523,10 +528,10 @@ ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr >
 		}
 
 
-		vIndex += mesh->GetTotalVertexCount();
+		vIndex += mesh.GetTotalVertexCount();
 	}
 
-	auto newMesh = std::make_shared<ExtTriangleMesh>(totalVertexCount, totalTriangleCount,
+	auto newMesh = std::make_unique<ExtTriangleMesh>(totalVertexCount, totalTriangleCount,
 			meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas);
 	for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {
 		newMesh->SetVertexAOV(dataIndex, meshVertAOV[dataIndex]);
@@ -539,16 +544,17 @@ ExtTriangleMeshPtr ExtTriangleMesh::Merge(const vector<ExtTriangleMeshConstPtr >
 // For some reason, LoadSerialized() and SaveSerialized() must be in the same
 // file of BOOST_CLASS_EXPORT_IMPLEMENT()
 
-ExtTriangleMeshPtr ExtTriangleMesh::LoadSerialized(const string &fileName) {
+ExtTriangleMeshUPtr ExtTriangleMesh::LoadSerialized(const string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	ExtTriangleMeshPtr mesh;
+	ExtTriangleMesh * mesh;
 	sif.GetArchive() >> mesh;
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading serialized scene: " + fileName);
 
-	return mesh;
+	ExtTriangleMeshUPtr res(mesh);
+	return res;
 }
 
 void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
@@ -577,8 +583,8 @@ struct is_virtual_base_of<luxrays::InstanceTriangleMesh, luxrays::ExtInstanceTri
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
 
-void ExtInstanceTriangleMesh::UpdateMeshReferences(ExtTriangleMeshPtr oldMesh, ExtTriangleMeshPtr newMesh) {
-	if (static_pointer_cast<ExtTriangleMesh>(mesh) == oldMesh) {
+void ExtInstanceTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh, ExtTriangleMesh& newMesh) {
+	if (&static_cast<ExtTriangleMesh&>(*mesh) == &oldMesh) {
 		mesh = newMesh;
 		cachedArea = false;
 	}
@@ -598,9 +604,9 @@ struct is_virtual_base_of<luxrays::MotionTriangleMesh, luxrays::ExtMotionTriangl
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMotionTriangleMesh)
 
-void ExtMotionTriangleMesh::UpdateMeshReferences(ExtTriangleMeshPtr oldMesh, ExtTriangleMeshPtr newMesh) {
-	if (static_pointer_cast<ExtTriangleMesh>(mesh) == oldMesh) {
-		mesh = oldMesh;
+void ExtMotionTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh, ExtTriangleMesh& newMesh) {
+	if (&static_cast<ExtTriangleMesh&>(*mesh) == &oldMesh) {
+		mesh = newMesh;
 		cachedArea = false;
 	}
 }

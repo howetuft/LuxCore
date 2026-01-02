@@ -26,14 +26,14 @@ using namespace slg;
 // NormalMap texture
 //------------------------------------------------------------------------------
 
-NormalMapTexture::NormalMapTexture(TextureConstPtr t, const float s) : tex(t), scale(s) {
+NormalMapTexture::NormalMapTexture(TextureRef t, const float s) : tex(t), scale(s) {
 }
 
 NormalMapTexture::~NormalMapTexture() {
 }
 
 Normal NormalMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-    const Spectrum rgb = tex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+    const Spectrum rgb = GetTexture().GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	// Normal from normal map
 	Vector n(rgb.c);
@@ -55,7 +55,7 @@ Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".scale")(scale));
 
 	return props;

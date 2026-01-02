@@ -29,7 +29,7 @@ namespace slg {
 
 class RoundingTexture : public Texture {
 public:
-    RoundingTexture(TextureConstPtr t, TextureConstPtr i) : texture(t), increment(i) { }
+    RoundingTexture(TextureRef t, TextureRef i) : texture(t), increment(i) { }
     virtual ~RoundingTexture() { }
 
     virtual TextureType GetType(void) const { return ROUNDING_TEX; }
@@ -39,19 +39,19 @@ public:
     virtual float Y() const { return 1.f; }
     virtual float Filter() const { return 1.f; }
 
-    virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+    virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
         Texture::AddReferencedTextures(referencedTexs);
 
-        texture->AddReferencedTextures(referencedTexs);
-        increment->AddReferencedTextures(referencedTexs);
+        GetTexture().AddReferencedTextures(referencedTexs);
+        GetIncrement().AddReferencedTextures(referencedTexs);
     }
 
-    virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > referencedImgMaps) const {
-        texture->AddReferencedImageMaps(referencedImgMaps);
-        increment->AddReferencedImageMaps(referencedImgMaps);
+    virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > referencedImgMaps) const {
+        GetTexture().AddReferencedImageMaps(referencedImgMaps);
+        GetIncrement().AddReferencedImageMaps(referencedImgMaps);
     }
 
-    virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+    virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
         if(texture == oldTex) {
             texture = newTex;
         }
@@ -60,14 +60,14 @@ public:
         }
     }
 
-    TextureConstPtr GetTexture() const { return texture; }
-    TextureConstPtr GetIncrement() const { return increment; }
+    TextureConstRef GetTexture() const { return texture; }
+    TextureConstRef GetIncrement() const { return increment; }
 
     virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-    TextureConstPtr texture;
-    TextureConstPtr increment;
+    std::reference_wrapper<Texture> texture;
+    std::reference_wrapper<Texture> increment;
 
     float round(float value, float increment) const;
 };

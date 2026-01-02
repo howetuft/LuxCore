@@ -33,8 +33,14 @@ using namespace luxcore::detail;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-static void CreateBox(auto const& scene, const string &objName, const string &meshName,
-		const string &matName, const bool enableUV, const BBox &bbox) {
+static void CreateBox(
+	auto& scene,
+	const string &objName,
+	const string &meshName,
+	const string &matName,
+	const bool enableUV,
+	const BBox &bbox
+) {
 	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
@@ -90,7 +96,7 @@ static void CreateBox(auto const& scene, const string &objName, const string &me
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
+		scene.DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -125,7 +131,7 @@ static void CreateBox(auto const& scene, const string &objName, const string &me
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
+		scene.DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
 	}
 
 	// Add the object to the scene
@@ -134,7 +140,7 @@ static void CreateBox(auto const& scene, const string &objName, const string &me
 		"scene.objects." + objName + ".shape = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
 		);
-	scene->Parse(props);
+	scene.Parse(props);
 }
 
 static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &scnSetUpProps) {
@@ -144,7 +150,8 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG(scnSetUpProps);
 
 	// Build the scene to render
-	auto scene = Scene::Create();
+	auto sceneptr = Scene::Create();
+	auto& scene = *sceneptr;
 
 	auto scnProps = std::make_shared<Properties>(scnSetUpProps);
 
@@ -171,7 +178,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 		}
 	}
 
-	scene->DefineImageMap<u_char>("image.png", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
+	scene.DefineImageMap<u_char>("image.png", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 
 	// Define light sources
 	const Property lightSetUpProp = scnSetUpProps.Get(Property("kernelcachefill.light.types")("infinite"));
@@ -189,7 +196,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	}
 
 	// Parse the scene definition properties
-	scene->Parse(scnProps);
+	scene.Parse(scnProps);
 
 	const string geometrySetUp = cfgSetUpProps.Get(Property("kernelcachefill.geometry.type")("test")).Get<string>();
 	if (geometrySetUp == "test") {
@@ -201,7 +208,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 				Property("scene.materials.triangle_light.emission")(
 					1000000.f, 1000000.f, 1000000.f
 				);
-			scene->Parse(props);
+			scene.Parse(props);
 
 			CreateBox(
 				scene,
@@ -220,7 +227,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 
 			auto props = std::make_shared<Properties>();
 			*props << Property("scene.materials." + materialType + "_mat.type")(materialType);
-			scene->Parse(props);
+			scene.Parse(props);
 
 			CreateBox(scene, "mbox_" + materialType, "mesh_mbox_" + materialType, materialType + "_mat", false, BBox(Point(-1.75f, 1.5f, .75f + i), Point(-1.5f, 1.75f, .5f + i)));
 		}
@@ -235,7 +242,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 					Property("scene.textures." + textureType + "_tex.type")(textureType) <<
 					Property("scene.materials." + textureType + "_tmat.type")("matte") <<
 					Property("scene.materials." + textureType + "_tmat.kd")(textureType + "_tex");
-			scene->Parse(props);
+			scene.Parse(props);
 
 			CreateBox(scene, "tbox_" + textureType, "mesh_tbox_" + textureType, textureType + "_tmat", false, BBox(Point(-1.75f, 2.5f, .75f + i), Point(-1.5f, 2.75f, .5f + i)));
 		}
@@ -245,7 +252,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			return;
 		}
 
-		scene->Parse(scnProps);
+		scene.Parse(scnProps);
 	}
 
 	// Do the render
@@ -255,7 +262,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");
 
-	RenderConfigPtr config = RenderConfig::Create(cfgProps, std::move(scene));
+	RenderConfigPtr config = RenderConfig::Create(cfgProps, sceneptr);
 	auto session = RenderSession::Create(config);
 
 	// Start the rendering
@@ -272,7 +279,12 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG("Done.");
 }
 
-static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
+static void KernelCacheFillImpl(
+	const PropertiesPtr & configPtr,
+	void (*ProgressHandler)(const size_t, const size_t)
+) {
+	auto& config = *configPtr;
+
 	// Extract the render engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 	const size_t count = renderEngines.GetSize();
@@ -309,7 +321,7 @@ static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler
 
 #endif
 
-void luxcore::KernelCacheFill(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
+void luxcore::KernelCacheFill(const PropertiesPtr & config, void (*ProgressHandler)(const size_t, const size_t)) {
 	API_BEGIN("{}, {}", ToArgString(config),(void *)ProgressHandler);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

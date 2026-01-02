@@ -29,10 +29,10 @@ namespace slg {
 
 class ClothMaterial : public Material {
 public:
-	ClothMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-            const slg::ocl::ClothPreset preset, TextureConstPtr weft_kd, TextureConstPtr weft_ks,
-            TextureConstPtr warp_kd, TextureConstPtr warp_ks, const float repeat_u, const float repeat_v);
+	ClothMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+            const slg::ocl::ClothPreset preset, OptionalPtr<const Texture> weft_kd, OptionalPtr<const Texture> weft_ks,
+            OptionalPtr<const Texture> warp_kd, OptionalPtr<const Texture> warp_ks, const float repeat_u, const float repeat_v);
 
 	virtual MaterialType GetType() const { return CLOTH; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -50,16 +50,16 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
     slg::ocl::ClothPreset GetPreset() const { return Preset; }
-	TextureConstPtr GetWeftKd() const { return Weft_Kd; }
-	TextureConstPtr GetWeftKs() const { return Weft_Ks; }
-	TextureConstPtr GetWarpKd() const { return Warp_Kd; }
-	TextureConstPtr GetWarpKs() const { return Warp_Ks; }
+	OptionalPtr<const Texture> GetWeftKd() const { return Weft_Kd; }
+	OptionalPtr<const Texture> GetWeftKs() const { return Weft_Ks; }
+	OptionalPtr<const Texture> GetWarpKd() const { return Warp_Kd; }
+	OptionalPtr<const Texture> GetWarpKs() const { return Warp_Ks; }
 	const float GetRepeatU() const { return Repeat_U; }
 	const float GetRepeatV() const { return Repeat_V; }
     const float GetSpecularNormalization() const { return specularNormalization; }
@@ -81,10 +81,10 @@ private:
         const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
 
 	const slg::ocl::ClothPreset Preset;
-	TextureConstPtr Weft_Kd;
-	TextureConstPtr Weft_Ks;
-	TextureConstPtr Warp_Kd;
-	TextureConstPtr Warp_Ks;
+	OptionalPtr<const Texture> Weft_Kd;
+	OptionalPtr<const Texture> Weft_Ks;
+	OptionalPtr<const Texture> Warp_Kd;
+	OptionalPtr<const Texture> Warp_Ks;
 	const float Repeat_U;
 	const float Repeat_V;
 	float specularNormalization;

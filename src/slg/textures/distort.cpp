@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void DistortTexture::GetTmpHitPoint(const HitPoint &hitPoint, HitPoint &tmpHitPoint) const {
-	const Spectrum offsetColor = offset->GetSpectrumValue(hitPoint);
+	const Spectrum offsetColor = GetOffset().GetSpectrumValue(hitPoint);
 	const Vector offset = Vector(offsetColor.c[0], offsetColor.c[1], offsetColor.c[2]) * strength;
 	
 	tmpHitPoint = hitPoint;
@@ -40,7 +40,7 @@ Spectrum DistortTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	HitPoint tmpHitPoint;
 	GetTmpHitPoint(hitPoint, tmpHitPoint);
 	
-	return tex->GetSpectrumValue(tmpHitPoint);
+	return GetTex().GetSpectrumValue(tmpHitPoint);
 }
 
 float DistortTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -52,8 +52,8 @@ Properties DistortTexture::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("distort"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".offset")(offset->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture")(GetTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".offset")(GetOffset().GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".strength")(strength));
 
 	return props;

@@ -29,7 +29,7 @@ namespace slg {
 
 class WindyTexture : public Texture {
 public:
-	WindyTexture(TextureMapping3DConstPtr mp) : mapping(mp) { }
+	WindyTexture(TextureMapping3DUPtr&& mp) : mapping(std::move(mp)) { }
 	virtual ~WindyTexture() { }
 
 	virtual TextureType GetType() const { return WINDY; }
@@ -38,12 +38,12 @@ public:
 	virtual float Y() const { return .5f; }
 	virtual float Filter() const { return .5f; }
 
-	TextureMapping3DConstPtr GetTextureMapping() const { return mapping; }
+	TextureMapping3DConstRef GetTextureMapping() const { return *mapping; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureMapping3DConstPtr mapping;
+	TextureMapping3DUPtr mapping;
 };
 
 }

@@ -550,11 +550,11 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 }
 
 template <class T, u_int CHANNELS>
-ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
+ImageMapStorageUPtr ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 	const u_int pixelCount = width * height;
-	unique_ptr<ImageMapPixel<T, CHANNELS>[]> newPixels(new ImageMapPixel<T, CHANNELS>[pixelCount]);
+	auto newPixels = std::make_unique<ImageMapPixel<T, CHANNELS>[]>(pixelCount);
 
-	const ImageMapPixel<T, CHANNELS> *src = pixels;
+	const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 	ImageMapPixel<T, CHANNELS> *dst = newPixels.get();
 	for (u_int i = 0; i < pixelCount; ++i) {
 		dst->Set(src->c);
@@ -563,11 +563,13 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 		dst++;
 	}
 
-	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height, wrapType, filterType);
+	return std::make_unique<ImageMapStorageImpl<T, CHANNELS>>(
+		std::move(newPixels), width, height, wrapType, filterType
+	);
 }
 
 template <class T, u_int CHANNELS>
-ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSelectionType selectionType) const {
+ImageMapStorageUPtr ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSelectionType selectionType) const {
 	const u_int pixelCount = width * height;
 
 	// Convert the image if required
@@ -583,9 +585,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return nullptr;
 			} else if (CHANNELS == 2) {
-				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 1>[]>(pixelCount);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = (
 					(selectionType == ImageMapStorage::RED) ||
@@ -599,11 +601,13 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 1>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			} else {
 				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = selectionType - ImageMapStorage::RED;
 
@@ -614,7 +618,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 1>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			}
 		}
 		case ImageMapStorage::MEAN:
@@ -623,9 +629,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return nullptr;
 			} else if (CHANNELS == 2) {
-				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 1>[]>(pixelCount);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = 0;
 
@@ -636,11 +642,13 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 1>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			} else {
-				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 1>[]>(pixelCount);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 1> *dst = newPixels.get();
 
 				if (selectionType == ImageMapStorage::MEAN) {
@@ -659,7 +667,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					}
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 1>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			}
 		}
 		case ImageMapStorage::RGB: {
@@ -667,9 +677,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return nullptr;
 			} else {
-				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 3>[]>(pixelCount);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
@@ -679,7 +689,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 3>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			}
 		}
 		case ImageMapStorage::DIRECTX2OPENGL_NORMALMAP: {
@@ -687,9 +699,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return nullptr;
 			} else {
-				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 3>[]>(pixelCount);
 
-				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
@@ -704,7 +716,9 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType, filterType);
+				return std::make_unique<ImageMapStorageImpl<T, 3>>(
+					std::move(newPixels), width, height, wrapType, filterType
+				);
 			}
 		}
 		default:
@@ -777,15 +791,14 @@ ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg,
 	Init(fileName, cfg, widthHint, heightHint);
 }
 
-ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
-	pixelStorage = pixels;
+ImageMap::ImageMap(ImageMapStorageUPtr&& pixels, const float im, const float imy) {
+	pixelStorage = std::move(pixels);
 	imageMean = im;
 	imageMeanY = imy;
 	instrumentationInfo = nullptr;
 }
 
 ImageMap::~ImageMap() {
-	delete pixelStorage;
 	delete instrumentationInfo;
 }
 
@@ -793,7 +806,7 @@ void ImageMap::Reload() {
 	if (!instrumentationInfo)
 		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
 
-	delete pixelStorage;
+	pixelStorage.reset();
 	Init(GetName(), instrumentationInfo->originalImgCfg, 0, 0);
 }
 
@@ -801,7 +814,7 @@ void ImageMap::Reload(const string &fileName, const u_int widthHint, const u_int
 	if (!instrumentationInfo)
 		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName() + " from " + fileName);
 
-	delete pixelStorage;
+	pixelStorage.reset();
 	Init(fileName, instrumentationInfo->originalImgCfg, widthHint, heightHint);
 }
 
@@ -963,50 +976,79 @@ UV ImageMap::GetDuv(const UV &uv) const {
 	return pixelStorage->GetDuv(uv);
 }
 
-ImageMapPtr ImageMap::AllocImageMap(
+ImageMapUPtr ImageMap::AllocImageMap(
 	const u_int channels,
 	const u_int width,
 	const u_int height,
 	const ImageMapConfig &cfg
 ) {
-	ImageMapStorage *imageMapStorage;
-	switch (cfg.storageType) {
-		case ImageMapStorage::BYTE:
-			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height,cfg.wrapType, cfg.filterType);
-			break;
-		case ImageMapStorage::HALF:
-			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType, cfg.filterType);
-			break;
-		case ImageMapStorage::FLOAT:
-			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType, cfg.filterType);
-			break;
-		default:
-			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
-	}
-	auto imageMap = std::make_shared<ImageMap>(imageMapStorage, 0.f, 0.f);
 
-	return imageMap;
+	// This lambda avoids to deal with a predeclared UPtr (at low level, it avoids a
+	// a release)
+	auto createIMS = [&]() {
+		switch (cfg.storageType) {
+			case ImageMapStorage::BYTE:
+				return AllocImageMapStorage<u_char>(
+					channels, width, height,cfg.wrapType, cfg.filterType
+				);
+				break;
+			case ImageMapStorage::HALF:
+				return AllocImageMapStorage<half>(
+					channels, width, height, cfg.wrapType, cfg.filterType
+				);
+				break;
+			case ImageMapStorage::FLOAT:
+				return AllocImageMapStorage<float>(
+					channels, width, height, cfg.wrapType, cfg.filterType
+				);
+				break;
+			default:
+				throw runtime_error(
+					"Unknown storage type in ImageMap::AllocImageMap(): "
+					+ ToString(cfg.storageType)
+				);
+		}  // Switch
+	};  // lambda
+
+	return std::make_unique<ImageMap>(std::move(createIMS()), 0.f, 0.f);
+
 }
 
-ImageMapPtr ImageMap::AllocImageMap(void *pixels, const u_int channels,
-		const u_int width, const u_int height, const ImageMapConfig &cfg) {
-	ImageMapStorage *imageMapStorage;
-	switch (cfg.storageType) {
-		case ImageMapStorage::BYTE:
-			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType, cfg.filterType);
-			break;
-		case ImageMapStorage::HALF:
-			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType, cfg.filterType);
-			break;
-		case ImageMapStorage::FLOAT:
-			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType, cfg.filterType);
-			break;
-		default:
-			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
-	}
+ImageMapUPtr ImageMap::AllocImageMap(
+	void *pixels, const u_int channels,
+	const u_int width, const u_int height, const ImageMapConfig &cfg
+) {
 
-	auto imageMap = std::make_shared<ImageMap>(imageMapStorage, 0.f , 0.f);
-	memcpy(imageMap->GetStorage()->GetPixelsData(), pixels, imageMap->GetStorage()->GetMemorySize());
+	// This lambda avoids to deal with a predeclared UPtr (at low level, it avoids a
+	// a release)
+	auto&& createIMS = [&]() {
+		switch (cfg.storageType) {
+			case ImageMapStorage::BYTE:
+				return AllocImageMapStorage<u_char>(
+					channels, width, height,cfg.wrapType, cfg.filterType
+				);
+				break;
+			case ImageMapStorage::HALF:
+				return AllocImageMapStorage<half>(
+					channels, width, height, cfg.wrapType, cfg.filterType
+				);
+				break;
+			case ImageMapStorage::FLOAT:
+				return AllocImageMapStorage<float>(
+					channels, width, height, cfg.wrapType, cfg.filterType
+				);
+				break;
+			default:
+				throw runtime_error(
+					"Unknown storage type in ImageMap::AllocImageMap(): "
+					+ ToString(cfg.storageType)
+				);
+		}  // Switch
+	};  // lambda
+
+	auto imageMap = std::make_unique<ImageMap>(std::move(createIMS()), 0.f , 0.f);
+
+	memcpy(imageMap->GetStorage().GetPixelsData(), pixels, imageMap->GetStorage().GetMemorySize());
 
 	switch (cfg.colorSpaceCfg.colorSpaceType) {
 		case ColorSpaceConfig::NOP_COLORSPACE:
@@ -1083,12 +1125,11 @@ void ImageMap::Preprocess() {
 }
 
 void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType) {
-	ImageMapStorage *newPixelStorage = pixelStorage->SelectChannel(selectionType);
+	ImageMapStorageUPtr newPixelStorage = pixelStorage->SelectChannel(selectionType);
 
 	// Replace the old image map storage if required
 	if (newPixelStorage) {
-		delete pixelStorage;
-		pixelStorage = newPixelStorage;
+		pixelStorage = std::move(newPixelStorage);
 	}
 }
 
@@ -1105,14 +1146,18 @@ void ImageMap::ConvertStorage(const ImageMapStorage::StorageType newStorageType,
 	const ImageMapStorage::FilterType filterType = pixelStorage->filterType;
 
 	// Allocate the new image map storage
-	ImageMapStorage *newPixelStorage;
+	ImageMapStorageUPtr newPixelStorage;
 	switch (newStorageType) {
 		case ImageMapStorage::BYTE: {
-			newPixelStorage = AllocImageMapStorage<u_char>(newChannelCount, width, height, wrapType, filterType);
+			newPixelStorage = AllocImageMapStorage<u_char>(
+				newChannelCount, width, height, wrapType, filterType
+			);
 			break;
 		}
 		case ImageMapStorage::HALF: {
-			newPixelStorage = AllocImageMapStorage<half>(newChannelCount, width, height, wrapType, filterType);
+			newPixelStorage = AllocImageMapStorage<half>(
+				newChannelCount, width, height, wrapType, filterType
+			);
 			break;
 		}
 		case ImageMapStorage::FLOAT: {
@@ -1154,8 +1199,7 @@ void ImageMap::ConvertStorage(const ImageMapStorage::StorageType newStorageType,
 	}
 	
 	// I can delete the current image
-	delete pixelStorage;
-	pixelStorage = newPixelStorage;
+	pixelStorage = std::move(newPixelStorage);
 }
 
 void ImageMap::ConvertColorSpace(const string &configFileName,
@@ -1233,7 +1277,7 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	// Save the filter mode
 	const ImageMapStorage::FilterType filterType = pixelStorage->filterType;
 	// I can delete the current image
-	delete pixelStorage;
+	pixelStorage.reset();
 
 	// Allocate the new image map storage
 	switch (storageType) {
@@ -1328,42 +1372,54 @@ void ImageMap::WriteImage(const string &fileName) const {
 		throw runtime_error("Failed image save: " + fileName);
 }
 
-ImageMapPtr ImageMap::Copy() const {
-	return std::make_shared<ImageMap>(pixelStorage->Copy(), imageMean, imageMeanY);
+ImageMapUPtr ImageMap::Copy() const {
+	return std::make_unique<ImageMap>(pixelStorage->Copy(), imageMean, imageMeanY);
 }
 
-ImageMapPtr ImageMap::Merge(ImageMapConstPtr map0, ImageMapConstPtr map1, const u_int channels,
-		const u_int width, const u_int height) {
+ImageMapUPtr ImageMap::Merge(
+	ImageMapConstRef map0,
+	ImageMapConstRef map1,
+	const u_int channels,
+	const u_int width,
+	const u_int height
+) {
 	if (channels == 1) {
 		// I assume the images have the same gamma
-		auto imgMap = AllocImageMap(1, width, height,
-				ImageMapConfig(1.f,
-					ImageMapStorage::StorageType::FLOAT,
-					map0->GetStorage()->wrapType,
-					ImageMapStorage::ChannelSelectionType::DEFAULT));
-		float *mergedImg = (float *)imgMap->GetStorage()->GetPixelsData();
+		auto imgMap = AllocImageMap(
+			1, width, height,
+			ImageMapConfig(
+				1.f,
+				ImageMapStorage::StorageType::FLOAT,
+				map0.GetStorage().wrapType,
+				ImageMapStorage::ChannelSelectionType::DEFAULT
+			)
+		);
+		float *mergedImg = (float *)imgMap->GetStorage().GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				mergedImg[x + y * width] = map0->GetFloat(uv) * map1->GetFloat(uv);
+				mergedImg[x + y * width] = map0.GetFloat(uv) * map1.GetFloat(uv);
 			}
 		}
 
 		return imgMap;
 	} else if (channels == 3) {
 		// I assume the images have the same gamma
-		auto imgMap = AllocImageMap(3, width, height,
-				ImageMapConfig(1.f,
-					ImageMapStorage::StorageType::FLOAT,
-					map0->GetStorage()->wrapType,
-					ImageMapStorage::ChannelSelectionType::DEFAULT));
-		float *mergedImg = (float *)imgMap->GetStorage()->GetPixelsData();
+		auto imgMap = AllocImageMap(
+			3, width, height,
+			ImageMapConfig(
+				1.f,
+				ImageMapStorage::StorageType::FLOAT,
+				map0.GetStorage().wrapType,
+				ImageMapStorage::ChannelSelectionType::DEFAULT)
+			);
+		float *mergedImg = (float *)imgMap->GetStorage().GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				const Spectrum c = map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
+				const Spectrum c = map0.GetSpectrum(uv) * map1.GetSpectrum(uv);
 
 				const u_int dstIndex = (x + y * width) * 3;
 				mergedImg[dstIndex] = c.c[0];
@@ -1377,27 +1433,27 @@ ImageMapPtr ImageMap::Merge(ImageMapConstPtr map0, ImageMapConstPtr map1, const 
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
 }
 
-ImageMapPtr ImageMap::Merge(ImageMapConstPtr map0, ImageMapConstPtr map1, const u_int channels) {
-	const u_int width = Max(map0->GetWidth(), map1->GetWidth());
-	const u_int height = Max(map0->GetHeight(), map1->GetHeight());
+ImageMapUPtr ImageMap::Merge(ImageMapConstRef map0, ImageMapConstRef map1, const u_int channels) {
+	const u_int width = Max(map0.GetWidth(), map1.GetWidth());
+	const u_int height = Max(map0.GetHeight(), map1.GetHeight());
 
 	return ImageMap::Merge(map0, map1, channels, width, height);
 }
 
-ImageMapPtr ImageMap::Resample(ImageMapConstPtr map, const u_int channels,
+ImageMapUPtr ImageMap::Resample(ImageMapConstRef map, const u_int channels,
 		const u_int width, const u_int height) {
 	if (channels == 1) {
 		auto imgMap = AllocImageMap(1, width, height,
 				ImageMapConfig(1.f,
 					ImageMapStorage::StorageType::FLOAT,
-					map->GetStorage()->wrapType,
+					map.GetStorage().wrapType,
 					ImageMapStorage::ChannelSelectionType::DEFAULT));
-		float *newImg = (float *)imgMap->GetStorage()->GetPixelsData();
+		float *newImg = (float *)imgMap->GetStorage().GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				newImg[x + y * width] = map->GetFloat(uv);
+				newImg[x + y * width] = map.GetFloat(uv);
 			}
 		}
 
@@ -1406,14 +1462,14 @@ ImageMapPtr ImageMap::Resample(ImageMapConstPtr map, const u_int channels,
 		auto imgMap = AllocImageMap(3, width, height,
 				ImageMapConfig(1.f,
 					ImageMapStorage::StorageType::FLOAT,
-					map->GetStorage()->wrapType,
+					map.GetStorage().wrapType,
 					ImageMapStorage::ChannelSelectionType::DEFAULT));
-		float *newImg = (float *)imgMap->GetStorage()->GetPixelsData();
+		float *newImg = (float *)imgMap->GetStorage().GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				const Spectrum c = map->GetSpectrum(uv);
+				const Spectrum c = map.GetSpectrum(uv);
 
 				const u_int index = (x + y * width) * 3;
 				newImg[index] = c.c[0];
@@ -1439,7 +1495,7 @@ pair<u_int, u_int> ImageMap::GetSize(const std::string &fileName) {
 
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
-				
+
 			return make_pair(spec.width, spec.height);
 		} else
 			throw runtime_error("Error opening image file: " + resolvedFileName +
@@ -1456,13 +1512,13 @@ void ImageMap::MakeTx(const std::string &srcFileName, const std::string &dstFile
 		throw runtime_error("ImageMap::MakeTx error: " + s.str());
 }
 
-ImageMapPtr ImageMap::FromProperties(const Properties &props, const string &prefix) {
-	ImageMapPtr im;
+ImageMapUPtr ImageMap::FromProperties(const Properties &props, const string &prefix) {
+	ImageMapUPtr im;
 	if (props.IsDefined(prefix + ".file")) {
 		// Read the image map from a file
 		const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
 		
-		im = std::make_shared<ImageMap>(fileName, ImageMapConfig(props, prefix));
+		im = std::make_unique<ImageMap>(fileName, ImageMapConfig(props, prefix));
 	} else if (props.IsDefined(prefix + ".blob")) {
 		// Read the image map from embedded data
 		const u_int width = props.Get(Property(prefix + ".blob.width")(512)).Get<u_int>();
@@ -1476,7 +1532,7 @@ ImageMapPtr ImageMap::FromProperties(const Properties &props, const string &pref
 		const ImageMapStorage::FilterType filterType = ImageMapStorage::String2FilterType(
 				props.Get(Property(prefix + ".filter")("linear")).Get<string>());
 
-		ImageMapStorage *pixelStorage;
+		ImageMapStorageUPtr pixelStorage;
 		switch (storageType) {
 			case ImageMapStorage::BYTE: {
 				pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, wrapType, filterType);
@@ -1497,7 +1553,7 @@ ImageMapPtr ImageMap::FromProperties(const Properties &props, const string &pref
 		const Blob &blob = props.Get(Property(prefix + ".blob")).Get<const Blob &>();
 		copy(blob.GetData(), blob.GetData() + blob.GetSize(), (char *)pixelStorage->GetPixelsData());
 
-		im = std::make_shared<ImageMap>(pixelStorage, 0.f, 0.f);
+		im = std::make_unique<ImageMap>(std::move(pixelStorage), 0.f, 0.f);
 		im->Preprocess();
 	} else
 		throw runtime_error("Missing data ImageMap::FromProperties()");
@@ -1524,4 +1580,12 @@ Properties ImageMap::ToProperties(const string &prefix, const bool includeBlobIm
 
 	return props;
 }
+
+
+bool operator==(slg::ImageMapConstRef im1, slg::ImageMapConstRef im2) {
+	return &im1 == &im2;
+}
+
+slg::ImageMap NullImageMap();
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

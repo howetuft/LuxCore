@@ -72,17 +72,17 @@ void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const s
 	im.pixelsIndex = start;
 }
 
-u_int CompiledScene::CompileImageMap(ImageMapConstPtr im) {
+u_int CompiledScene::CompileImageMap(ImageMapConstRef im) {
 	const u_int imgMapIndex = imageMapDescs.size();
 
 	imageMapDescs.resize(imageMapDescs.size() + 1);
 	slg::ocl::ImageMap *imd = &imageMapDescs[imgMapIndex];
 
-	imd->channelCount = im->GetChannelCount();
-	imd->width = im->GetWidth();
-	imd->height = im->GetHeight();
+	imd->channelCount = im.GetChannelCount();
+	imd->width = im.GetWidth();
+	imd->height = im.GetHeight();
 
-	switch (im->GetStorage()->wrapType) {
+	switch (im.GetStorage().wrapType) {
 		case ImageMapStorage::REPEAT:
 			imd->wrapType = slg::ocl::WRAP_REPEAT;
 			break;
@@ -97,10 +97,10 @@ u_int CompiledScene::CompileImageMap(ImageMapConstPtr im) {
 			break;
 		default:
 			throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMap(): " +
-					ToString(im->GetStorage()->wrapType));
+					ToString(im.GetStorage().wrapType));
 	}
 
-	switch (im->GetStorage()->filterType) {
+	switch (im.GetStorage().filterType) {
 		case ImageMapStorage::NEAREST:
 			imd->filterType = slg::ocl::FILTER_NEAREST;
 			break;
@@ -109,10 +109,10 @@ u_int CompiledScene::CompileImageMap(ImageMapConstPtr im) {
 			break;
 		default:
 			throw runtime_error("Unknown filter type in CompiledScene::CompileImageMap(): " +
-					ToString(im->GetStorage()->filterType));
+					ToString(im.GetStorage().filterType));
 	}
 
-	switch (im->GetStorage()->GetStorageType()) {
+	switch (im.GetStorage().GetStorageType()) {
 		case ImageMapStorage::BYTE:
 			imd->storageType = slg::ocl::BYTE;
 			break;
@@ -124,10 +124,12 @@ u_int CompiledScene::CompileImageMap(ImageMapConstPtr im) {
 			break;
 		default:
 			throw runtime_error("Unknown storage type in CompiledScene::CompileImageMap(): " +
-					ToString(im->GetStorage()->GetStorageType()));
+					ToString(im.GetStorage().GetStorageType()));
 	}
 
-	AddToImageMapMem(*imd, im->GetStorage()->GetPixelsData(), im->GetStorage()->GetMemorySize());
+	AddToImageMapMem(
+		*imd, im.GetStorage().GetPixelsData(), im.GetStorage().GetMemorySize()
+	);
 
 	return imgMapIndex;
 }
@@ -145,9 +147,9 @@ void CompiledScene::CompileImageMaps() {
 
 	const double tStart = WallClockTime();
 
-	vector<ImageMapConstPtr > ims;
-	scene->imgMapCache.GetImageMaps(ims);
-	
+	vector<std::reference_wrapper<const ImageMap> > ims;
+	scene.imgMapCache.GetImageMaps(ims);
+
 	for (u_int i = 0; i < ims.size(); ++i)
 		CompileImageMap(ims[i]);
 

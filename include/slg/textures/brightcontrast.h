@@ -29,7 +29,7 @@ namespace slg {
 
 class BrightContrastTexture : public Texture {
 public:
-	BrightContrastTexture(TextureConstPtr tex, TextureConstPtr brightnessTex, TextureConstPtr contrastTex) :
+	BrightContrastTexture(TextureRef tex, TextureRef brightnessTex, TextureRef contrastTex) :
 		tex(tex), brightnessTex(brightnessTex), contrastTex(contrastTex) { }
 	virtual ~BrightContrastTexture() { }
 
@@ -43,20 +43,20 @@ public:
 		return 0.f;  // TODO
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs);
-		brightnessTex->AddReferencedTextures(referencedTexs);
-		contrastTex->AddReferencedTextures(referencedTexs);
+		GetTex().AddReferencedTextures(referencedTexs);
+		GetBrightnessTex().AddReferencedTextures(referencedTexs);
+		GetContrastTex().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex->AddReferencedImageMaps(referencedImgMaps);
-		brightnessTex->AddReferencedImageMaps(referencedImgMaps);
-		contrastTex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTex().AddReferencedImageMaps(referencedImgMaps);
+		GetBrightnessTex().AddReferencedImageMaps(referencedImgMaps);
+		GetContrastTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 		if (brightnessTex == oldTex)
@@ -65,16 +65,16 @@ public:
 			contrastTex = newTex;
 	}
 
-	TextureConstPtr GetTex() const { return tex; }
-	TextureConstPtr GetBrightnessTex() const { return brightnessTex; }
-	TextureConstPtr GetContrastTex() const { return contrastTex; }
+	TextureConstRef GetTex() const { return tex; }
+	TextureConstRef GetBrightnessTex() const { return brightnessTex; }
+	TextureConstRef GetContrastTex() const { return contrastTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex;
-	TextureConstPtr brightnessTex;
-	TextureConstPtr contrastTex;
+	std::reference_wrapper<Texture> tex;
+	std::reference_wrapper<Texture> brightnessTex;
+	std::reference_wrapper<Texture> contrastTex;
 };
 
 }

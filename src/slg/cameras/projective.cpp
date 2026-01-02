@@ -160,7 +160,9 @@ void ProjectiveCamera::GenerateRay(const float  time,
 		Ray *ray, PathVolumeInfo *volInfo,
 		const float u0, const float u1) const {
 	InitRay(ray, filmX, filmY);
-	volInfo->AddVolume(volume);
+	if (HasVolume()) {
+		volInfo->AddVolume(GetVolume());
+	}
 
 	// Modify ray for depth of field
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {

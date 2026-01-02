@@ -29,9 +29,10 @@ namespace slg {
 
 class MirrorMaterial : public Material {
 public:
-	MirrorMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr refl);
+	using TexRef = OptionalPtr<const Texture>;
+	MirrorMaterial(TexRef frontTransp, TexRef backTransp,
+			TexRef emitted, TexRef bump,
+			TexRef refl);
 
 	virtual MaterialType GetType() const { return MIRROR; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
@@ -54,15 +55,15 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKr() const { return Kr; }
+	TexRef GetKr() const { return Kr; }
 
 private:
-	TextureConstPtr Kr;
+	TexRef Kr;
 };
 
 }

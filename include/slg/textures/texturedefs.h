@@ -23,7 +23,9 @@
 #include <vector>
 
 #include "luxrays/core/namedobjectvector.h"
+#include "luxrays/usings.h"
 #include "slg/textures/texture.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -40,19 +42,26 @@ public:
 		return texs.IsObjDefined(name);
 	}
 
-	void DefineTexture(TexturePtr t);
+    std::tuple<TextureRef&, TextureUPtr> DefineTexture(TextureUPtr&& t);
 
-	TextureConstPtr GetTexture(const std::string &name) const {
-		return dynamic_pointer_cast<const Texture>(texs.GetObj(name));
+	TextureConstRef GetTexture(const std::string &name) const {
+		return dynamic_cast<TextureConstRef>(texs.GetObj(name));
 	}
-	TextureConstPtr GetTexture(const u_int index) const {
-		return dynamic_pointer_cast<const Texture>(texs.GetObj(index));
+	TextureRef GetTexture(const std::string &name) {
+		return dynamic_cast<TextureRef>(texs.GetObj(name));
+	}
+
+	TextureConstRef GetTexture(const u_int index) const {
+		return dynamic_cast<TextureConstRef>(texs.GetObj(index));
 	}
 	u_int GetTextureIndex(const std::string &name) const {
 		return texs.GetIndex(name);
 	}
-	u_int GetTextureIndex(TextureConstPtr t) const {
+	u_int GetTextureIndex(TextureConstRef t) const {
 		return texs.GetIndex(t);
+	}
+	u_int GetTextureIndex(OptionalPtr<const Texture> t) const {
+		return texs.GetIndex(*t);  // Will throw if t is nullopt
 	}
 
 	u_int GetSize() const {
@@ -69,7 +78,7 @@ public:
 	void GetTextureSortedNames(std::vector<std::string> &names) const;
 
 private:
-	void GetTextureSortedNamesImpl(TextureConstPtr tex, std::vector<std::string> &names,
+	void GetTextureSortedNamesImpl(TextureConstRef tex, std::vector<std::string> &names,
 			std::unordered_set<std::string> &doneNames) const;
 
 	luxrays::NamedObjectVector texs;

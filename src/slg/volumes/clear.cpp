@@ -29,13 +29,14 @@ using namespace slg;
 // ClearVolume
 //------------------------------------------------------------------------------
 
-ClearVolume::ClearVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
-		TextureConstPtr a) : Volume(iorTex, emiTex) {
-	sigmaA = a;
-}
+ClearVolume::ClearVolume(
+	TextureConstRef iorTex,
+	OptionalPtr<const Texture> emiTex,
+	TextureConstRef a
+) : Volume(iorTex, emiTex), sigmaA(a) {}
 
 Spectrum ClearVolume::SigmaA(const HitPoint &hitPoint) const {
-	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
+	return GetSigmaA().GetSpectrumValue(hitPoint).Clamp();
 }
 
 Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
@@ -95,13 +96,13 @@ void ClearVolume::Pdf(const HitPoint &hitPoint,
 	throw runtime_error("Internal error: called ClearVolume::Pdf()");
 }
 
-void ClearVolume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void ClearVolume::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Volume::AddReferencedTextures(referencedTexs);
 
-	sigmaA->AddReferencedTextures(referencedTexs);
+	GetSigmaA().AddReferencedTextures(referencedTexs);
 }
 
-void ClearVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void ClearVolume::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)
@@ -113,7 +114,7 @@ Properties ClearVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("clear"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
 	props.Set(Volume::ToProperties());
 
 	return props;

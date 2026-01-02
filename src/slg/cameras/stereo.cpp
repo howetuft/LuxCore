@@ -18,6 +18,8 @@
 
 #include "slg/cameras/stereo.h"
 #include "slg/cameras/environment.h"
+#include <algorithm>
+#include <utility>
 
 using namespace std;
 using namespace luxrays;
@@ -78,13 +80,13 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	switch(stereoType) {
 		case STEREO_PERSPECTIVE: {
 			// Create left eye camera
-			auto left = std::make_shared<PerspectiveCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
+			auto left = std::make_unique<PerspectiveCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
 			left->clipHither = clipHither;
 			left->clipYon = clipYon;
 			left->shutterOpen = shutterOpen;
 			left->shutterClose = shutterClose;
 			left->autoVolume = autoVolume;
-			left->volume = volume;
+			left->SetVolume(*volume);
 
 			left->clippingPlaneCenter = clippingPlaneCenter;
 			left->clippingPlaneNormal = clippingPlaneNormal;
@@ -99,17 +101,17 @@ void StereoCamera::Update(const u_int width, const u_int height,
 			left->enableOculusRiftBarrel = enableOculusRiftBarrel;
 
 			left->Update(filmWidth / 2, filmHeight, nullptr);
-			leftEye = left;
+			leftEye = std::move(left);
 
 			// Create right eye camera
-			auto right = std::make_shared<PerspectiveCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
+			auto right = std::make_unique<PerspectiveCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
 
 			right->clipHither = clipHither;
 			right->clipYon = clipYon;
 			right->shutterOpen = shutterOpen;
 			right->shutterClose = shutterClose;
 			right->autoVolume = autoVolume;
-			right->volume = volume;
+			right->SetVolume(*volume);
 
 			right->clippingPlaneCenter = clippingPlaneCenter;
 			right->clippingPlaneNormal = clippingPlaneNormal;
@@ -124,43 +126,43 @@ void StereoCamera::Update(const u_int width, const u_int height,
 			right->enableOculusRiftBarrel = enableOculusRiftBarrel;
 
 			right->Update(filmWidth / 2, filmHeight, nullptr);
-			rightEye = right;
+			rightEye = std::move(right);
 			break;
 		}
 		case STEREO_ENVIRONMENT_180: {
 			// Create left eye camera
-			auto left = std::make_shared<EnvironmentCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
+			auto left = std::make_unique<EnvironmentCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
 			left->screenOffsetX = -horizStereoLensDistance * .5f;
 			left->degrees = 180.f;
 
 			left->Update(filmWidth / 2, filmHeight, nullptr);
-			leftEye = left;
+			leftEye = std::move(left);
 
 			// Create right eye camera
-			auto right = std::make_shared<EnvironmentCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
+			auto right = std::make_unique<EnvironmentCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
 			right->screenOffsetX = horizStereoLensDistance * .5f;
 			right->degrees = 180.f;
 
 			right->Update(filmWidth / 2, filmHeight, nullptr);
-			rightEye = right;
+			rightEye = std::move(right);
 			break;
 		}
 		case STEREO_ENVIRONMENT_360: {
 			// Create left eye camera
-			auto left = std::make_shared<EnvironmentCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
+			auto left = std::make_unique<EnvironmentCamera>(orig - .5f * horizStereoEyesDistance * x, target, up);
 			left->screenOffsetX = -horizStereoLensDistance * .5f;
 			left->degrees = 360.f;
 
 			left->Update(filmWidth, filmHeight / 2, nullptr);
-			leftEye = left;
+			leftEye = std::move(left);
 
 			// Create right eye camera
-			auto right = std::make_shared<EnvironmentCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
+			auto right = std::make_unique<EnvironmentCamera>(orig + .5f * horizStereoEyesDistance * x, target, up);
 			right->screenOffsetX = horizStereoLensDistance * .5f;
 			right->degrees = 360.f;
 
 			right->Update(filmWidth, filmHeight / 2, nullptr);
-			rightEye = right;
+			rightEye = std::move(right);
 			break;
 		}
 		default:

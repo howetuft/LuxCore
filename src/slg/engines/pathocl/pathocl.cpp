@@ -56,7 +56,7 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigConstRef rcfg) :
+PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigRef rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
 	lightSampleSplatter = nullptr; 
 	eyeSamplerSharedData = nullptr;
@@ -83,13 +83,13 @@ RenderStatePtr PathOCLRenderEngine::GetRenderState() {
 }
 
 void PathOCLRenderEngine::StartLockLess() {
-	auto cfg = renderConfig.cfg;
+	auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
-	CheckSamplersForNoTile(RenderEngineType2String(GetType()), *cfg);
+	CheckSamplersForNoTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
@@ -126,7 +126,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
 		if (photonGICache)
-			photonGICache->SetScene(renderConfig.scene);
+			photonGICache->SetScene(renderConfig.GetScene());
 
 		startRenderState = nullptr;
 
@@ -206,8 +206,8 @@ void PathOCLRenderEngine::UpdateCounters() {
 }
 
 void PathOCLRenderEngine::UpdateTaskCount() {
-	auto cfg = renderConfig.cfg;
-	if (!cfg->IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
+	auto& cfg = renderConfig.GetConfig();
+	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else {
@@ -224,10 +224,10 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
-		if (cfg->Get(Property("opencl.task.count")("AUTO")).Get<string>() == "AUTO")
+		if (cfg.Get(Property("opencl.task.count")("AUTO")).Get<string>() == "AUTO")
 			taskCount = taskCap;
 		else
-			taskCount = cfg->Get(Property("opencl.task.count")(taskCap)).Get<u_int>();
+			taskCount = cfg.Get(Property("opencl.task.count")(taskCap)).Get<u_int>();
 	}
 
 	// I don't know yet the workgroup size of each device so I can not
@@ -284,7 +284,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new PathOCLRenderEngine(rcfg);
 }
 

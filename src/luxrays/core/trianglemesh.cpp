@@ -97,7 +97,7 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
-TriangleMeshPtr TriangleMesh::Merge(
+TriangleMeshUPtr TriangleMesh::Merge(
 	const deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
@@ -151,7 +151,7 @@ TriangleMeshPtr TriangleMesh::Merge(
 		}
 	}
 
-	return std::make_shared<TriangleMesh>(totalVertexCount, totalTriangleCount, v, i);
+	return std::make_unique<TriangleMesh>(totalVertexCount, totalTriangleCount, v, i);
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(
@@ -231,9 +231,8 @@ u_int TriangleMesh::GetUniqueVerticesMapping(
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::InstanceTriangleMesh)
 
-InstanceTriangleMesh::InstanceTriangleMesh(TriangleMeshPtr m, const Transform &t) {
-	assert (m != NULL);
-	
+InstanceTriangleMesh::InstanceTriangleMesh(TriangleMeshRef m, const Transform &t) {
+
 	trans = t;
 	transSwapsHandedness = t.SwapsHandedness();
 	mesh = m;
@@ -259,9 +258,8 @@ BBox InstanceTriangleMesh::GetBBox() const {
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::MotionTriangleMesh)
 
-MotionTriangleMesh::MotionTriangleMesh(TriangleMeshPtr m, const MotionSystem &ms) {
-	assert (m != NULL);
-
+MotionTriangleMesh::MotionTriangleMesh(TriangleMeshRef m, const MotionSystem &ms) {
+	
 	motionSystem = ms;
 	mesh = m;
 

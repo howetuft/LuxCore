@@ -25,20 +25,20 @@ using namespace slg;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfigConstRef rcfg) :
+BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfigRef rcfg) :
 		BiDirCPURenderEngine(rcfg) {
 }
 
 void BiDirVMCPURenderEngine::StartLockLess() {
-	const auto cfg = renderConfig.cfg;
+	const auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	lightPathsCount = Max(1024u, cfg->Get(GetDefaultProps().Get("bidirvm.lightpath.count")).Get<u_int>());
-	baseRadius = cfg->Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.scene->dataSet->GetBSphere().rad;
-	radiusAlpha = cfg->Get(GetDefaultProps().Get("bidirvm.alpha")).Get<double>();
+	lightPathsCount = Max(1024u, cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")).Get<u_int>());
+	baseRadius = cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.GetScene().dataSet->GetBSphere().rad;
+	radiusAlpha = cfg.Get(GetDefaultProps().Get("bidirvm.alpha")).Get<double>();
 
 	BiDirCPURenderEngine::StartLockLess();
 }
@@ -55,7 +55,7 @@ Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
 }
 
-RenderEngine *BiDirVMCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *BiDirVMCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new BiDirVMCPURenderEngine(rcfg);
 }
 

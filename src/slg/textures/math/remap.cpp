@@ -27,41 +27,41 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float RemapTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const float value = valueTex->GetFloatValue(hitPoint);
-	const float sourceMin = sourceMinTex->GetFloatValue(hitPoint);
-	const float sourceMax = sourceMaxTex->GetFloatValue(hitPoint);
-	const float targetMin = targetMinTex->GetFloatValue(hitPoint);
-	const float targetMax = targetMaxTex->GetFloatValue(hitPoint);
+	const float value = GetValueTex().GetFloatValue(hitPoint);
+	const float sourceMin = GetSourceMinTex().GetFloatValue(hitPoint);
+	const float sourceMax = GetSourceMaxTex().GetFloatValue(hitPoint);
+	const float targetMin = GetTargetMinTex().GetFloatValue(hitPoint);
+	const float targetMax = GetTargetMaxTex().GetFloatValue(hitPoint);
 	
 	return ClampedRemap(value, sourceMin, sourceMax, targetMin, targetMax);
 }
 
 Spectrum RemapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Spectrum value = valueTex->GetSpectrumValue(hitPoint);
-	const float sourceMin = sourceMinTex->GetFloatValue(hitPoint);
-	const float sourceMax = sourceMaxTex->GetFloatValue(hitPoint);
-	const float targetMin = targetMinTex->GetFloatValue(hitPoint);
-	const float targetMax = targetMaxTex->GetFloatValue(hitPoint);
+	const Spectrum value = GetValueTex().GetSpectrumValue(hitPoint);
+	const float sourceMin = GetSourceMinTex().GetFloatValue(hitPoint);
+	const float sourceMax = GetSourceMaxTex().GetFloatValue(hitPoint);
+	const float targetMin = GetTargetMinTex().GetFloatValue(hitPoint);
+	const float targetMax = GetTargetMaxTex().GetFloatValue(hitPoint);
 	
 	return ClampedRemap(value, sourceMin, sourceMax, targetMin, targetMax);
 }
 
 float RemapTexture::Y() const {
-	const float valueY = valueTex->Y();
-	const float sourceMinY = sourceMinTex->Y();
-	const float sourceMaxY = sourceMaxTex->Y();
-	const float targetMinY = targetMinTex->Y();
-	const float targetMaxY = targetMaxTex->Y();
+	const float valueY = GetValueTex().Y();
+	const float sourceMinY = GetSourceMinTex().Y();
+	const float sourceMaxY = GetSourceMaxTex().Y();
+	const float targetMinY = GetTargetMinTex().Y();
+	const float targetMaxY = GetTargetMaxTex().Y();
 	
 	return ClampedRemap(valueY, sourceMinY, sourceMaxY, targetMinY, targetMaxY);
 }
 
 float RemapTexture::Filter() const {
-	const float valueFilter = valueTex->Filter();
-	const float sourceMinFilter = sourceMinTex->Filter();
-	const float sourceMaxFilter = sourceMaxTex->Filter();
-	const float targetMinFilter = targetMinTex->Filter();
-	const float targetMaxFilter = targetMaxTex->Filter();
+	const float valueFilter = GetValueTex().Filter();
+	const float sourceMinFilter = GetSourceMinTex().Filter();
+	const float sourceMaxFilter = GetSourceMaxTex().Filter();
+	const float targetMinFilter = GetTargetMinTex().Filter();
+	const float targetMaxFilter = GetTargetMaxTex().Filter();
 	
 	return ClampedRemap(valueFilter, sourceMinFilter, sourceMaxFilter, targetMinFilter, targetMaxFilter);
 }
@@ -71,11 +71,11 @@ Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("remap"));
-	props.Set(Property("scene.textures." + name + ".value")(valueTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".sourcemin")(sourceMinTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".sourcemax")(sourceMaxTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".targetmin")(targetMinTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".targetmax")(targetMaxTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".value")(GetValueTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".sourcemin")(GetSourceMinTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".sourcemax")(GetSourceMaxTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".targetmin")(GetTargetMinTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".targetmax")(GetTargetMaxTex().GetSDLValue()));
 
 	return props;
 }

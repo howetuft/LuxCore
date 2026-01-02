@@ -21,6 +21,8 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
 
+#include "luxrays/usings.h"
+#include "slg/imagemap/imagemap.h"
 #include "slg/scene/scene.h"
 
 #include "slg/lights/constantinfinitelight.h"
@@ -49,19 +51,19 @@ void Scene::ParseLights(const Properties &props) {
 	if (props.HaveNames("scene.skylight")) {
 		// Parse all syntax
 		auto newLight = CreateLightSource("scene.skylight", props);
-		lightDefs.DefineLightSource(newLight);
+		lightDefs.DefineLightSource(std::move(newLight));
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.infinitelight")) {
 		// Parse all syntax
 		auto newLight = CreateLightSource("scene.infinitelight", props);
-		lightDefs.DefineLightSource(newLight);
+		lightDefs.DefineLightSource(std::move(newLight));
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.sunlight")) {
 		// Parse all syntax
 		auto newLight = CreateLightSource("scene.sunlight", props);
-		lightDefs.DefineLightSource(newLight);
+		lightDefs.DefineLightSource(std::move(newLight));
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 
@@ -84,20 +86,25 @@ void Scene::ParseLights(const Properties &props) {
 		}
 
 		auto newLight = CreateLightSource(lightName, props);
-		lightDefs.DefineLightSource(newLight);
-		
+
 		if ((newLight->GetType() == TYPE_IL) ||
 				(newLight->GetType() == TYPE_MAPPOINT) ||
 				(newLight->GetType() == TYPE_MAPSPHERE) ||
 				(newLight->GetType() == TYPE_PROJECTION))
 			editActions.AddActions(IMAGEMAPS_EDIT);
+
+		// Move to container. This MUST be the last statement of the block.
+		// Afterwards, access to newLight is undefined behavior.
+		lightDefs.DefineLightSource(std::move(newLight));
 	}
 
 	editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 }
 
 
-ImageMapPtr Scene::CreateEmissionMap(const string &propName, const luxrays::Properties &props) {
+OptionalPtr<ImageMap> Scene::CreateEmissionMap(
+	const string &propName, const luxrays::Properties &props
+) {
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
 	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
@@ -105,19 +112,19 @@ ImageMapPtr Scene::CreateEmissionMap(const string &propName, const luxrays::Prop
 	// Read the IES map if available
 	//--------------------------------------------------------------------------
 
-	std::shared_ptr<PhotometricDataIES> iesData = NULL;
+	std::unique_ptr<PhotometricDataIES> iesData;
 	if (props.IsDefined(propName + ".iesblob")) {
 		const Blob &blob = props.Get(propName + ".iesblob").Get<const Blob &>();
 
 		istringstream ss(string(blob.GetData(), blob.GetSize()));
-		
-		iesData = std::make_shared<PhotometricDataIES>(ss);
+
+		iesData = std::make_unique<PhotometricDataIES>(ss);
 	} else if (props.IsDefined(propName + ".iesfile")) {
 		const string iesName = SLG_FileNameResolver.ResolveFile(props.Get(propName + ".iesfile").Get<string>());
-		iesData = std::make_shared<PhotometricDataIES>(iesName.c_str());
+		iesData = std::make_unique<PhotometricDataIES>(iesName.c_str());
 	}
 
-	ImageMapPtr iesMap = NULL;
+	ImageMapUPtr iesMap;
 	if (iesData) {
 		if (iesData->IsValid()) {
 			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
@@ -137,7 +144,7 @@ ImageMapPtr Scene::CreateEmissionMap(const string &propName, const luxrays::Prop
 	// Read the image map if available
 	//--------------------------------------------------------------------------
 
-	ImageMapPtr imgMap = NULL;
+	OptionalPtr<ImageMap> imgMap;
 	if (props.IsDefined(propName + ".mapfile")) {
 		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
 
@@ -149,19 +156,18 @@ ImageMapPtr Scene::CreateEmissionMap(const string &propName, const luxrays::Prop
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
-			ImageMapPtr resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
+			auto resampledImgMap = ImageMap::Resample(*imgMap, imgMap->GetChannelCount(),
 					(width > 0) ? width: imgMap->GetWidth(),
 					(height > 0) ? height : imgMap->GetHeight());
 			resampledImgMap->Preprocess();
 
 			// Delete the old map
-			imgMapCache.DeleteImageMap(imgMap);
+			imgMapCache.DeleteImageMap(*imgMap);
 
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
 			resampledImgMap->SetName(name);
-			imgMapCache.DefineImageMap(resampledImgMap);
-			imgMap = resampledImgMap;
+			imgMap = imgMapCache.DefineImageMap(std::move(resampledImgMap));
 		}
 	}
 
@@ -171,30 +177,31 @@ ImageMapPtr Scene::CreateEmissionMap(const string &propName, const luxrays::Prop
 
 	// Nothing was defined
 	if (!iesMap && !imgMap)
-		return NULL;
+		return std::nullopt;
 
-	ImageMapPtr map = NULL;
+	OptionalPtr<ImageMap> map_ref;
 	if (iesMap && imgMap) {
 		// Merge the 2 maps
-		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+		auto map = ImageMap::Merge(*imgMap, *iesMap, imgMap->GetChannelCount());
 		map->Preprocess();
-		imgMapCache.DeleteImageMap(imgMap);
+		imgMapCache.DeleteImageMap(*imgMap);
 
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
-		imgMapCache.DefineImageMap(map);
+		map_ref = imgMapCache.DefineImageMap(std::move(map));
 	} else if (imgMap)
-		map = imgMap;
+		map_ref = *imgMap;  // Already in cache...
 	else if (iesMap) {
-		map = iesMap;
-		imgMapCache.DefineImageMap(map);
+		map_ref = imgMapCache.DefineImageMap(std::move(iesMap));
 	}
 
-	return map;
+	// At the end of the journey, the new image map is in the cache, and
+	// we return a reference to it
+	return map_ref;
 }
 
-LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Properties &props) {
+LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Properties &props) {
 	string propName, lightType, lightName;
 
 	// The following code is used only for compatibility with the past syntax
@@ -222,12 +229,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		lightType = props.Get(Property(propName + ".type")("sky2")).Get<string>();
 	}
 
-	std::shared_ptr<NotIntersectableLightSource> lightSource = NULL;
+	std::unique_ptr<NotIntersectableLightSource> lightSource = NULL;
 	if (lightType == "sky2") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto sl = std::make_shared<SkyLight2>();
+		auto sl = std::make_unique<SkyLight2>();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.0, props.Get(Property(propName + ".turbidity")(2.2)).Get<double>());
 		sl->groundAlbedo = GetColor(props.Get(Property(propName + ".groundalbedo")(Spectrum()))).Clamp(0.0);
@@ -249,16 +256,16 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		if (sl->useVisibilityMapCache)
 			sl->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
 
-		lightSource = sl;
+		lightSource = std::move(sl);
 	} else if (lightType == "infinite") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 
-		ImageMapConstPtr imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
+		auto& imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
 
-		auto il = std::make_shared<InfiniteLight>();
+		auto il = std::make_unique<InfiniteLight>();
 		il->lightToWorld = light2World;
 		il->imageMap = imgMap;
 		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
@@ -272,12 +279,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		if (il->useVisibilityMapCache)
 			il->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
 
-		lightSource = il;
+		lightSource = std::move(il);
 	} else if (lightType == "sun") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto sl = std::make_shared<SunLight>();
+		auto sl = std::make_unique<SunLight>();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.0, props.Get(Property(propName + ".turbidity")(2.2)).Get<double>());
 		sl->relSize = Max(1.0, props.Get(Property(propName + ".relsize")(1.0)).Get<double>());
@@ -287,12 +294,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
-		lightSource = sl;
+		lightSource = std::move(sl);
 	} else if (lightType == "point") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto pl = std::make_shared<PointLight>();
+		auto pl = std::make_unique<PointLight>();
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
@@ -300,16 +307,16 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = pl;
+		lightSource = std::move(pl);
 	} else if (lightType == "mappoint") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		ImageMapPtr map = CreateEmissionMap(propName, props);
+		auto map = CreateEmissionMap(propName, props);
 		if (!map)
 			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
 
-		auto mpl = std::make_shared<MapPointLight>();
+		auto mpl = std::make_unique<MapPointLight>();
 		mpl->lightToWorld = light2World;
 		mpl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		mpl->imageMap = map;
@@ -318,12 +325,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		mpl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		mpl->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = mpl;
+		lightSource = std::move(mpl);
 	} else if (lightType == "sphere") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto sl = std::make_shared<SphereLight>();
+		auto sl = std::make_unique<SphereLight>();
 		sl->lightToWorld = light2World;
 		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		sl->radius = Max(0.0, props.Get(Property(propName + ".radius")(1.0)).Get<double>());
@@ -332,16 +339,16 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = sl;
+		lightSource = std::move(sl);
 	} else if (lightType == "mapsphere") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		ImageMapPtr map = CreateEmissionMap(propName, props);
+		auto map = CreateEmissionMap(propName, props);
 		if (!map)
 			throw runtime_error("MapSphere light source (" + propName + ") is missing mapfile or iesfile property");
 
-		auto msl = std::make_shared<MapSphereLight>();
+		auto msl = std::make_unique<MapSphereLight>();
 		msl->lightToWorld = light2World;
 		msl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		msl->radius = Max(0.0, props.Get(Property(propName + ".radius")(1.0)).Get<double>());
@@ -351,12 +358,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		msl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		msl->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = msl;
+		lightSource = std::move(msl);
 	} else if (lightType == "spot") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto sl = std::make_shared<SpotLight>();
+		auto sl = std::make_unique<SpotLight>();
 		sl->lightToWorld = light2World;
 		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		sl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
@@ -367,18 +374,18 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = sl;
+		lightSource = std::move(sl);
 	} else if (lightType == "projection") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 
-		ImageMapConstPtr imgMap = (imageName == "") ?
-			NULL :
-			imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
+		OptionalPtr<const ImageMap> imgMap = (imageName == "") ?
+			std::nullopt :
+			OptionalPtr<const ImageMap>(imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false));
 
-		auto pl = std::make_shared<ProjectionLight>();
+		auto pl = std::make_unique<ProjectionLight>();
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
@@ -388,12 +395,12 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		pl->imageMap = imgMap;
 		pl->fov = Max(0.0, props.Get(Property(propName + ".fov")(45.0)).Get<double>());
 
-		lightSource = pl;
+		lightSource = std::move(pl);
 	} else if (lightType == "laser") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto ll = std::make_shared<LaserLight>();
+		auto ll = std::make_unique<LaserLight>();
 		ll->lightToWorld = light2World;
 		ll->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		ll->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
@@ -403,9 +410,9 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		ll->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		ll->efficiency = Max(0.0, props.Get(Property(propName + ".efficiency")(0.0), propName + ".efficency").Get<double>());
 
-		lightSource = ll;
+		lightSource = std::move(ll);
 	} else if (lightType == "constantinfinite") {
-		auto cil = std::make_shared<ConstantInfiniteLight>();
+		auto cil = std::make_unique<ConstantInfiniteLight>();
 
 		cil->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
@@ -417,28 +424,28 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 		if (cil->useVisibilityMapCache)
 			cil->visibilityMapCacheParams = EnvLightVisibilityCache::Properties2Params(propName, props);
 
-		lightSource = cil;
+		lightSource = std::move(cil);
 	} else if (lightType == "sharpdistant") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto sdl = std::make_shared<SharpDistantLight>();
+		auto sdl = std::make_unique<SharpDistantLight>();
 		sdl->lightToWorld = light2World;
 		sdl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		sdl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 
-		lightSource = sdl;
+		lightSource = std::move(sdl);
 	} else if (lightType == "distant") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		auto dl = std::make_shared<DistantLight>();
+		auto dl = std::make_unique<DistantLight>();
 		dl->lightToWorld = light2World;
 		dl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		dl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 		dl->theta = props.Get(Property(propName + ".theta")(10.0)).Get<double>();
 
-		lightSource = dl;
+		lightSource = std::move(dl);
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
@@ -449,18 +456,19 @@ LightSourcePtr Scene::CreateLightSource(const string &name, const luxrays::Prope
 	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.0)).Get<double>());
 
 	if (!lightSource->IsIntersectable()) {
-		auto nils = static_pointer_cast<NotIntersectableLightSource>(lightSource);
+		auto& nils = static_cast<NotIntersectableLightSource&>(*lightSource);
 
-		nils->temperature = props.Get(Property(propName + ".temperature")(-1.0)).Get<double>();
-		nils->normalizeTemperature = props.Get(Property(propName + ".temperature.normalize")(false)).Get<bool>();
+		nils.temperature = props.Get(Property(propName + ".temperature")(-1.0)).Get<double>();
+		nils.normalizeTemperature = props.Get(Property(propName + ".temperature.normalize")(false)).Get<bool>();
 	}
 
 	if (props.IsDefined(propName + ".volume")) {
-		auto vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
-		if (dynamic_pointer_cast<const Volume>(vol))
-			lightSource->volume = dynamic_pointer_cast<const Volume>(vol);
-		else
-			throw runtime_error("\"" + lightName + "\" light volume is a material: " + vol->GetName());
+		auto& vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
+		try {
+			lightSource->volume = dynamic_cast<const Volume&>(vol);
+		} catch (std::bad_cast&) {
+			throw runtime_error("\"" + lightName + "\" light volume is a material: " + vol.GetName());
+		}
 	}
 
 	lightSource->Preprocess();

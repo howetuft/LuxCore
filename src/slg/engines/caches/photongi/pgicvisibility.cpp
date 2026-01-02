@@ -34,7 +34,7 @@ class PGICSceneVisibility : public SceneVisibility<PGICVisibilityParticle> {
 public:
 	PGICSceneVisibility(PhotonGICache &cache) :
 		SceneVisibility(
-			cache.scene.lock(),
+			cache.scene,
 			cache.visibilityParticles,
 			cache.params.photon.maxPathDepth,
 			cache.params.visibility.maxSampleCount,
@@ -51,7 +51,7 @@ public:
 	
 protected:
 	virtual IndexOctree<PGICVisibilityParticle> *AllocOctree() const {
-		auto bbox = scene.lock()->dataSet->GetBBox();
+		auto bbox = scene.dataSet->GetBBox();
 		return new PGICOctree(
 			visibilityParticles,
 			bbox,

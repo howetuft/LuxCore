@@ -29,7 +29,7 @@ using namespace slg;
 // MapPointLight
 //------------------------------------------------------------------------------
 
-MapPointLight::MapPointLight() : imageMap(NULL), func(NULL) {
+MapPointLight::MapPointLight() : imageMap(std::nullopt), func(nullptr) {
 }
 
 MapPointLight::~MapPointLight() {
@@ -51,11 +51,11 @@ void MapPointLight::GetPreprocessedData(float *localPosData, float *absolutePosD
 		*funcData = func;
 }
 
-float MapPointLight::GetPower(SceneConstPtr scene) const {
+float MapPointLight::GetPower(SceneConstRef scene) const {
 	return imageMap->GetSpectrumMeanY() * PointLight::GetPower(scene);
 }
 
-Spectrum MapPointLight::Emit(SceneConstPtr scene,
+Spectrum MapPointLight::Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
@@ -80,7 +80,7 @@ Spectrum MapPointLight::Emit(SceneConstPtr scene,
 			(4.f * M_PI * func->Average());
 }
 
-Spectrum MapPointLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+Spectrum MapPointLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -115,7 +115,7 @@ Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	props.Set(Property(prefix + ".type")("mappoint"));
 	const string fileName = useRealFileName ?
-		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
 	props.Set(Property(prefix + ".mapfile")(fileName));
 	props.Set(imageMap->ToProperties(prefix, false));
 

@@ -20,6 +20,7 @@
 #define	_SLG_HSVTEX_H
 
 #include "slg/textures/texture.h"
+#include <functional>
 
 namespace slg {
 
@@ -29,8 +30,8 @@ namespace slg {
 
 class HsvTexture : public Texture {
 public:
-	HsvTexture(TextureConstPtr t, TextureConstPtr h, 
-			TextureConstPtr s, TextureConstPtr v) : tex(t), hue(h), sat(s), val(v) { }
+	HsvTexture(TextureRef t, TextureRef h, 
+			TextureRef s, TextureRef v) : tex(t), hue(h), sat(s), val(v) { }
 	virtual ~HsvTexture() { }
 
 	virtual TextureType GetType() const { return HSV_TEX; }
@@ -39,22 +40,22 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs);
-		hue->AddReferencedTextures(referencedTexs);
-		sat->AddReferencedTextures(referencedTexs);
-		val->AddReferencedTextures(referencedTexs);
+		GetTexture().AddReferencedTextures(referencedTexs);
+		GetHue().AddReferencedTextures(referencedTexs);
+		GetSaturation().AddReferencedTextures(referencedTexs);
+		GetValue().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex->AddReferencedImageMaps(referencedImgMaps);
-		hue->AddReferencedImageMaps(referencedImgMaps);
-		sat->AddReferencedImageMaps(referencedImgMaps);
-		val->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture().AddReferencedImageMaps(referencedImgMaps);
+		GetHue().AddReferencedImageMaps(referencedImgMaps);
+		GetSaturation().AddReferencedImageMaps(referencedImgMaps);
+		GetValue().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 		if (hue == oldTex)
@@ -65,10 +66,10 @@ public:
 			val = newTex;
 	}
 
-	TextureConstPtr GetTexture() const { return tex; }
-	TextureConstPtr GetHue() const { return hue; }
-	TextureConstPtr GetSaturation() const { return sat; }
-	TextureConstPtr GetValue() const { return val; }
+	TextureConstRef GetTexture() const { return tex; }
+	TextureConstRef GetHue() const { return hue; }
+	TextureConstRef GetSaturation() const { return sat; }
+	TextureConstRef GetValue() const { return val; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -79,10 +80,10 @@ private:
 			const float &hueHitpoint, const float &satHitpoint,
 			const float &valHitpoint) const;
 
-	TextureConstPtr tex;
-	TextureConstPtr hue;
-	TextureConstPtr sat;
-	TextureConstPtr val;
+	std::reference_wrapper<Texture> tex;
+	std::reference_wrapper<Texture> hue;
+	std::reference_wrapper<Texture> sat;
+	std::reference_wrapper<Texture> val;
 };
 
 }

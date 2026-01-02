@@ -42,8 +42,12 @@ static string GetFileNameExt(const string &fileName) {
 	return boost::algorithm::to_lower_copy(std::filesystem::path(fileName).extension().string());
 }
 
-static void BatchRendering(RenderConfigPtr config, RenderStatePtr startState, FilmPtr startFilm,
-		const bool showDevicesStats) {
+static void BatchRendering(
+	const RenderConfigPtr & config,
+	RenderStatePtr startState,
+	FilmPtr startFilm,
+	const bool showDevicesStats
+) {
 	auto session = RenderSession::Create(config, &startState, &startFilm);
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
@@ -253,7 +257,7 @@ int main(int argc, char *argv[]) {
 			props->Set(Property("screen.refresh.interval")(2500));
 			config->Parse(props);
 		}
-		
+
 		BatchRendering(config, startRenderState, startFilm, showDevicesStats);
 
 

@@ -43,9 +43,11 @@ public:
 
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
 
-	virtual void Init(const std::deque<MeshConstPtr > &meshes,
+	virtual void Init(
+		const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
-		const u_longlong totalTriangleCount);
+		const u_longlong totalTriangleCount
+	);
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
@@ -62,7 +64,7 @@ private:
 	luxrays::ocl::BVHArrayNode *bvhTree;
 
 	const Context & ctx;
-	std::deque<MeshConstPtr > meshes;
+	std::deque<const Mesh *> meshes;
 	u_longlong totalVertexCount, totalTriangleCount;
 
 	bool initialized;

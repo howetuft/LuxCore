@@ -29,12 +29,13 @@ using namespace slg;
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-CarPaintMaterial::CarPaintMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr kd, TextureConstPtr ks1, TextureConstPtr ks2, TextureConstPtr ks3, TextureConstPtr m1, TextureConstPtr m2, TextureConstPtr m3,
-		TextureConstPtr r1, TextureConstPtr r2, TextureConstPtr r3, TextureConstPtr ka, TextureConstPtr d) :
-			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
-			R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
+CarPaintMaterial::CarPaintMaterial(
+	OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+	OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks1, OptionalPtr<const Texture> ks2, OptionalPtr<const Texture> ks3, OptionalPtr<const Texture> m1, OptionalPtr<const Texture> m2, OptionalPtr<const Texture> m3,
+	OptionalPtr<const Texture> r1, OptionalPtr<const Texture> r2, OptionalPtr<const Texture> r3, OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d) :
+	Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
+	R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
 	ComputeGlossiness(M1, M2, M3);
 }
 
@@ -382,7 +383,7 @@ void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = (pdf + fabsf(localFixedDir.z) * INV_PI) / n;
 }
 
-void CarPaintMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void CarPaintMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -399,7 +400,9 @@ void CarPaintMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>
 	depth->AddReferencedTextures(referencedTexs);
 }
 
-void CarPaintMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void CarPaintMaterial::UpdateTextureReferences(
+	TextureConstRef oldTex,
+	TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

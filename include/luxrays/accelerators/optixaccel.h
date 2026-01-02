@@ -38,7 +38,7 @@ public:
 
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
 
-	virtual void Init(const std::deque<MeshConstPtr > &meshes,
+	virtual void Init(const std::deque<const Mesh * > &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
 
@@ -48,7 +48,7 @@ public:
 
 private:
 	const Context & ctx;
-	std::deque<MeshConstPtr > meshes;
+	std::deque<const Mesh * > meshes;
 	u_longlong totalVertexCount, totalTriangleCount;
 
 	bool initialized;

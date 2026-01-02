@@ -274,7 +274,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 		auto compareVerts = [](
 			const TriangleMesh& mesh, const u_int vertIndex1, const u_int vertIndex2
 		) {
-			auto triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
+			auto& triMesh = dynamic_cast<const ExtTriangleMesh&>(mesh);
 
 			return (DistanceSquared(
 				triMesh.GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
@@ -571,7 +571,7 @@ bool ExtInstanceTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHi
 
 	Point localNewP;
 	Normal localN;
-	const bool result = static_pointer_cast<ExtTriangleMesh>(mesh)->IntersectBevel(localRay, rayHit, continueToTrace, rayHitT, localNewP, localN);
+	const bool result = static_cast<const ExtTriangleMesh&>(*mesh).IntersectBevel(localRay, rayHit, continueToTrace, rayHitT, localNewP, localN);
 	if(result) {
 		// Transform newP and N in global space
 		newP = trans * localNewP;

@@ -29,11 +29,11 @@ namespace slg {
 
 class CarPaintMaterial : public Material {
 public:
-	CarPaintMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr kd, TextureConstPtr ks1, TextureConstPtr ks2, TextureConstPtr ks3,
-			TextureConstPtr m1, TextureConstPtr m2, TextureConstPtr m3,
-			TextureConstPtr r1, TextureConstPtr r2, TextureConstPtr r3, TextureConstPtr ka, TextureConstPtr d);
+	CarPaintMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+			OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks1, OptionalPtr<const Texture> ks2, OptionalPtr<const Texture> ks3,
+			OptionalPtr<const Texture> m1, OptionalPtr<const Texture> m2, OptionalPtr<const Texture> m3,
+			OptionalPtr<const Texture> r1, OptionalPtr<const Texture> r2, OptionalPtr<const Texture> r3, OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d);
 
 	virtual MaterialType GetType() const { return CARPAINT; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -51,8 +51,8 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -68,18 +68,18 @@ public:
 	static const struct CarPaintData data[8];
 	static int NbPresets() { return 8; }
 
-	TextureConstPtr Kd;
-	TextureConstPtr Ks1;
-	TextureConstPtr Ks2;
-	TextureConstPtr Ks3;
-	TextureConstPtr M1;
-	TextureConstPtr M2;
-	TextureConstPtr M3;
-	TextureConstPtr R1;
-	TextureConstPtr R2;
-	TextureConstPtr R3;
-	TextureConstPtr Ka;
-	TextureConstPtr depth;
+	OptionalPtr<const Texture> Kd;
+	OptionalPtr<const Texture> Ks1;
+	OptionalPtr<const Texture> Ks2;
+	OptionalPtr<const Texture> Ks3;
+	OptionalPtr<const Texture> M1;
+	OptionalPtr<const Texture> M2;
+	OptionalPtr<const Texture> M3;
+	OptionalPtr<const Texture> R1;
+	OptionalPtr<const Texture> R2;
+	OptionalPtr<const Texture> R3;
+	OptionalPtr<const Texture> Ka;
+	OptionalPtr<const Texture> depth;
 };
 
 }

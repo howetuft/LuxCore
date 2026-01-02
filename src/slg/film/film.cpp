@@ -21,6 +21,7 @@
 #include <exception>
 
 #include <boost/lexical_cast.hpp>
+#include <memory>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -47,7 +48,7 @@ FilmPtr Film::Create(
 }
 
 void Film::InitFilmDenoiser() {
-	filmDenoiser = std::move(std::make_unique<FilmDenoiser>(shared_from_this()));
+	filmDenoiser = std::make_unique<FilmDenoiser>(shared_from_this());
 }
 
 Film::Film() {

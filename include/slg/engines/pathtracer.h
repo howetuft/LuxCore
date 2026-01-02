@@ -50,7 +50,7 @@ public:
 	PathTracerThreadState(luxrays::IntersectionDevice *device,
 			const SamplerUPtr& eyeSampler,
 			const SamplerUPtr& lightSampler,
-			SceneConstPtr scene, FilmPtr film,
+			SceneConstRef scene, FilmPtr film,
 			const VarianceClamping *varianceClamping,
 			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
@@ -59,7 +59,7 @@ public:
 
 	const SamplerUPtr& eyeSampler;
 	const SamplerUPtr& lightSampler;
-	SceneConstWPtr scene;
+	SceneConstRef scene;
 	FilmPtr film;
 	const VarianceClamping *varianceClamping;
 	
@@ -91,12 +91,12 @@ public:
 	const PhotonGICache *GetPhotonGICache() const { return photonGICache; }
 
 	void ParseOptions(
-		luxrays::PropertiesConstPtr cfg,
+		luxrays::PropertiesConstRef cfg,
 		const luxrays::Properties &defaultProps
 	);
 
 	DirectLightResult DirectLightSampling(
-		luxrays::IntersectionDevice *device, SceneConstPtr scene,
+		luxrays::IntersectionDevice *device, SceneConstRef scene,
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
@@ -106,26 +106,26 @@ public:
 
 	void RenderEyePath(
 		luxrays::IntersectionDevice *device,
-		SceneConstPtr scene,
+		SceneConstRef scene,
 		Sampler& sampler,
 		EyePathInfo &pathInfo,
 		luxrays::Ray &eyeRay, const luxrays::Spectrum &eyeTroughput,
 		std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(
 		luxrays::IntersectionDevice *device,
-		SceneConstPtr scene, FilmConstPtr film,
+		SceneConstRef scene, FilmConstPtr film,
 		Sampler& sampler,
 		std::vector<SampleResult> &sampleResults) const;
 
 	void RenderLightSample(
 		luxrays::IntersectionDevice *device,
-		SceneConstPtr scene, FilmConstPtr film,
+		SceneConstRef scene, FilmConstPtr film,
 		Sampler& sampler,
 		std::vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const;
 	void RenderLightSample(
 		luxrays::IntersectionDevice *device,
-		SceneConstPtr scene, FilmConstPtr film,
+		SceneConstRef scene, FilmConstPtr film,
 		Sampler& sampler,
 		std::vector<SampleResult> &sampleResults
 		) const {
@@ -171,27 +171,27 @@ public:
 	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
-	void GenerateEyeRay(CameraConstPtr camera, FilmConstPtr film,
+	void GenerateEyeRay(CameraConstRef camera, FilmConstPtr film,
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler& sampler,
 			SampleResult &sampleResult) const;
 
 	// RenderEyeSample methods
 
-	void DirectHitFiniteLight(SceneConstPtr scene, const EyePathInfo &pathInfo,
+	void DirectHitFiniteLight(SceneConstRef scene, const EyePathInfo &pathInfo,
 			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
 			const float distance, const BSDF &bsdf,
 			SampleResult *sampleResult) const;
-	void DirectHitInfiniteLight(SceneConstPtr scene, const EyePathInfo &pathInfo,
+	void DirectHitInfiniteLight(SceneConstRef scene, const EyePathInfo &pathInfo,
 			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
 			const BSDF *bsdf, SampleResult *sampleResult) const;
-	bool CheckDirectHitVisibilityFlags(LightSourceConstPtr lightSource,
+	bool CheckDirectHitVisibilityFlags(LightSourceConstRef lightSource,
 			const PathDepthInfo &depthInfo,	const BSDFEvent lastBSDFEvent) const;
 
 	// RenderLightSample methods
 
 	void ConnectToEye(luxrays::IntersectionDevice *device,
-			SceneConstPtr scene,
+			SceneConstRef scene,
 			FilmConstPtr film, const float time,
 			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,

@@ -29,6 +29,7 @@
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/imagemap/imagemap.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -38,7 +39,7 @@ namespace slg {
 
 class BackgroundImgPlugin : public ImagePipelinePlugin {
 public:
-	BackgroundImgPlugin(ImageMapPtr map);
+	BackgroundImgPlugin(ImageMapUPtr&& map);
 	virtual ~BackgroundImgPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -48,6 +49,15 @@ public:
 	virtual bool CanUseHW() const { return true; }
 	virtual void AddHWChannelsUsed(Film::FilmChannels &hwChannelsUsed) const;
 	virtual void ApplyHW(Film &film, const u_int index);
+
+	ImageMapRef GetImageMap() { return *imgMap; }
+	ImageMapConstRef GetImageMap() const { return *imgMap; }
+	bool HasImageMap() const { return bool(imgMap); }
+
+	ImageMapRef GetFilmImageMap() { return *filmImageMap; }
+	ImageMapConstRef GetFilmImageMap() const { return *filmImageMap; }
+	void SetFilmImageMap(ImageMapUPtr&& imgMap) { filmImageMap = std::move(imgMap); }
+	bool HasFilmImageMap() const { return bool(filmImageMap); }
 
 	friend class boost::serialization::access;
 
@@ -63,8 +73,8 @@ private:
 
 	void UpdateFilmImageMap(const Film &film);
 
-	ImageMapPtr imgMap;
-	ImageMapPtr filmImageMap;
+	ImageMapUPtr imgMap;
+	ImageMapUPtr filmImageMap;
 
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;

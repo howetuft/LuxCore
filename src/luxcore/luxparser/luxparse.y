@@ -26,7 +26,7 @@
 #include <vector>
 
 #include <boost/algorithm/string/replace.hpp>
-	
+
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 
@@ -39,7 +39,7 @@ namespace luxcore { namespace parselxs {
 PropertiesPtr renderConfigProps;
 PropertiesPtr sceneProps;
 
-Properties overwriteProps;
+luxrays::Properties overwriteProps;
 Transform worldToCamera;
 
 static string GetLuxCoreValidName(const string &name) {
@@ -94,7 +94,7 @@ public:
 	}
 
 	string areaLightName, materialName, interiorVolumeName, exteriorVolumeName;
-	Properties areaLightProps, materialProps, interiorVolumeProps, exteriorVolumeProps;
+	luxrays::Properties areaLightProps, materialProps, interiorVolumeProps, exteriorVolumeProps;
 
 	u_int currentLightGroup;
 };
@@ -111,9 +111,9 @@ static std::unordered_map<string, Transform> namedCoordinateSystems;
 static u_int freeLightGroupIndex;
 static std::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
-static std::unordered_map<string, Properties> namedMaterials;
+static std::unordered_map<string, luxrays::Properties> namedMaterials;
 // The named Volumes
-static std::unordered_map<string, Properties> namedVolumes;
+static std::unordered_map<string, luxrays::Properties> namedVolumes;
 // The named Textures
 static std::unordered_set<string> namedTextures;
 // The named Object
@@ -154,7 +154,7 @@ void ResetParser() {
 	freeLightID = 0;
 }
 
-static Properties GetTextureMapping2D(const string &prefix, const Properties &props) {
+static luxrays::Properties GetTextureMapping2D(const string &prefix, const luxrays::Properties &props) {
 	const string type = props.Get(Property("mapping")("uv")).Get<string>();
 	
 	if (type == "uv") {
@@ -165,11 +165,11 @@ static Properties GetTextureMapping2D(const string &prefix, const Properties &pr
 					props.Get(Property("udelta")(0.f)).Get<double>());
 	} else {
 		LC_LOG("LuxCore supports only texture coordinate mapping 2D with 'uv' (i.e. not " << type << "). Ignoring the mapping.");
-		return Properties();
+		return luxrays::Properties();
 	}
 }
 
-static Properties GetTextureMapping3D(const string &prefix, const Transform &tex2World, const Properties &props) {
+static luxrays::Properties GetTextureMapping3D(const string &prefix, const Transform &tex2World, const luxrays::Properties &props) {
 	const string type = props.Get(Property("coordinates")("uv")).Get<string>();
 
 	if (type == "uv") {
@@ -180,11 +180,11 @@ static Properties GetTextureMapping3D(const string &prefix, const Transform &tex
 				Property(prefix + ".mapping.transformation")(tex2World.mInv);
 	} else {
 		LC_LOG("LuxCore supports only texture coordinate mapping 3D with 'uv' and 'global' (i.e. not " << type << "). Ignoring the mapping.");
-		return Properties();
+		return luxrays::Properties();
 	}
 }
 
-static Property GetTexture(const string &luxCoreName, const Property defaultProp, const Properties &props) {
+static Property GetTexture(const string &luxCoreName, const Property defaultProp, const luxrays::Properties &props) {
 	Property prop = props.Get(defaultProp);
 	if (prop.GetValueType(0) == PropertyValue::STRING_VAL) {
 		// It is a texture name
@@ -195,8 +195,8 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 		return prop.Renamed(luxCoreName);
 }
 
-static void DefineMaterial(const string &name, const Properties &matProps,
-		const Properties &lightProps,
+static void DefineMaterial(const string &name, const luxrays::Properties &matProps,
+		const luxrays::Properties &lightProps,
 		const string &interiorVolumeName, const string &exteriorVolumeName) {
 	const string prefix = "scene.materials." + name;
 
@@ -473,7 +473,7 @@ static void DefineMaterial(const string &name, const Properties &matProps,
 	}
 }
 
-static void DefineVolume(const string &name, const Properties &volProps) {
+static void DefineVolume(const string &name, const luxrays::Properties &volProps) {
 	const string prefix = "scene.volumes." + name;
 
 	//--------------------------------------------------------------------------
@@ -641,7 +641,7 @@ static bool LookupType(const char *token, ParamType *type, string &name) {
 	return true;
 }
 
-static void InitProperties(Properties &props, const u_int count, const ParamListElem *list) {
+static void InitProperties(luxrays::Properties &props, const u_int count, const ParamListElem *list) {
 	for (u_int i = 0; i < count; ++i) {
 		ParamType type;
 		string name;
@@ -918,7 +918,7 @@ ri_stmt_list: ri_stmt_list ri_stmt
 
 ri_stmt: ACCELERATOR STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
@@ -957,29 +957,29 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (name != "perspective")
 		throw runtime_error("LuxCore supports only perspective camera");
 
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 	
 	if (props.IsDefined("screenwindow")) {
 		Property prop = props.Get("screenwindow");
-		*sceneProps << Property("scene.camera.screenwindow")(
+		*sceneProps << Property("scene.GetCamera().screenwindow")(
 			prop.Get<double>(0), prop.Get<double>(1), prop.Get<double>(2), prop.Get<double>(3));
 	}
 
 	if (props.IsDefined("clippingplane")) {
 		Property prop = props.Get("clippingplane");
 		*sceneProps <<
-				Property("scene.camera.clippingplane.enable")(1) <<
-				Property("scene.camera.clippingplane.center")(prop.Get<double>(0), prop.Get<double>(1), prop.Get<double>(2)) <<
-				Property("scene.camera.clippingplane.normal")(prop.Get<double>(3), prop.Get<double>(4), prop.Get<double>(5));
+				Property("scene.GetCamera().clippingplane.enable")(1) <<
+				Property("scene.GetCamera().clippingplane.center")(prop.Get<double>(0), prop.Get<double>(1), prop.Get<double>(2)) <<
+				Property("scene.GetCamera().clippingplane.normal")(prop.Get<double>(3), prop.Get<double>(4), prop.Get<double>(5));
 	}
 
 	*sceneProps <<
-			Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<double>()) <<
-			Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.f)).Get<double>()) <<
-			Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<double>()) <<
-			Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<double>()) <<
-			Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<double>());
+			Property("scene.GetCamera().fieldofview")(props.Get(Property("fov")(90.f)).Get<double>()) <<
+			Property("scene.GetCamera().lensradius")(props.Get(Property("lensradius")(0.f)).Get<double>()) <<
+			Property("scene.GetCamera().focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<double>()) <<
+			Property("scene.GetCamera().hither")(props.Get(Property("cliphither")(1e-3f)).Get<double>()) <<
+			Property("scene.GetCamera().yon")(props.Get(Property("clipyon")(1e30f)).Get<double>());
 
 	worldToCamera = currentTransform;
 	namedCoordinateSystems["camera"] = currentTransform;
@@ -1024,14 +1024,14 @@ ri_stmt: ACCELERATOR STRING paramlist
 	// If I'm not defining an object, set the world volume
 	if (graphicsStatesStack.size() == 0) {
 		*sceneProps <<
-				Property("scene.camera.autovolume.enable")(false) <<
-				Property("scene.camera.volume")(name);
+				Property("scene.GetCamera().autovolume.enable")(false) <<
+				Property("scene.GetCamera().volume")(name);
 				
 	}
 }
 | FILM STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Image size
@@ -1108,7 +1108,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | LIGHTSOURCE STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Define light name
@@ -1275,9 +1275,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 | LOOKAT NUM NUM NUM NUM NUM NUM NUM NUM NUM
 {
 	*sceneProps <<
-			Property("scene.camera.lookat.orig")($2, $3, $4) <<
-			Property("scene.camera.lookat.target")($5, $6, $7) <<
-			Property("scene.camera.up")($8, $9, $10);
+			Property("scene.GetCamera().lookat.orig")($2, $3, $4) <<
+			Property("scene.GetCamera().lookat.target")($5, $6, $7) <<
+			Property("scene.GetCamera().up")($8, $9, $10);
 }
 | MATERIAL STRING paramlist
 {
@@ -1292,10 +1292,10 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' already defined");
 
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 	namedMaterials[name] = props;
-	DefineMaterial(name, props, Properties(), "", "");
+	DefineMaterial(name, props, luxrays::Properties(), "", "");
 
 	FreeArgs();
 }
@@ -1305,7 +1305,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (namedVolumes.count(name))
 		throw runtime_error("Named volume '" + name + "' already defined");
 
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 	// The volume type
 	const string type = $3;
@@ -1384,7 +1384,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | PIXELFILTER STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	const string name($2);
@@ -1424,7 +1424,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | RENDERER STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Check the name of the renderer
@@ -1456,7 +1456,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SAMPLER STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	const string name($2);
@@ -1490,7 +1490,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SHAPE STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	// Define object name
@@ -1620,7 +1620,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SURFACEINTEGRATOR STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	const string name($2);
@@ -1646,7 +1646,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | TEXTURE STRING STRING STRING paramlist
 {
-	Properties props;
+	luxrays::Properties props;
 	InitProperties(props, CPS, CP);
 
 	string name = GetLuxCoreValidName($2);

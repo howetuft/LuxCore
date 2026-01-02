@@ -61,7 +61,7 @@ private:
 
 class TilePathCPURenderEngine : public CPUTileRenderEngine {
 public:
-	TilePathCPURenderEngine(RenderConfigConstRef cfg);
+	TilePathCPURenderEngine(RenderConfigRef cfg);
 	~TilePathCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -76,7 +76,7 @@ public:
 	static RenderEngineType GetObjectType() { return TILEPATHCPU; }
 	static std::string GetObjectTag() { return "TILEPATHCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class TilePathCPURenderThread;
 

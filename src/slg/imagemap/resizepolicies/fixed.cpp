@@ -26,9 +26,9 @@ using namespace slg;
 // ImageMapResizeFixedPolicy::ApplyResizePolicy()
 //------------------------------------------------------------------------------
 
-ImageMapPtr ImageMapResizeFixedPolicy::ApplyResizePolicy(const std::string &fileName,
+ImageMapUPtr ImageMapResizeFixedPolicy::ApplyResizePolicy(const std::string &fileName,
 		const ImageMapConfig &imgCfg, bool &toApply) const {
-	ImageMapPtr im = std::make_shared<ImageMap>(fileName, imgCfg);
+	ImageMapUPtr im = std::make_unique<ImageMap>(fileName, imgCfg);
 
 	const u_int width = im->GetWidth();
 	const u_int height = im->GetHeight();

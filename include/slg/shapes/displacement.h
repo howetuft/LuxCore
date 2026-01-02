@@ -33,7 +33,7 @@ public:
 		HIGHT_DISPLACEMENT,
 		VECTOR_DISPLACEMENT
 	} DisplacementType;
-	
+
 	typedef struct {
 		DisplacementType mapType;
 		u_int mapChannels[3];
@@ -43,16 +43,14 @@ public:
 		bool normalSmooth;
 	} Params;
 
-	DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const Texture &dispMap,
+	DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
 			const Params &params);
 	virtual ~DisplacementShape();
 
-	virtual ShapeType GetType() const { return DISPLACEMENT; }
+	virtual ShapeType GetType() const override { return DISPLACEMENT; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
-
-	luxrays::ExtTriangleMeshPtr mesh;
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 };
 
 }

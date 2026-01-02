@@ -32,8 +32,8 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
-Material::Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump) :
+Material::Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump) :
 		NamedObject("material"),
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
@@ -42,8 +42,8 @@ Material::Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
 		emittedTemperature(-1.f), emittedNormalizeTemperature(false),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
-		emissionMap(nullptr), emissionFunc(nullptr),
-		interiorVolume(nullptr), exteriorVolume(nullptr),
+		emissionMap(std::nullopt), emissionFunc(nullptr),
+		interiorVolume(std::nullopt), exteriorVolume(std::nullopt),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true),
@@ -72,7 +72,7 @@ void Material::SetEmittedTheta(const float theta) {
 	}
 }
 
-void Material::SetEmissionMap(ImageMapConstPtr map) {
+void Material::SetEmissionMap(ImageMapConstRef map) {
 	emissionMap = map;
 	delete emissionFunc;
 	if (emissionMap)
@@ -81,10 +81,22 @@ void Material::SetEmissionMap(ImageMapConstPtr map) {
 		emissionFunc = nullptr;
 }
 
+
+void Material::SetInteriorVolume(VolumeConstRef vol) { interiorVolume = vol; }
+OptionalPtr<const Volume> Material::GetInteriorVolume(const HitPoint &hitPoint,
+	const float passThroughEvent) const { return interiorVolume; }
+void Material::SetExteriorVolume(VolumeConstRef vol) { exteriorVolume = vol; }
+OptionalPtr<const Volume> Material::GetExteriorVolume(const HitPoint &hitPoint,
+	const float passThroughEvent) const { return exteriorVolume; }
+
+OptionalPtr<const Volume> Material::GetInteriorVolume() const { return interiorVolume; }
+OptionalPtr<const Volume> Material::GetExteriorVolume() const { return exteriorVolume; }
+
+
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {
-	TextureConstPtr transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
+	OptionalPtr<const Texture> transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
 	
 	if (transparencyTex) {
 		const float weight = Clamp(transparencyTex->GetFloatValue(hitPoint), 0.f, 1.f);
@@ -214,7 +226,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetSDLValue()));
 	if (emissionMap) {
 		const string fileName = useRealFileName ?
-			emissionMap->GetName() : imgMapCache.GetSequenceFileName(emissionMap);
+			emissionMap->GetName() : imgMapCache.GetSequenceFileName(*emissionMap);
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
@@ -257,24 +269,24 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	return props;
 }
 
-void Material::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat) {
-	if (oldMat == interiorVolume)
-		interiorVolume = dynamic_pointer_cast<const Volume>(newMat);
-	if (oldMat == exteriorVolume)
-		exteriorVolume = dynamic_pointer_cast<const Volume>(newMat);
+void Material::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
+	if (interiorVolume == dynamic_cast<const Volume &>(oldMat))
+		interiorVolume = dynamic_cast<const Volume &>(newMat);
+	if (exteriorVolume == dynamic_cast<const Volume &>(oldMat))
+		exteriorVolume = dynamic_cast<const Volume &>(newMat);
 }
 
 void Material::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats
+	std::unordered_set<const Material *> &referencedMats
 ) const {
-	referencedMats.insert(shared_from_this());
+	referencedMats.insert(this);
 	if (interiorVolume)
-		referencedMats.insert(interiorVolume);
+		referencedMats.insert(&interiorVolume.value().get());
 	if (exteriorVolume)
-		referencedMats.insert(exteriorVolume);
+		referencedMats.insert(&exteriorVolume.value().get());
 }
 
-void Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void Material::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	if (frontTransparencyTex)
 		frontTransparencyTex->AddReferencedTextures(referencedTexs);
 	if (backTransparencyTex)
@@ -285,13 +297,13 @@ void Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &refer
 		bumpTex->AddReferencedTextures(referencedTexs);
 }
 
-void Material::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
+void Material::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (emissionMap)
-		referencedImgMaps.insert(emissionMap);
+		referencedImgMaps.insert(emissionMap.ptr());
 }
 
 // Update any reference to oldTex with newTex
-void Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	if (frontTransparencyTex == oldTex) {
 		frontTransparencyTex = newTex;
 		UpdateAvgPassThroughTransparency();
@@ -336,7 +348,7 @@ string Material::MaterialType2String(const MaterialType type) {
 	}
 }
 
-float Material::ComputeGlossiness(TextureConstPtr t1, TextureConstPtr t2, TextureConstPtr t3) {
+float Material::ComputeGlossiness(OptionalPtr<const Texture> t1, OptionalPtr<const Texture> t2, OptionalPtr<const Texture> t3) {
 	const float glossinessT1 = t1 ? t1->Filter() : 1.f;
 	const float glossinessT2 = t2 ? t2->Filter() : 1.f;
 	const float glossinessT3 = t3 ? t3->Filter() : 1.f;
@@ -348,7 +360,7 @@ float Material::ComputeGlossiness(TextureConstPtr t1, TextureConstPtr t2, Textur
 // IOR utilities
 //------------------------------------------------------------------------------
 
-float slg::ExtractExteriorIors(const HitPoint &hitPoint, TextureConstPtr exteriorIor) {
+float slg::ExtractExteriorIors(const HitPoint &hitPoint, OptionalPtr<const Texture> exteriorIor) {
 	float nc = 1.f;
 	if (exteriorIor)
 		nc = exteriorIor->GetFloatValue(hitPoint);
@@ -358,7 +370,7 @@ float slg::ExtractExteriorIors(const HitPoint &hitPoint, TextureConstPtr exterio
 	return nc;
 }
 
-float slg::ExtractInteriorIors(const HitPoint &hitPoint, TextureConstPtr interiorIor) {
+float slg::ExtractInteriorIors(const HitPoint &hitPoint, OptionalPtr<const Texture> interiorIor) {
 	float nt = 1.f;
 	if (interiorIor)
 		nt = interiorIor->GetFloatValue(hitPoint);

@@ -20,6 +20,7 @@
 #include "slg/core/sdl.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
@@ -96,23 +97,23 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
 
 			// Get the scene object
-			auto sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
+			auto& sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
-			auto mesh = sceneObject->GetExtMesh();
+			auto& mesh = sceneObject.GetExtMesh();
 
 			// Get the material
-			auto material = sceneObject->GetMaterial();
+			auto& material = sceneObject.GetMaterial();
 
 			// Interpolate face normal
 			Transform local2world;
-			mesh->GetLocal2World(ray.time, local2world);
-			const Normal geometryN = mesh->GetGeometryNormal(local2world, rayHit.triangleIndex);
+			mesh.GetLocal2World(ray.time, local2world);
+			const Normal geometryN = mesh.GetGeometryNormal(local2world, rayHit.triangleIndex);
 			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
 
 			volume = intoObject ?
-				material->GetExteriorVolume() :
-				material->GetInteriorVolume();
+				material.GetExteriorVolume() :
+				material.GetInteriorVolume();
 			if (!volume)
 				volume = scene.defaultWorldVolume;
 		}
@@ -136,8 +137,8 @@ Properties Camera::ToProperties(const ImageMapCache &imgMapCache, const bool use
 	return props;
 }
 
-void Camera::UpdateVolumeReferences(VolumeConstPtr oldVol, VolumeConstPtr newVol) {
-	if (volume == oldVol)
+void Camera::UpdateVolumeReferences(VolumeConstRef oldVol, VolumeConstRef newVol) {
+	if (volume && *volume == oldVol)
 		volume = newVol;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

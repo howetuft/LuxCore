@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/textures/bilerp.h"
+#include "slg/usings.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,8 +32,11 @@ float BilerpTexture::GetFloatValue(const HitPoint &hitPoint) const
 	UV uv = hitPoint.GetUV(0);
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
-	return Lerp(uv.u, Lerp(uv.v, t00->GetFloatValue(hitPoint), t01->GetFloatValue(hitPoint)),
-		Lerp(uv.v, t10->GetFloatValue(hitPoint), t11->GetFloatValue(hitPoint)));
+	return Lerp(
+		uv.u,
+		Lerp( uv.v, GetTexture00().GetFloatValue(hitPoint), GetTexture01().GetFloatValue(hitPoint)),
+		Lerp(uv.v, GetTexture10().GetFloatValue(hitPoint), GetTexture11().GetFloatValue(hitPoint))
+	);
 }
 
 Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
@@ -40,60 +44,70 @@ Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	UV uv = hitPoint.GetUV(0);
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
-	return Lerp(uv.u, Lerp(uv.v, t00->GetSpectrumValue(hitPoint), t01->GetSpectrumValue(hitPoint)),
-		Lerp(uv.v, t10->GetSpectrumValue(hitPoint), t11->GetSpectrumValue(hitPoint)));
+	return Lerp(
+		uv.u,
+		Lerp(uv.v, GetTexture00().GetSpectrumValue(hitPoint), GetTexture01().GetSpectrumValue(hitPoint)),
+		Lerp(uv.v, GetTexture10().GetSpectrumValue(hitPoint), GetTexture11().GetSpectrumValue(hitPoint))
+	);
 }
 
-Properties BilerpTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const
+Properties BilerpTexture::ToProperties(
+	const ImageMapCache &imgMapCache,
+	const bool useRealFileName
+) const
 {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("bilerp"));
-	props.Set(Property("scene.textures." + name + ".texture00")(t00->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture01")(t01->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture10")(t10->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture11")(t11->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture00")(GetTexture00().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture01")(GetTexture01().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture10")(GetTexture10().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture11")(GetTexture11().GetSDLValue()));
 
 	return props;
 }
 
 float BilerpTexture::Y() const
 {
-	return (t00->Y() + t01->Y() + t10->Y() + t11->Y()) * .25f;
+	return (GetTexture00().Y() + GetTexture01().Y() + GetTexture10().Y() + GetTexture11().Y()) * .25f;
 }
 
 float BilerpTexture::Filter() const
 {
-	return (t00->Filter() + t01->Filter() + t10->Filter() + t11->Filter()) * .25f;
+	return (GetTexture00().Filter() + GetTexture01().Filter() + GetTexture10().Filter() + GetTexture11().Filter()) * .25f;
 }
 
-void BilerpTexture::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const
+void BilerpTexture::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const
 {
 	Texture::AddReferencedTextures(referencedTexs);
 
-	t00->AddReferencedTextures(referencedTexs);
-	t01->AddReferencedTextures(referencedTexs);
-	t10->AddReferencedTextures(referencedTexs);
-	t11->AddReferencedTextures(referencedTexs);
+	GetTexture00().AddReferencedTextures(referencedTexs);
+	GetTexture01().AddReferencedTextures(referencedTexs);
+	GetTexture10().AddReferencedTextures(referencedTexs);
+	GetTexture11().AddReferencedTextures(referencedTexs);
 }
-void BilerpTexture::AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const
+void BilerpTexture::AddReferencedImageMaps(
+	std::unordered_set<const ImageMap *> &referencedImgMaps
+) const
 {
-	t00->AddReferencedImageMaps(referencedImgMaps);
-	t01->AddReferencedImageMaps(referencedImgMaps);
-	t10->AddReferencedImageMaps(referencedImgMaps);
-	t11->AddReferencedImageMaps(referencedImgMaps);
+	GetTexture00().AddReferencedImageMaps(referencedImgMaps);
+	GetTexture01().AddReferencedImageMaps(referencedImgMaps);
+	GetTexture10().AddReferencedImageMaps(referencedImgMaps);
+	GetTexture11().AddReferencedImageMaps(referencedImgMaps);
 }
 
-void BilerpTexture::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex)
+void BilerpTexture::UpdateTextureReferences(
+	TextureConstRef oldTex, TextureRef newTex
+)
 {
-	if (t00 == oldTex)
+	if (GetTexture00() == oldTex)
 		t00 = newTex;
-	if (t01 == oldTex)
+	if (GetTexture01() == oldTex)
 		t01 = newTex;
-	if (t10 == oldTex)
+	if (GetTexture10() == oldTex)
 		t10 = newTex;
-	if (t11 == oldTex)
+	if (GetTexture11() == oldTex)
 		t11 = newTex;
 }
 

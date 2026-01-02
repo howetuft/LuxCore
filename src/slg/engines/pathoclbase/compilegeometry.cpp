@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <functional>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <iosfwd>
@@ -31,7 +32,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static bool MeshPtrCompare(MeshConstPtr p0, MeshConstPtr p1) {
+static bool MeshPtrCompare(const Mesh * p0, const Mesh * p1) {
 	return p0 < p1;
 }
 
@@ -39,7 +40,7 @@ void CompiledScene::CompileGeometry() {
 	SLG_LOG("Compile Geometry");
 	wasGeometryCompiled = true;
 
-	const u_int objCount = scene->objDefs.GetSize();
+	const u_int objCount = scene.objDefs.GetSize();
 
 	const double tStart = WallClockTime();
 
@@ -61,7 +62,7 @@ void CompiledScene::CompileGeometry() {
 	//--------------------------------------------------------------------------
 
 	// Not using std::unordered_map because the key is an ExtMesh pointer
-	map<ExtMeshPtr, u_int, bool (*)(MeshConstPtr , MeshConstPtr )> definedMeshs(MeshPtrCompare);
+	std::map<const ExtMesh *, u_int, bool (*)(const Mesh * , const Mesh * )> definedMeshs(MeshPtrCompare);
 
 	u_int vertsOffset = 0;
 	u_int trisOffset = 0;
@@ -123,27 +124,30 @@ void CompiledScene::CompileGeometry() {
     };
 
 	slg::ocl::ExtMesh currentMeshDesc;
+	ExtTriangleMesh initBaseMesh;
+	std::reference_wrapper<const ExtTriangleMesh> baseMesh = initBaseMesh;
 	for (u_int i = 0; i < objCount; ++i) {
-		auto mesh = scene->objDefs.GetSceneObject(i)->GetExtMesh();
+		ExtMeshConstRef mesh = scene.objDefs.GetSceneObject(i).GetExtMesh();
 
 		bool isExistingInstance;
-		ExtTriangleMeshConstPtr baseMesh = nullptr;
-		switch (mesh->GetType()) {
+		switch (mesh.GetType()) {
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				// It is an instanced mesh
-				auto imesh = static_pointer_cast<const ExtInstanceTriangleMesh>(mesh);
-				baseMesh = imesh->GetExtTriangleMesh();
+				auto& imesh = static_cast<const ExtInstanceTriangleMesh &>(mesh);
+				baseMesh = imesh.GetExtTriangleMesh();
 
 				// Check if is one of the already defined meshes
-				auto it = definedMeshs.find(imesh->GetExtTriangleMesh());
+				ExtTriangleMeshConstRef trimesh = imesh.GetExtTriangleMesh();
+				auto it = definedMeshs.find(&trimesh);
+				// auto it = definedMeshs.find(&imesh.GetExtTriangleMesh());
 				if (it == definedMeshs.end()) {
 					// It is a new one
-					InitMeshDesc(currentMeshDesc, *imesh);
+					InitMeshDesc(currentMeshDesc, imesh);
 
 					isExistingInstance = false;
 
 					const u_int index = meshDescs.size();
-					definedMeshs[imesh->GetExtTriangleMesh()] = index;
+					definedMeshs[&imesh.GetExtTriangleMesh()] = index;
 				} else {
 					currentMeshDesc = meshDescs[it->second];
 
@@ -151,26 +155,26 @@ void CompiledScene::CompileGeometry() {
 				}
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
-				memcpy(&currentMeshDesc.instance.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.instance.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
-				currentMeshDesc.instance.transSwapsHandedness = imesh->GetTransformation().SwapsHandedness();
+				memcpy(&currentMeshDesc.instance.trans.m, &imesh.GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.instance.trans.mInv, &imesh.GetTransformation().mInv, sizeof(float[4][4]));
+				currentMeshDesc.instance.transSwapsHandedness = imesh.GetTransformation().SwapsHandedness();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_MOTION: {
 				// It is an instanced mesh
-				auto mmesh = static_pointer_cast<const ExtMotionTriangleMesh>(mesh);
-				baseMesh = mmesh->GetExtTriangleMesh();
+				auto& mmesh = static_cast<const ExtMotionTriangleMesh&>(mesh);
+				baseMesh = mmesh.GetExtTriangleMesh();
 
 				// Check if is one of the already defined meshes
-				auto it = definedMeshs.find(mmesh->GetExtTriangleMesh());
+				auto it = definedMeshs.find(&mmesh.GetExtTriangleMesh());
 				if (it == definedMeshs.end()) {
 					// It is a new one
-					InitMeshDesc(currentMeshDesc, *mmesh);
+					InitMeshDesc(currentMeshDesc, mmesh);
 
 					isExistingInstance = false;
 
 					const u_int index = meshDescs.size();
-					definedMeshs[mmesh->GetExtTriangleMesh()] = index;
+					definedMeshs[&mmesh.GetExtTriangleMesh()] = index;
 				} else {
 					currentMeshDesc = meshDescs[it->second];
 
@@ -179,7 +183,7 @@ void CompiledScene::CompileGeometry() {
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_MOTION;
 				
-				const MotionSystem &ms = mmesh->GetMotionSystem();
+				const MotionSystem &ms = mmesh.GetMotionSystem();
 
 				// Copy the motion system information
 
@@ -203,16 +207,16 @@ void CompiledScene::CompileGeometry() {
 				break;
 			}
 			case TYPE_EXT_TRIANGLE: {
-				baseMesh = static_pointer_cast<const ExtTriangleMesh>(mesh);
+				baseMesh = static_cast<const ExtTriangleMesh &>(mesh);
 
 				// It is a not instanced mesh
-				InitMeshDesc(currentMeshDesc, *baseMesh);
+				InitMeshDesc(currentMeshDesc, baseMesh);
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE;
 
 				Transform t;
 				// Time doesn't matter for ExtTriangleMesh
-				baseMesh->GetLocal2World(0.f, t);
+				baseMesh.get().GetLocal2World(0.f, t);
 				memcpy(&currentMeshDesc.triangle.appliedTrans.m, &t.m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.triangle.appliedTrans.mInv, &t.mInv, sizeof(float[4][4]));
 				currentMeshDesc.triangle.appliedTransSwapsHandedness = t.SwapsHandedness();
@@ -221,7 +225,7 @@ void CompiledScene::CompileGeometry() {
 				break;
 			}
 			default:
-				throw runtime_error("Unsupported mesh type in CompiledScene::CompileGeometry(): " + ToString(mesh->GetType()));
+				throw runtime_error("Unsupported mesh type in CompiledScene::CompileGeometry(): " + ToString(mesh.GetType()));
 		}
 
 		if (!isExistingInstance) {		
@@ -229,62 +233,62 @@ void CompiledScene::CompileGeometry() {
 			// Compile mesh normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			if (baseMesh->HasNormals()) {
-				const Normal *n = baseMesh->GetNormals();
-				normals.insert(normals.end(), n, n + baseMesh->GetTotalVertexCount());
+			if (baseMesh.get().HasNormals()) {
+				const Normal *n = baseMesh.get().GetNormals();
+				normals.insert(normals.end(), n, n + baseMesh.get().GetTotalVertexCount());
 			}
 
 			//------------------------------------------------------------------
 			// Compile mesh triangle normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Normal *tn = baseMesh->GetTriNormals();
-			triNormals.insert(triNormals.end(), tn, tn + baseMesh->GetTotalTriangleCount());
+			const Normal *tn = baseMesh.get().GetTriNormals();
+			triNormals.insert(triNormals.end(), tn, tn + baseMesh.get().GetTotalTriangleCount());
 
 			for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
 				//--------------------------------------------------------------
 				// Compile vertex uvs
 				//--------------------------------------------------------------
 
-				if (baseMesh->HasUVs(dataIndex)) {
-					const UV *u = baseMesh->GetUVs(dataIndex);
-					uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
+				if (baseMesh.get().HasUVs(dataIndex)) {
+					const UV *u = baseMesh.get().GetUVs(dataIndex);
+					uvs.insert(uvs.end(), u, u + baseMesh.get().GetTotalVertexCount());
 				}
 
 				//--------------------------------------------------------------
 				// Compile vertex colors
 				//--------------------------------------------------------------
 
-				if (baseMesh->HasColors(dataIndex)) {
-					const Spectrum *c = baseMesh->GetColors(dataIndex);
-					cols.insert(cols.end(), c, c + baseMesh->GetTotalVertexCount());
+				if (baseMesh.get().HasColors(dataIndex)) {
+					const Spectrum *c = baseMesh.get().GetColors(dataIndex);
+					cols.insert(cols.end(), c, c + baseMesh.get().GetTotalVertexCount());
 				}
 
 				//--------------------------------------------------------------
 				// Compile vertex alphas
 				//--------------------------------------------------------------
 
-				if (baseMesh->HasAlphas(dataIndex)) {
-					const float *a = baseMesh->GetAlphas(dataIndex);
-					alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
+				if (baseMesh.get().HasAlphas(dataIndex)) {
+					const float *a = baseMesh.get().GetAlphas(dataIndex);
+					alphas.insert(alphas.end(), a, a + baseMesh.get().GetTotalVertexCount());
 				}
 
 				//--------------------------------------------------------------
 				// Compile vertex AOVs
 				//--------------------------------------------------------------
 
-				if (baseMesh->HasVertexAOV(dataIndex)) {
-					const float *v = baseMesh->GetVertexAOVs(dataIndex);
-					vertexAOVs.insert(vertexAOVs.end(), v, v + baseMesh->GetTotalVertexCount());
+				if (baseMesh.get().HasVertexAOV(dataIndex)) {
+					const float *v = baseMesh.get().GetVertexAOVs(dataIndex);
+					vertexAOVs.insert(vertexAOVs.end(), v, v + baseMesh.get().GetTotalVertexCount());
 				}
 
 				//--------------------------------------------------------------
 				// Compile triangle AOVs
 				//--------------------------------------------------------------
 
-				if (baseMesh->HasTriAOV(dataIndex)) {
-					const float *t = baseMesh->GetTriAOVs(dataIndex);
-					triAOVs.insert(triAOVs.end(), t, t + baseMesh->GetTotalTriangleCount());
+				if (baseMesh.get().HasTriAOV(dataIndex)) {
+					const float *t = baseMesh.get().GetTriAOVs(dataIndex);
+					triAOVs.insert(triAOVs.end(), t, t + baseMesh.get().GetTotalTriangleCount());
 				}
 			}
 
@@ -292,21 +296,21 @@ void CompiledScene::CompileGeometry() {
 			// Compile baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Point *v = baseMesh->GetVertices();
-			verts.insert(verts.end(), v, v + baseMesh->GetTotalVertexCount());
+			const Point *v = baseMesh.get().GetVertices();
+			verts.insert(verts.end(), v, v + baseMesh.get().GetTotalVertexCount());
 
 			//------------------------------------------------------------------
 			// Compile baseMesh triangle indices
 			//------------------------------------------------------------------
 
-			const Triangle *t = baseMesh->GetTriangles();
-			tris.insert(tris.end(), t, t + baseMesh->GetTotalTriangleCount());
+			const Triangle *t = baseMesh.get().GetTriangles();
+			tris.insert(tris.end(), t, t + baseMesh.get().GetTotalTriangleCount());
 		}
 
 		meshDescs.push_back(currentMeshDesc);
 	}
 
-	worldBSphere = scene->dataSet->GetBSphere();
+	worldBSphere = scene.dataSet->GetBSphere();
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

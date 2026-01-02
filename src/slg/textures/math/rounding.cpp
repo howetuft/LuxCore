@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float RoundingTexture::GetFloatValue(const HitPoint &hitPoint) const {
-    return round(texture->GetFloatValue(hitPoint), increment->GetFloatValue(hitPoint));
+    return round(GetTexture().GetFloatValue(hitPoint), GetIncrement().GetFloatValue(hitPoint));
 }
 
 Spectrum RoundingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -39,8 +39,8 @@ Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const
 
     const string name = GetName();
     props.Set(Property("scene.textures." + name + ".type")("rounding"));
-    props.Set(Property("scene.textures." + name + ".texture")(texture->GetSDLValue()));
-    props.Set(Property("scene.textures." + name + ".increment")(increment->GetSDLValue()));
+    props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+    props.Set(Property("scene.textures." + name + ".increment")(GetIncrement().GetSDLValue()));
 
     return props;
 }

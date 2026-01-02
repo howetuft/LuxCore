@@ -31,7 +31,7 @@ using namespace slg;
 
 ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficiency(0.f),
 		emittedPowerNormalize(true), localPos(), localTarget(0.f, 0.f, 1.f),
-		fov(45.f), imageMap(NULL) {
+		fov(45.f), imageMap(std::nullopt) {
 }
 
 ProjectionLight::~ProjectionLight() {
@@ -125,13 +125,13 @@ void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absol
 		*lightProjectionData = &lightProjection;
 }
 
-float ProjectionLight::GetPower(SceneConstPtr scene) const {
+float ProjectionLight::GetPower(SceneConstRef scene) const {
 	return emittedFactor.Y() *
 			(imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
 			2.f * M_PI * (1.f - cosTotalWidth);
 }
 
-Spectrum ProjectionLight::Emit(SceneConstPtr scene,
+Spectrum ProjectionLight::Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
@@ -158,7 +158,7 @@ Spectrum ProjectionLight::Emit(SceneConstPtr scene,
 	return c;
 }
 
-Spectrum ProjectionLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+Spectrum ProjectionLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -198,7 +198,7 @@ Spectrum ProjectionLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
 	return c;
 }
 
-bool ProjectionLight::IsAlwaysInShadow(SceneConstPtr scene,
+bool ProjectionLight::IsAlwaysInShadow(SceneConstRef scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
 	const Vector toLight(absolutePos - p);
 	const float distance = toLight.Length();
@@ -222,7 +222,7 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const
 	props.Set(Property(prefix + ".fov")(fov));
 
 	const string fileName = useRealFileName ?
-		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
 	props.Set(Property(prefix + ".mapfile")(fileName));
 	props.Set(imageMap->ToProperties(prefix, false));
 

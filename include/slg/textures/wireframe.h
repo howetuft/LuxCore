@@ -30,7 +30,7 @@ namespace slg {
 class WireFrameTexture : public Texture {
 public:
 	WireFrameTexture(const float w,
-			TextureConstPtr borderTx, TextureConstPtr insideTx) :
+			TextureRef borderTx, TextureRef insideTx) :
 		width(w), borderTex(borderTx), insideTex(insideTx) { }
 	virtual ~WireFrameTexture() { }
 
@@ -38,24 +38,24 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const {
-		return (borderTex->Y() + insideTex->Y()) * .5f;
+		return (GetBorderTex().Y() + GetInsideTex().Y()) * .5f;
 	}
 	virtual float Filter() const {
-		return (borderTex->Filter() + insideTex->Filter()) * .5f;
+		return (GetBorderTex().Filter() + GetInsideTex().Filter()) * .5f;
 	}
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		borderTex->AddReferencedTextures(referencedTexs);
-		insideTex->AddReferencedTextures(referencedTexs);
+		GetBorderTex().AddReferencedTextures(referencedTexs);
+		GetInsideTex().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		borderTex->AddReferencedImageMaps(referencedImgMaps);
-		insideTex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetBorderTex().AddReferencedImageMaps(referencedImgMaps);
+		GetInsideTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (borderTex == oldTex)
 			borderTex = newTex;
 		if (insideTex == oldTex)
@@ -63,8 +63,8 @@ public:
 	}
 
 	float GetWidth() const { return width; }
-	TextureConstPtr GetBorderTex() const { return borderTex; }
-	TextureConstPtr GetInsideTex() const { return insideTex; }
+	TextureConstRef GetBorderTex() const { return borderTex; }
+	TextureConstRef GetInsideTex() const { return insideTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -72,8 +72,8 @@ private:
 	bool Evaluate(const HitPoint &hitPoint) const;
 
 	const float width;
-	TextureConstPtr borderTex;
-	TextureConstPtr insideTex;
+	std::reference_wrapper<Texture> borderTex;
+	std::reference_wrapper<Texture> insideTex;
 };
 
 }

@@ -63,5 +63,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void PathCPURenderState::save(LuxOutputArchive &ar, const u_int version) const;
 template void PathCPURenderState::load(LuxInputArchive &ar, const u_int version);
+template void PathCPURenderState::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void PathCPURenderState::load(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

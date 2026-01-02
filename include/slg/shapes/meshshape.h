@@ -27,19 +27,17 @@ namespace slg {
 
 class MeshShape : public Shape {
 public:
-	MeshShape(luxrays::ExtTriangleMeshPtr mesh);
+	MeshShape(luxrays::ExtTriangleMeshUPtr&& mesh);
 	MeshShape(const std::string &fileName);
 	virtual ~MeshShape();
 
-	virtual ShapeType GetType() const { return MESH; }
+	virtual ShapeType GetType() const override { return MESH; }
 
 	void SetLocal2World(const luxrays::Transform &trans);
 	void ApplyTransform(const luxrays::Transform &trans);
-	
-protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
 
-	luxrays::ExtTriangleMeshPtr mesh;
+protected:
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 };
 
 }

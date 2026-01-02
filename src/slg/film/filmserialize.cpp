@@ -237,5 +237,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Film::save(LuxOutputArchive &ar, const u_int version) const;
 template void Film::load(LuxInputArchive &ar, const u_int version);
+template void Film::save(LuxOutputArchiveText &ar, const u_int version) const;
+template void Film::load(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

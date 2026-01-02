@@ -26,6 +26,7 @@
 #include "slg/engines/caches/photongi/tracephotonsthread.h"
 #include "slg/utils/pathdepthinfo.h"
 #include "slg/utils/pathinfo.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
@@ -114,8 +115,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	newCausticPhotons.clear();
 	vector<u_int> allNearEntryIndices;
 
-	SceneConstPtr scene = pgic.scene.lock();
-	auto camera = scene->camera;
+	SceneConstRef scene = pgic.scene;
+	auto& camera = scene.GetCamera();
 
 	bool usefulPath = false;
 
@@ -124,11 +125,11 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 	const float timeSample = samples[0];
 	const float time = (pgic.params.photon.timeStart <= pgic.params.photon.timeEnd) ?
 		Lerp(timeSample, pgic.params.photon.timeStart, pgic.params.photon.timeEnd) :
-		camera->GenerateRayTime(timeSample);
+		camera.GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;
-	auto light = scene->lightDefs.GetEmitLightStrategy()->
+	auto light = scene.lightDefs.GetEmitLightStrategy().
 			SampleLights(scene, samples[1], &lightPickPdf);
 
 	if (light) {
@@ -154,7 +155,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 				RayHit nextEventRayHit;
 				BSDF bsdf;
 				Spectrum connectionThroughput;
-				const bool hit = scene->Intersect(nullptr, LIGHT_RAY | GENERIC_RAY, &pathInfo.volume, samples[sampleOffset],
+				const bool hit = scene.Intersect(nullptr, LIGHT_RAY | GENERIC_RAY, &pathInfo.volume, samples[sampleOffset],
 						&nextEventRay, &nextEventRayHit, &bsdf,
 						&connectionThroughput);
 

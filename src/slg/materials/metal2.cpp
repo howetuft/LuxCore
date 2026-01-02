@@ -28,19 +28,42 @@ using namespace slg;
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-Metal2Material::Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr nn, TextureConstPtr kk, TextureConstPtr u, TextureConstPtr v) :
-			Material(frontTransp, backTransp, emitted, bump),
-			fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) {
+Metal2Material::Metal2Material(
+	OptionalPtr<const Texture> frontTransp,
+	OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted,
+	OptionalPtr<const Texture> bump,
+	OptionalPtr<const Texture> nn,
+	OptionalPtr<const Texture> kk,
+	OptionalPtr<const Texture> u,
+	OptionalPtr<const Texture> v
+) :
+	Material(frontTransp, backTransp, emitted, bump),
+	fresnelTex(std::nullopt),
+	n(nn),
+	k(kk),
+	nu(u),
+	nv(v)
+{
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
-Metal2Material::Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		FresnelTextureConstPtr ft, TextureConstPtr u, TextureConstPtr v) :
-			Material(frontTransp, backTransp, emitted, bump),
-			fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) {
+Metal2Material::Metal2Material(
+	OptionalPtr<const Texture> frontTransp,
+	OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted,
+	OptionalPtr<const Texture> bump,
+	OptionalPtr<const FresnelTexture> ft,
+	OptionalPtr<const Texture> u,
+	OptionalPtr<const Texture> v)
+	:
+	Material(frontTransp, backTransp, emitted, bump),
+	fresnelTex(ft),
+	n(std::nullopt),
+	k(std::nullopt),
+	nu(u),
+	nv(v)
+{
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
@@ -167,7 +190,7 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localLightDir, wh));
 }
 
-void Metal2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void Metal2Material::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	if (fresnelTex)
@@ -181,12 +204,12 @@ void Metal2Material::AddReferencedTextures(std::unordered_set<TextureConstPtr>  
 	nv->AddReferencedTextures(referencedTexs);
 }
 
-void Metal2Material::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void Metal2Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (fresnelTex == oldTex)
-		fresnelTex = static_pointer_cast<const FresnelTexture>(newTex);
+	if (fresnelTex.ptr() == &oldTex)
+		fresnelTex = static_cast<const FresnelTexture&>(newTex);
 	if (n == oldTex)
 		n = newTex;
 	if (k == oldTex)

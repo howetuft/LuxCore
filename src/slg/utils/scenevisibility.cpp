@@ -24,6 +24,7 @@
 
 #include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
+#include "slg/cameras/camera.h"
 #include "slg/engines/renderengine.h"
 #include "slg/utils/scenevisibility.h"
 #include "slg/utils/pathdepthinfo.h"
@@ -80,18 +81,18 @@ void SceneVisibility<T>::TraceVisibilityThread::Join() {
 }
 
 template <class T>
-void SceneVisibility<T>::TraceVisibilityThread::GenerateEyeRay(CameraConstPtr camera, Ray &eyeRay,
+void SceneVisibility<T>::TraceVisibilityThread::GenerateEyeRay(CameraConstRef camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
-	const u_int *subRegion = camera->filmSubRegion;
+	const u_int *subRegion = camera.filmSubRegion;
 	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
 	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
 
 	const float timeSample = sampler->GetSample(4);
 	const float time = (sv.timeStart <= sv.timeEnd) ?
 		Lerp(timeSample, sv.timeStart, sv.timeEnd) :
-		camera->GenerateRayTime(timeSample);
+		camera.GenerateRayTime(timeSample);
 
-	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
+	camera.GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
 		sampler->GetSample(2), sampler->GetSample(3));
 }
 
@@ -110,8 +111,8 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 	// This is really used only by Windows for 64+ threads support
 	SetThreadGroupAffinity(threadIndex);
 
-	auto scene = sv.scene.lock();
-	auto camera = scene->camera;
+	auto& scene = sv.scene;
+	auto& camera = scene.GetCamera();
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
@@ -188,7 +189,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				const bool hit = scene->Intersect(NULL,
+				const bool hit = scene.Intersect(NULL,
 						EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 						&volInfo, sampler.GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -329,7 +330,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 //------------------------------------------------------------------------------
 
 template <class T>
-SceneVisibility<T>::SceneVisibility(SceneConstPtr scn, vector<T> &parts,
+SceneVisibility<T>::SceneVisibility(SceneConstRef scn, vector<T> &parts,
 		const u_int maxDepth,  const u_int sampleCount,
 		const float hitRate, const float r, const float ang,
 		const float t0, const float t1) :

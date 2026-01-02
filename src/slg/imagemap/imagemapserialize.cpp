@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/serialization/unique_ptr.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include "slg/imagemap/imagemap.h"
 
 using namespace std;
@@ -39,6 +41,8 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImageMapStorage::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImageMapStorage::serialize(LuxInputArchive &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxInputArchiveText &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -78,5 +82,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImageMap::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImageMap::serialize(LuxInputArchive &ar, const u_int version);
+template void ImageMap::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void ImageMap::serialize(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

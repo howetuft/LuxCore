@@ -31,9 +31,9 @@ float MakeFloat3Texture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum MakeFloat3Texture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v1 = tex1->GetFloatValue(hitPoint);
-	const float v2 = tex2->GetFloatValue(hitPoint);
-	const float v3 = tex3->GetFloatValue(hitPoint);
+	const float v1 = GetTexture1().GetFloatValue(hitPoint);
+	const float v2 = GetTexture2().GetFloatValue(hitPoint);
+	const float v3 = GetTexture3().GetFloatValue(hitPoint);
 	return Spectrum(v1, v2, v3);
 }
 
@@ -42,9 +42,9 @@ Properties MakeFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, con
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("makefloat3"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture3")(tex3->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture3")(GetTexture3().GetSDLValue()));
 
 	return props;
 }

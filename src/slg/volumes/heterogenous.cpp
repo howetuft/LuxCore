@@ -18,6 +18,7 @@
 
 #include <cstddef>
 
+#include "luxrays/usings.h"
 #include "slg/volumes/homogenous.h"
 #include "slg/volumes/heterogenous.h"
 #include "slg/bsdf/bsdf.h"
@@ -30,22 +31,26 @@ using namespace slg;
 // HeterogeneousVolume
 //------------------------------------------------------------------------------
 
-HeterogeneousVolume::HeterogeneousVolume(TextureConstPtr iorTex, TextureConstPtr emiTex,
-		TextureConstPtr a, TextureConstPtr s, TextureConstPtr g,
-		const float ss, const u_int maxStepC,
-		const bool multiScat) : Volume(iorTex, emiTex),
-		schlickScatter(*this, g), stepSize(ss), maxStepsCount(maxStepC),
-		multiScattering(multiScat) {
-	sigmaA = a;
-	sigmaS = s;
-}
+HeterogeneousVolume::HeterogeneousVolume(
+	TextureConstRef iorTex,
+	OptionalPtr<const Texture> emiTex,
+	TextureConstRef a, TextureConstRef s, TextureConstRef g,
+	const float ss, const u_int maxStepC,
+	const bool multiScat
+) :
+	Volume(iorTex, emiTex),
+	schlickScatter(*this, g), stepSize(ss), maxStepsCount(maxStepC),
+	multiScattering(multiScat),
+	sigmaA(a),
+	sigmaS(s)
+{}
 
 Spectrum HeterogeneousVolume::SigmaA(const HitPoint &hitPoint) const {
-	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
+	return GetSigmaA().GetSpectrumValue(hitPoint).Clamp();
 }
 
 Spectrum HeterogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
-	return sigmaS->GetSpectrumValue(hitPoint).Clamp();
+	return GetSigmaS().GetSpectrumValue(hitPoint).Clamp();
 }
 
 float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
@@ -135,23 +140,25 @@ void HeterogeneousVolume::Pdf(const HitPoint &hitPoint,
 	schlickScatter.Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-void HeterogeneousVolume::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void HeterogeneousVolume::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Volume::AddReferencedTextures(referencedTexs);
 
-	sigmaA->AddReferencedTextures(referencedTexs);
-	sigmaS->AddReferencedTextures(referencedTexs);
-	schlickScatter.g->AddReferencedTextures(referencedTexs);
+	GetSigmaA().AddReferencedTextures(referencedTexs);
+	GetSigmaS().AddReferencedTextures(referencedTexs);
+	schlickScatter.GetG().AddReferencedTextures(referencedTexs);
 }
 
-void HeterogeneousVolume::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void HeterogeneousVolume::UpdateTextureReferences(
+	TextureConstRef oldTex, TextureRef newTex
+) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)
 		sigmaA = newTex;
 	if (sigmaS == oldTex)
 		sigmaS = newTex;
-	if (schlickScatter.g == oldTex)
-		schlickScatter.g = newTex;
+	if (schlickScatter.GetG() == oldTex)
+		schlickScatter.SetG(newTex);
 }
 
 Properties HeterogeneousVolume::ToProperties() const {
@@ -159,9 +166,9 @@ Properties HeterogeneousVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("heterogeneous"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
-	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetSDLValue()));
-	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".scattering")(GetSigmaS().GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.GetG().GetSDLValue()));
 	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
 	props.Set(Property("scene.volumes." + name + ".steps.size")(stepSize));
 	props.Set(Property("scene.volumes." + name + ".steps.maxcount")(maxStepsCount));

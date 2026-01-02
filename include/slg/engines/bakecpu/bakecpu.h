@@ -80,7 +80,7 @@ protected:
 
 class BakeCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BakeCPURenderEngine(RenderConfigConstRef cfg);
+	BakeCPURenderEngine(RenderConfigRef cfg);
 	virtual ~BakeCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -95,7 +95,7 @@ public:
 	static RenderEngineType GetObjectType() { return BAKECPU; }
 	static std::string GetObjectTag() { return "BAKECPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class BakeCPURenderThread;
     struct completion_t {
@@ -128,7 +128,7 @@ protected:
 	std::unique_ptr<SamplerSharedData> lightSamplerSharedData;
 
 	FilmPtr mapFilm;
-	std::vector<SceneObjectConstPtr> currentSceneObjsToBake;
+	std::vector<const SceneObject *> currentSceneObjsToBake;
 	std::vector<float> currentSceneObjsToBakeArea;
 	luxrays::Distribution1D *currentSceneObjsDist;
 	std::vector<luxrays::Distribution1D *> currentSceneObjDist;

@@ -47,22 +47,27 @@ public:
 	virtual LightStrategyType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
 
-	virtual void Preprocess(SceneConstPtr scn, const LightStrategyTask taskType,
+	virtual void Preprocess(SceneConstRef scn, const LightStrategyTask taskType,
 			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
-	virtual LightSourcePtr SampleLights(
-			SceneConstPtr scene,
+	virtual OptionalPtr<LightSource> SampleLights(
+			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume,
 			float *pdf) const = 0;
-	virtual float SampleLightPdf(LightSourceConstPtr light,
-			const luxrays::Point &p, const luxrays::Normal &n,
+
+	virtual float SampleLightPdf(
+			LightSourceConstRef light,
+			const luxrays::Point &p,
+			const luxrays::Normal &n,
 			const bool isVolume) const = 0;
 
 	// Used for light emission
-	virtual LightSourcePtr SampleLights(SceneConstPtr, const float u, float *pdf) const = 0;
+	virtual OptionalPtr<LightSource> SampleLights(
+		SceneConstRef, const float u, float *pdf
+	) const = 0;
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const = 0;
@@ -76,7 +81,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static LightStrategyPtr FromProperties(const luxrays::Properties &cfg);
+	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -87,6 +92,9 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategy(const LightStrategyType t) : type(t) { }
+
+	OptionalPtr<const Scene> scene;  // I think this could be a (mandatory) reference but
+									 // for now, I keep it as a (optional) pointer
 
 private:
 	const LightStrategyType type;

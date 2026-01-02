@@ -27,7 +27,7 @@ using namespace slg;
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
 
-void LightStrategyLogPower::Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
+void LightStrategyLogPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	// Delete old lightsDistribution
 	delete lightsDistribution;
@@ -35,7 +35,7 @@ void LightStrategyLogPower::Preprocess(SceneConstPtr scene, const LightStrategyT
 
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene->lightDefs.GetSize();
+	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -43,8 +43,8 @@ void LightStrategyLogPower::Preprocess(SceneConstPtr scene, const LightStrategyT
 	lightPower.reserve(lightCount);
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto l = scene->lightDefs.GetLightSource(i);
-		const float power = logf(1.f + l->GetPower(scene)) * l->GetImportance();
+		auto& l = scene.lightDefs.GetLightSource(i);
+		const float power = logf(1.f + l.GetPower(scene)) * l.GetImportance();
 
 		switch (taskType) {
 			case TASK_EMIT: {
@@ -52,14 +52,14 @@ void LightStrategyLogPower::Preprocess(SceneConstPtr scene, const LightStrategyT
 				break;
 			}
 			case TASK_ILLUMINATE: {
-				if (l->IsDirectLightSamplingEnabled()){
+				if (l.IsDirectLightSamplingEnabled()){
 					lightPower.push_back(power);
 				} else
 					lightPower.push_back(0.f);
 				break;
 			}
 			case TASK_INFINITE_ONLY: {
-				if (l->IsInfinite())
+				if (l.IsInfinite())
 					lightPower.push_back(power);
 				else
 					lightPower.push_back(0.f);
@@ -81,8 +81,8 @@ Properties LightStrategyLogPower::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
 }
 
-LightStrategyPtr LightStrategyLogPower::FromProperties(const Properties &cfg) {
-	return std::make_shared<LightStrategyLogPower>();
+LightStrategyUPtr LightStrategyLogPower::FromProperties(const Properties &cfg) {
+	return std::make_unique<LightStrategyLogPower>();
 }
 
 const Properties &LightStrategyLogPower::GetDefaultProps() {

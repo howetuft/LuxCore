@@ -43,24 +43,24 @@ OPENCL_FORCE_NOT_INLINE void DistortTexture_EvalOp(
 			EvalStack_PopFloat3(offsetColor);
 
 			// Save original P
-			float3 p = VLOAD3F(&hitPoint->p.x);
+			float3 p = VLOAD3F(&hitPoint.p.x);
 			EvalStack_PushFloat3(p);
 
 			// Save original UV
-			float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
+			float2 uv = VLOAD2F(&hitPoint.defaultUV.u);
 			EvalStack_PushFloat(uv.x);
 			EvalStack_PushFloat(uv.y);
 
 			// Distort HitPoint P and UV
 			__global HitPoint *tmpHitPoint = (__global HitPoint *)hitPoint;
 
-			const float3 offset = offsetColor * texture->distortTex.strength;
+			const float3 offset = offsetColor * texture.distortTex.strength;
 			p += offset;
-			VSTORE3F(p, &tmpHitPoint->p.x);
+			VSTORE3F(p, &tmpHitPoint.p.x);
 
 			uv.x += offset.x;
 			uv.y += offset.y;
-			VSTORE2F(uv, &tmpHitPoint->defaultUV.u);
+			VSTORE2F(uv, &tmpHitPoint.defaultUV.u);
 			break;
 		}
 		case EVAL_FLOAT:
@@ -73,11 +73,11 @@ OPENCL_FORCE_NOT_INLINE void DistortTexture_EvalOp(
 			__global HitPoint *tmpHitPoint = (__global HitPoint *)hitPoint;
 			float2 uv;
 			EvalStack_PopFloat2(uv);
-			VSTORE2F(uv, &tmpHitPoint->defaultUV.u);
+			VSTORE2F(uv, &tmpHitPoint.defaultUV.u);
 
 			float3 p;
 			EvalStack_PopFloat3(p);
-			VSTORE3F(p, &tmpHitPoint->p.x);
+			VSTORE3F(p, &tmpHitPoint.p.x);
 
 			// Save the result
 			if (evalType == EVAL_FLOAT) {

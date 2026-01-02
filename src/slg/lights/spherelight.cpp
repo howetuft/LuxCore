@@ -68,7 +68,7 @@ bool SphereLight::SphereIntersect(const Ray &ray, float &hitT) const {
 	return true;
 }
 
-Spectrum SphereLight::Emit(SceneConstPtr scene,
+Spectrum SphereLight::Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
@@ -100,7 +100,7 @@ Spectrum SphereLight::Emit(SceneConstPtr scene,
 	return emittedFactor * invArea * CosTheta(localDirOut) * INV_PI;
 }
 
-Spectrum SphereLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+Spectrum SphereLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {

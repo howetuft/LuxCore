@@ -29,27 +29,26 @@ namespace slg {
 class SubdivShape : public Shape {
 public:
 	SubdivShape(
-		CameraConstPtr camera,
-		luxrays::ExtTriangleMeshPtr srcMesh,
+		OptionalPtr<const Camera> camera,
+		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
 		const float maxEdgeScreenSize,
 		const bool enhanced
 	);
 	virtual ~SubdivShape();
 
-	virtual ShapeType GetType() const { return SUBDIV; }
+	virtual ShapeType GetType() const override { return SUBDIV; }
 
-	static float MaxEdgeScreenSize(CameraConstPtr camera, luxrays::ExtTriangleMeshPtr srcMesh);
-	static luxrays::ExtTriangleMeshPtr ApplySubdiv(
-		luxrays::ExtTriangleMeshPtr srcMesh,
+	static float MaxEdgeScreenSize(CameraConstRef camera, luxrays::ExtTriangleMeshRef srcMesh);
+	static luxrays::ExtTriangleMeshUPtr ApplySubdiv(
+		luxrays::ExtTriangleMeshRef srcMesh,
 		const u_int maxLevel,
 		const bool enhanced
 	);
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	luxrays::ExtTriangleMeshPtr mesh = nullptr;
 };
 
 }

@@ -19,6 +19,7 @@
 #ifndef _SLG_PHOTONGICACHE_H
 #define	_SLG_PHOTONGICACHE_H
 
+#include <functional>
 #include <vector>
 #include <barrier>
 
@@ -61,7 +62,8 @@ protected:
 	// Used by serialization
 	GenericPhoton() { }
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	template<class Archive>
+	void serialize(Archive &ar, const u_int version) {
 		ar & p;
 		ar & isVolume;
 	}
@@ -262,12 +264,12 @@ class EyePathInfo;
 
 class PhotonGICache {
 public:
-	PhotonGICache(SceneConstPtr scn, const PhotonGICacheParams &params);
+	PhotonGICache(SceneConstRef scn, const PhotonGICacheParams &params);
 	virtual ~PhotonGICache();
 
-	void SetScene(SceneConstPtr scn) { scene = scn; }
+	void SetScene(SceneRef scn) { scene = scn; }
 	PhotonGIDebugType GetDebugType() const { return params.debugType; }
-	
+
 	bool IsIndirectEnabled() const { return params.indirect.enabled; }
 	bool IsCausticEnabled() const { return params.caustic.enabled; }
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
@@ -275,7 +277,7 @@ public:
 			const float lastGlossiness, const float u0) const;
 	bool IsDirectLightHitVisible(const EyePathInfo &pathInfo,
 		const bool photonGICausticCacheUsed) const;
-	
+
 	const PhotonGICacheParams &GetParams() const { return params; }
 
 	void Preprocess(const u_int threadCount);
@@ -289,7 +291,7 @@ public:
 
 	const luxrays::SpectrumGroup *GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::SpectrumGroup ConnectWithCausticPaths(const BSDF &bsdf) const;
-	
+
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
 	const u_int GetRadiancePhotonTracedCount() const { return indirectPhotonTracedCount; }
@@ -305,7 +307,7 @@ public:
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
-	static PhotonGICache *FromProperties(SceneConstPtr scn, const luxrays::Properties &cfg);
+	static PhotonGICache *FromProperties(SceneConstRef scn, const luxrays::Properties &cfg);
 
 	friend class PGICSceneVisibility;
 	friend class TracePhotonsThread;
@@ -335,7 +337,8 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	SceneConstWPtr scene;
+	std::reference_wrapper<const Scene> scene;
+
 	PhotonGICacheParams params;
 
 	u_int threadCount;

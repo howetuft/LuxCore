@@ -28,9 +28,13 @@
 #include <fstream>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+
 #include <boost/archive/basic_archive.hpp>
 
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/version.hpp>
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/split_free.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/level.hpp>
 #include <boost/serialization/export.hpp>
@@ -38,7 +42,7 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 #include <boost/serialization/tracking.hpp>
-#include <boost/serialization/split_free.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 
 #include <boost/serialization/deque.hpp>
 #include <boost/serialization/set.hpp>
@@ -46,6 +50,8 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "luxrays/luxrays.h"
 
@@ -53,6 +59,8 @@ namespace luxrays {
 
 typedef boost::archive::binary_oarchive LuxOutputArchive;
 typedef boost::archive::binary_iarchive LuxInputArchive;
+typedef boost::archive::text_oarchive LuxOutputArchiveText;
+typedef boost::archive::text_iarchive LuxInputArchiveText;
 
 class SerializationOutputFile {
 public:
@@ -86,7 +94,22 @@ private:
 	LuxInputArchive *inArchive;
 };
 
+}  // namespace luxrays
+
+
+namespace boost {
+namespace serialization {
+
+// Helper for std::reference_wrapper
+template<class Archive, typename T>
+void serialize(Archive & ar, std::reference_wrapper<T> & ref, const unsigned int version) {
+    // Serialize the referenced object
+    ar & ref.get();
 }
+
+} // namespace serialization
+} // namespace boost
+
 
 #endif	/* _SLG_SERIALIZATIONUTILS_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

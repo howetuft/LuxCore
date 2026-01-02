@@ -16,6 +16,20 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// Guidelines for this API (Howetuft):
+//	- All functions parameters must be wrapped into smart pointers,
+//	  as there is no more deallocation.
+//	- Preferred smart pointer is of course std::unique_ptr
+//	- Returns of complex types can be smart pointers, references or const
+//	  references of smart pointers. Raw pointers are prohibited.
+//	- For each object Object, please declare an alias, via
+//    `using` directive. Naming is `ObjectPtr`, so the directive should be:
+//    `using ObjectPtr = std::unique_ptr<Object>;`
+//  - In parameters, use `ObjectPtr&&` and move semantic to transfer ownership,
+//	  and `const ObjectPtr &` to provide a reference without ownership.
+
+
+
 /*!
  * \file
  *
@@ -63,21 +77,26 @@
 namespace luxcore {
 
 class Scene;
-using ScenePtr = std::shared_ptr<Scene>;
-using SceneConstPtr = std::shared_ptr<const Scene>;
-
-class Film;
-using FilmPtr = std::shared_ptr<Film>;
+using ScenePtr = std::unique_ptr<Scene>;
+using SceneConstPtr = std::unique_ptr<const Scene>;
 
 class RenderConfig;
-using RenderConfigPtr = std::shared_ptr<RenderConfig>;
+using RenderConfigPtr = std::unique_ptr<RenderConfig>;
+using RenderConfigRef = RenderConfig &;
 
 class RenderState;
 using RenderStatePtr = std::shared_ptr<RenderState>;
 
 class RenderSession;
-using RenderSessionPtr = std::shared_ptr<RenderSession>;
-using RenderSessionUPtr = std::unique_ptr<RenderSession>;
+using RenderSessionPtr = std::unique_ptr<RenderSession>;
+
+using luxrays::Properties;
+using PropertiesPtr = std::shared_ptr<luxrays::Properties>;
+using PropertiesConstPtr = std::shared_ptr<const luxrays::Properties>;
+
+class Film;
+using FilmPtr = std::shared_ptr<Film>;
+using FilmConstPtr = std::shared_ptr<const Film>;
 
 #define LC_MESH_MAX_DATA_COUNT 8
 
@@ -162,7 +181,10 @@ CPP_EXPORT CPP_API void ParseLXS(
  * They can be used to define the list of types to use, for instance with a
  * Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL").
  */
-CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
+CPP_EXPORT CPP_API void KernelCacheFill(
+	const PropertiesPtr & config,
+	void (*ProgressHandler)(const size_t, const size_t) = NULL
+);
 
 /*!
  * \brief Return a list of properties describing the features available. The
@@ -180,7 +202,7 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not. This is now always false.
  */
-CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
+CPP_EXPORT CPP_API PropertiesPtr GetPlatformDesc();
 
 /*!
  * \brief Return the list of OpenCL devices available. For instance:
@@ -203,7 +225,7 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
  * - opencl.device.2.maxmemory = 16765145088
  * - opencl.device.2.maxmemoryallocsize = 4191286272
  */
-CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
+CPP_EXPORT CPP_API PropertiesPtr GetOpenCLDeviceDescs();
 
 /*!
  * \brief Convert an image file to TX format
@@ -211,7 +233,10 @@ CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
  * \param srcFileName defines the source image file name
  * \param srcFileName defines the destination image file name
  */
-CPP_EXPORT CPP_API void MakeTx(const std::string &srcFileName, const std::string &dstFileName);
+CPP_EXPORT CPP_API void MakeTx(
+	const std::string &srcFileName,
+	const std::string &dstFileName
+);
 
 /*!
  * \brief Clear the list of places where to look for files.
@@ -227,9 +252,6 @@ CPP_EXPORT CPP_API void AddFileNameResolverPath(const std::string &path);
  * \brief Return the list of places where to look for files.
  */
 CPP_EXPORT CPP_API std::vector<std::string> GetFileNameResolverPaths();
-
-class RenderSession;
-class RenderState;
 
 /*!
  * \brief Film stores all the outputs of a rendering. It can be obtained
@@ -347,7 +369,7 @@ public:
 	 *
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
-	static std::shared_ptr<Film> Create(const std::string &fileName);
+	static FilmPtr Create(const std::string &fileName);
 	/*!
 	 * \brief Create a stand alone Film (i.e. not connected to a rendering session)
 	 * from the properties.
@@ -359,10 +381,11 @@ public:
 	 * Required by BIDIRCPU and LIGHTCPU render engines.
 	 *
 	 */
-	static std::shared_ptr<Film> Create(
-			std::shared_ptr<const luxrays::Properties> props,
-			const bool hasPixelNormalizedChannel,
-			const bool hasScreenNormalizedChannel);
+	static FilmPtr Create(
+		PropertiesConstPtr props,
+		const bool hasPixelNormalizedChannel,
+		const bool hasScreenNormalizedChannel
+	);
 
 	/*!
 	 * \brief Returns the Film width.
@@ -382,7 +405,7 @@ public:
 	 *
 	 * \return a Properties container with the statistics.
 	 */
-	virtual luxrays::Properties GetStats() const = 0;
+	virtual PropertiesPtr GetStats() const = 0;
 	/*!
 	 * \brief Returns the Film average luminance. It can be used to
 	 * estimate a good value for variance clamping.
@@ -402,7 +425,7 @@ public:
 	 * \param film the film to add.
 	 *
 	 */
-	virtual void AddFilm(std::shared_ptr<const Film> film) = 0;
+	virtual void AddFilm(FilmConstPtr) = 0;
 	/*!
 	 * \brief Add a film.
 	 *
@@ -416,7 +439,7 @@ public:
 	 *
 	 */
 	virtual void AddFilm(
-		std::shared_ptr<const Film> film,
+		FilmConstPtr film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY) = 0;
@@ -443,7 +466,7 @@ public:
 	virtual void SaveOutput(
 		const std::string &fileName,
 		const FilmOutputType type,
-		std::shared_ptr<const luxrays::Properties> props
+		PropertiesConstPtr props
 	) const = 0;
 
 	/*!
@@ -501,8 +524,13 @@ public:
 	 * \param executeImagePipeline is a flag to enable/disable automatic image
 	 * pipeline execution before to perform the copy.
 	 */
-	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0,
-			const bool executeImagePipeline = true) {
+	template<class T>
+	void GetOutput(
+		const FilmOutputType type,
+		T *buffer,
+		const unsigned int index = 0,
+		const bool executeImagePipeline = true
+	) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 	/*!
@@ -518,8 +546,13 @@ public:
 	 * \param executeImagePipeline is a flag to enable/disable automatic image
 	 * pipeline execution before to perform the copy.
 	 */
-	template<class T> void UpdateOutput(const FilmOutputType type, const T *buffer, const unsigned int index = 0,
-			const bool executeImagePipeline = false) {
+	template<class T>
+	void UpdateOutput(
+		const FilmOutputType type,
+		const T *buffer,
+		const unsigned int index = 0,
+		const bool executeImagePipeline = false
+	) {
 		throw std::runtime_error("Called Film::UpdateOutput() with wrong type");
 	}
 	/*!
@@ -552,8 +585,11 @@ public:
 	 *
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0,
-			const bool executeImagePipeline = true) {
+	template<class T>
+	const T *GetChannel(
+		const FilmChannelType type, const unsigned int index = 0,
+		const bool executeImagePipeline = true
+		) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 	/*!
@@ -571,8 +607,10 @@ public:
 	 *
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> T *UpdateChannel(const FilmChannelType type, const unsigned int index = 0,
-			const bool executeImagePipeline = true) {
+	template<class T>
+	T *UpdateChannel(const FilmChannelType type, const unsigned int index = 0,
+		const bool executeImagePipeline = true
+	) {
 		throw std::runtime_error("Called Film::UpdateChannel() with wrong type");
 	}
 	/*!
@@ -582,7 +620,8 @@ public:
 	 *
 	 * \param props are the Properties to set.
 	 */
-	virtual void Parse(std::shared_ptr<const luxrays::Properties> props) = 0;
+	virtual void Parse(PropertiesConstPtr props) = 0;
+
 	/*!
 	 * \brief Delete all image pipelines and goes the default image
 	 * pipeline (AutoLinearToneMap + GammaCorrectionPlugin). This method can
@@ -606,11 +645,13 @@ public:
 	 *
 	 */
 	virtual void AsyncExecuteImagePipeline(const unsigned int index) = 0;
+
 	/*!
 	 * \brief wait for the end of the asynchronously execution of an image pipeline.
 	 *
 	 */
 	virtual void WaitAsyncExecuteImagePipeline() = 0;
+
 	/*!
 	 * \brief wait for the end of the asynchronously execution of an image pipeline.
 	 *
@@ -619,8 +660,10 @@ public:
 	virtual bool HasDoneAsyncExecuteImagePipeline() = 0;
 
 protected:
-	virtual void GetOutputFloat(const FilmOutputType type, float *buffer, const unsigned int index,
-			const bool executeImagePipeline = true) = 0;
+	virtual void GetOutputFloat(
+		const FilmOutputType type, float *buffer, const unsigned int index,
+		const bool executeImagePipeline = true
+	) = 0;
 	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
 
@@ -679,41 +722,46 @@ public:
 	 * \return a camera type.
 	 */
 	virtual const CameraType GetType() const = 0;
+
 	/*!
 	 * \brief Translates by vector t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation vector.
 	 */
-	virtual void Translate(const float x, const float y, const float z) const = 0;
+	virtual void Translate(const float x, const float y, const float z) = 0;
+
 	/*!
 	 * \brief Translates left by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	virtual void TranslateLeft(const float t) const = 0;
+	virtual void TranslateLeft(const float t) = 0;
+
 	/*!
 	 * \brief Translates right by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	virtual void TranslateRight(const float t) const = 0;
+	virtual void TranslateRight(const float t) = 0;
+
 	/*!
 	 * \brief Translates forward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	virtual void TranslateForward(const float t) const = 0;
+	virtual void TranslateForward(const float t) = 0;
+
 	/*!
 	 * \brief Translates backward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param t is the translation distance.
 	 */
-	virtual void TranslateBackward(const float t) const = 0;
+	virtual void TranslateBackward(const float t) = 0;
 
 	/*!
 	 * \brief Rotates by angle around the axis. This method can be used only when
@@ -722,35 +770,38 @@ public:
 	 * \param angle is the rotation angle.
 	 * \param axis is the rotation axis.
 	 */
-	virtual void Rotate(const float angle, const float x, const float y, const float z) const = 0;
+	virtual void Rotate(const float angle, const float x, const float y, const float z) = 0;
+
 	/*!
 	* \brief Rotates left by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param angle is the rotation angle.
 	 */
-	virtual void RotateLeft(const float angle) const = 0;
+	virtual void RotateLeft(const float angle) = 0;
+
 	/*!
 	 * \brief Rotates right by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param angle is the rotation angle.
 	 */
-	virtual void RotateRight(const float angle) const = 0;
+	virtual void RotateRight(const float angle) = 0;
+
 	/*!
 	 * \brief Rotates up by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param angle is the rotation angle.
 	 */
-	virtual void RotateUp(const float angle) const = 0;
+	virtual void RotateUp(const float angle) = 0;
 	/*!
 	 * \brief Rotates down by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 *
 	 * \param angle is the rotation angle.
 	 */
-	virtual void RotateDown(const float angle) const = 0;
+	virtual void RotateDown(const float angle) = 0;
 };
 
 /*!
@@ -798,8 +849,8 @@ public:
 	 *
 	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static std::unique_ptr<Scene> Create(
-			std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
+	static ScenePtr Create(
+		PropertiesConstPtr resizePolicyProps = nullptr
 	);
 	/*!
 	 * \brief Creates a new Scene as defined by props.
@@ -807,9 +858,10 @@ public:
 	 * \param props are the Properties used to build the new Scene.
 	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static std::unique_ptr<Scene> Create(
-		std::shared_ptr<const luxrays::Properties> props,
-		std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
+
+	static ScenePtr Create(
+		PropertiesConstPtr props,
+		PropertiesConstPtr resizePolicyProps = nullptr
 	);
 	/*!
 	 * \brief Creates a new Scene as defined in fileName file.
@@ -821,9 +873,9 @@ public:
 	 * This parameter has no effect when loading binary serialized binary
 	 * file.
 	 */
-	static std::unique_ptr<Scene> Create(
+	static ScenePtr Create(
 		const std::string &fileName,
-		std::shared_ptr<const luxrays::Properties> resizePolicyProps = nullptr
+		PropertiesConstPtr resizePolicyProps = nullptr
 	);
 
 	virtual ~Scene();
@@ -841,6 +893,7 @@ public:
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 */
 	virtual const Camera &GetCamera() const = 0;
+	virtual Camera &GetCamera() = 0;
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
 	 * The memory allocated for pixels array is NOT freed by the Scene class nor
@@ -1038,7 +1091,7 @@ public:
 	 * \param props are the Properties with the definition of camera, textures,
 	 * materials and/or objects.
 	 */
-	virtual void Parse(std::shared_ptr<const luxrays::Properties> props) = 0;
+	virtual void Parse(PropertiesConstPtr props) = 0;
 
 	/*!
 	 * \brief Duplicate an object in an instance using the passed transformation.
@@ -1168,13 +1221,13 @@ public:
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	virtual std::shared_ptr<const luxrays::Properties> ToProperties() const = 0;
+	virtual PropertiesConstPtr ToProperties() const = 0;
 	/*!
 	 * \brief Serializes a Scene in a file.
 	 *
 	 * \param fileName is the name of the file where to serialize the scene.
 	 */
-	virtual void Save(const std::string &fileName) const = 0;
+	virtual void Save(const std::string &fileName) = 0;
 
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
@@ -1225,7 +1278,7 @@ public:
 	 * \param props are the Properties used to build the new RenderConfig.
 	 */
 	static std::unique_ptr<RenderConfig> Create(
-		std::shared_ptr<const luxrays::Properties> props
+		PropertiesConstPtr props = nullptr
 	);
 
 	/*!
@@ -1240,8 +1293,8 @@ public:
 	 * the destructor.
 	 */
 	static std::unique_ptr<RenderConfig> Create(
-		std::shared_ptr<const luxrays::Properties> props,
-		std::shared_ptr<luxcore::Scene> scene
+		PropertiesConstPtr props,
+		const std::unique_ptr<luxcore::Scene>& scene
 	);
 
 	/*!
@@ -1251,6 +1304,7 @@ public:
 	 * RenderConfig. The extension for the binary format must be ".bcf".
 	 */
 	static std::unique_ptr<RenderConfig> Create(const std::string &fileName);
+
 	/*!
 	 * \brief Create a new RenderConfig using the provided resume binary file.
 	 *
@@ -1303,7 +1357,7 @@ public:
 	 *
 	 * \param props are the Properties to set.
 	 */
-	virtual void Parse(std::shared_ptr<const luxrays::Properties> props) = 0;
+	virtual void Parse(PropertiesConstPtr props) = 0;
 	/*!
 	 * \brief Deletes any configuration Property starting with the given prefix.
 	 * This method can be used only when the RenderConfig is not in use by a
@@ -1411,8 +1465,8 @@ public:
 	 * \param startFilm is the optional Film to use to resume rendering. The
 	 * memory for Film is freed by RenderSession.
 	 */
-	static std::unique_ptr<RenderSession> Create(
-			RenderConfigPtr config,
+	static RenderSessionPtr Create(
+			const RenderConfigPtr & config,
 			std::shared_ptr<RenderState> * startState = nullptr,
 			std::shared_ptr<Film> * startFilm = nullptr
 	);
@@ -1425,8 +1479,8 @@ public:
 	 * \param startStateFileName is the file name of a RenderState to use to resume rendering.
 	 * \param startFilmFileName is the file name of a Film to use to resume rendering.
 	 */
-	static std::unique_ptr<RenderSession> Create(
-		RenderConfigPtr config,
+	static RenderSessionPtr Create(
+		const RenderConfigPtr & config,
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
@@ -1439,7 +1493,7 @@ public:
 	 *
 	 * \return a reference to the RenderingConfig.
 	 */
-	virtual RenderConfig& GetRenderConfig() = 0;
+	virtual const RenderConfigRef GetRenderConfig() = 0;
 
 	/*!
 	 * \brief Returns a pointer to the current RenderState. The session must be
@@ -1536,7 +1590,7 @@ public:
 	 * \param props are the Properties with the definition of: film.imagepipeline(s).*
 	 * (including radiance channel scales), film.outputs.*, film.width or film.height.
 	 */
-	virtual void Parse(std::shared_ptr<const luxrays::Properties> props) = 0;
+	virtual void Parse(PropertiesConstPtr props) = 0;
 
 	/*!
 	 * \brief Save all the rendering related information (the LuxCore RenderConfig,

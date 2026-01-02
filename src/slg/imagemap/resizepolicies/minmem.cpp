@@ -30,9 +30,9 @@ using namespace slg;
 // ImageMapResizeMinMemPolicy::ApplyResizePolicy()
 //------------------------------------------------------------------------------
 
-ImageMapPtr ImageMapResizeMinMemPolicy::ApplyResizePolicy(const std::string &fileName,
+ImageMapUPtr ImageMapResizeMinMemPolicy::ApplyResizePolicy(const std::string &fileName,
 		const ImageMapConfig &imgCfg, bool &toApply) const {
-	ImageMapPtr im = std::make_shared<ImageMap>(fileName, imgCfg);
+	auto im = std::make_unique<ImageMap>(fileName, imgCfg);
 
 	const u_int width = im->GetWidth();
 	const u_int height = im->GetHeight();
@@ -66,7 +66,7 @@ ImageMapPtr ImageMapResizeMinMemPolicy::ApplyResizePolicy(const std::string &fil
 // ImageMapResizeMinMemPolicy::Preprocess()
 //------------------------------------------------------------------------------
 
-void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, SceneConstPtr scene,
+void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, SceneConstRef scene,
 		const bool useRTMode) const {
 	if (useRTMode)
 		return;
@@ -136,11 +136,11 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, SceneConstPtr sc
 
 		// Reload the original image map
 		imc.maps[i]->Reload();
-		originalMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
+		originalMemUsed += imc.maps[i]->GetStorage().GetMemorySize();
 
 		// Resize the image map
 		imc.maps[i]->Resize(newWidth, newHeight);
-		currentMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
+		currentMemUsed += imc.maps[i]->GetStorage().GetMemorySize();
 		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
 				originalWidth << "x" << originalHeigth << " => " <<

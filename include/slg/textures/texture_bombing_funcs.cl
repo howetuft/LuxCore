@@ -40,9 +40,9 @@ OPENCL_FORCE_INLINE bool BombingTexture_WriteCellUV(__global const Texture* rest
 	const float2 currentCellOffset = cellOffset - MAKE_FLOAT2(i, j);
 
 	// Pick cell random values
-	__global const ImageMap *randomImageMap = &imageMapDescs[texture->bombingTex.randomImageMapIndex];
-	const uint randomImageMapWidth = randomImageMap->width;
-	const uint randomImageMapHeight = randomImageMap->height;
+	__global const ImageMap *randomImageMap = &imageMapDescs[texture.bombingTex.randomImageMapIndex];
+	const uint randomImageMapWidth = randomImageMap.width;
+	const uint randomImageMapHeight = randomImageMap.height;
 
 	const uint randomImageMapStorageIndex = (((int)currentCell.x) % (randomImageMapWidth / 2)) * 2 +
 			(((int)currentCell.y) % randomImageMapHeight) * randomImageMapWidth;
@@ -75,11 +75,11 @@ OPENCL_FORCE_INLINE bool BombingTexture_WriteCellUV(__global const Texture* rest
 	const float2 translatedUV = MAKE_FLOAT2(bulletUV.x - .5f, bulletUV.y - .5f);
 
 	// Apply random scale
-	const float scaleFactor = Lerp(currentCellRandomScale, 1.f, 1.f + texture->bombingTex.randomScaleFactor);
+	const float scaleFactor = Lerp(currentCellRandomScale, 1.f, 1.f + texture.bombingTex.randomScaleFactor);
 	const float2 scaledUV = MAKE_FLOAT2(translatedUV.x * scaleFactor, translatedUV.y * scaleFactor);
 
 	// Apply random rotation
-	const float angle = texture->bombingTex.useRandomRotation ? currentCellRandomRotate * (2.f * M_PI_F) : 0.f;
+	const float angle = texture.bombingTex.useRandomRotation ? currentCellRandomRotate * (2.f * M_PI_F) : 0.f;
 	const float sinAngle = sin(angle);
 	const float cosAngle = cos(angle);
 	const float2 rotatedUV = MAKE_FLOAT2(
@@ -98,11 +98,11 @@ OPENCL_FORCE_INLINE bool BombingTexture_WriteCellUV(__global const Texture* rest
 		return false;
 
 	// Pick a bullet out if multiple available shapes (if multiBulletCount > 1)
-	const uint multiBulletCount = texture->bombingTex.multiBulletCount;
+	const uint multiBulletCount = texture.bombingTex.multiBulletCount;
 	const uint currentCellRandomBulletIndex = Floor2UInt(multiBulletCount * currentCellRandomBullet);
 	bulletUV.x = (currentCellRandomBulletIndex + bulletUV.x) / multiBulletCount;
 
-	VSTORE2F(bulletUV, &hitPointTmp->defaultUV.u);
+	VSTORE2F(bulletUV, &hitPointTmp.defaultUV.u);
 
 	return true;
 }
@@ -122,11 +122,11 @@ OPENCL_FORCE_NOT_INLINE void BombingTexture_EvalOp(
 			EvalStack_PopFloat3(backgroundTexValue);
 
 			// Save original UV
-			const float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
+			const float2 uv = VLOAD2F(&hitPoint.defaultUV.u);
 			EvalStack_PushFloat2(uv);
 
 			// Save mapped UV
-			const float2 mapUV = TextureMapping2D_Map(&texture->bombingTex.mapping, hitPoint TEXTURES_PARAM);
+			const float2 mapUV = TextureMapping2D_Map(&texture.bombingTex.mapping, hitPoint TEXTURES_PARAM);
 			EvalStack_PushFloat2(mapUV);
 
 			// Save background texture value
@@ -385,7 +385,7 @@ OPENCL_FORCE_NOT_INLINE void BombingTexture_EvalOp(
 
 			// Restore original HitPoint UV
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			VSTORE2F(uv, &hitPointTmp->defaultUV.u);
+			VSTORE2F(uv, &hitPointTmp.defaultUV.u);
 
 			// Save the texture evaluation result
 			if (evalType == EVAL_FLOAT) {

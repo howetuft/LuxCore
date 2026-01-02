@@ -35,6 +35,8 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipelinePlugin::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipelinePlugin::serialize(LuxInputArchive &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxInputArchiveText &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -54,5 +56,7 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipeline::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipeline::serialize(LuxInputArchive &ar, const u_int version);
+template void ImagePipeline::serialize(LuxOutputArchiveText &ar, const u_int version);
+template void ImagePipeline::serialize(LuxInputArchiveText &ar, const u_int version);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

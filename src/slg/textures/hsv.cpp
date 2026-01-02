@@ -31,10 +31,10 @@ float HsvTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum HsvTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const Spectrum colorHitpoint = tex->GetSpectrumValue(hitPoint);
-	const float hueHitpoint = hue->GetFloatValue(hitPoint);
-	const float satHitpoint = sat->GetFloatValue(hitPoint);
-	const float valHitpoint = val->GetFloatValue(hitPoint);
+	const Spectrum colorHitpoint = GetTexture().GetSpectrumValue(hitPoint);
+	const float hueHitpoint = GetHue().GetFloatValue(hitPoint);
+	const float satHitpoint = GetSaturation().GetFloatValue(hitPoint);
+	const float valHitpoint = GetValue().GetFloatValue(hitPoint);
 	
 	return ApplyTransformation(colorHitpoint, hueHitpoint, satHitpoint, valHitpoint);
 }
@@ -59,13 +59,13 @@ Spectrum HsvTexture::ApplyTransformation(const Spectrum &colorHitpoint,
 }
 
 float HsvTexture::Y() const {
-	return ApplyTransformation(Spectrum(tex->Filter()),
-			hue->Filter(), sat->Filter(), val->Filter()).Y();
+	return ApplyTransformation(Spectrum(GetTexture().Filter()),
+			GetHue().Filter(), GetSaturation().Filter(), GetValue().Filter()).Y();
 }
 
 float HsvTexture::Filter() const {
-	return ApplyTransformation(Spectrum(tex->Filter()),
-			hue->Filter(), sat->Filter(), val->Filter()).Filter();	
+	return ApplyTransformation(Spectrum(GetTexture().Filter()),
+			GetHue().Filter(), GetSaturation().Filter(), GetValue().Filter()).Filter();	
 }
 
 Properties HsvTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -73,10 +73,10 @@ Properties HsvTexture::ToProperties(const ImageMapCache &imgMapCache, const bool
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hsv"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".hue")(hue->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".saturation")(sat->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".value")(val->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".hue")(GetHue().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".saturation")(GetSaturation().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".value")(GetValue().GetSDLValue()));
 
 	return props;
 }

@@ -31,7 +31,7 @@ namespace slg {
 
 class FresnelApproxNTexture : public Texture {
 public:
-	FresnelApproxNTexture(TextureConstPtr t) : tex(t) { }
+	FresnelApproxNTexture(TextureRef t) : tex(t) { }
 	virtual ~FresnelApproxNTexture() { }
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
@@ -40,31 +40,31 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs);
+		GetTexture().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	TextureConstPtr GetTexture() const { return tex; }
+	TextureConstRef GetTexture() const { return tex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex;
+	std::reference_wrapper<Texture> tex;
 };
 
 class FresnelApproxKTexture : public Texture {
 public:
-	FresnelApproxKTexture(TextureConstPtr t) : tex(t) { }
+	FresnelApproxKTexture(TextureRef t) : tex(t) { }
 	virtual ~FresnelApproxKTexture() { }
 
 	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
@@ -73,26 +73,26 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs);
+		GetTexture().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	TextureConstPtr GetTexture() const { return tex; }
+	TextureConstRef GetTexture() const { return tex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex;
+	std::reference_wrapper<Texture> tex;
 };
 
 }

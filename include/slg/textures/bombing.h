@@ -29,11 +29,11 @@ namespace slg {
 
 class BombingTexture : public Texture {
 public:
-	BombingTexture(TextureMapping2DConstPtr mp, TextureConstPtr backgroundTx,
-			TextureConstPtr bulletTx, TextureConstPtr bulletMaskTx,
+	BombingTexture(TextureMapping2DUPtr&& mp, TextureConstRef backgroundTx,
+			TextureConstRef bulletTx, TextureConstRef bulletMaskTx,
 			const float randomScaleFctr, const bool useRandomRot,
 			const u_int multiBulletCnt) :
-			mapping(mp), backgroundTex(backgroundTx), bulletTex(bulletTx),
+			mapping(std::move(mp)), backgroundTex(backgroundTx), bulletTex(bulletTx),
 			bulletMaskTex(bulletMaskTx),
 			randomScaleFactor(randomScaleFctr), useRandomRotation(useRandomRot),
 			multiBulletCount(multiBulletCnt) { }
@@ -44,14 +44,14 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
-	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
-	TextureConstPtr GetBackgroundTex() const { return backgroundTex; }
-	TextureConstPtr GetBulletTex() const { return bulletTex; }
-	TextureConstPtr GetBulletMaskTex() const { return bulletMaskTex; }
+	TextureMapping2DConstRef GetTextureMapping() const { return *mapping; }
+	TextureConstRef GetBackgroundTex() const { return backgroundTex; }
+	TextureConstRef GetBulletTex() const { return bulletTex; }
+	TextureConstRef GetBulletMaskTex() const { return bulletMaskTex; }
 	
 	const float GetRandomScaleFactor() const { return randomScaleFactor; }
 	const bool GetUseRandomRotation() const { return useRandomRotation; }
@@ -61,10 +61,13 @@ public:
 
 private:
 
-	TextureMapping2DConstPtr mapping;
-	TextureConstPtr backgroundTex;
-	TextureConstPtr bulletTex;
-	TextureConstPtr bulletMaskTex;
+	TextureMapping2DUPtr mapping;
+
+	// Underlying textures. reference_wrapper is necessary in order to be able
+	// rebind ref despite constness.
+	std::reference_wrapper<const Texture> backgroundTex;
+	std::reference_wrapper<const Texture> bulletTex;
+	std::reference_wrapper<const Texture> bulletMaskTex;
 
 	const float randomScaleFactor;
 	const bool useRandomRotation;

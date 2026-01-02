@@ -25,24 +25,24 @@ using namespace luxrays;
 using namespace slg;
 
 DisneyMaterial::DisneyMaterial(
-	TextureConstPtr frontTransp,
-	TextureConstPtr backTransp,
-	TextureConstPtr emitted,
-	TextureConstPtr bump,
-	TextureConstPtr baseColor,
-	TextureConstPtr subsurface,
-	TextureConstPtr roughness,
-	TextureConstPtr metallic,
-	TextureConstPtr specular,
-	TextureConstPtr specularTint,
-	TextureConstPtr clearcoat,
-	TextureConstPtr clearcoatGloss,
-	TextureConstPtr anisotropic,
-	TextureConstPtr sheen,
-	TextureConstPtr sheenTint,
-	TextureConstPtr filmAmount,
-	TextureConstPtr filmThickness,
-	TextureConstPtr filmIor
+	OptionalPtr<const Texture> frontTransp,
+	OptionalPtr<const Texture> backTransp,
+	OptionalPtr<const Texture> emitted,
+	OptionalPtr<const Texture> bump,
+	OptionalPtr<const Texture> baseColor,
+	OptionalPtr<const Texture> subsurface,
+	OptionalPtr<const Texture> roughness,
+	OptionalPtr<const Texture> metallic,
+	OptionalPtr<const Texture> specular,
+	OptionalPtr<const Texture> specularTint,
+	OptionalPtr<const Texture> clearcoat,
+	OptionalPtr<const Texture> clearcoatGloss,
+	OptionalPtr<const Texture> anisotropic,
+	OptionalPtr<const Texture> sheen,
+	OptionalPtr<const Texture> sheenTint,
+	OptionalPtr<const Texture> filmAmount,
+	OptionalPtr<const Texture> filmThickness,
+	OptionalPtr<const Texture> filmIor
 ) : Material(frontTransp, backTransp, emitted, bump), 
 	BaseColor(baseColor), 
 	Subsurface(subsurface),
@@ -559,7 +559,7 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 	return props;
 }
 
-void DisneyMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void DisneyMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
@@ -585,7 +585,7 @@ void DisneyMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureCons
 		UpdateGlossiness();
 }
 
-void DisneyMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void DisneyMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	BaseColor->AddReferencedTextures(referencedTexs);

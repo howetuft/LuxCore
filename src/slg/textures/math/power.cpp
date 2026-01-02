@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float PowerTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return SafePow(base->GetFloatValue(hitPoint), exponent->GetFloatValue(hitPoint));
+	return SafePow(GetBase().GetFloatValue(hitPoint), GetExponent().GetFloatValue(hitPoint));
 }
 
 Spectrum PowerTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -39,8 +39,8 @@ Properties PowerTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("power"));
-	props.Set(Property("scene.textures." + name + ".base")(base->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".exponent")(exponent->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".base")(GetBase().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".exponent")(GetExponent().GetSDLValue()));
 
 	return props;
 }

@@ -48,13 +48,13 @@ bool DotsTexture::Evaluate(const HitPoint &hitPoint) const {
 }
 
 float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return Evaluate(hitPoint) ? insideTex->GetFloatValue(hitPoint) :
-		outsideTex->GetFloatValue(hitPoint);
+	return Evaluate(hitPoint) ? GetInsideTex().GetFloatValue(hitPoint) :
+		GetOutsideTex().GetFloatValue(hitPoint);
 }
 
 Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Evaluate(hitPoint) ? insideTex->GetSpectrumValue(hitPoint) :
-		outsideTex->GetSpectrumValue(hitPoint);
+	return Evaluate(hitPoint) ? GetInsideTex().GetSpectrumValue(hitPoint) :
+		GetOutsideTex().GetSpectrumValue(hitPoint);
 }
 
 Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -62,8 +62,8 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const boo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("dots"));
-	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".outside")(GetOutsideTex().GetSDLValue()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

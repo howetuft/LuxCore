@@ -29,83 +29,88 @@ namespace slg {
 
 class CheckerBoard2DTexture : public Texture {
 public:
-	CheckerBoard2DTexture(TextureMapping2DConstPtr mp, TextureConstPtr t1, TextureConstPtr t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	CheckerBoard2DTexture(
+		TextureMapping2DUPtr&& mp,
+		TextureRef t1,
+		TextureRef t2
+	) : mapping(std::move(mp)), tex1(t1), tex2(t2)
+	{ }
 
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
-	virtual float Filter() const { return (tex1->Filter() + tex2->Filter()) * .5f; }
+	virtual float Y() const { return (GetTexture1().Y() + GetTexture2().Y()) * .5f; }
+	virtual float Filter() const { return (GetTexture1().Filter() + GetTexture2().Filter()) * .5f; }
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex1->AddReferencedTextures(referencedTexs);
-		tex2->AddReferencedTextures(referencedTexs);
+		GetTexture1().AddReferencedTextures(referencedTexs);
+		GetTexture2().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex1->AddReferencedImageMaps(referencedImgMaps);
-		tex2->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture1().AddReferencedImageMaps(referencedImgMaps);
+		GetTexture2().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
 			tex2 = newTex;
 	}
 
-	TextureMapping2DConstPtr GetTextureMapping() const { return mapping; }
-	TextureConstPtr GetTexture1() const { return tex1; }
-	TextureConstPtr GetTexture2() const { return tex2; }
+	TextureMapping2DConstRef GetTextureMapping() const { return *mapping; }
+	TextureConstRef GetTexture1() const { return tex1; }
+	TextureConstRef GetTexture2() const { return tex2; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureMapping2DConstPtr mapping;
-	TextureConstPtr tex1;
-	TextureConstPtr tex2;
+	TextureMapping2DUPtr mapping;  // Owned by this object
+	std::reference_wrapper<Texture> tex1;
+	std::reference_wrapper<Texture> tex2;
 };
 
 class CheckerBoard3DTexture : public Texture {
 public:
-	CheckerBoard3DTexture(TextureMapping3DConstPtr mp, TextureConstPtr t1, TextureConstPtr t2) : mapping(mp), tex1(t1), tex2(t2) { }
+	CheckerBoard3DTexture(TextureMapping3DUPtr&& mp, TextureRef t1, TextureRef t2) : mapping(std::move(mp)), tex1(t1), tex2(t2) { }
 	virtual ~CheckerBoard3DTexture() {  }
 
 	virtual TextureType GetType() const { return CHECKERBOARD3D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
-	virtual float Filter() const { return (tex1->Filter() + tex2->Filter()) * .5f; }
+	virtual float Y() const { return (GetTexture1().Y() + GetTexture2().Y()) * .5f; }
+	virtual float Filter() const { return (GetTexture1().Filter() + GetTexture2().Filter()) * .5f; }
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex1->AddReferencedTextures(referencedTexs);
-		tex2->AddReferencedTextures(referencedTexs);
+		GetTexture1().AddReferencedTextures(referencedTexs);
+		GetTexture2().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex1->AddReferencedImageMaps(referencedImgMaps);
-		tex2->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		GetTexture1().AddReferencedImageMaps(referencedImgMaps);
+		GetTexture2().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex1 == oldTex)
 			tex1 = newTex;
 		if (tex2 == oldTex)
 			tex2 = newTex;
 	}
 
-	TextureMapping3DConstPtr GetTextureMapping() const { return mapping; }
-	TextureConstPtr GetTexture1() const { return tex1; }
-	TextureConstPtr GetTexture2() const { return tex2; }
+	TextureMapping3DConstRef GetTextureMapping() const { return *mapping; }
+	TextureConstRef GetTexture1() const { return tex1; }
+	TextureConstRef GetTexture2() const { return tex2; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureMapping3DConstPtr mapping;
-	TextureConstPtr tex1;
-	TextureConstPtr tex2;
+	TextureMapping3DUPtr mapping;  // Mapping is owned
+	std::reference_wrapper<Texture> tex1;
+	std::reference_wrapper<Texture> tex2;
 };
 
 }

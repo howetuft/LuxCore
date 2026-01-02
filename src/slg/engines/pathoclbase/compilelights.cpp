@@ -50,8 +50,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-void CompiledScene::CompileDLSC(std::shared_ptr<const LightStrategyDLSCache> dlscLightStrategy) {
-	if (dlscLightStrategy->UseRTMode()) {
+void CompiledScene::CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy) {
+	if (dlscLightStrategy.UseRTMode()) {
 		dlscAllEntries.clear();
 		dlscAllEntries.shrink_to_fit();
 
@@ -64,11 +64,11 @@ void CompiledScene::CompileDLSC(std::shared_ptr<const LightStrategyDLSCache> dls
 		return;
 	}
 
-	dlscRadius2 = dlscLightStrategy->GetEntryRadius() * dlscLightStrategy->GetEntryRadius();
-	dlscNormalCosAngle = cosf(Radians(dlscLightStrategy->GetEntryNormalAngle()));
+	dlscRadius2 = dlscLightStrategy.GetEntryRadius() * dlscLightStrategy.GetEntryRadius();
+	dlscNormalCosAngle = cosf(Radians(dlscLightStrategy.GetEntryNormalAngle()));
 
 	// Compile all cache entries
-	auto bvh = dlscLightStrategy->GetBVH();
+	auto bvh = dlscLightStrategy.GetBVH();
 	if (bvh) {
 		const std::vector<DLSCacheEntry> *allEntries = bvh->GetAllEntries();
 		const u_int entriesCount = allEntries->size();
@@ -128,36 +128,41 @@ void CompiledScene::CompileLightStrategy() {
 	// Compile lightDistribution
 	//--------------------------------------------------------------------------
 
-	auto illuminateLightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
+	auto& illuminateLightStrategy = scene.lightDefs.GetIlluminateLightStrategy();
 	
 	// Check if it is an DistributionLightStrategy
-	auto distributionIllumLightStrategy = dynamic_pointer_cast<const DistributionLightStrategy>(illuminateLightStrategy);
-	if (distributionIllumLightStrategy) {
+	try {
+		auto& distributionIllumLightStrategy =
+			dynamic_cast<const DistributionLightStrategy&>(illuminateLightStrategy);
 		delete[] lightsDistribution;
 		lightsDistribution = nullptr;
 		lightsDistributionSize = 0;
 
-		if (distributionIllumLightStrategy->GetLightsDistribution()) {
-			lightsDistribution = CompileDistribution1D(distributionIllumLightStrategy->GetLightsDistribution(),
-					&lightsDistributionSize);
+		if (distributionIllumLightStrategy.GetLightsDistribution()) {
+			lightsDistribution = CompileDistribution1D(
+				distributionIllumLightStrategy.GetLightsDistribution(),
+				&lightsDistributionSize);
 		}
-	} else {
+	} catch(std::bad_cast&) {
 		// Check if it is an LightStrategyDLSCache
-		
-		auto dlscLightStrategy = dynamic_pointer_cast<const LightStrategyDLSCache>(illuminateLightStrategy);
-		if (dlscLightStrategy) {
+		try {
+			auto& dlscLightStrategy =
+				dynamic_cast<const LightStrategyDLSCache&>(illuminateLightStrategy);
 			delete[] lightsDistribution;
 			lightsDistribution = nullptr;
 			lightsDistributionSize = 0;
 
-			if (dlscLightStrategy->GetLightsDistribution()) {
-				lightsDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
-						&lightsDistributionSize);
+			if (dlscLightStrategy.GetLightsDistribution()) {
+				lightsDistribution = CompileDistribution1D(
+					dlscLightStrategy.GetLightsDistribution(),
+					&lightsDistributionSize
+				);
 			}
-			
+
 			CompileDLSC(dlscLightStrategy);
-		} else
+		} catch(std::bad_cast&) {
 			throw runtime_error("Unsupported illuminate light strategy in CompiledScene::CompileLights()");
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -168,30 +173,35 @@ void CompiledScene::CompileLightStrategy() {
 	infiniteLightSourcesDistribution = nullptr;
 	infiniteLightSourcesDistributionSize = 0;
 
-	auto infiniteLightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
+	auto& infiniteLightStrategy = scene.lightDefs.GetInfiniteLightStrategy();
 
 	// Check if it is an DistributionLightStrategy
-	auto distributionInfLightStrategy = dynamic_pointer_cast<const DistributionLightStrategy>(infiniteLightStrategy);
-	if (distributionInfLightStrategy) {
-		if (distributionInfLightStrategy->GetLightsDistribution()) {
-			infiniteLightSourcesDistribution = CompileDistribution1D(distributionInfLightStrategy->GetLightsDistribution(),
-					&infiniteLightSourcesDistributionSize);
+	try {
+		auto& distributionInfLightStrategy =
+			dynamic_cast<const DistributionLightStrategy&>(infiniteLightStrategy);
+		if (distributionInfLightStrategy.GetLightsDistribution()) {
+			infiniteLightSourcesDistribution = CompileDistribution1D(
+				distributionInfLightStrategy.GetLightsDistribution(),
+				&infiniteLightSourcesDistributionSize
+			);
 		}
-	} else {
+	} catch(std::bad_cast&) {
 		// Check if it is an LightStrategyDLSCache
-		
-		auto dlscLightStrategy = dynamic_pointer_cast<const LightStrategyDLSCache>(illuminateLightStrategy);
-		if (dlscLightStrategy) {
-			if (dlscLightStrategy->GetLightsDistribution()) {
-				infiniteLightSourcesDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
-						&infiniteLightSourcesDistributionSize);
+		try {
+			auto& dlscLightStrategy =
+				dynamic_cast<const LightStrategyDLSCache&>(illuminateLightStrategy);
+			if (dlscLightStrategy.GetLightsDistribution()) {
+				infiniteLightSourcesDistribution = CompileDistribution1D(
+					dlscLightStrategy.GetLightsDistribution(),
+					&infiniteLightSourcesDistributionSize);
 			}
-		} else
+		} catch (std::bad_cast&) {
 			throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
+		}
 	}
 }
 
-void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCache) {
+void CompiledScene::CompileELVC(OptionalPtr<const EnvLightVisibilityCache> visibilityMapCache) {
 	if (!visibilityMapCache ||  !visibilityMapCache->GetBVH()) {
 		elvcAllEntries.clear();
 		elvcAllEntries.shrink_to_fit();
@@ -212,7 +222,7 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 	elvcNormalCosAngle = cosf(Radians(visibilityMapCache->GetParams().visibility.lookUpNormalAngle));
 
 	// Compile all cache entries
-	auto bvh = visibilityMapCache->GetBVH();
+	auto* bvh = visibilityMapCache->GetBVH();
 	if (bvh) {
 		const std::vector<ELVCacheEntry> *allEntries = bvh->GetAllEntries();
 		const u_int entriesCount = allEntries->size();
@@ -278,17 +288,18 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 				copy(dist, dist + distributionSize4,
 						&elvcDistributions[size]);
 
-				delete[] dist;		
+				delete[] dist;
 			}
-		} else
+		} else {
 			elvcTileDistributionOffsets.clear();
+		}
 	} else {
 		elvcAllEntries.clear();
 		elvcDistributions.clear();
 		elvcTileDistributionOffsets.clear();
 		elvcBVHArrayNode.clear();
 	}
-	
+
 	elvcAllEntries.shrink_to_fit();
 	elvcDistributions.shrink_to_fit();
 	elvcTileDistributionOffsets.shrink_to_fit();
@@ -305,45 +316,45 @@ void CompiledScene::CompileLights() {
 
 	const double tStart = WallClockTime();
 
-	const u_int lightCount = scene->lightDefs.GetSize();
+	const u_int lightCount = scene.lightDefs.GetSize();
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
 	envLightDistributions.clear();
 
-	CompileELVC(nullptr);
+	CompileELVC(OptionalPtr<const EnvLightVisibilityCache>(std::nullopt));
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto l = scene->lightDefs.GetLightSource(i);
+		auto& l = scene.lightDefs.GetLightSource(i);
 
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
-		oclLight->lightSceneIndex = l->lightSceneIndex;
-		oclLight->lightID = l->GetID();
+		oclLight->lightSceneIndex = l.lightSceneIndex;
+		oclLight->lightID = l.GetID();
 		oclLight->visibility =
-				(l->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-		oclLight->isDirectLightSamplingEnabled = l->IsDirectLightSamplingEnabled();
+				(l.IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(l.IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(l.IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+		oclLight->isDirectLightSamplingEnabled = l.IsDirectLightSamplingEnabled();
 
-		switch (l->GetType()) {
+		switch (l.GetType()) {
 			case TYPE_TRIANGLE: {
-				auto tl = static_pointer_cast<const TriangleLight>(l);
+				auto& tl = static_cast<const TriangleLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
 
 				// TriangleLight data
 
-				const float triangleArea = tl->GetTriangleArea();
+				const float triangleArea = tl.GetTriangleArea();
 				oclLight->triangle.invTriangleArea = (triangleArea == 0.f) ? 0.f : (1.f / triangleArea);
-				const float meshArea = tl->GetMeshArea();
+				const float meshArea = tl.GetMeshArea();
 				oclLight->triangle.invMeshArea = (meshArea == 0.f) ? 0.f : (1.f / meshArea);
-				oclLight->triangle.meshIndex = tl->meshIndex;
-				oclLight->triangle.triangleIndex = tl->triangleIndex;
+				oclLight->triangle.meshIndex = tl.meshIndex;
+				oclLight->triangle.triangleIndex = tl.triangleIndex;
 
-				auto emissionFunc = tl->lightMaterial->GetEmissionFunc();
+				auto emissionFunc = tl.lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
 					oclLight->triangle.average = emissionFunc->Average();
-					oclLight->triangle.imageMapIndex = scene->imgMapCache.GetImageMapIndex(
+					oclLight->triangle.imageMapIndex = scene.imgMapCache.GetImageMapIndex(
 							// I use only ImageMapSphericalFunction
 
 							((const ImageMapSphericalFunction *)(emissionFunc->GetFunc()))->GetImageMap());
@@ -354,31 +365,36 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_IL: {
-				auto il = static_pointer_cast<const InfiniteLight>(l);
+				auto& il = static_cast<const InfiniteLight &>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &il->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &il->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, il->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, il->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &il.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &il.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, il.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, il.GetTemperatureScale());
 
 				// InfiniteLight data
-				oclLight->notIntersectable.infinite.imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->imageMap);
+				oclLight->notIntersectable.infinite.imageMapIndex = scene.imgMapCache.GetImageMapIndex(il.imageMap);
 
 				// Compile the image map Distribution2D
-				const Distribution2D* dist;
-				const EnvLightVisibilityCache* visibilityMapCache;
-				il->GetPreprocessedData(&dist, &visibilityMapCache);
+				const Distribution2D * dist;
+				const EnvLightVisibilityCache * visibilityMapCache;
+				il.GetPreprocessedData(&dist, &visibilityMapCache);
 
 				oclLight->notIntersectable.infinite.useVisibilityMapCache = false;
-				if (il->useVisibilityMapCache && visibilityMapCache) {
+				if (il.useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						CompileELVC(visibilityMapCache);
+						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						CompileELVC(
+							visibilityMapCache ?
+							optmapcache_t(*visibilityMapCache) :
+							optmapcache_t(std::nullopt)
+						);
 
 						oclLight->notIntersectable.infinite.useVisibilityMapCache = true;
 					}
@@ -400,21 +416,21 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_IL_SKY2: {
-				auto sl = static_pointer_cast<const SkyLight2>(l);
+				auto& sl = static_cast<const SkyLight2&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_SKY2;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
 				// SkyLight2 data
 				const Distribution2D *dist;
 				const EnvLightVisibilityCache* visibilityMapCache;
-				sl->GetPreprocessedData(
+				sl.GetPreprocessedData(
 						&oclLight->notIntersectable.sky2.absoluteSunDir.x,
 						&oclLight->notIntersectable.sky2.absoluteUpDir.x,
 						oclLight->notIntersectable.sky2.scaledGroundColor.c,
@@ -433,17 +449,22 @@ void CompiledScene::CompileLights() {
 						&visibilityMapCache);
 
 				oclLight->notIntersectable.sky2.useVisibilityMapCache = false;
-				if (sl->useVisibilityMapCache && visibilityMapCache) {
+				if (sl.useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						CompileELVC(visibilityMapCache);
+						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						CompileELVC(
+							visibilityMapCache ?
+							optmapcache_t(*visibilityMapCache) :
+							optmapcache_t(std::nullopt)
+						);
 
 						oclLight->notIntersectable.sky2.useVisibilityMapCache = true;
 					}
 				}
 
-				oclLight->notIntersectable.sky2.hasGround = sl->hasGround;
+				oclLight->notIntersectable.sky2.hasGround = sl.hasGround;
 				
 				u_int distributionSize;
 				auto skyDistribution = CompileDistribution2D(dist,
@@ -461,86 +482,86 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_SUN: {
-				auto sl = static_pointer_cast<const SunLight>(l);
+				auto& sl = static_cast<const SunLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SUN;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
 				// SunLight data
-				sl->GetPreprocessedData(
+				sl.GetPreprocessedData(
 						&oclLight->notIntersectable.sun.absoluteDir.x,
 						&oclLight->notIntersectable.sun.x.x,
 						&oclLight->notIntersectable.sun.y.x,
 						NULL, NULL, NULL,
 						&oclLight->notIntersectable.sun.cosThetaMax, &oclLight->notIntersectable.sun.sin2ThetaMax);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl->color);
-				oclLight->notIntersectable.sun.turbidity = sl->turbidity;
-				oclLight->notIntersectable.sun.relSize= sl->relSize;
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.sun.color, sl.color);
+				oclLight->notIntersectable.sun.turbidity = sl.turbidity;
+				oclLight->notIntersectable.sun.relSize= sl.relSize;
 				break;
 			}
 			case TYPE_POINT: {
-				auto pl = static_pointer_cast<const PointLight>(l);
+				auto& pl = static_cast<const PointLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_POINT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, pl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &pl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &pl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, pl.GetTemperatureScale());
 
 				// PointLight data
-				pl->GetPreprocessedData(
+				pl.GetPreprocessedData(
 						NULL,
 						&oclLight->notIntersectable.point.absolutePos.x,
 						oclLight->notIntersectable.point.emittedFactor.c);
 				break;
 			}
 			case TYPE_MAPPOINT: {
-				auto mpl = static_pointer_cast<const MapPointLight>(l);
+				auto& mpl = static_cast<const MapPointLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_MAPPOINT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &mpl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &mpl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, mpl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, mpl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &mpl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &mpl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, mpl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, mpl.GetTemperatureScale());
 
 				// MapPointLight data
 				const SampleableSphericalFunction *funcData;
-				mpl->GetPreprocessedData(
+				mpl.GetPreprocessedData(
 					&oclLight->notIntersectable.mapPoint.localPos.x,
 					&oclLight->notIntersectable.mapPoint.absolutePos.x,
 					oclLight->notIntersectable.mapPoint.emittedFactor.c,
 					&funcData);
 				oclLight->notIntersectable.mapPoint.average = funcData->Average();
-				oclLight->notIntersectable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->imageMap);
+				oclLight->notIntersectable.mapPoint.imageMapIndex = scene.imgMapCache.GetImageMapIndex(*mpl.imageMap);
 				break;
 			}
 			case TYPE_SPOT: {
-				auto sl = static_pointer_cast<const SpotLight>(l);
+				auto& sl = static_cast<const SpotLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SPOT;
 
 				// NotIntersectableLightSource data
-				//memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
-				//memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl->GetTemperatureScale());
+				//memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
+				//memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
 				// SpotLight data
 				const Transform *alignedWorld2Light;
-				sl->GetPreprocessedData(
+				sl.GetPreprocessedData(
 					oclLight->notIntersectable.spot.emittedFactor.c,
 					&oclLight->notIntersectable.spot.absolutePos.x,
 					&oclLight->notIntersectable.spot.cosTotalWidth,
@@ -552,24 +573,24 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_PROJECTION: {
-				auto pl = static_pointer_cast<const ProjectionLight>(l);
+				auto& pl = static_cast<const ProjectionLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_PROJECTION;
 
 				// NotIntersectableLightSource data
-				//memcpy(&oclLight->notIntersectable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
-				//memcpy(&oclLight->notIntersectable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, pl->GetTemperatureScale());
+				//memcpy(&oclLight->notIntersectable.light2World.m, &pl.lightToWorld.m, sizeof(float[4][4]));
+				//memcpy(&oclLight->notIntersectable.light2World.mInv, &pl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, pl.GetTemperatureScale());
 
 				// ProjectionLight data
-				oclLight->notIntersectable.projection.imageMapIndex = (pl->imageMap) ?
-					scene->imgMapCache.GetImageMapIndex(pl->imageMap) :
+				oclLight->notIntersectable.projection.imageMapIndex = (pl.imageMap) ?
+					scene.imgMapCache.GetImageMapIndex(*pl.imageMap) :
 					NULL_INDEX;
 
 				const Transform *alignedWorld2Light, *lightProjection;
-				pl->GetPreprocessedData(
+				pl.GetPreprocessedData(
 					oclLight->notIntersectable.projection.emittedFactor.c,
 					&(oclLight->notIntersectable.projection.absolutePos.x),
 					&(oclLight->notIntersectable.projection.lightNormal.x),
@@ -586,30 +607,35 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_IL_CONSTANT: {
-				auto cil = static_pointer_cast<const ConstantInfiniteLight>(l);
+				auto& cil = static_cast<const ConstantInfiniteLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_CONSTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &cil->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &cil->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, cil->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, cil->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &cil.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &cil.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, cil.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, cil.GetTemperatureScale());
 
 				// ConstantInfiniteLight data
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.constantInfinite.color, cil->color);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.constantInfinite.color, cil.color);
 
 				// Compile the visibility map Distribution2D
 				const EnvLightVisibilityCache *visibilityMapCache;
-				cil->GetPreprocessedData(&visibilityMapCache);
+				cil.GetPreprocessedData(&visibilityMapCache);
 
 				oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = false;
-				if (cil->useVisibilityMapCache && visibilityMapCache) {
+				if (cil.useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						CompileELVC(visibilityMapCache);
+						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						CompileELVC(
+							visibilityMapCache ?
+							optmapcache_t(*visibilityMapCache) :
+							optmapcache_t(std::nullopt)
+						);
 
 						oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = true;
 					}
@@ -617,37 +643,37 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 		case TYPE_SHARPDISTANT: {
-				auto sdl = static_pointer_cast<const SharpDistantLight>(l);
+				auto& sdl = static_cast<const SharpDistantLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SHARPDISTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sdl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sdl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sdl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sdl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &sdl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sdl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sdl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sdl.GetTemperatureScale());
 
 				// SharpDistantLight data
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.sharpDistant.color, sdl->color);
-				sdl->GetPreprocessedData(&(oclLight->notIntersectable.sharpDistant.absoluteLightDir.x), NULL, NULL);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.sharpDistant.color, sdl.color);
+				sdl.GetPreprocessedData(&(oclLight->notIntersectable.sharpDistant.absoluteLightDir.x), NULL, NULL);
 				break;
 			}
 			case TYPE_DISTANT: {
-				auto dl = static_pointer_cast<const DistantLight>(l);
+				auto& dl = static_cast<const DistantLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_DISTANT;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &dl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &dl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, dl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, dl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &dl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &dl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, dl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, dl.GetTemperatureScale());
 
 				// DistantLight data
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.sharpDistant.color, dl->color);
-				dl->GetPreprocessedData(
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.sharpDistant.color, dl.color);
+				dl.GetPreprocessedData(
 					&(oclLight->notIntersectable.distant.absoluteLightDir.x),
 					&(oclLight->notIntersectable.distant.x.x),
 					&(oclLight->notIntersectable.distant.y.x),
@@ -656,82 +682,82 @@ void CompiledScene::CompileLights() {
 				break;
 			}
 			case TYPE_LASER: {
-				auto ll = static_pointer_cast<const LaserLight>(l);
+				auto& ll = static_cast<const LaserLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_LASER;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &ll->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &ll->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, ll->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, ll->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &ll.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &ll.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, ll.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, ll.GetTemperatureScale());
 
 				// LaserLight data
-				ll->GetPreprocessedData(
+				ll.GetPreprocessedData(
 					oclLight->notIntersectable.laser.emittedFactor.c,
 					&oclLight->notIntersectable.laser.absoluteLightPos.x,
 					&oclLight->notIntersectable.laser.absoluteLightDir.x,
 					NULL, NULL);
-				oclLight->notIntersectable.laser.radius = ll->radius;
+				oclLight->notIntersectable.laser.radius = ll.radius;
 				break;
 			}
 			case TYPE_SPHERE: {
-				auto sl = static_pointer_cast<const SphereLight>(l);
+				auto& sl = static_cast<const SphereLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SPHERE;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &sl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &sl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, sl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
 				// SphereLight data
-				sl->GetPreprocessedData(
+				sl.GetPreprocessedData(
 						NULL,
 						&oclLight->notIntersectable.sphere.absolutePos.x,
 						oclLight->notIntersectable.sphere.emittedFactor.c);
 				
-				oclLight->notIntersectable.sphere.radius = sl->radius;
+				oclLight->notIntersectable.sphere.radius = sl.radius;
 				break;
 			}
 			case TYPE_MAPSPHERE: {
-				auto msl = static_pointer_cast<const MapSphereLight>(l);
+				auto& msl = static_cast<const MapSphereLight&>(l);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_MAPSPHERE;
 
 				// NotIntersectableLightSource data
-				memcpy(&oclLight->notIntersectable.light2World.m, &msl->lightToWorld.m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersectable.light2World.mInv, &msl->lightToWorld.mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, msl->gain);
-				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, msl->GetTemperatureScale());
+				memcpy(&oclLight->notIntersectable.light2World.m, &msl.lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &msl.lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, msl.gain);
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, msl.GetTemperatureScale());
 
 				// MapSphereLight data
 				const SampleableSphericalFunction *funcData;
-				msl->GetPreprocessedData(
+				msl.GetPreprocessedData(
 					NULL,
 					&oclLight->notIntersectable.mapSphere.sphere.absolutePos.x,
 					oclLight->notIntersectable.mapSphere.sphere.emittedFactor.c,
 					&funcData);
-				oclLight->notIntersectable.mapSphere.sphere.radius = msl->radius;
+				oclLight->notIntersectable.mapSphere.sphere.radius = msl.radius;
 
 				oclLight->notIntersectable.mapSphere.average = funcData->Average();
-				oclLight->notIntersectable.mapSphere.imageMapIndex = scene->imgMapCache.GetImageMapIndex(msl->imageMap);
+				oclLight->notIntersectable.mapSphere.imageMapIndex = scene.imgMapCache.GetImageMapIndex(*msl.imageMap);
 				break;
 			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}
 
-		if (l->IsEnvironmental())
+		if (l.IsEnvironmental())
 			envLightIndices.push_back(i);
 	}
 
-	lightIndexOffsetByMeshIndex = scene->lightDefs.GetLightIndexOffsetByMeshIndex();
-	lightIndexByTriIndex = scene->lightDefs.GetLightIndexByTriIndex();
+	lightIndexOffsetByMeshIndex = scene.lightDefs.GetLightIndexOffsetByMeshIndex();
+	lightIndexByTriIndex = scene.lightDefs.GetLightIndexByTriIndex();
 
 	CompileLightStrategy();
 

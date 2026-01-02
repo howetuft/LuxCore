@@ -28,15 +28,13 @@ namespace slg {
 class PointinessShape : public Shape {
 public:
 	// destAOVIndex = NULL_INDEX means use the alpha channel
-	PointinessShape(luxrays::ExtTriangleMeshPtr srcMesh, const u_int destAOVIndex);
+	PointinessShape(luxrays::ExtTriangleMeshRef srcMesh, const u_int destAOVIndex);
 	virtual ~PointinessShape();
 
-	virtual ShapeType GetType() const { return POINTINESS; }
+	virtual ShapeType GetType() const override { return POINTINESS; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
-
-	luxrays::ExtTriangleMeshPtr mesh;
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 };
 
 }

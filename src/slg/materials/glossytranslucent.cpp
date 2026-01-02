@@ -29,12 +29,12 @@ using namespace slg;
 // LuxRender GlossyTranslucent material porting.
 //------------------------------------------------------------------------------
 
-GlossyTranslucentMaterial::GlossyTranslucentMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		TextureConstPtr kd, TextureConstPtr kt, TextureConstPtr ks, TextureConstPtr ks2,
-		TextureConstPtr u, TextureConstPtr u2, TextureConstPtr v, TextureConstPtr v2,
-		TextureConstPtr ka, TextureConstPtr ka2, TextureConstPtr d, TextureConstPtr d2,
-		TextureConstPtr i, TextureConstPtr i2, const bool mbounce, const bool mbounce2) :
+GlossyTranslucentMaterial::GlossyTranslucentMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		OptionalPtr<const Texture> kd, OptionalPtr<const Texture> kt, OptionalPtr<const Texture> ks, OptionalPtr<const Texture> ks2,
+		OptionalPtr<const Texture> u, OptionalPtr<const Texture> u2, OptionalPtr<const Texture> v, OptionalPtr<const Texture> v2,
+		OptionalPtr<const Texture> ka, OptionalPtr<const Texture> ka2, OptionalPtr<const Texture> d, OptionalPtr<const Texture> d2,
+		OptionalPtr<const Texture> i, OptionalPtr<const Texture> i2, const bool mbounce, const bool mbounce2) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Kt(kt), Ks(ks), Ks_bf(ks2), nu(u), nu_bf(u2),
 			nv(v), nv_bf(v2), Ka(ka), Ka_bf(ka2), depth(d), depth_bf(d2), index(i),
 			index_bf(i2), multibounce(mbounce), multibounce_bf(mbounce2) {
@@ -352,7 +352,7 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void GlossyTranslucentMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void GlossyTranslucentMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -371,7 +371,7 @@ void GlossyTranslucentMaterial::AddReferencedTextures(std::unordered_set<Texture
 	index_bf->AddReferencedTextures(referencedTexs);
 }
 
-void GlossyTranslucentMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void GlossyTranslucentMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;

@@ -27,7 +27,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float DotProductTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return Dot(tex1->GetSpectrumValue(hitPoint), tex2->GetSpectrumValue(hitPoint));
+	return Dot(GetTexture1().GetSpectrumValue(hitPoint), GetTexture2().GetSpectrumValue(hitPoint));
 }
 
 Spectrum DotProductTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -39,8 +39,8 @@ Properties DotProductTexture::ToProperties(const ImageMapCache &imgMapCache, con
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("dotproduct"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
 
 	return props;
 }

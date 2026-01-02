@@ -931,10 +931,10 @@ vector<string> Properties::GetAllNames(const string &prefix) const {
 	return namesSubset;
 }
 
-vector<string> Properties::GetAllNamesRE(const string &regularExpression) const {
+std::vector<string> Properties::GetAllNamesRE(const string &regularExpression) const {
 	std::regex re(regularExpression);
-	
-	vector<string> namesSubset;
+
+	std::vector<string> namesSubset;
 	for(const string &name: names) {
 		if (std::regex_match(name, re))
 			namesSubset.push_back(name);
@@ -943,7 +943,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 	return namesSubset;
 }
 
-vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool sorted) const {
+std::vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool sorted) const {
 	const size_t fieldsCount = count(prefix.begin(), prefix.end(), '.') + 2;
 
 	set<string> definedNames;

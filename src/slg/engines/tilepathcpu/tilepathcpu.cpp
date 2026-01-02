@@ -32,7 +32,7 @@ using namespace slg;
 // TilePathCPURenderEngine
 //------------------------------------------------------------------------------
 
-TilePathCPURenderEngine::TilePathCPURenderEngine(RenderConfigConstRef rcfg) :
+TilePathCPURenderEngine::TilePathCPURenderEngine(RenderConfigRef rcfg) :
 		CPUTileRenderEngine(rcfg), photonGICache(nullptr) {
 }
 
@@ -42,7 +42,7 @@ TilePathCPURenderEngine::~TilePathCPURenderEngine() {
 
 void TilePathCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
 	film->Init();
 }
 
@@ -51,20 +51,20 @@ RenderStatePtr TilePathCPURenderEngine::GetRenderState() {
 }
 
 void TilePathCPURenderEngine::StartLockLess() {
-	const auto cfg = renderConfig.cfg;
+	const auto& cfg = renderConfig.GetConfig();
 
 	//--------------------------------------------------------------------------
 	// Check to have the right sampler settings
 	//--------------------------------------------------------------------------
 
 	// Sobol is the default sampler (but it can not work with TILEPATH)
-	CheckSamplersForTile(RenderEngineType2String(GetType()), *cfg);
+	CheckSamplersForTile(RenderEngineType2String(GetType()), cfg);
 
 	//--------------------------------------------------------------------------
 	// Initialize rendering parameters
 	//--------------------------------------------------------------------------
 
-	aaSamples = Max(1, cfg->Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
+	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
 
 	// pathTracer must be configured here because it is then used
 	// to set tileRepository->varianceClamping, etc.
@@ -97,7 +97,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 	} else {
 		film->Reset();
 
-		tileRepository = TileRepository::FromProperties(*renderConfig.cfg);
+		tileRepository = TileRepository::FromProperties(renderConfig.GetConfig());
 		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 		tileRepository->InitTiles(*film);
 	}
@@ -108,7 +108,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 	// note: photonGICache could have been restored from the render state
 	if ((GetType() != RTPATHCPU) && !photonGICache) {
-		photonGICache = PhotonGICache::FromProperties(renderConfig.scene, *cfg);
+		photonGICache = PhotonGICache::FromProperties(renderConfig.GetScene(), cfg);
 
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
@@ -153,7 +153,7 @@ Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return props;
 }
 
-RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigConstRef rcfg) {
+RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new TilePathCPURenderEngine(rcfg);
 }
 

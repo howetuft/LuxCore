@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/cyhair/cyHairFile.h"
 
 #include "slg/shapes/shape.h"
@@ -42,11 +43,11 @@ public:
 			const bool useCameraPosition);
 	virtual ~StrendsShape();
 
-	virtual ShapeType GetType() const { return STRANDS; }
+	virtual ShapeType GetType() const override { return STRANDS; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
-	
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
+
 	void TessellateRibbon(SceneConstRef scene,
 		const std::vector<luxrays::Point> &hairPoints,
 		const std::vector<float> &hairSizes, const std::vector<luxrays::Spectrum> &hairCols,
@@ -76,7 +77,6 @@ protected:
 	bool solidCapBottom, solidCapTop;
 	bool useCameraPosition;
 
-	luxrays::ExtTriangleMeshPtr mesh;
 };
 
 }

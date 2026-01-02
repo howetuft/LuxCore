@@ -33,13 +33,13 @@ using namespace slg;
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-DensityGridTexture::DensityGridTexture(TextureMapping3DConstPtr mp,
+DensityGridTexture::DensityGridTexture(TextureMapping3DUPtr&& mp,
 		const u_int nx, const u_int ny, const u_int nz,
-        ImageMapConstPtr map) : mapping(mp),
+        ImageMapConstRef map) : mapping(std::move(mp)),
 		nx(nx), ny(ny), nz(nz), imageMap(map) {
 }
 
-ImageMapPtr DensityGridTexture::ParseData(const luxrays::Property &dataProp,
+ImageMapUPtr DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 		const bool isRGB,
 		const u_int nx, const u_int ny, const u_int nz,
 		const ImageMapStorage::StorageType storageType,
@@ -51,13 +51,13 @@ ImageMapPtr DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 	// implemented by the code accessing the data.
 
 	const u_int channelCount = isRGB ? 3 : 1;
-	ImageMapPtr imgMap(ImageMap::AllocImageMap(channelCount, nx, ny * nz,
+	auto imgMap(ImageMap::AllocImageMap(channelCount, nx, ny * nz,
 			ImageMapConfig(1.f,
 				(storageType == ImageMapStorage::AUTO) ? ImageMapStorage::HALF : storageType,
 				wrapMode,
 				ImageMapStorage::ChannelSelectionType::DEFAULT)));
 
-	ImageMapStorage *imgStorage = imgMap->GetStorage();
+	auto& imgStorage = imgMap->GetStorage();
 
 	if (isRGB) {
 		for (u_int z = 0, i = 0; z < nz; ++z)
@@ -67,22 +67,24 @@ ImageMapPtr DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 					const float g = dataProp.Get<double>(i * 3 + 1);
 					const float b = dataProp.Get<double>(i * 3 + 2);
 
-					imgStorage->SetSpectrum((z * ny + y) * nx + x, Spectrum(r, g, b));
+					imgStorage.SetSpectrum((z * ny + y) * nx + x, Spectrum(r, g, b));
 				}
 	} else {
 		for (u_int z = 0, i = 0; z < nz; ++z)
 			for (u_int y = 0; y < ny; ++y)
 				for (u_int x = 0; x < nx; ++x, ++i)
-					imgStorage->SetFloat((z * ny + y) * nx + x, dataProp.Get<double>(i));
+					imgStorage.SetFloat((z * ny + y) * nx + x, dataProp.Get<double>(i));
 	}
 
 	return imgMap;
 }
 
-ImageMapPtr DensityGridTexture::ParseOpenVDB(const string &fileName, const string &gridName,
-		const u_int nx, const u_int ny, const u_int nz,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapMode) {
+ImageMapUPtr DensityGridTexture::ParseOpenVDB(
+	const string &fileName, const string &gridName,
+	const u_int nx, const u_int ny, const u_int nz,
+	const ImageMapStorage::StorageType storageType,
+	const ImageMapStorage::WrapType wrapMode
+) {
 	SDL_LOG("OpenVDB file: " + fileName);
 
 	openvdb::io::File file(fileName);	
@@ -127,13 +129,13 @@ ImageMapPtr DensityGridTexture::ParseOpenVDB(const string &fileName, const strin
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
 
-	ImageMapPtr imgMap(ImageMap::AllocImageMap(channelsCount, nx, ny * nz,
+	ImageMapUPtr imgMap(ImageMap::AllocImageMap(channelsCount, nx, ny * nz,
 			ImageMapConfig(1.f,
 				storageType,
 				wrapMode,
 				ImageMapStorage::ChannelSelectionType::DEFAULT)));
 
-	ImageMapStorage *imgStorage = imgMap->GetStorage();	
+	auto& imgStorage = imgMap->GetStorage();	
 
 	if (channelsCount == 3) {
 		// Check if it is the right type of grid
@@ -156,7 +158,7 @@ ImageMapPtr DensityGridTexture::ParseOpenVDB(const string &fileName, const strin
 					openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
 					openvdb::Vec3f v3f = v;
 
-					imgStorage->SetSpectrum((z * ny + y) * nx + x, Spectrum(v3f.x(), v3f.y(), v3f.z()));
+					imgStorage.SetSpectrum((z * ny + y) * nx + x, Spectrum(v3f.x(), v3f.y(), v3f.z()));
 				}
 			}
 		}
@@ -180,7 +182,7 @@ ImageMapPtr DensityGridTexture::ParseOpenVDB(const string &fileName, const strin
 					openvdb::ScalarGrid::ValueType v;
 					openvdb::tools::QuadraticSampler::sample(grid->tree(), xyz, v);
 
-					imgStorage->SetFloat((z * ny + y) * nx + x, v);
+					imgStorage.SetFloat((z * ny + y) * nx + x, v);
 				}
 			}
 		}
@@ -188,11 +190,11 @@ ImageMapPtr DensityGridTexture::ParseOpenVDB(const string &fileName, const strin
 
 	file.close();
 
-	return imgMap;
+	return std::move(imgMap);
 }
 
 Spectrum DensityGridTexture::D(int x, int y, int z) const {
-	return imageMap->GetStorage()->GetSpectrum(((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1));
+	return imageMap.GetStorage().GetSpectrum(((Clamp(z, 0, nz - 1) * ny) + Clamp(y, 0, ny - 1)) * nx + Clamp(x, 0, nx - 1));
 }
 
 Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -201,7 +203,7 @@ Spectrum DensityGridTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	float x, y, z;
 	int vx, vy, vz;
 
-	switch (imageMap->GetStorage()->wrapType) {
+	switch (imageMap.GetStorage().wrapType) {
 		case ImageMapStorage::REPEAT:
 			x = P.x * nx;
 			vx = Floor2Int(x);
@@ -279,15 +281,15 @@ Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, co
 	props.Set(Property("scene.textures." + name + ".nx")(nx));
 	props.Set(Property("scene.textures." + name + ".ny")(ny));
 	props.Set(Property("scene.textures." + name + ".nz")(nz));
-	props.Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap->GetStorage()->wrapType)));
+	props.Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap.GetStorage().wrapType)));
 	
 	Property dataProp("scene.textures." + name + ".data");
-	const ImageMapStorage *imgStorage = imageMap->GetStorage();
+	auto& imgStorage = imageMap.GetStorage();
 
 	for (int z = 0; z < nz; ++z)
 		for (int y = 0; y < ny; ++y)
 			for (int x = 0; x < nx; ++x)
-				dataProp.Add<float>(imgStorage->GetFloat((z * ny + y) * nx + x));
+				dataProp.Add<float>(imgStorage.GetFloat((z * ny + y) * nx + x));
 
 	props.Set(dataProp);
 	

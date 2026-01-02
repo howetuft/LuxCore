@@ -26,8 +26,8 @@ using namespace slg;
 // Null material
 //------------------------------------------------------------------------------
 
-NullMaterial::NullMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp) :
-		Material(frontTransp, backTransp, NULL, NULL) {
+NullMaterial::NullMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp) :
+		Material(frontTransp, backTransp, std::nullopt, std::nullopt) {
 }
 
 Spectrum NullMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -58,7 +58,7 @@ void NullMaterial::UpdateAvgPassThroughTransparency() {
 Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const {
-	TextureConstPtr transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
+	auto transparencyTex = (hitPoint.intoObject != backTracing) ? frontTransparencyTex : backTransparencyTex;
 
 	if (transparencyTex) {
 		const Spectrum blendColor = transparencyTex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);

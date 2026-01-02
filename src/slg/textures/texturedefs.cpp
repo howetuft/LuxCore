@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/textures/texturedefs.h"
+#include "slg/usings.h"
 
 using namespace std;
 using namespace luxrays;
@@ -26,42 +27,49 @@ using namespace slg;
 // TextureDefinitions
 //------------------------------------------------------------------------------
 
-void TextureDefinitions::DefineTexture(TexturePtr newTex) {
-	auto oldTex = static_pointer_cast<const Texture>(texs.DefineObj(newTex));
+std::tuple<Texture&, TextureUPtr>
+TextureDefinitions::DefineTexture(TextureUPtr&& tex) {
 
-	if (oldTex) {
+	auto [newTexRef, oldTexPtr] = texs.DefineObj<Texture>(std::move(tex));
+
+	if (oldTexPtr) {  // This is a replacement
+		auto& oldTexRef = *oldTexPtr;
 		// Update all references
-		for(auto& tex: texs.GetObjs())
-			static_pointer_cast<Texture>(tex)->UpdateTextureReferences(oldTex, newTex);
+		for(auto& o: texs.GetObjs()) {
+			auto& t = dynamic_cast<Texture&>(o);
+			t.UpdateTextureReferences(oldTexRef, newTexRef);
+		}
 	}
+
+	return std::make_tuple(std::ref(newTexRef), std::move(oldTexPtr));
 }
 
 void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const {
 	std::unordered_set<string> doneNames;
 
 	for (u_int i = 0; i < GetSize(); ++i) {
-		TextureConstPtr tex = GetTexture(i);
+		TextureConstRef tex = GetTexture(i);
 		
 		GetTextureSortedNamesImpl(tex, names, doneNames);
 	}
 }
 
-void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstPtr tex,
+void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstRef tex,
 		vector<std::string> &names, std::unordered_set<string> &doneNames) const {
 	// Check it has not been already added
-	const string &texName = tex->GetName();
+	const string &texName = tex.GetName();
 	if (doneNames.count(texName) != 0)
 		return;
 
 	// Get the list of reference textures by this one
-	std::unordered_set<TextureConstPtr> referencedTexs;
-	tex->AddReferencedTextures(referencedTexs);
+	std::unordered_set<const Texture *> referencedTexs;
+	tex.AddReferencedTextures(referencedTexs);
 
 	// Add all referenced texture names
 	for (auto refTex : referencedTexs) {
 		// AddReferencedTextures() adds also itself to the list of referenced textures
-		if (refTex != tex)
-			GetTextureSortedNamesImpl(refTex, names, doneNames);
+		if (*refTex != tex)
+			GetTextureSortedNamesImpl(*refTex, names, doneNames);
 	}
 
 	// I can now add the name of this texture name

@@ -22,33 +22,33 @@
 // UVMapping2D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
-	const float2 uv = HitPoint_GetUV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping.dataIndex EXTMESH_PARAM);
 
 	// Scale
-	const float uScaled = uv.x * mapping->uvMapping2D.uScale;
-	const float vScaled = uv.y * mapping->uvMapping2D.vScale;
+	const float uScaled = uv.x * mapping.uvMapping2D.uScale;
+	const float vScaled = uv.y * mapping.uvMapping2D.vScale;
 
 	// Rotate
-	const float sinTheta = mapping->uvMapping2D.sinTheta;
-	const float cosTheta = mapping->uvMapping2D.cosTheta;
+	const float sinTheta = mapping.uvMapping2D.sinTheta;
+	const float cosTheta = mapping.uvMapping2D.cosTheta;
 	const float uRotated = uScaled * cosTheta - vScaled * sinTheta;
 	const float vRotated = vScaled * cosTheta + uScaled * sinTheta;
 
 	// Translate
-	const float uTranslated = uRotated + mapping->uvMapping2D.uDelta;
-	const float vTranslated = vRotated + mapping->uvMapping2D.vDelta;
+	const float uTranslated = uRotated + mapping.uvMapping2D.uDelta;
+	const float vTranslated = vRotated + mapping.uvMapping2D.vDelta;
 
 	return MAKE_FLOAT2(uTranslated, vTranslated);
 }
 
-OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
-	const float signUScale = mapping->uvMapping2D.uScale > 0 ? 1.f : -1.f;
-	const float signVScale = mapping->uvMapping2D.vScale > 0 ? 1.f : -1.f;
-	const float sinTheta = mapping->uvMapping2D.sinTheta;
-	const float cosTheta = mapping->uvMapping2D.cosTheta;
+	const float signUScale = mapping.uvMapping2D.uScale > 0 ? 1.f : -1.f;
+	const float signVScale = mapping.uvMapping2D.vScale > 0 ? 1.f : -1.f;
+	const float sinTheta = mapping.uvMapping2D.sinTheta;
+	const float cosTheta = mapping.uvMapping2D.cosTheta;
 	
 	*ds = MAKE_FLOAT2(signUScale * cosTheta, signUScale * sinTheta);
 	*dt = MAKE_FLOAT2(-signVScale * sinTheta, signVScale * cosTheta);
@@ -60,20 +60,20 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *m
 // UVRandomMapping2D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
 	// Select random parameters
 	uint seed;
-	switch (mapping->uvRandomMapping2D.seedType) {
+	switch (mapping.uvRandomMapping2D.seedType) {
 		default:
 		case OBJECT_ID:
-			seed = hitPoint->objectID;
+			seed = hitPoint.objectID;
 			break;
 		case TRIANGLE_AOV:
-			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping->uvRandomMapping2D.triAOVIndex EXTMESH_PARAM);
+			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping.uvRandomMapping2D.triAOVIndex EXTMESH_PARAM);
 			break;
 		case OBJECT_ID_OFFSET:
-			seed = hitPoint->objectID + mapping->uvRandomMapping2D.objectIDOffset;
+			seed = hitPoint.objectID + mapping.uvRandomMapping2D.objectIDOffset;
 			break;
 	}
 
@@ -81,21 +81,21 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 	Rnd_Init(seed, &rndSeed);
 
 	const float uvRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax,
-			mapping->uvRandomMapping2D.uvRotationStep);
+			mapping.uvRandomMapping2D.uvRotationMin, mapping.uvRandomMapping2D.uvRotationMax,
+			mapping.uvRandomMapping2D.uvRotationStep);
 	const float uScale = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uScaleMin, mapping->uvRandomMapping2D.uScaleMax);
-	const float vScale = mapping->uvRandomMapping2D.uniformScale ?
+			mapping.uvRandomMapping2D.uScaleMin, mapping.uvRandomMapping2D.uScaleMax);
+	const float vScale = mapping.uvRandomMapping2D.uniformScale ?
 		uScale :
 		Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.vScaleMin, mapping->uvRandomMapping2D.vScaleMax);
+			mapping.uvRandomMapping2D.vScaleMin, mapping.uvRandomMapping2D.vScaleMax);
 	const float uDelta = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uDeltaMin, mapping->uvRandomMapping2D.uDeltaMax);
+			mapping.uvRandomMapping2D.uDeltaMin, mapping.uvRandomMapping2D.uDeltaMax);
 	const float vDelta = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.vDeltaMin, mapping->uvRandomMapping2D.vDeltaMax);
+			mapping.uvRandomMapping2D.vDeltaMin, mapping.uvRandomMapping2D.vDeltaMax);
 
 	// Get the hit point UV
-	const float2 uv = HitPoint_GetUV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping.dataIndex EXTMESH_PARAM);
 	
 	// Scale
 	const float uScaled = uv.x * uScale;
@@ -123,12 +123,12 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 	return MAKE_FLOAT2(uTranslated, vTranslated);
 }
 
-OPENCL_FORCE_INLINE float2 UVRandomMapping2D_Map(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_Map(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
 	return  UVRandomMapping2D_MapImpl(mapping, hitPoint, NULL, NULL TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapDuv(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
 	return  UVRandomMapping2D_MapImpl(mapping, hitPoint, ds, dt TEXTURES_PARAM);
 }
@@ -137,9 +137,9 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapDuv(__global const TextureMappin
 // TextureMapping2D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
-	switch (mapping->type) {
+	switch (mapping.type) {
 		case UVMAPPING2D:
 			return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 		case UVRANDOMMAPPING2D:
@@ -149,9 +149,9 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMappin
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D mapping,
 		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
-	switch (mapping->type) {
+	switch (mapping.type) {
 		case UVMAPPING2D:
 			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt TEXTURES_PARAM);
 		case UVRANDOMMAPPING2D:
@@ -165,44 +165,44 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 // UVMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping,
+OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	if (shadeN)
-		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
+		*shadeN = normalize(Transform_ApplyNormal(&mapping.worldToLocal, VLOAD3F(&hitPoint.shadeN.x)));
 
-	const float2 uv = HitPoint_GetUV(hitPoint, mapping->uvMapping3D.dataIndex EXTMESH_PARAM);
-	return Transform_ApplyPoint(&mapping->worldToLocal, MAKE_FLOAT3(uv.x, uv.y, 0.f));
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping.uvMapping3D.dataIndex EXTMESH_PARAM);
+	return Transform_ApplyPoint(&mapping.worldToLocal, MAKE_FLOAT3(uv.x, uv.y, 0.f));
 }
 
 //------------------------------------------------------------------------------
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping,
+OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN) {
 	if (shadeN)
-		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
+		*shadeN = normalize(Transform_ApplyNormal(&mapping.worldToLocal, VLOAD3F(&hitPoint.shadeN.x)));
 
-	const float3 p = VLOAD3F(&hitPoint->p.x);
-	return Transform_ApplyPoint(&mapping->worldToLocal, p);
+	const float3 p = VLOAD3F(&hitPoint.p.x);
+	return Transform_ApplyPoint(&mapping.worldToLocal, p);
 }
 
 //------------------------------------------------------------------------------
 // LocalMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping,
+OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN) {
 	if (shadeN) {
-		const Matrix4x4 mInv = Matrix4x4_Mul(&hitPoint->localToWorld.m, &mapping->worldToLocal.mInv);
+		const Matrix4x4 mInv = Matrix4x4_Mul(&hitPoint.localToWorld.m, &mapping.worldToLocal.mInv);
 		
-		const float3 sn = VLOAD3F(&hitPoint->shadeN.x);
+		const float3 sn = VLOAD3F(&hitPoint.shadeN.x);
 		*shadeN = normalize(Matrix4x4_ApplyNormal_Private(&mInv, sn));
 	}
 
-	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->localToWorld.mInv);
+	const Matrix4x4 m = Matrix4x4_Mul(&mapping.worldToLocal.m, &hitPoint.localToWorld.mInv);
 
-	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 p = VLOAD3F(&hitPoint.p.x);
 	return Matrix4x4_ApplyPoint_Private(&m, p);
 }
 
@@ -210,29 +210,29 @@ OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *m
 // LocalRandomMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMapping3D *mapping,
+OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMapping3D mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	if (shadeN) {
-		const Matrix4x4 mInv = Matrix4x4_Mul(&hitPoint->localToWorld.m, &mapping->worldToLocal.mInv);
+		const Matrix4x4 mInv = Matrix4x4_Mul(&hitPoint.localToWorld.m, &mapping.worldToLocal.mInv);
 		
-		const float3 sn = VLOAD3F(&hitPoint->shadeN.x);
+		const float3 sn = VLOAD3F(&hitPoint.shadeN.x);
 		*shadeN = normalize(Matrix4x4_ApplyNormal_Private(&mInv, sn));
 	}
 
-	Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->localToWorld.mInv);
+	Matrix4x4 m = Matrix4x4_Mul(&mapping.worldToLocal.m, &hitPoint.localToWorld.mInv);
 
 	// Select random parameters
 	uint seed;
-	switch (mapping->localRandomMapping.seedType) {
+	switch (mapping.localRandomMapping.seedType) {
 		default:
 		case OBJECT_ID:
-			seed = hitPoint->objectID;
+			seed = hitPoint.objectID;
 			break;
 		case TRIANGLE_AOV:
-			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping->localRandomMapping.triAOVIndex EXTMESH_PARAM);
+			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping.localRandomMapping.triAOVIndex EXTMESH_PARAM);
 			break;
 		case OBJECT_ID_OFFSET:
-			seed = hitPoint->objectID + mapping->localRandomMapping.objectIDOffset;
+			seed = hitPoint.objectID + mapping.localRandomMapping.objectIDOffset;
 			break;
 	}
 
@@ -240,26 +240,26 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	Rnd_Init(seed, &rndSeed);
 	
 	const float xRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
-			mapping->localRandomMapping.xRotationMin,
-			mapping->localRandomMapping.xRotationMax,
-			mapping->localRandomMapping.xRotationStep);
+			mapping.localRandomMapping.xRotationMin,
+			mapping.localRandomMapping.xRotationMax,
+			mapping.localRandomMapping.xRotationStep);
 	const float yRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
-			mapping->localRandomMapping.yRotationMin,
-			mapping->localRandomMapping.yRotationMax,
-			mapping->localRandomMapping.yRotationStep);
+			mapping.localRandomMapping.yRotationMin,
+			mapping.localRandomMapping.yRotationMax,
+			mapping.localRandomMapping.yRotationStep);
 	const float zRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
-			mapping->localRandomMapping.zRotationMin,
-			mapping->localRandomMapping.zRotationMax,
-			mapping->localRandomMapping.yRotationStep);
+			mapping.localRandomMapping.zRotationMin,
+			mapping.localRandomMapping.zRotationMax,
+			mapping.localRandomMapping.yRotationStep);
 	
-	const float xScale = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xScaleMin, mapping->localRandomMapping.xScaleMax);
-	const bool uniformScale = mapping->localRandomMapping.uniformScale;
-	const float yScale = uniformScale ? xScale : Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yScaleMin, mapping->localRandomMapping.yScaleMax);
-	const float zScale = uniformScale ? xScale : Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zScaleMin, mapping->localRandomMapping.zScaleMax);
+	const float xScale = Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.xScaleMin, mapping.localRandomMapping.xScaleMax);
+	const bool uniformScale = mapping.localRandomMapping.uniformScale;
+	const float yScale = uniformScale ? xScale : Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.yScaleMin, mapping.localRandomMapping.yScaleMax);
+	const float zScale = uniformScale ? xScale : Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.zScaleMin, mapping.localRandomMapping.zScaleMax);
 	
-	const float xTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xTranslateMin, mapping->localRandomMapping.xTranslateMax);
-	const float yTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yTranslateMin, mapping->localRandomMapping.yTranslateMax);
-	const float zTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zTranslateMin, mapping->localRandomMapping.zTranslateMax);
+	const float xTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.xTranslateMin, mapping.localRandomMapping.xTranslateMax);
+	const float yTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.yTranslateMin, mapping.localRandomMapping.yTranslateMax);
+	const float zTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping.localRandomMapping.zTranslateMin, mapping.localRandomMapping.zTranslateMax);
 
 	Matrix4x4 mRandomTrans = Matrix4x4_Scale(xScale, yScale, zScale);
 
@@ -275,15 +275,15 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	
 	m = Matrix4x4_Mul_Private(&mRandomTrans, &m);
 
-	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float3 p = VLOAD3F(&hitPoint.p.x);
 	return Matrix4x4_ApplyPoint_Private(&m, p);
 }
 
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
+OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
-	switch (mapping->type) {
+	switch (mapping.type) {
 		case UVMAPPING3D:
 			return UVMapping3D_Map(mapping, hitPoint, shadeN TEXTURES_PARAM);
 		case GLOBALMAPPING3D:

@@ -131,22 +131,21 @@ BuildBuffer(
 }
 
 
-static Far::TopologyRefiner * createFarTopologyRefiner(ExtTriangleMeshConstPtr);
+static Far::TopologyRefiner * createFarTopologyRefiner(ExtTriangleMeshConstRef);
 
-// TODO
-static ExtTriangleMeshPtr ApplySubdivAdaptive(
-	ExtTriangleMeshPtr srcMesh,
+static ExtTriangleMeshUPtr ApplySubdivAdaptive(
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel
 );
 
-static ExtTriangleMeshPtr ApplyAdaptiveSubdiv(
-	ExtTriangleMeshPtr srcMesh,
+static ExtTriangleMeshUPtr ApplyAdaptiveSubdiv(
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel
 );
 
 
 
-ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel) {
+ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel) {
 	//--------------------------------------------------------------------------
 	// Refine topology
 	//--------------------------------------------------------------------------
@@ -168,7 +167,7 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	if (refiner->GetMaxLevel() < maxLevel) {
 		SDL_LOG("WARNING - SUBDIVISION FAILURE");
 		SDL_LOG("'maxlevel' may be too high, please check. Continuing with input mesh...");
-		return srcMesh;
+		return srcMesh.Copy();
 	}
 
 	// Get topology constants
@@ -232,17 +231,17 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	// Vertices
 	auto vertsBuffer = BuildBuffer<3>(
 		stencilTable,
-		(const float *)srcMesh->GetVertices(),
+		(const float *)srcMesh.GetVertices(),
 		nCoarseVerts,
 		nRefinedVerts
 	);
 
 	// Normals
     BufferPtr normsBuffer;
-	if (srcMesh->HasNormals()) {
+	if (srcMesh.HasNormals()) {
         normsBuffer = BuildBuffer<3>(
 			stencilTable,
-			(const float *)srcMesh->GetNormals(),
+			(const float *)srcMesh.GetNormals(),
 			nCoarseVerts,
 			nRefinedVerts
 		);
@@ -251,10 +250,10 @@ ExtTriangleMeshPtr ApplySubdiv(ExtTriangleMeshPtr srcMesh, const u_int maxLevel)
 	// UVs
 	std::vector<BufferPtr> uvsBuffers(EXTMESH_MAX_DATA_COUNT);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasUVs(i)) {
+		if (srcMesh.HasUVs(i)) {
 			uvsBuffers[i] = BuildBuffer<2>(
 				stencilTable,
-				(const float *)srcMesh->GetUVs(i),
+				(const float *)srcMesh.GetUVs(i),
 				nCoarseVerts,
 nRefinedVerts
 			);
@@ -264,10 +263,10 @@ nRefinedVerts
 	// Colors
 	std::vector<BufferPtr> colsBuffers(EXTMESH_MAX_DATA_COUNT);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasColors(i)) {
+		if (srcMesh.HasColors(i)) {
 			colsBuffers[i] = BuildBuffer<3>(
 				stencilTable,
-				(const float *)srcMesh->GetColors(i),
+				(const float *)srcMesh.GetColors(i),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -276,11 +275,11 @@ nRefinedVerts
 
 	// Alphas
 	std::vector<BufferPtr> alphasBuffers(EXTMESH_MAX_DATA_COUNT);
-	if (srcMesh->HasAlphas(0)) {
+	if (srcMesh.HasAlphas(0)) {
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			alphasBuffers[i] = BuildBuffer<1>(
 				stencilTable,
-				(const float *)srcMesh->GetAlphas(i),
+				(const float *)srcMesh.GetAlphas(i),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -290,11 +289,11 @@ nRefinedVerts
 	// VertAOVs
 	std::vector<BufferPtr> vertAOVSsBuffers(EXTMESH_MAX_DATA_COUNT);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasVertexAOV(i)) {
+		if (srcMesh.HasVertexAOV(i)) {
 			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 				vertAOVSsBuffers[i] = BuildBuffer<1>(
 					stencilTable,
-					(const float *)srcMesh->GetVertexAOVs(i),
+					(const float *)srcMesh.GetVertexAOVs(i),
 					nCoarseVerts,
 					nRefinedVerts
 				);
@@ -324,7 +323,7 @@ nRefinedVerts
 
 	// New normals
 	Normal *newNorms = nullptr;
-	if (srcMesh->HasNormals()) {
+	if (srcMesh.HasNormals()) {
 		newNorms = new Normal[nRefinedVerts];
 		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
 		std::copy(refinedNorms, refinedNorms + 3 * nRefinedVerts, &newNorms->x);
@@ -333,7 +332,7 @@ nRefinedVerts
 	// New UVs
 	std::array<UV *, EXTMESH_MAX_DATA_COUNT> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasUVs(i)) {
+		if (srcMesh.HasUVs(i)) {
 			newUVs[i] = new UV[nRefinedVerts];
 
 			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
@@ -345,7 +344,7 @@ nRefinedVerts
 	// New colors
 	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasColors(i)) {
+		if (srcMesh.HasColors(i)) {
 			newCols[i] = new Spectrum[nRefinedVerts];
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
@@ -357,7 +356,7 @@ nRefinedVerts
 	// New alphas
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasAlphas(i)) {
+		if (srcMesh.HasAlphas(i)) {
 			newAlphas[i] = new float[nRefinedVerts];
 
 			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
@@ -369,7 +368,7 @@ nRefinedVerts
 	// New vertAOVs
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasVertexAOV(i)) {
+		if (srcMesh.HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
 			newVertAOVs[i] = new float[nRefinedVerts];
 
@@ -380,7 +379,7 @@ nRefinedVerts
 	}
 
 	// Allocate the new mesh
-	ExtTriangleMeshPtr newMesh =  std::make_shared<ExtTriangleMesh>(
+	ExtTriangleMeshUPtr newMesh =  std::make_unique<ExtTriangleMesh>(
 		nRefinedVerts, nRefinedFaces,
 		newVerts, newTris, newNorms,
 		&newUVs, &newCols, &newAlphas
@@ -393,20 +392,20 @@ nRefinedVerts
 	return newMesh;
 }
 
-static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstPtr srcMesh)
+static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef srcMesh)
 {
 	// Set topology descriptor
 	Far::TopologyDescriptor desc;
-	desc.numVertices = srcMesh->GetTotalVertexCount();
-	desc.numFaces = srcMesh->GetTotalTriangleCount();
+	desc.numVertices = srcMesh.GetTotalVertexCount();
+	desc.numFaces = srcMesh.GetTotalTriangleCount();
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh->GetTriangles());
+	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
 
 	// Look for mesh boundary edges
 	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
-	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const u_int triCount = srcMesh.GetTotalTriangleCount();
+	const Triangle *tris = srcMesh.GetTriangles();
 
 	// Count how many times an edge is shared
 	for (u_int i = 0; i < triCount; ++i) {
@@ -431,7 +430,7 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstPtr sr
 			edgesMap[edge2] = 1;
 	}
 
-	std::vector<bool> isBoundaryVertex(srcMesh->GetTotalVertexCount(), false);
+	std::vector<bool> isBoundaryVertex(srcMesh.GetTotalVertexCount(), false);
 	std::vector<Far::Index> cornerVertexIndices;
 	std::vector<float> cornerWeights;
 	for (auto em : edgesMap) {
@@ -639,7 +638,7 @@ struct Surface {
 	/// Constructor
 	///
 	/// @param srcMesh The mesh to be subdivided
-	Surface(ExtTriangleMeshConstPtr srcMesh)
+	Surface(ExtTriangleMeshConstRef srcMesh)
 	{
 		SDL_LOG("Subdivision (enhanced) - Computing patches");
 
@@ -656,9 +655,9 @@ struct Surface {
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh->GetTriangles()),
-				srcMesh->GetTotalVertexCount(),
-				srcMesh->GetTotalTriangleCount(),
+				reinterpret_cast<const int *>(srcMesh.GetTriangles()),
+				srcMesh.GetTotalVertexCount(),
+				srcMesh.GetTotalTriangleCount(),
 				patchTableOptions
 			)
 		);
@@ -1233,8 +1232,8 @@ struct MultiLayerDataEvaluator{
 
 
 // Entry point for enhanced subdivision
-ExtTriangleMeshPtr ApplySubdiv(
-	ExtTriangleMeshPtr srcMesh,
+ExtTriangleMeshUPtr ApplySubdiv(
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel
 ) {
 	// Remarks:
@@ -1265,7 +1264,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 		surface.Tessellate(tessellationRate);
 
 	// Record initial vertex count
-	u_int numMeshVertex = srcMesh->GetTotalVertexCount();
+	u_int numMeshVertex = srcMesh.GetTotalVertexCount();
 
 	// Evaluate positions and normals
 	PointArrayPtr tessPoints;
@@ -1273,7 +1272,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
-			surface.Interpolate(srcMesh->GetVertices(), numMeshVertex);
+			surface.Interpolate(srcMesh.GetVertices(), numMeshVertex);
 
 		// Evaluate refined (interpolated) positions
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
@@ -1285,21 +1284,21 @@ ExtTriangleMeshPtr ApplySubdiv(
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
 
 	// Evaluate UV
-	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh->GetUVs(layer); };
+	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh.GetUVs(layer); };
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh->GetColors(layer); };
+	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
 	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetAlphas(layer); };
+		{ return (FloatAdapter*) srcMesh.GetAlphas(layer); };
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
 	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh->GetVertexAOVs(layer); };
+		{ return (FloatAdapter*) srcMesh.GetVertexAOVs(layer); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
@@ -1310,7 +1309,7 @@ ExtTriangleMeshPtr ApplySubdiv(
 		<< numTriangles << " triangles"
 	);
 
-	auto newMesh =  std::make_shared<ExtTriangleMesh>(
+	auto newMesh =  std::make_unique<ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
 		tessPoints.release(),
@@ -1342,8 +1341,8 @@ ExtTriangleMeshPtr ApplySubdiv(
 
 
 SubdivShape::SubdivShape(
-	CameraConstPtr camera,
-	ExtTriangleMeshPtr srcMesh,
+	OptionalPtr<const Camera> camera,
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
 	const bool enhanced
@@ -1351,21 +1350,25 @@ SubdivShape::SubdivShape(
 	const double startTime = WallClockTime();
 
 	if ((maxEdgeScreenSize > 0.f) && !camera) {
-		throw std::runtime_error("The scene camera must be defined in order to enable subdiv maxedgescreensize option");
+		throw std::runtime_error(
+			"The scene.GetCamera() must be defined in order to enable "
+			"subdiv maxedgescreensize option"
+		);
 	}
 
 	if (maxLevel > 0) {
 
 		if (camera && (maxEdgeScreenSize > 0.f)) {
-			SDL_LOG("Subdividing shape " << srcMesh->GetName()
+			SDL_LOG("Subdividing shape " << srcMesh.GetName()
 					<< " - Adaptive subdivision");
 
-			mesh = srcMesh->Copy();
+			mesh = srcMesh.Copy();
 
 			for (u_int i = 0; i < maxLevel; ++i) {
 				SDL_LOG("Subdividing - Adaptive - Computing max edge size");
 				// Check the size of the longest mesh edge on film image plane
-				const float edgeScreenSize = MaxEdgeScreenSize(camera, mesh);
+				const float edgeScreenSize = MaxEdgeScreenSize(*camera, *mesh);
+
 
 				if (edgeScreenSize <= maxEdgeScreenSize)
 					break;
@@ -1384,7 +1387,7 @@ SubdivShape::SubdivShape(
 				SDL_LOG("Subdividing adapted level = " << optimizedLevel);
 
 				// Subdivide and re-try
-				auto newMesh = ApplySubdiv(mesh, optimizedLevel, enhanced);
+				auto newMesh = ApplySubdiv(*mesh, optimizedLevel, enhanced);
 				SDL_LOG(
 					"Done step #" << i
 					<< " from " << mesh->GetTotalTriangleCount()
@@ -1393,21 +1396,21 @@ SubdivShape::SubdivShape(
 				);
 
 				// Replace old mesh with new one
-				mesh = newMesh;
+				std::swap(mesh, newMesh);
 			}
 		} else {
-			SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
+			SDL_LOG("Subdividing shape " << srcMesh.GetName() << " at level: " << maxLevel);
 
 			mesh = ApplySubdiv(srcMesh, maxLevel, enhanced);
 		}
 	} else {
 		// Nothing to do, just make a copy
 		SDL_LOG("Subdivision: level=0 - Skipping");
-		mesh = srcMesh->Copy();
+		mesh = srcMesh.Copy();
 	}
 
 	if (maxLevel > 0) {
-		SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
+		SDL_LOG("Subdivided shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 	}
 
 	// For some debugging
@@ -1419,23 +1422,23 @@ SubdivShape::SubdivShape(
 
 
 
-float SubdivShape::MaxEdgeScreenSize(CameraConstPtr camera, ExtTriangleMeshPtr srcMesh) {
-	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Point *verts = srcMesh->GetVertices();
-	const Triangle *tris = srcMesh->GetTriangles();
+float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef srcMesh) {
+	const u_int triCount = srcMesh.GetTotalTriangleCount();
+	const Point *verts = srcMesh.GetVertices();
+	const Triangle *tris = srcMesh.GetTriangles();
 
 	// Note VisualStudio doesn't support:
 	//#pragma omp parallel for reduction(max:maxEdgeSize)
 
 	const u_int threadCount = omp_get_max_threads();
 
-	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
+	const Transform worldToScreen = Inverse(camera.GetScreenToWorld());
 
 	std::vector<float> maxEdgeSizes(threadCount, 0.f);
 
-	std::vector<Point> projectedPoints(srcMesh->GetTotalVertexCount());
+	std::vector<Point> projectedPoints(srcMesh.GetTotalVertexCount());
 	#pragma omp parallel for
-	for(int i = 0; i < srcMesh->GetTotalVertexCount(); ++i) {
+	for(int i = 0; i < srcMesh.GetTotalVertexCount(); ++i) {
 		projectedPoints[i] = worldToScreen * verts[i];
 		projectedPoints[i] /= projectedPoints[i].z;
 	}
@@ -1471,8 +1474,8 @@ float SubdivShape::MaxEdgeScreenSize(CameraConstPtr camera, ExtTriangleMeshPtr s
 }
 
 
-ExtTriangleMeshPtr SubdivShape::ApplySubdiv(
-	ExtTriangleMeshPtr srcMesh,
+ExtTriangleMeshUPtr SubdivShape::ApplySubdiv(
+	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const bool enhanced
 ) {
@@ -1481,22 +1484,22 @@ ExtTriangleMeshPtr SubdivShape::ApplySubdiv(
 	//--------------------------------------------------------------------------
 
 	// OSD topology is indexed by int whereas Lux's one is indexed by uint...
-	assert(srcMesh->GetTotalVertexCount() <= std::numeric_limits<int>::max());
-	assert(srcMesh->GetTotalTriangleCount() <= std::numeric_limits<int>::max());
+	assert(srcMesh.GetTotalVertexCount() <= std::numeric_limits<int>::max());
+	assert(srcMesh.GetTotalTriangleCount() <= std::numeric_limits<int>::max());
 
 	if (enhanced) {
 		SDL_LOG(
 			"Subdivision (enhanced) - Starting - "
-			<< srcMesh->GetTotalVertexCount() << " points / "
-			<< srcMesh->GetTotalTriangleCount() << " triangles"
+			<< srcMesh.GetTotalVertexCount() << " points / "
+			<< srcMesh.GetTotalTriangleCount() << " triangles"
 		);
 
 		return enhanced::ApplySubdiv(srcMesh, maxLevel);
 	}
 	else {
 		SDL_LOG("Subdivision - Starting - "
-			<< srcMesh->GetTotalVertexCount() << " points / "
-			<< srcMesh->GetTotalTriangleCount() << " triangles"
+			<< srcMesh.GetTotalVertexCount() << " points / "
+			<< srcMesh.GetTotalTriangleCount() << " triangles"
 		);
 
 		return simple::ApplySubdiv(srcMesh, maxLevel);
@@ -1507,8 +1510,8 @@ ExtTriangleMeshPtr SubdivShape::ApplySubdiv(
 SubdivShape::~SubdivShape() {
 }
 
-ExtTriangleMeshPtr SubdivShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr SubdivShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 
 

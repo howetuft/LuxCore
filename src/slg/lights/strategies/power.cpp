@@ -28,11 +28,11 @@ using namespace slg;
 // LightStrategyPower
 //------------------------------------------------------------------------------
 
-void LightStrategyPower::Preprocess(SceneConstPtr scene, const LightStrategyTask taskType,
+void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene->lightDefs.GetSize();
+	const u_int lightCount = scene.lightDefs.GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -43,10 +43,10 @@ void LightStrategyPower::Preprocess(SceneConstPtr scene, const LightStrategyTask
 	lightPower.reserve(lightCount);
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto l = scene->lightDefs.GetLightSource(i);
-		float power = l->GetPower(scene) * l->GetImportance();
+		auto& l = scene.lightDefs.GetLightSource(i);
+		float power = l.GetPower(scene) * l.GetImportance();
 		// In order to avoid over-sampling of distant lights
-		if (l->IsInfinite())
+		if (l.IsInfinite())
 			power *= invEnvRadius2;
 
 		switch (taskType) {
@@ -55,14 +55,14 @@ void LightStrategyPower::Preprocess(SceneConstPtr scene, const LightStrategyTask
 				break;
 			}
 			case TASK_ILLUMINATE: {
-				if (l->IsDirectLightSamplingEnabled())
+				if (l.IsDirectLightSamplingEnabled())
 					lightPower.push_back(power);
 				else
 					lightPower.push_back(0.f);
 				break;
 			}
 			case TASK_INFINITE_ONLY: {
-				if (l->IsInfinite())
+				if (l.IsInfinite())
 					lightPower.push_back(power);
 				else
 					lightPower.push_back(0.f);
@@ -85,8 +85,8 @@ Properties LightStrategyPower::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
 }
 
-LightStrategyPtr LightStrategyPower::FromProperties(const Properties &cfg) {
-	return std::make_shared<LightStrategyPower>();
+LightStrategyUPtr LightStrategyPower::FromProperties(const Properties &cfg) {
+	return std::make_unique<LightStrategyPower>();
 }
 
 const Properties &LightStrategyPower::GetDefaultProps() {

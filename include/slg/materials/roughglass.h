@@ -29,12 +29,14 @@ namespace slg {
 
 class RoughGlassMaterial : public Material {
 public:
-	RoughGlassMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr refl, TextureConstPtr trans,
-			TextureConstPtr exteriorIorFact, TextureConstPtr interiorIorFact,
-			TextureConstPtr u, TextureConstPtr v,
-			TextureConstPtr filmThickness, TextureConstPtr filmIor);
+	using TexRef = OptionalPtr<const Texture>;
+
+	RoughGlassMaterial(TexRef frontTransp, TexRef backTransp,
+			TexRef emitted, TexRef bump,
+			TexRef refl, TexRef trans,
+			TexRef exteriorIorFact, TexRef interiorIorFact,
+			TexRef u, TexRef v,
+			TexRef filmThickness, TexRef filmIor);
 
 	virtual MaterialType GetType() const { return ROUGHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
@@ -51,29 +53,30 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKr() const { return Kr; }
-	TextureConstPtr GetKt() const { return Kt; }
-	TextureConstPtr GetExteriorIOR() const { return exteriorIor; }
-	TextureConstPtr GetInteriorIOR() const { return interiorIor; }
-	TextureConstPtr GetNu() const { return nu; }
-	TextureConstPtr GetNv() const { return nv; }
-	TextureConstPtr GetFilmThickness() const { return filmThickness; }
-	TextureConstPtr GetFilmIOR() const { return filmIor; }
+
+	TexRef GetKr() const { return Kr; }
+	TexRef GetKt() const { return Kt; }
+	TexRef GetExteriorIOR() const { return exteriorIor; }
+	TexRef GetInteriorIOR() const { return interiorIor; }
+	TexRef GetNu() const { return nu; }
+	TexRef GetNv() const { return nv; }
+	TexRef GetFilmThickness() const { return filmThickness; }
+	TexRef GetFilmIOR() const { return filmIor; }
 
 private:
-	TextureConstPtr Kr;
-	TextureConstPtr Kt;
-	TextureConstPtr exteriorIor;
-	TextureConstPtr interiorIor;
-	TextureConstPtr nu;
-	TextureConstPtr nv;
-	TextureConstPtr filmThickness;
-	TextureConstPtr filmIor;
+	TexRef Kr;
+	TexRef Kt;
+	TexRef exteriorIor;
+	TexRef interiorIor;
+	TexRef nu;
+	TexRef nv;
+	TexRef filmThickness;
+	TexRef filmIor;
 };
 
 }

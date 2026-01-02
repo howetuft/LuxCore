@@ -29,12 +29,13 @@ namespace slg {
 
 class GlassMaterial : public Material {
 public:
-	GlassMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr refl, TextureConstPtr trans,
-			TextureConstPtr exteriorIorFact, TextureConstPtr interiorIorFact,
-			TextureConstPtr B, 
-			TextureConstPtr filmThickness, TextureConstPtr filmIor);
+	using TexRef = OptionalPtr<const Texture>;
+	GlassMaterial(TexRef frontTransp, TexRef backTransp,
+			TexRef emitted, TexRef bump,
+			TexRef refl, TexRef trans,
+			TexRef exteriorIorFact, TexRef interiorIorFact,
+			TexRef B, 
+			TexRef filmThickness, TexRef filmIor);
 
 	virtual MaterialType GetType() const { return GLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -52,18 +53,18 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKr() const { return Kr; }
-	TextureConstPtr GetKt() const { return Kt; }
-	TextureConstPtr GetExteriorIOR() const { return exteriorIor; }
-	TextureConstPtr GetInteriorIOR() const { return interiorIor; }
-	TextureConstPtr GetCauchyB() const { return cauchyB; }
-	TextureConstPtr GetFilmThickness() const { return filmThickness; }
-	TextureConstPtr GetFilmIOR() const { return filmIor; }
+	TexRef GetKr() const { return Kr; }
+	TexRef GetKt() const { return Kt; }
+	TexRef GetExteriorIOR() const { return exteriorIor; }
+	TexRef GetInteriorIOR() const { return interiorIor; }
+	TexRef GetCauchyB() const { return cauchyB; }
+	TexRef GetFilmThickness() const { return filmThickness; }
+	TexRef GetFilmIOR() const { return filmIor; }
 
 	static luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir,
@@ -78,13 +79,13 @@ public:
 
 private:
 
-	TextureConstPtr Kr;
-	TextureConstPtr Kt;
-	TextureConstPtr exteriorIor;
-	TextureConstPtr interiorIor;
-	TextureConstPtr cauchyB;
-	TextureConstPtr filmThickness;
-	TextureConstPtr filmIor;
+	TexRef Kr;
+	TexRef Kt;
+	TexRef exteriorIor;
+	TexRef interiorIor;
+	TexRef cauchyB;
+	TexRef filmThickness;
+	TexRef filmIor;
 };
 
 }

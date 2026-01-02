@@ -31,7 +31,7 @@ using namespace slg;
 // ImageMapResizeMipMapMemPolicy::ApplyResizePolicy()
 //------------------------------------------------------------------------------
 
-ImageMapPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &fileName,
+ImageMapUPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &fileName,
 		const ImageMapConfig &imgCfg, bool &toApply) const {
 	const string srcFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	
@@ -63,7 +63,7 @@ ImageMapPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &
 		SDL_LOG("Probe ImageMap: " << dstFileName << " [from " << width << "x" << height <<
 				" to " << newWidth << "x" << newHeight <<"]");
 
-		ImageMapPtr im = std::make_shared<ImageMap>(dstFileName, imgCfg, newWidth, newHeight);
+		auto im = std::make_unique<ImageMap>(dstFileName, imgCfg, newWidth, newHeight);
 		// Set the ImageMap with  the original name
 		im->SetName(fileName);
 
@@ -73,7 +73,7 @@ ImageMapPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &
 
 		return im;
 	} else {
-		ImageMapPtr im = std::make_shared<ImageMap>(fileName, imgCfg);
+		auto im = std::make_unique<ImageMap>(fileName, imgCfg);
 
 		toApply = false;
 
@@ -85,7 +85,7 @@ ImageMapPtr ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &
 // ImageMapResizeMinMemPolicy::Preprocess()
 //------------------------------------------------------------------------------
 
-void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, SceneConstPtr scene,
+void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, SceneConstRef scene,
 		const bool useRTMode) const {
 	if (useRTMode)
 		return;
@@ -153,14 +153,14 @@ void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, SceneConstPtr
 
 		imc.resizePolicyToApply[i] = false;
 
-		originalMemUsed += originalWidth * originalHeigth * imc.maps[i]->GetStorage()->GetMemoryPixelSize();
+		originalMemUsed += originalWidth * originalHeigth * imc.maps[i]->GetStorage().GetMemoryPixelSize();
 
 		// Reload the original image map with the best mip map level
 		const string srcFileName = SLG_FileNameResolver.ResolveFile(imc.maps[i]->GetName());
 		const string dstFileName = srcFileName + ".tx";
 		imc.maps[i]->Reload(dstFileName, newWidth, newHeight);
 
-		currentMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
+		currentMemUsed += imc.maps[i]->GetStorage().GetMemorySize();
 		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
 				originalWidth << "x" << originalHeigth << " => " <<

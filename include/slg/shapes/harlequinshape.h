@@ -21,21 +21,21 @@
 
 #include <string>
 
+#include "luxrays/usings.h"
 #include "slg/shapes/shape.h"
 
 namespace slg {
 
 class HarlequinShape : public Shape {
 public:
-	HarlequinShape(luxrays::ExtTriangleMeshPtr srcMesh);
+	HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh);
 	virtual ~HarlequinShape();
 
-	virtual ShapeType GetType() const { return HARLEQUIN; }
+	virtual ShapeType GetType() const override { return HARLEQUIN; }
 
 protected:
-	virtual luxrays::ExtTriangleMeshPtr RefineImpl(SceneConstRef scene);
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	luxrays::ExtTriangleMeshPtr mesh;
 };
 
 }

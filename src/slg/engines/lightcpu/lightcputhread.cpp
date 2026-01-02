@@ -75,7 +75,7 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				break;
 		}
 
-		pathTracer.RenderLightSample(device, engine->renderConfig.scene,
+		pathTracer.RenderLightSample(device, engine->renderConfig.GetScene(),
 				engine->film, *sampler, sampleResults);
 
 		// Variance clamping

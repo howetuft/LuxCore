@@ -30,12 +30,12 @@ namespace slg {
 
 class Metal2Material : public Material {
 public:
-	Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr nn, TextureConstPtr kk, TextureConstPtr u, TextureConstPtr v);
-	Metal2Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			FresnelTextureConstPtr ft, TextureConstPtr u, TextureConstPtr v);
+	Metal2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+			OptionalPtr<const Texture> nn, OptionalPtr<const Texture> kk, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v);
+	Metal2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+			OptionalPtr<const FresnelTexture> ft, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v);
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -53,24 +53,24 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	FresnelTextureConstPtr GetFresnel() const { return fresnelTex; }
-	TextureConstPtr GetN() const { return n; }
-	TextureConstPtr GetK() const { return k; }
-	TextureConstPtr GetNu() const { return nu; }
-	TextureConstPtr GetNv() const { return nv; }
+	OptionalPtr<const FresnelTexture> GetFresnel() const { return fresnelTex; }
+	OptionalPtr<const Texture> GetN() const { return n; }
+	OptionalPtr<const Texture> GetK() const { return k; }
+	OptionalPtr<const Texture> GetNu() const { return nu; }
+	OptionalPtr<const Texture> GetNv() const { return nv; }
 	
 private:
-	FresnelTextureConstPtr fresnelTex;
+	OptionalPtr<const FresnelTexture> fresnelTex;
 	// For compatibility with the past
-	TextureConstPtr n, k;
+	OptionalPtr<const Texture> n, k;
 
-	TextureConstPtr nu;
-	TextureConstPtr nv;
+	OptionalPtr<const Texture> nu;
+	OptionalPtr<const Texture> nv;
 };
 
 }

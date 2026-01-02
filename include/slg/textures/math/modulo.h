@@ -29,7 +29,7 @@ namespace slg {
 
 class ModuloTexture : public Texture {
 public:
-    ModuloTexture(TextureConstPtr t, TextureConstPtr m) : texture(t), modulo(m) {}
+    ModuloTexture(TextureRef t, TextureRef m) : texture(t), modulo(m) {}
     virtual ~ModuloTexture() {}
 
     virtual TextureType GetType() const {return MODULO_TEX;}
@@ -38,19 +38,19 @@ public:
     virtual float Y() const {return 1.f;}
     virtual float Filter() const {return 1.f;}
 
-    virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+    virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
         Texture::AddReferencedTextures(referencedTexs);
 
-        texture->AddReferencedTextures(referencedTexs);
-        modulo->AddReferencedTextures(referencedTexs);
+        GetTexture().AddReferencedTextures(referencedTexs);
+        GetModulo().AddReferencedTextures(referencedTexs);
     }
 
-    virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-        texture->AddReferencedImageMaps(referencedImgMaps);
-        modulo->AddReferencedImageMaps(referencedImgMaps);
+    virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+        GetTexture().AddReferencedImageMaps(referencedImgMaps);
+        GetModulo().AddReferencedImageMaps(referencedImgMaps);
     }
 
-    virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+    virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
         if(texture == oldTex) {
             texture = newTex;
         }
@@ -59,14 +59,14 @@ public:
         }
     }
 
-    TextureConstPtr GetTexture() const {return texture;}
-    TextureConstPtr GetModulo() const {return modulo;}
+    TextureConstRef GetTexture() const {return texture;}
+    TextureConstRef GetModulo() const {return modulo;}
 
     virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-    TextureConstPtr texture;
-    TextureConstPtr modulo;
+    std::reference_wrapper<Texture> texture;
+    std::reference_wrapper<Texture> modulo;
 };
 }
 #endif  /* _SLG_MODULOTEX_H */

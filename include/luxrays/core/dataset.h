@@ -46,7 +46,7 @@ public:
 	bool RequiresMotionBlurSupport() const { return enableMotionBlurSupport && hasMotionBlur; }
 	bool HasMotionBlur() const { return hasMotionBlur; }
 
-	TriangleMeshID Add(MeshConstPtr mesh);
+	TriangleMeshID Add(MeshConstRef mesh);
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
 	void UpdateBBoxes();
@@ -75,7 +75,7 @@ private:
 
 	u_longlong totalVertexCount;
 	u_longlong totalTriangleCount;
-	std::deque<MeshConstPtr> meshes;
+	std::deque<const Mesh *> meshes;
 
 	BBox bbox;
 	BSphere bsphere;

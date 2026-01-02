@@ -26,22 +26,22 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const Texture &dispMap,
+DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const Texture &dispMap,
 		const Params &params) {
-	SDL_LOG("Displacement shape " << srcMesh->GetName() << " with texture " << dispMap.GetName());
+	SDL_LOG("Displacement shape " << srcMesh.GetName() << " with texture " << dispMap.GetName());
 
 	// I need vertex normals
-	if (!srcMesh->HasNormals())
-		srcMesh->ComputeNormals();
+	if (!srcMesh.HasNormals())
+		srcMesh.ComputeNormals();
 
 	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs(params.uvIndex))
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh.HasUVs(params.uvIndex))
 		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
 
 	const double startTime = WallClockTime();
 
-	const u_int vertCount = srcMesh->GetTotalVertexCount();
-	const Point *vertices = srcMesh->GetVertices();
+	const u_int vertCount = srcMesh.GetTotalVertexCount();
+	const Point *vertices = srcMesh.GetVertices();
 	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 
 	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
@@ -55,8 +55,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 
 	// Go trough the faces and save the information
 	vector<bool> doneVerts(vertCount, false);
-	const u_int triCount = srcMesh->GetTotalTriangleCount();
-	const Triangle *tris = srcMesh->GetTriangles();
+	const u_int triCount = srcMesh.GetTotalTriangleCount();
+	const Triangle *tris = srcMesh.GetTriangles();
 	for (u_int i = 0; i < triCount; ++i) {
 		const Triangle &tri = tris[i];
 
@@ -64,10 +64,10 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 			const u_int vertIndex = tri.v[j];
 
 			if (!doneVerts[vertIndex]) {
-				const Normal shadeN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
+				const Normal shadeN = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
 
 				// Compute geometry differentials
-				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
+				srcMesh.GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
 						&dpdu[vertIndex], &dpdv[vertIndex],
 						&dndu[vertIndex], &dndv[vertIndex]);
 
@@ -92,13 +92,13 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 		HitPoint hitPoint;
 		
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
-		hitPoint.p = srcMesh->GetVertex(Transform::TRANS_IDENTITY, i);
+		hitPoint.p = srcMesh.GetVertex(Transform::TRANS_IDENTITY, i);
 
-		hitPoint.geometryN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
+		hitPoint.geometryN = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, i);
 		hitPoint.interpolatedN = hitPoint.geometryN;
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
-		hitPoint.defaultUV = srcMesh->HasUVs(params.uvIndex) ? srcMesh->GetUV(i, params.uvIndex) : UV(0.f, 0.f);
+		hitPoint.defaultUV = srcMesh.HasUVs(params.uvIndex) ? srcMesh.GetUV(i, params.uvIndex) : UV(0.f, 0.f);
 		hitPoint.mesh = srcMesh;
 		hitPoint.triangleIndex = triangleIndex[i];
 		if (i == tris[hitPoint.triangleIndex].v[0]) {
@@ -121,9 +121,9 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 		hitPoint.dndv = dndv[i];
 
 		hitPoint.passThroughEvent = 0.f;
-		srcMesh->GetLocal2World(0.f, hitPoint.localToWorld);
-		hitPoint.interiorVolume = nullptr;
-		hitPoint.exteriorVolume = nullptr;
+		srcMesh.GetLocal2World(0.f, hitPoint.localToWorld);
+		hitPoint.interiorVolume = std::nullopt;
+		hitPoint.exteriorVolume = std::nullopt;
 		hitPoint.objectID = 0;
 		hitPoint.fromLight = false;
 		hitPoint.intoObject = true;
@@ -157,7 +157,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 	}
 	
 	// Make a copy of the original mesh and overwrite vertex information
-	mesh = srcMesh->Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
+	mesh = srcMesh.Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
 	if (params.normalSmooth)
 		mesh->ComputeNormals();
 	
@@ -171,7 +171,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshPtr srcMesh, const 
 DisplacementShape::~DisplacementShape() {
 }
 
-ExtTriangleMeshPtr DisplacementShape::RefineImpl(SceneConstRef scene) {
-	return mesh;
+ExtTriangleMeshUPtr DisplacementShape::RefineImpl(SceneConstRef scene) {
+	return std::move(mesh);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

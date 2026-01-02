@@ -263,12 +263,12 @@ Properties FilmOutputsWindow::GetFilmOutputsProperties(const Properties &cfgProp
 void FilmOutputsWindow::RefreshObjectProperties(Properties &props) {
 	auto& config = app->config;
 	try {
-		props = GetFilmOutputsProperties(config.lock()->ToProperties());
+		props = GetFilmOutputsProperties(config->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("FilmOutputs parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetFilmOutputsProperties(config.lock()->GetProperties());
+		props = GetFilmOutputsProperties(config->GetProperties());
 	}
 }
 

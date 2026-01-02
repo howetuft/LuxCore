@@ -16,9 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #include <sstream>
 #include <algorithm>
+#include <tuple>
 
+#include "luxrays/core/namedobject.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/strutils.h"
 #include "luxrays/core/namedobjectvector.h"
 
@@ -33,53 +37,70 @@ using namespace luxrays;
 NamedObjectVector::NamedObjectVector() {
 }
 
+// Specialization (definition) of DefineObj for NamedObject
+// Derived classes will rely on it
+template<>
+std::tuple< NamedObject&, std::unique_ptr<NamedObject> >
+NamedObjectVector::DefineObj(std::unique_ptr<NamedObject>&& obj) {
 
-NamedObjectPtr NamedObjectVector::DefineObj(NamedObjectPtr newObj) {
-	const string &name = newObj->GetName();
+	const std::string name = obj->GetName();
 
 	if (IsObjDefined(name)) {
-		auto oldObj = objs[GetIndex(name)];
+		// The object already exists in the container
 
 		// Update name/object definition
 		const u_int index = GetIndex(name);
-		objs[index] = newObj;
+		std::swap(objs[index], obj);  // warning: obj now contains the old object
 
+		// Get reference on new object in container
+		auto& newObjRef = *objs[index];
+
+		// Update index structures
 		name2index.left.erase(name);
 		name2index.insert(Name2IndexType::value_type(name, index));
 
 		index2obj.left.erase(index);
-		index2obj.insert(Index2ObjType::value_type(index, newObj.get()));
+		index2obj.insert(Index2ObjType::value_type(index, std::ref(*objs[index])));
 
-		return oldObj;
+		// Return
+		return std::make_tuple(std::ref(newObjRef), std::move(obj));
+
 	} else {
+		// The object does not already exist in the container
+
 		// Add the new name/object definition
 		const u_int index = objs.size();
-		objs.push_back(newObj);
-		name2index.insert(Name2IndexType::value_type(name, index));
-		index2obj.insert(Index2ObjType::value_type(index, newObj.get()));
+		objs.push_back(std::move(obj));  // warning: obj is no more valid (moved...)
 
-		return nullptr;
+		auto& newObjRef = *objs.back();
+
+		// Update index structures
+		name2index.insert(Name2IndexType::value_type(name, index));
+		index2obj.insert(Index2ObjType::value_type(index, std::ref(*objs.back())));
+
+		return std::make_tuple(std::ref(newObjRef), std::move(std::unique_ptr<NamedObject>()));
 	}
 }
+
 
 bool NamedObjectVector::IsObjDefined(const string &name) const {
 	return (name2index.left.count(name) > 0);
 }
 
-NamedObjectConstPtr NamedObjectVector::GetObj(const string &name) const {
-	return objs[GetIndex(name)];
+NamedObjectConstRef NamedObjectVector::GetObj(const string &name) const {
+	return *objs[GetIndex(name)];
 }
 
-NamedObjectPtr NamedObjectVector::GetObj(const string &name) {
-	return objs[GetIndex(name)];
+NamedObjectRef NamedObjectVector::GetObj(const string &name) {
+	return *objs[GetIndex(name)];
 }
 
-NamedObjectConstPtr NamedObjectVector::GetObj(const u_int index) const {
-	return objs[index];
+NamedObjectConstRef NamedObjectVector::GetObj(const u_int index) const {
+	return *objs[index];
 }
 
-NamedObjectPtr NamedObjectVector::GetObj(const u_int index) {
-	return objs[index];
+NamedObjectRef NamedObjectVector::GetObj(const u_int index) {
+	return *objs[index];
 }
 
 u_int NamedObjectVector::GetIndex(const string &name) const {
@@ -93,12 +114,12 @@ u_int NamedObjectVector::GetIndex(const string &name) const {
 		return it->second;
 }
 
-u_int NamedObjectVector::GetIndex(NamedObjectConstPtr o) const {
-	Index2ObjType::right_const_iterator it = index2obj.right.find(o.get());
+u_int NamedObjectVector::GetIndex(NamedObjectConstRef o) const {
+	Index2ObjType::right_const_iterator it = index2obj.right.find(o);
 
 	if (it == index2obj.right.end())
 		throw UndefinedNamedObjectError(
-			"Reference to an undefined NamedObject pointer: " + luxrays::ToString(o)
+			"Reference to an undefined NamedObject pointer: " + luxrays::ToString(&o)
 		);
 	else
 		return it->second;
@@ -115,12 +136,12 @@ const string &NamedObjectVector::GetName(const u_int index) const {
 		return it->second;
 }
 
-const string &NamedObjectVector::GetName(NamedObjectConstPtr o) const {
+const string &NamedObjectVector::GetName(NamedObjectConstRef o) const {
 	Name2IndexType::right_const_iterator it = name2index.right.find(GetIndex(o));
 
 	if (it == name2index.right.end())
 		throw UndefinedNamedObjectError(
-			"Reference to an undefined NamedObject: " + luxrays::ToString(o)
+			"Reference to an undefined NamedObject: " + luxrays::ToString(&o)
 		);
 	else
 		return it->second;
@@ -130,16 +151,12 @@ u_int NamedObjectVector::GetSize()const {
 	return static_cast<u_int>(objs.size());
 }
 
-void NamedObjectVector::GetNames(vector<string> &names) const {
+void NamedObjectVector::GetNames(std::vector<string> &names) const {
 	const u_int size = GetSize();
 	names.resize(size);
 
 	for (u_int i = 0; i < size; ++i)
 		names[i] = GetName(i);
-}
-
-std::vector<NamedObjectPtr>& NamedObjectVector::GetObjs() {
-	return objs;
 }
 
 void NamedObjectVector::DeleteObj(const string &name) {
@@ -173,7 +190,9 @@ void NamedObjectVector::DeleteObj(const string &name) {
 			index2obj.left.erase(lastObjIndex);
 			index2obj.left.erase(removeObjIndex);
 			index2obj.insert(
-				Index2ObjType::value_type(removeObjIndex, objs[removeObjIndex].get())
+				Index2ObjType::value_type(
+					removeObjIndex, std::ref(*objs[removeObjIndex])
+				)
 			);
 
 		}
@@ -194,6 +213,18 @@ void NamedObjectVector::DeleteObjs(const std::vector<string> &names) {
 	for (const string& name : names) {
 		DeleteObj(name);
 	}
+}
+
+
+std::ostream& operator<<(std::ostream& os, const luxrays::NamedObject& obj) {
+    os << obj.GetName(); // Print the NamedObject
+    return os;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const std::reference_wrapper<T>& ref) {
+    os << ref.get(); // Print the value the wrapper refers to
+    return os;
 }
 
 template<class MapType> void PrintMap(const MapType &map, ostream &os) {
@@ -217,11 +248,11 @@ string NamedObjectVector::ToString() const {
 	stringstream ss;
 
 	ss << "NamedObjectVector[\n";
-	
+
 	for (u_int i = 0; i < objs.size(); ++i) {
 		if (i > 0)
 			ss << ", ";
-		ss << "(" << i << ", " << objs[i] << ")";
+		ss << "(" << i << ", " << &objs[i] << ")";
 	}
 	ss << ",\n";
 

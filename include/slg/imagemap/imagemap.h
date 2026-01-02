@@ -65,7 +65,7 @@ public:
 	}
 
 	~ImageMapPixel() { }
-	
+
 	u_int GetChannelCount() const { return CHANNELS; }
 
 	float GetFloat() const;
@@ -630,7 +630,7 @@ public:
 	ImageMapStorage(const u_int w, const u_int h, const WrapType wm, const FilterType ft);
 	virtual ~ImageMapStorage() { }
 
-	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const = 0;
+	virtual ImageMapStorageUPtr SelectChannel(const ChannelSelectionType selectionType) const = 0;
 
 	virtual StorageType GetStorageType() const = 0;
 	virtual u_int GetChannelCount() const = 0;
@@ -683,7 +683,7 @@ public:
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
-	virtual ImageMapStorage *Copy() const = 0;
+	virtual ImageMapStorageUPtr Copy() const = 0;
 
 	static StorageType String2StorageType(const std::string &type);
 	static std::string StorageType2String(const StorageType type);
@@ -706,21 +706,30 @@ protected:
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
 
-template <class T, u_int CHANNELS> class ImageMapStorageImpl : public ImageMapStorage {
+template <class T, u_int CHANNELS>
+class ImageMapStorageImpl : public ImageMapStorage {
 public:
-	ImageMapStorageImpl(ImageMapPixel<T, CHANNELS> *ps, const u_int w,
-			const u_int h, const WrapType wm, const FilterType ft) :
-			ImageMapStorage(w, h, wm, ft), pixels(ps) { }
-	virtual ~ImageMapStorageImpl() { delete[] pixels; }
+	ImageMapStorageImpl(
+		std::unique_ptr<ImageMapPixel<T, CHANNELS>[]>&& ps,
+		const u_int w,
+		const u_int h,
+		const WrapType wm,
+		const FilterType ft
+	) :
+		ImageMapStorage(w, h, wm, ft),
+		pixels(std::move(ps))
+	{}
 
-	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const;
+	virtual ~ImageMapStorageImpl() {}
+
+	virtual ImageMapStorageUPtr SelectChannel(const ChannelSelectionType selectionType) const;
 
 	virtual StorageType GetStorageType() const;
 	virtual u_int GetChannelCount() const { return CHANNELS; }
 	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
 	virtual size_t GetMemoryPixelSize() const { return CHANNELS * sizeof(T); };
 	virtual size_t GetMemoryChannelSize() const { return sizeof(T); };
-	virtual void *GetPixelsData() const { return pixels; }
+	virtual void *GetPixelsData() const { return pixels.get(); }
 
 	virtual void SetFloat(const u_int index, const float v);
 	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v);
@@ -737,7 +746,7 @@ public:
 
 	virtual void ReverseGammaCorrection(const float gamma);
 
-	virtual ImageMapStorage *Copy() const;
+	virtual ImageMapStorageUPtr Copy() const;
 
 	friend class boost::serialization::access;
 
@@ -766,14 +775,14 @@ private:
 
 		u_int size;
 		ar & size;
-		pixels = new ImageMapPixel<T, CHANNELS>[size];
+		pixels = std::make_unique<ImageMapPixel<T, CHANNELS>[]>(size);
 
 		for (u_int i = 0; i < size; ++i)
 			ar & pixels[i];
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	ImageMapPixel<T, CHANNELS> *pixels;
+	std::unique_ptr<ImageMapPixel<T, CHANNELS>[]> pixels;
 };
 
 // Mostly used for Boost serialization macros
@@ -790,74 +799,111 @@ typedef ImageMapStorageImpl<float, 2> ImageMapStorageImplFloat2;
 typedef ImageMapStorageImpl<float, 3> ImageMapStorageImplFloat3;
 typedef ImageMapStorageImpl<float, 4> ImageMapStorageImplFloat4;
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 1>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 1>::GetStorageType() const {
 	return ImageMapStorage::BYTE;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 2>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 2>::GetStorageType() const {
 	return ImageMapStorage::BYTE;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 3>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 3>::GetStorageType() const {
 	return ImageMapStorage::BYTE;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 4>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<u_char, 4>::GetStorageType() const {
 	return ImageMapStorage::BYTE;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 1>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 1>::GetStorageType() const {
 	return ImageMapStorage::HALF;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 2>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 2>::GetStorageType() const {
 	return ImageMapStorage::HALF;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 3>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 3>::GetStorageType() const {
 	return ImageMapStorage::HALF;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 4>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<half, 4>::GetStorageType() const {
 	return ImageMapStorage::HALF;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 1>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 1>::GetStorageType() const {
 	return ImageMapStorage::FLOAT;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 2>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 2>::GetStorageType() const {
 	return ImageMapStorage::FLOAT;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 3>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 3>::GetStorageType() const {
 	return ImageMapStorage::FLOAT;
 }
 
-template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 4>::GetStorageType() const {
+template<>
+inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 4>::GetStorageType() const {
 	return ImageMapStorage::FLOAT;
 }
 
-template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
-		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType,
-		const ImageMapStorage::FilterType filterType) {
+template <class T>
+ImageMapStorageUPtr AllocImageMapStorage(
+	const u_int channels,
+	const u_int width,
+	const u_int height,
+	const ImageMapStorage::WrapType wrapType,
+	const ImageMapStorage::FilterType filterType
+) {
 	const u_int pixelCount = width * height;
 
 	switch (channels) {
 		case 1:
-			return new ImageMapStorageImpl<T, 1>(new ImageMapPixel<T, 1>[pixelCount],
-					width, height, wrapType, filterType);
+			return std::make_unique<ImageMapStorageImpl<T, 1>>(
+				std::make_unique<ImageMapPixel<T, 1>[]>(pixelCount),
+				width,
+				height,
+				wrapType,
+				filterType
+			);
 		case 2:
-			return new ImageMapStorageImpl<T, 2>(new ImageMapPixel<T, 2>[pixelCount],
-					width, height, wrapType, filterType);
+			return std::make_unique<ImageMapStorageImpl<T, 2>>(
+				std::make_unique<ImageMapPixel<T, 2>[]>(pixelCount),
+				width,
+				height,
+				wrapType,
+				filterType
+			);
 		case 3:
-			return new ImageMapStorageImpl<T, 3>(new ImageMapPixel<T, 3>[pixelCount],
-					width, height, wrapType, filterType);
+			return std::make_unique<ImageMapStorageImpl<T, 3>>(
+				std::make_unique<ImageMapPixel<T, 3>[]>(pixelCount),
+				width,
+				height,
+				wrapType,
+				filterType
+			);
 		case 4:
-			return new ImageMapStorageImpl<T, 4>(new ImageMapPixel<T, 4>[pixelCount],
-					width, height, wrapType, filterType);
+			return std::make_unique<ImageMapStorageImpl<T, 4>>(
+				std::make_unique<ImageMapPixel<T, 4>[]>(pixelCount),
+				width,
+				height,
+				wrapType,
+				filterType
+			);
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -904,12 +950,12 @@ class ImageMap : public luxrays::NamedObject {
 public:
 	ImageMap(const std::string &fileName, const ImageMapConfig &cfg,
 			const u_int widthHint = 0, const u_int heightHint = 0);
-	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
+	ImageMap(ImageMapStorageUPtr&& pixels, const float imageMean, const float imageMeanY);
 	~ImageMap();
 
 	void Reload();
 	void Reload(const std::string &fileName, const u_int widthHint = 0, const u_int heightHint = 0);
-	
+
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ConvertColorSpace(const std::string &configFileName,
 		const std::string &inputColorSpace, const std::string &outputColorSpace);
@@ -926,8 +972,8 @@ public:
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
 	u_int GetHeight() const { return pixelStorage->height; }
-	const ImageMapStorage *GetStorage() const { return pixelStorage; }
-	ImageMapStorage *GetStorage() { return pixelStorage; }
+	ImageMapStorageConstRef GetStorage() const { return *pixelStorage; }
+	ImageMapStorageRef GetStorage() { return *pixelStorage; }
 
 	float GetFloat(const luxrays::UV &uv) const;
 	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const;
@@ -945,22 +991,32 @@ public:
 	float GetSpectrumMean() const { return imageMean; }
 	float GetSpectrumMeanY() const { return imageMeanY; }
 
-	ImageMapPtr Copy() const;
+	ImageMapUPtr Copy() const;
 
 	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
-	
-	// The following 3 methods always return an ImageMap with FLOAT storage
-	static ImageMapPtr Merge(ImageMapConstPtr map0, ImageMapConstPtr map1, const u_int channels);
-	static ImageMapPtr Merge(ImageMapConstPtr map0, ImageMapConstPtr map1, const u_int channels,
-		const u_int width, const u_int height);
-	static ImageMapPtr Resample(ImageMapConstPtr map, const u_int channels,
-		const u_int width, const u_int height);
-	static ImageMapPtr FromProperties(const luxrays::Properties &props, const std::string &prefix);
 
-	static ImageMapPtr AllocImageMap(const u_int channels, const u_int width, const u_int height,
-		const ImageMapConfig &cfg);
-	static ImageMapPtr AllocImageMap(void *pixels, const u_int channels, const u_int width, const u_int height,
-		const ImageMapConfig &cfg);
+	// The following 3 methods always return an ImageMap with FLOAT storage
+	static ImageMapUPtr Merge(ImageMapConstRef map0, ImageMapConstRef map1, const u_int channels);
+	static ImageMapUPtr Merge(ImageMapConstRef map0, ImageMapConstRef map1, const u_int channels,
+		const u_int width, const u_int height);
+	static ImageMapUPtr Resample(ImageMapConstRef map, const u_int channels,
+		const u_int width, const u_int height);
+	static ImageMapUPtr FromProperties(const luxrays::Properties &props, const std::string &prefix);
+
+	static ImageMapUPtr AllocImageMap(
+		const u_int channels,
+		const u_int width,
+		const u_int height,
+		const ImageMapConfig &cfg
+	);
+
+	static ImageMapUPtr AllocImageMap(
+		void *pixels,
+		const u_int channels,
+		const u_int width,
+		const u_int height,
+		const ImageMapConfig &cfg
+	);
 
 	static std::pair<u_int, u_int> GetSize(const std::string &fileName);
 	static void MakeTx(const std::string &srcFileName, const std::string &dstFileName);
@@ -994,7 +1050,7 @@ protected:
 
 		u_int optimalWidth, optimalHeigth;
 		bool enabled;
-	
+
 		friend class boost::serialization::access;
 
 	private:
@@ -1005,7 +1061,7 @@ protected:
 
 			u_int currentSamplesIndex;
 			std::vector<luxrays::UV> samples[3];
-			
+
 			u_int samplesCount;
 			float minDistance;
 		};
@@ -1035,15 +1091,29 @@ protected:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	ImageMapStorage *pixelStorage;
+	ImageMapStorageUPtr pixelStorage;
 
 	// Cached image information
 	float imageMean, imageMeanY;
-	
+
 	InstrumentationInfo *instrumentationInfo;
 };
 
-}
+// Singleton for reference pre-assignment
+extern ImageMap NullImageMap;
+
+}  // namespace slg
+
+template<>
+struct std::hash<OptionalPtr<const slg::ImageMap>> {
+	size_t operator()(const OptionalPtr<const slg::ImageMap>& opt) const {
+		if (!opt) return 0;
+		auto& ref = *opt;
+		const auto * ptr = &ref;
+		return std::hash<size_t>()(reinterpret_cast<size_t>(ptr));
+	}
+};
+
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImageMapStorage)
 

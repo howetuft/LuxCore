@@ -49,7 +49,7 @@ using namespace luxcore::detail;
 namespace py = pybind11;
 
 using PropertyPtr = std::shared_ptr<luxrays::Property>;
-using SceneImplPtr = std::shared_ptr<luxcore::detail::SceneImpl>;
+using SceneImplPtr = std::unique_ptr<luxcore::detail::SceneImpl>;
 
 
 namespace luxcore {
@@ -139,10 +139,10 @@ static py::list GetOpenCLDeviceList() {
 }
 
 static void LuxCore_KernelCacheFill1() {
-  KernelCacheFill(luxrays::Properties());
+  KernelCacheFill(std::make_shared<Properties>());
 }
 
-static void LuxCore_KernelCacheFill2(const luxrays::Properties &config) {
+static void LuxCore_KernelCacheFill2(const PropertiesPtr & config) {
   KernelCacheFill(config);
 }
 
@@ -981,13 +981,19 @@ static void Camera_Rotate(luxcore::detail::CameraImpl *camera, const float angle
 // Glue for Scene class
 //------------------------------------------------------------------------------
 
-static luxcore::detail::CameraImpl &Scene_GetCamera(SceneImplPtr scene) {
-  return (luxcore::detail::CameraImpl &)scene->GetCamera();
+static luxcore::detail::CameraImpl & Scene_GetCamera(const SceneImplPtr & scene) {
+  return dynamic_cast<luxcore::detail::CameraImpl &>(scene->GetCamera());
 }
 
-static void Scene_DefineImageMap(SceneImplPtr scene, const std::string &imgMapName,
-    py::object &obj, const float gamma,
-    const size_t channels, const size_t width, const size_t height) {
+static void Scene_DefineImageMap(
+	const SceneImplPtr & scene,
+	const std::string &imgMapName,
+    py::object &obj,
+	const float gamma,
+    const size_t channels,
+	const size_t width,
+	const size_t height
+) {
   if (PyObject_CheckBuffer(obj.ptr())) {
     Py_buffer view;
     if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
@@ -1014,7 +1020,9 @@ static void Scene_DefineImageMap(SceneImplPtr scene, const std::string &imgMapNa
   }
 }
 
-static void Scene_DefineMesh1(SceneImplPtr scene, const std::string &meshName,
+static void Scene_DefineMesh1(
+	const SceneImplPtr & scene,
+	const std::string &meshName,
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
     const py::object &cols, const py::object &alphas,
@@ -1154,34 +1162,39 @@ static void Scene_DefineMesh1(SceneImplPtr scene, const std::string &meshName,
     }
   }
 
-  auto mesh = std::make_shared<luxrays::ExtTriangleMesh>(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
+		plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as
+	);
 
-  // Apply the transformation if required
-  if (!transformation.is_none()) {
-    float mat[16];
-    GetMatrix4x4(transformation, mat);
-    mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
-  }
+	// Apply the transformation if required
+	if (!transformation.is_none()) {
+	float mat[16];
+	GetMatrix4x4(transformation, mat);
+	mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
+	}
 
-  mesh->SetName(meshName);
-  scene->DefineMesh(mesh);
+	mesh->SetName(meshName);
+	scene->DefineMesh(std::move(mesh));
 }
 
-static void Scene_DefineMesh2(SceneImplPtr scene, const std::string &meshName,
+static void Scene_DefineMesh2(
+	const SceneImplPtr & scene,
+	const std::string &meshName,
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
-    const py::object &cols, const py::object &alphas) {
+    const py::object &cols, const py::object &alphas
+) {
   Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, py::none());
 }
 
-static void Scene_DefineMeshExt1(SceneImplPtr scene, const std::string &meshName,
+static void Scene_DefineMeshExt1(
+	const SceneImplPtr & scene,
+	const std::string &meshName,
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
     const py::object &cols, const py::object &alphas,
-    const py::object &transformation) {
-  // NOTE: I would like to use boost::scoped_array but
-  // some guy has decided that boost::scoped_array must not have
-  // a release() method for some ideological reason...
+    const py::object &transformation
+) {
 
   // Translate all vertices
   long plyNbVerts;
@@ -1355,20 +1368,24 @@ static void Scene_DefineMeshExt1(SceneImplPtr scene, const std::string &meshName
     }
   }
 
-  auto mesh = std::make_shared<luxrays::ExtTriangleMesh>(plyNbVerts, plyNbTris, points, tris, normals, &uvs, &colors, &as);
+	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
+		plyNbVerts, plyNbTris, points, tris, normals, &uvs, &colors, &as
+	);
 
-  // Apply the transformation if required
-  if (!transformation.is_none()) {
-    float mat[16];
-    GetMatrix4x4(transformation, mat);
-    mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
-  }
+	// Apply the transformation if required
+	if (!transformation.is_none()) {
+		float mat[16];
+		GetMatrix4x4(transformation, mat);
+		mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
+	}
 
   mesh->SetName(meshName);
-  scene->DefineMesh(mesh);
+  scene->DefineMesh(std::move(mesh));
 }
 
-static void Scene_DefineMeshExt2(SceneImplPtr scene, const std::string &meshName,
+static void Scene_DefineMeshExt2(
+	const SceneImplPtr & scene,
+	const std::string &meshName,
     const py::object &p, const py::object &vi,
     const py::object &n, const py::object &uv,
     const py::object &cols, const py::object &alphas) {
@@ -1458,7 +1475,7 @@ using py_float_array= py::array_t<float, py::array::c_style>;
 
 // Define Mesh from Numpy arrays
 static void Scene_DefineMeshExt3(
-	SceneImplPtr scene,
+	const SceneImplPtr & scene,
 	const std::string &meshName,
     const py_float_array p,
 	const py::array_t<triangle_underlying_type, py::array::c_style > tri,
@@ -1556,7 +1573,7 @@ static void Scene_DefineMeshExt3(
 	}
 
 	// Create Mesh
-	auto newMesh =  std::make_shared<luxrays::ExtTriangleMesh>(
+	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
 		u_int(numPoints),
 		u_int(numTriangles),
 		points.release(),
@@ -1576,11 +1593,11 @@ static void Scene_DefineMeshExt3(
 
 
 	// Insert mesh into the scene
-	scene->DefineMesh(newMesh);
+	scene->DefineMesh(std::move(newMesh));
 
 }
 
-static void Scene_SetMeshVertexAOV(SceneImplPtr scene, const std::string &meshName,
+static void Scene_SetMeshVertexAOV(const SceneImplPtr & scene, const std::string &meshName,
     const size_t index, const py::object &data) {
   std::vector<float> v;
   GetArray<float>(data, v);
@@ -1592,7 +1609,7 @@ static void Scene_SetMeshVertexAOV(SceneImplPtr scene, const std::string &meshNa
 }
 
 static void Scene_SetMeshTriangleAOV(
-    SceneImplPtr scene,
+    const SceneImplPtr & scene,
     const std::string &meshName,
     const size_t index,
     const py::object &data) {
@@ -1606,7 +1623,7 @@ static void Scene_SetMeshTriangleAOV(
 }
 
 static void Scene_SetMeshAppliedTransformation(
-    SceneImplPtr scene,
+    const SceneImplPtr & scene,
     const std::string &meshName,
     const py::object &transformation) {
   float mat[16];
@@ -1615,7 +1632,7 @@ static void Scene_SetMeshAppliedTransformation(
 }
 
 static void Scene_DefineStrands(
-    SceneImplPtr scene,
+    const SceneImplPtr & scene,
     const std::string &shapeName,
     const py::int_ strandsCount,
     const py::int_ pointsCount,
@@ -1806,7 +1823,7 @@ static void Scene_DefineStrands(
       useCameraPosition);
 }
 
-static void Scene_DuplicateObject(SceneImplPtr scene,
+static void Scene_DuplicateObject(const SceneImplPtr & scene,
     const std::string &srcObjName,
     const std::string &dstObjName,
     const py::object &transformation,
@@ -1817,7 +1834,7 @@ static void Scene_DuplicateObject(SceneImplPtr scene,
   scene->DuplicateObject(srcObjName, dstObjName, mat, objectID);
 }
 
-static void Scene_DuplicateObjectMulti(SceneImplPtr scene,
+static void Scene_DuplicateObjectMulti(const SceneImplPtr & scene,
     const std::string &srcObjName,
     const std::string &dstObjNamePrefix,
     const unsigned int count,
@@ -1876,7 +1893,7 @@ static void Scene_DuplicateObjectMulti(SceneImplPtr scene,
   PyBuffer_Release(&objectIDsView);
 }
 
-static void Scene_DuplicateMotionObject(SceneImplPtr scene,
+static void Scene_DuplicateMotionObject(const SceneImplPtr & scene,
     const std::string &srcObjName,
     const std::string &dstObjName,
     const size_t steps,
@@ -1911,7 +1928,7 @@ static void Scene_DuplicateMotionObject(SceneImplPtr scene,
     throw std::runtime_error("None times and/or transformations in Scene.DuplicateObject(): " + srcObjName);
 }
 
-static void Scene_DuplicateMotionObjectMulti(SceneImplPtr scene,
+static void Scene_DuplicateMotionObjectMulti(const SceneImplPtr & scene,
     const std::string &srcObjName,
     const std::string &dstObjName,
     const unsigned int count,
@@ -1999,7 +2016,7 @@ static void Scene_DuplicateMotionObjectMulti(SceneImplPtr scene,
     PyBuffer_Release(&objectIDsView);
 }
 
-static void Scene_DeleteObjects(SceneImplPtr scene,
+static void Scene_DeleteObjects(const SceneImplPtr & scene,
     const py::list &l) {
   const py::ssize_t size = len(l);
   std::vector<std::string> names;
@@ -2016,7 +2033,7 @@ static void Scene_DeleteObjects(SceneImplPtr scene,
   scene->DeleteObjects(names);
 }
 
-static void Scene_DeleteLights(SceneImplPtr scene,
+static void Scene_DeleteLights(const SceneImplPtr & scene,
     const py::list &l) {
   const py::ssize_t size = len(l);
   std::vector<std::string> names;
@@ -2033,12 +2050,13 @@ static void Scene_DeleteLights(SceneImplPtr scene,
   scene->DeleteLights(names);
 }
 
-static void Scene_UpdateObjectTransformation(SceneImplPtr scene,
+static void Scene_UpdateObjectTransformation(const SceneImplPtr & scene,
     const std::string &objName,
-    const py::object &transformation) {
-  float mat[16];
-  GetMatrix4x4(transformation, mat);
-  scene->UpdateObjectTransformation(objName, mat);
+    const py::object &transformation
+) {
+	float mat[16];
+	GetMatrix4x4(transformation, mat);
+	scene->UpdateObjectTransformation(objName, mat);
 }
 
 //------------------------------------------------------------------------------
@@ -2468,7 +2486,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   using luxcore::detail::SceneImpl;
   py::class_<SceneImpl, py::smart_holder>(m, "Scene")
 	.def(
-		py::init(&SceneImpl::Create<slg::ScenePtr>),
+		py::init(&SceneImpl::Create<slg::SceneRef>),
 		py::keep_alive<1, 2>()
 	)
     .def(
@@ -2545,7 +2563,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::keep_alive<1, 2>()
 	)
     .def(
-		py::init(&RenderConfigImpl::Create<luxrays::PropertiesPtr, SceneImplPtr>),
+		py::init(&RenderConfigImpl::Create<luxrays::PropertiesConstPtr, SceneImpl&>),
 		py::keep_alive<1, 2>(),
 		py::keep_alive<1, 3>()
 	)
@@ -2582,20 +2600,20 @@ PYBIND11_MODULE(pyluxcore, m) {
 
   py::class_<luxcore::detail::RenderSessionImpl, py::smart_holder>(m, "RenderSession")
 	.def(
-		py::init<>(&RenderSessionImpl::Create<RenderConfigImplPtr>),
+		py::init<>(&RenderSessionImpl::Create<RenderConfigImplRef>),
 		py::keep_alive<1, 2>()
 	)
 
 	.def(
 		py::init<>(&RenderSessionImpl::Create
-			<RenderConfigImplPtr, std::string&, std::string&>
+			<RenderConfigImplRef, std::string&, std::string&>
 		),
 		py::keep_alive<1, 2>()
 	)
 
 	.def(
 		py::init<>(&RenderSessionImpl::Create
-			<RenderConfigImplPtr, RenderStateImplPtr&, FilmImplStandalonePtr&>
+			<RenderConfigImplRef, RenderStateImplPtr&, FilmImplStandalonePtr&>
 		),
 		py::keep_alive<1, 2>()
 	)

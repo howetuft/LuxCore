@@ -26,9 +26,9 @@ using namespace slg;
 // Two-sided material
 //------------------------------------------------------------------------------
 
-TwoSidedMaterial::TwoSidedMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-		TextureConstPtr emitted, TextureConstPtr bump,
-		MaterialConstPtr frontMat, MaterialConstPtr backMat) :
+TwoSidedMaterial::TwoSidedMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
+		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+		MaterialConstRef frontMat, MaterialConstRef backMat) :
 			Material(frontTransp, backTransp, emitted, bump),
 			frontMat(frontMat), backMat(backMat) {
 	Preprocess();
@@ -67,7 +67,7 @@ void TwoSidedMaterial::Preprocess() {
 	isDelta = IsDeltaImpl();
 }
 
-VolumeConstPtr TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+OptionalPtr<const Volume> TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
 		return interiorVolume;
@@ -79,7 +79,7 @@ VolumeConstPtr TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 	}
 }
 
-VolumeConstPtr TwoSidedMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+OptionalPtr<const Volume> TwoSidedMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (exteriorVolume)
 		return exteriorVolume;
@@ -191,44 +191,44 @@ void TwoSidedMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void TwoSidedMaterial::UpdateMaterialReferences(MaterialConstPtr oldMat, MaterialConstPtr newMat) {
+void TwoSidedMaterial::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
 	if (frontMat == oldMat)
 		frontMat = newMat;
 
 	if (backMat == oldMat)
 		backMat = newMat;
-	
+
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
-	
+
 	Preprocess();
 }
 
-bool TwoSidedMaterial::IsReferencing(MaterialConstPtr mat) const {
+bool TwoSidedMaterial::IsReferencing(MaterialConstRef mat) const {
 	return frontMat == mat || frontMat->IsReferencing(mat) ||
 		backMat == mat || backMat->IsReferencing(mat);
 }
 
 void TwoSidedMaterial::AddReferencedMaterials(
-	std::unordered_set<MaterialConstPtr> &referencedMats
+	std::unordered_set<const Material *> &referencedMats
 ) const {
 	Material::AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(frontMat);
+	referencedMats.insert(frontMat.ptr());
 	frontMat->AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(backMat);
+	referencedMats.insert(backMat.ptr());
 	backMat->AddReferencedMaterials(referencedMats);
 }
 
-void TwoSidedMaterial::AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+void TwoSidedMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	frontMat->AddReferencedTextures(referencedTexs);
 	backMat->AddReferencedTextures(referencedTexs);
 }
 
-void TwoSidedMaterial::UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+void TwoSidedMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	Preprocess();

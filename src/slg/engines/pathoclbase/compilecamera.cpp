@@ -45,27 +45,27 @@ void CompiledScene::CompileCamera() {
 	// Camera definition
 	//--------------------------------------------------------------------------
 
-	auto sceneCamera = scene->camera;
+	auto& sceneCamera = scene.GetCamera();
 
 	delete[] cameraBokehDistribution;
 	cameraBokehDistribution = nullptr;
 
 	// Initialize CameraBase
 
-	camera.base.yon = sceneCamera->clipYon;
-	camera.base.hither = sceneCamera->clipHither;
-	camera.base.shutterOpen = sceneCamera->shutterOpen;
-	camera.base.shutterClose = sceneCamera->shutterClose;
-	camera.base.volumeIndex = sceneCamera->volume ?
-		scene->matDefs.GetMaterialIndex(sceneCamera->volume) : NULL_INDEX;
+	camera.base.yon = sceneCamera.clipYon;
+	camera.base.hither = sceneCamera.clipHither;
+	camera.base.shutterOpen = sceneCamera.shutterOpen;
+	camera.base.shutterClose = sceneCamera.shutterClose;
+	camera.base.volumeIndex = sceneCamera.HasVolume() ?
+		scene.matDefs.GetMaterialIndex(sceneCamera.GetVolume()) : NULL_INDEX;
 
-	if (sceneCamera->motionSystem) {
-		if (sceneCamera->motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)
+	if (sceneCamera.motionSystem) {
+		if (sceneCamera.motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)
 			throw runtime_error("Too many interpolated transformations in camera motion system: " +
-					ToString(sceneCamera->motionSystem->interpolatedTransforms.size()));
+					ToString(sceneCamera.motionSystem->interpolatedTransforms.size()));
 
-		for (u_int i = 0; i < sceneCamera->motionSystem->interpolatedTransforms.size(); ++i) {
-			const InterpolatedTransform &it = sceneCamera->motionSystem->interpolatedTransforms[i];
+		for (u_int i = 0; i < sceneCamera.motionSystem->interpolatedTransforms.size(); ++i) {
+			const InterpolatedTransform &it = sceneCamera.motionSystem->interpolatedTransforms[i];
 
 			// Here, I assume that luxrays::ocl::InterpolatedTransform and
 			// luxrays::InterpolatedTransform are the same
@@ -73,7 +73,7 @@ void CompiledScene::CompileCamera() {
 		}
 
 		camera.base.motionSystem.interpolatedTransformFirstIndex = 0;
-		camera.base.motionSystem.interpolatedTransformLastIndex = sceneCamera->motionSystem->interpolatedTransforms.size() - 1;
+		camera.base.motionSystem.interpolatedTransformLastIndex = sceneCamera.motionSystem->interpolatedTransforms.size() - 1;
 	} else {
 		camera.base.motionSystem.interpolatedTransformFirstIndex = NULL_INDEX;
 		camera.base.motionSystem.interpolatedTransformLastIndex = NULL_INDEX;
@@ -81,49 +81,49 @@ void CompiledScene::CompileCamera() {
 
 	// Initialize Camera specific data
 
-	switch (sceneCamera->GetType()) {
+	switch (sceneCamera.GetType()) {
 		case Camera::ORTHOGRAPHIC: {
-			auto orthoCamera = dynamic_pointer_cast<OrthographicCamera>(sceneCamera);
+			auto& orthoCamera = dynamic_cast<const OrthographicCamera&>(sceneCamera);
 			camera.type = slg::ocl::ORTHOGRAPHIC;
 
-			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, orthoCamera.GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, orthoCamera.GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
-			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
-			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
+			camera.ortho.projCamera.lensRadius = orthoCamera.lensRadius;
+			camera.ortho.projCamera.focalDistance = orthoCamera.focalDistance;
 
-			if (orthoCamera->enableClippingPlane) {
+			if (orthoCamera.enableClippingPlane) {
 				camera.ortho.projCamera.enableClippingPlane = true;
-				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
-				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
+				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneCenter, orthoCamera.clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneNormal, orthoCamera.clippingPlaneNormal);
 			} else
 				camera.ortho.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::PERSPECTIVE: {
-			auto perspCamera = dynamic_pointer_cast<PerspectiveCamera>(sceneCamera);
+			auto& perspCamera = dynamic_cast<const PerspectiveCamera&>(sceneCamera);
 			camera.type = slg::ocl::PERSPECTIVE;
 
-			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, perspCamera.GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, perspCamera.GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
-			camera.persp.projCamera.lensRadius = perspCamera->lensRadius;
-			camera.persp.projCamera.focalDistance = perspCamera->focalDistance;
+			camera.persp.projCamera.lensRadius = perspCamera.lensRadius;
+			camera.persp.projCamera.focalDistance = perspCamera.focalDistance;
 
-			camera.persp.screenOffsetX = perspCamera->screenOffsetX;
-			camera.persp.screenOffsetY = perspCamera->screenOffsetY;
+			camera.persp.screenOffsetX = perspCamera.screenOffsetX;
+			camera.persp.screenOffsetY = perspCamera.screenOffsetY;
 
-			camera.persp.enableOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
-			if (perspCamera->enableClippingPlane) {
+			camera.persp.enableOculusRiftBarrel = perspCamera.enableOculusRiftBarrel;
+			if (perspCamera.enableClippingPlane) {
 				camera.persp.projCamera.enableClippingPlane = true;
-				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
-				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
+				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera.clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera.clippingPlaneNormal);
 			} else
 				camera.persp.projCamera.enableClippingPlane = false;
 
-			camera.persp.bokehBlades = perspCamera->bokehBlades;
-			camera.persp.bokehPower = perspCamera->bokehPower;
-			switch (perspCamera->bokehDistribution) {
+			camera.persp.bokehBlades = perspCamera.bokehBlades;
+			camera.persp.bokehPower = perspCamera.bokehPower;
+			switch (perspCamera.bokehDistribution) {
 				case PerspectiveCamera::DIST_NONE:
 					camera.persp.bokehDistribution = slg::ocl::DIST_NONE;
 				case PerspectiveCamera::DIST_UNIFORM:
@@ -147,32 +147,32 @@ void CompiledScene::CompileCamera() {
 				case PerspectiveCamera::DIST_CUSTOM: {
 					camera.persp.bokehDistribution = slg::ocl::DIST_CUSTOM;
 
-					cameraBokehDistribution = CompileDistribution2D(perspCamera->bokehDistributionMap, &cameraBokehDistributionSize);
+					cameraBokehDistribution = CompileDistribution2D(perspCamera.bokehDistributionMap, &cameraBokehDistributionSize);
 					break;
 				}
 				default:
-					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera->bokehDistribution));
+					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera.bokehDistribution));
 			}
-			camera.persp.bokehScaleX = perspCamera->bokehScaleX;
-			camera.persp.bokehScaleY = perspCamera->bokehScaleY;
+			camera.persp.bokehScaleX = perspCamera.bokehScaleX;
+			camera.persp.bokehScaleY = perspCamera.bokehScaleY;
 			break;
 		}
 		case Camera::ENVIRONMENT: {
-			auto envCamera = dynamic_pointer_cast<EnvironmentCamera>(sceneCamera);
+			auto& envCamera = dynamic_cast<const EnvironmentCamera&>(sceneCamera);
 			camera.type = slg::ocl::ENVIRONMENT;
 
-			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, envCamera.GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera.GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
-			camera.env.degrees = envCamera->degrees;
+			camera.env.degrees = envCamera.degrees;
 			break;
 		}
 		case Camera::STEREO: {
-			auto stereoCamera = dynamic_pointer_cast<const StereoCamera>(sceneCamera);
+			auto& stereoCamera = dynamic_cast<const StereoCamera&>(sceneCamera);
 
 			camera.type = slg::ocl::STEREO;
 
-			switch(stereoCamera->GetStereoType()) {
+			switch(stereoCamera.GetStereoType()) {
 				case StereoCamera::STEREO_PERSPECTIVE:
 					camera.stereo.stereoCameraType = slg::ocl::STEREO_PERSPECTIVE;
 					break;
@@ -183,28 +183,28 @@ void CompiledScene::CompileCamera() {
 					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT_360;
 					break;
 				default:
-					throw runtime_error("Unknown StereoCamera type in CompiledScene::CompileCamera(): " + ToString(stereoCamera->GetStereoType()));
+					throw runtime_error("Unknown StereoCamera type in CompiledScene::CompileCamera(): " + ToString(stereoCamera.GetStereoType()));
 			}
 
-			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
-			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
+			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera.lensRadius;
+			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera.focalDistance;
 
-			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(0).m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(0).m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(1).m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(1).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera.GetRasterToCamera(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera.GetCameraToWorld(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera.GetRasterToCamera(1).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera.GetCameraToWorld(1).m.m, 4 * 4 * sizeof(float));
 
-			camera.stereo.perspCamera.enableOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
-			if (stereoCamera->enableClippingPlane) {
+			camera.stereo.perspCamera.enableOculusRiftBarrel = stereoCamera.enableOculusRiftBarrel;
+			if (stereoCamera.enableClippingPlane) {
 				camera.stereo.perspCamera.projCamera.enableClippingPlane = true;
-				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
-				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
+				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneCenter, stereoCamera.clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneNormal, stereoCamera.clippingPlaneNormal);
 			} else
 				camera.stereo.perspCamera.projCamera.enableClippingPlane = false;
 			break;
 		}
 		default:
-			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera->GetType()));
+			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera.GetType()));
 	}
 }
 

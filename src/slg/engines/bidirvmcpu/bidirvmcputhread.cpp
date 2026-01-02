@@ -23,6 +23,7 @@
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
@@ -51,8 +52,8 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	auto scene = engine->renderConfig.scene;
-	auto camera = scene->camera;
+	auto& scene = engine->renderConfig.GetScene();
+	auto& camera = scene.GetCamera();
 
 	// Setup the samplers
 	std::vector<SamplerUPtr> samplers(engine->lightPathsCount);
@@ -114,7 +115,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 		// current implementation (i.e. I can not mix paths with different
 		// times). However this is detrimental for the Metropolis sampler.
 		const float timeSample = rndGen->floatValue();
-		const float time = scene->camera->GenerateRayTime(timeSample);
+		const float time = scene.GetCamera().GenerateRayTime(timeSample);
 
 		//----------------------------------------------------------------------
 		// Trace all light paths
@@ -124,7 +125,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 			auto& sampler = samplers[samplerIndex];
 
 			// Sample a point on the camera lens
-			if (!camera->SampleLens(time, sampler->GetSample(3), sampler->GetSample(4),
+			if (!camera.SampleLens(time, sampler->GetSample(3), sampler->GetSample(4),
 					&lensPoints[samplerIndex]))
 				continue;
 
@@ -155,14 +156,14 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 			eyeSampleResult.filmX = sampler->GetSample(0);
 			eyeSampleResult.filmY = sampler->GetSample(1);
 			Ray eyeRay;
-			camera->GenerateRay(time,
+			camera.GenerateRay(time,
 					eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 					&eyeVertex.volInfo, sampler->GetSample(9), sampler->GetSample(10));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
 			float cameraPdfW;
-			scene->camera->GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
+			scene.GetCamera().GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 1.f;
 			eyeVertex.dVM = 1.f;
@@ -179,7 +180,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
-				const bool hit = scene->Intersect(device,
+				const bool hit = scene.Intersect(device,
 						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,

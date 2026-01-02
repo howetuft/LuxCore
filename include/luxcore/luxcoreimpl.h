@@ -19,6 +19,7 @@
 #ifndef _LUXCOREIMPL_H
 #define	_LUXCOREIMPL_H
 
+#include "luxrays/utils/serializationutils.h"
 #include <format>
 
 #include <luxcore/luxcore.h>
@@ -40,15 +41,16 @@ using RenderSessionImplRef = RenderSessionImpl &;
 using RenderSessionImplConstRef = const RenderSessionImpl &;
 
 class RenderConfigImpl;
-using RenderConfigImplPtr = std::shared_ptr<RenderConfigImpl>;
 using RenderConfigImplUPtr = std::unique_ptr<RenderConfigImpl>;
+using RenderConfigImplRef = RenderConfigImpl &;
+using RenderConfigImplConstRef = const RenderConfigImpl &;
 
 class RenderStateImpl;
 using RenderStateImplPtr = std::shared_ptr<RenderStateImpl>;
 
 class SceneImpl;
 using SceneImplConstRef = const SceneImpl &;
-using SceneImplPtr = std::shared_ptr<SceneImpl>;
+using SceneImplRef = SceneImpl &;
 using SceneImplUPtr = std::unique_ptr<SceneImpl>;
 
 class CameraImpl;
@@ -70,6 +72,7 @@ using LuxFilmConstPtr = std::shared_ptr<const luxcore::Film>;
 // Disambiguation: there are luxcore::Camera and slg:Camera...
 using LuxCamera = luxcore::Camera;
 using LuxCameraConstRef = const luxcore::Camera &;
+using LuxCameraRef = luxcore::Camera &;
 
 
 //------------------------------------------------------------------------------
@@ -93,7 +96,7 @@ public:
 
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
-	luxrays::Properties GetStats() const;
+	PropertiesPtr GetStats() const;
 	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
@@ -261,27 +264,28 @@ private:
 
 class CameraImpl : public luxcore::Camera {
 public:
-	CameraImpl(SceneImplConstRef scene);
+	CameraImpl(SceneImplRef scene);
 	~CameraImpl();
 
 	const CameraType GetType() const;
 
-	void Translate(const float x, const float y, const float z) const;
-	void TranslateLeft(const float t) const;
-	void TranslateRight(const float t) const;
-	void TranslateForward(const float t) const;
-	void TranslateBackward(const float t) const;
+	void Translate(const float x, const float y, const float z);
+	void TranslateLeft(const float t);
+	void TranslateRight(const float t);
+	void TranslateForward(const float t);
+	void TranslateBackward(const float t);
 
-	void Rotate(const float angle, const float x, const float y, const float z) const;
-	void RotateLeft(const float angle) const;
-	void RotateRight(const float angle) const;
-	void RotateUp(const float angle) const;
-	void RotateDown(const float angle) const;
+	void Rotate(const float angle, const float x, const float y, const float z);
+	void RotateLeft(const float angle);
+	void RotateRight(const float angle);
+	void RotateUp(const float angle);
+	void RotateDown(const float angle);
 
 	friend class SceneImpl;
 
 private:
-	SceneImplConstRef scene;
+	// Back link
+	SceneImplRef scene;
 };
 
 //------------------------------------------------------------------------------
@@ -293,13 +297,14 @@ class SceneImpl : public luxcore::Scene {
 	struct Private {};
 
 public:
+	// Factory
 	template<typename... Args>
 	static SceneImplUPtr Create(Args... args) {
 		return std::make_unique<SceneImpl>(Private(), std::forward<Args>(args)...);
 	}
 
 	// Constructors are private - please use factory
-	SceneImpl(Private, slg::ScenePtr scn);
+	SceneImpl(Private, slg::SceneRef scn);  // Non owning constructor
 	SceneImpl(Private, luxrays::PropertiesConstPtr resizePolicyProps = nullptr);
 	SceneImpl(
 		Private,
@@ -308,12 +313,13 @@ public:
 	);
 	SceneImpl(
 		Private,
-		const std::string &fileName,
+		const std::string fileName,
 		luxrays::PropertiesConstPtr resizePolicyProps = nullptr
 	);
 
 	void GetBBox(float min[3], float max[3]) const;
 	LuxCameraConstRef GetCamera() const;
+	LuxCameraRef GetCamera();
 
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
@@ -411,25 +417,34 @@ public:
 			ChannelSelectionType selectionType, WrapType wrapType);
 
 	luxrays::PropertiesConstPtr ToProperties() const;
-	void Save(const std::string &fileName) const;
+	void Save(const std::string &fileName);
 
 	// Note: this method is not part of LuxCore API and it is used only internally
-	void DefineMesh(std::shared_ptr<luxrays::ExtTriangleMesh> mesh);
+	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh);
 
 	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
-	friend class CameraImpl;
+
+	//friend class CameraImpl;
 	friend class RenderConfigImpl;
 	friend class RenderSessionImpl;
+
+	slg::SceneConstRef GetSlgScene() const { return sceneRef; }
+	slg::SceneRef GetSlgScene() { return sceneRef; }
 
 private:
 
 	mutable luxrays::PropertiesPtr scenePropertiesCache;
 
-	slg::ScenePtr scene;
+
+	// Reference to the working scene. Depending on object construction, it can
+	// be an external scene, or the internal scene below
+	std::reference_wrapper<slg::Scene> sceneRef;
+
+	// Internal objects (owned)
+	slg::SceneUPtr internalScene;
 	CameraImplUPtr camera;
-	bool allocatedScene;
 };
 
 //------------------------------------------------------------------------------
@@ -449,17 +464,17 @@ public:
 		);
 	}
 
-	// Constructors
-	RenderConfigImpl(Private, luxrays::PropertiesConstPtr props);
-	RenderConfigImpl(
+	// Constructors (private, please use factory instead)
+	RenderConfigImpl(  // Non owning constructor (scene is external)
 		Private,
 		luxrays::PropertiesConstPtr props,
-		SceneImplPtr scene
+		SceneImpl& scene
 	);
-	RenderConfigImpl(Private, const std::string &fileName);
+	RenderConfigImpl(Private, luxrays::PropertiesConstPtr props);
+	RenderConfigImpl(Private, const std::string fileName);
 	RenderConfigImpl(
 		Private,
-		const std::string &fileName,
+		const std::string fileName,
 		std::shared_ptr<RenderStateImpl>& startState,  // Out
 		std::shared_ptr<FilmImpl>& startFilm  // Out
 	);
@@ -490,16 +505,35 @@ public:
 
 	static const luxrays::Properties &GetDefaultProperties();
 
+	template<typename T> T ReadFromSIF() const;
+
 	friend class RenderSessionImpl;
 
 
 private:
+	// Input file for serialization (optional and mutable)
+	mutable std::optional<luxrays::SerializationInputFile> sif;
+
+	// CAVEAT: member order matters, for correct initialization.
+
 	// The underlying slg object
+	//
+	// Warning: keep this declaration **before** internalScene declaration.
+	// This of first importance for correct initialization order. See here:
+	// https://en.cppreference.com/w/cpp/language/initializer_list.html#Initialization_order
 	std::unique_ptr<slg::RenderConfig> renderConfig;
 
-	// The (optional) scene
-	SceneImplPtr scene;
-	bool allocatedScene;
+	// The (optional) internal scene.
+	//
+	// Warning: keep this declaration **before** sceneRef declaration.
+	// This of first importance for correct initialization order. See here:
+	// https://en.cppreference.com/w/cpp/language/initializer_list.html#Initialization_order
+	SceneImplUPtr internalScene;
+
+	// The working scene. Can bind to internal or external scene depending on
+	// construction
+	SceneImplRef sceneRef;
+
 };
 
 
@@ -546,18 +580,18 @@ public:
 	// Please use factory function
 	RenderSessionImpl(
 		Private priv,
-		RenderConfigImplPtr config,
+		RenderConfigImplRef config,  // Back link, not owned
 		std::shared_ptr<RenderStateImpl> startState = nullptr,
 		std::shared_ptr<FilmImplStandalone> startFilm = nullptr
 	);
 	RenderSessionImpl(
 		Private priv,
-		RenderConfigImplPtr config,
+		RenderConfigImplRef config,  // Back link, not owned
 		const std::string &startStateFileName,
 		const std::string &startFilmFileName
 	);
 
-	RenderConfig& GetRenderConfig() override;
+	RenderConfigImplRef GetRenderConfig() override;
 	std::shared_ptr<RenderState> GetRenderState() override;
 
 	void Start() override;
@@ -593,10 +627,8 @@ public:
 	friend class FilmImpl;
 
 private:
-	// RenderSessionImpl is created by RenderConfigImpl
-	// It should be a reference, but it can't, due to serialization
-	// So we use a raw pointer...
-	std::weak_ptr<RenderConfigImpl> renderConfig;  // Back link, not owned
+	// Back link, not owned
+	RenderConfigImplRef renderConfig;
 
 	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
 	// RenderSession must not be shared

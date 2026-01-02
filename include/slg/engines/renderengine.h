@@ -57,7 +57,7 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfigConstRef cfg);
+	RenderEngine(RenderConfigRef cfg);  // Nota: cfg must be modifiable!
 	virtual ~RenderEngine();
 
 	bool IsStarted() const { return started; }
@@ -88,7 +88,9 @@ public:
 	void GenerateNewSeedBase();
 
 	virtual RenderStatePtr GetRenderState() {
-		throw std::runtime_error("RenderEngine::GetRenderState() not implemented for render engine: " + GetTag());
+		throw std::runtime_error(
+			"RenderEngine::GetRenderState() not implemented for render engine: " + GetTag()
+		);
 	}
 	virtual void SetRenderState(RenderStatePtr state, FilmPtr startFilm);
 
@@ -151,7 +153,7 @@ public:
 	// This method is not used at the moment
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static RenderEngineUPtr FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngineUPtr FromProperties(RenderConfigRef rcfg);
 	// This method is not used at the moment
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
@@ -177,7 +179,7 @@ protected:
 	std::vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
-	RenderConfigConstRef renderConfig;
+	RenderConfigRef renderConfig;
 	Filter *pixelFilter;
 	FilmPtr film;
 	std::mutex *filmMutex;

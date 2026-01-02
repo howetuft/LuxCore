@@ -92,7 +92,7 @@ protected:
 		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const bool finiteLightSource, const PathVertexVM &eyeVertex,
 		SampleResult &eyeSampleResult) const;
-	void DirectHitLight(LightSourceConstPtr light, const luxrays::Spectrum &lightRadiance,
+	void DirectHitLight(LightSourceConstRef light, const luxrays::Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
@@ -105,7 +105,7 @@ protected:
 
 	bool TraceLightPath(const float time,
 		const SamplerUPtr& sampler,
-		CameraPtr camera,
+		CameraConstRef camera,
 		std::vector<PathVertexVM> &lightPathVertices,
 		std::vector<SampleResult> &sampleResults) const;
 	bool Bounce(const float time, const SamplerUPtr& sampler, const u_int sampleOffset,
@@ -123,7 +123,7 @@ class SobolSamplerSharedData;
 
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BiDirCPURenderEngine(RenderConfigConstRef cfg);
+	BiDirCPURenderEngine(RenderConfigRef cfg);
 	virtual ~BiDirCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -138,7 +138,7 @@ public:
 	static RenderEngineType GetObjectType() { return BIDIRCPU; }
 	static std::string GetObjectTag() { return "BIDIRCPU"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	// Signed because of the delta parameter
 	u_int maxEyePathDepth, maxLightPathDepth;

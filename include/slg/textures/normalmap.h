@@ -29,7 +29,7 @@ namespace slg {
 
 class NormalMapTexture : public Texture {
 public:
-	NormalMapTexture(TextureConstPtr t, const float scale);
+	NormalMapTexture(TextureRef t, const float scale);
 	virtual ~NormalMapTexture();
 
 	virtual TextureType GetType() const { return NORMALMAP_TEX; }
@@ -40,27 +40,27 @@ public:
 
     virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		tex->AddReferencedTextures(referencedTexs);
+		GetTexture().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		tex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetTexture().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (tex == oldTex)
 			tex = newTex;
 	}
 
-	TextureConstPtr GetTexture() const { return tex; }
+	TextureConstRef GetTexture() const { return tex; }
 	const float GetScale() const { return scale; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureConstPtr tex;
+	std::reference_wrapper<Texture> tex;
 	const float scale;
 };
 

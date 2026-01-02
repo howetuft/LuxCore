@@ -29,7 +29,7 @@ using namespace slg;
 // MapSphereLight
 //------------------------------------------------------------------------------
 
-MapSphereLight::MapSphereLight() : imageMap(NULL), func(NULL) {
+MapSphereLight::MapSphereLight() : imageMap(std::nullopt), func(NULL) {
 }
 
 MapSphereLight::~MapSphereLight() {
@@ -51,11 +51,11 @@ void MapSphereLight::GetPreprocessedData(float *localPosData, float *absolutePos
 		*funcData = func;
 }
 
-float MapSphereLight::GetPower(SceneConstPtr scene) const {
+float MapSphereLight::GetPower(SceneConstRef scene) const {
 	return imageMap->GetSpectrumMeanY() * SphereLight::GetPower(scene);
 }
 
-Spectrum MapSphereLight::Emit(SceneConstPtr scene,
+Spectrum MapSphereLight::Emit(SceneConstRef scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
@@ -73,7 +73,7 @@ Spectrum MapSphereLight::Emit(SceneConstPtr scene,
 			func->Average();
 }
 
-Spectrum MapSphereLight::Illuminate(SceneConstPtr scene, const BSDF &bsdf,
+Spectrum MapSphereLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
         Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
@@ -95,7 +95,7 @@ Properties MapSphereLight::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	props.Set(Property(prefix + ".type")("mapsphere"));
 	const string fileName = useRealFileName ?
-		imageMap->GetName() : imgMapCache.GetSequenceFileName(imageMap);
+		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
 	props.Set(Property(prefix + ".mapfile")(fileName));
 	props.Set(imageMap->ToProperties(prefix, false));
 

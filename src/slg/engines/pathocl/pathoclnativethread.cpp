@@ -132,7 +132,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	// Setup PathTracer thread state
 	PathTracerThreadState pathTracerThreadState(intersectionDevice,
 			eyeSampler, lightSampler,
-			engine->renderConfig.scene, film,
+			engine->renderConfig.GetScene(), film,
 			&varianceClamping);
 
 	//--------------------------------------------------------------------------

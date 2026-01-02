@@ -19,6 +19,7 @@
 #ifndef _SLG_REMAPTEX_H
 #define	_SLG_REMAPTEX_H
 
+#include "slg/imagemap/imagemap.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -29,9 +30,9 @@ namespace slg {
 
 class RemapTexture : public Texture {
 public:
-	RemapTexture(TextureConstPtr value, TextureConstPtr sourceMin,
-			TextureConstPtr sourceMax, TextureConstPtr targetMin,
-			TextureConstPtr targetMax)
+	RemapTexture(TextureRef value, TextureRef sourceMin,
+			TextureRef sourceMax, TextureRef targetMin,
+			TextureRef targetMax)
 		: valueTex(value), sourceMinTex(sourceMin), sourceMaxTex(sourceMax),
 		  targetMinTex(targetMin), targetMaxTex(targetMax) { }
 	virtual ~RemapTexture() { }
@@ -42,24 +43,24 @@ public:
 	virtual float Y() const;
 	virtual float Filter() const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexs) const {
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		valueTex->AddReferencedTextures(referencedTexs);
-		sourceMinTex->AddReferencedTextures(referencedTexs);
-		sourceMaxTex->AddReferencedTextures(referencedTexs);
-		targetMinTex->AddReferencedTextures(referencedTexs);
-		targetMaxTex->AddReferencedTextures(referencedTexs);
+		GetValueTex().AddReferencedTextures(referencedTexs);
+		GetSourceMinTex().AddReferencedTextures(referencedTexs);
+		GetSourceMaxTex().AddReferencedTextures(referencedTexs);
+		GetTargetMinTex().AddReferencedTextures(referencedTexs);
+		GetTargetMaxTex().AddReferencedTextures(referencedTexs);
 	}
-	virtual void AddReferencedImageMaps(std::unordered_set<ImageMapConstPtr > &referencedImgMaps) const {
-		valueTex->AddReferencedImageMaps(referencedImgMaps);
-		sourceMinTex->AddReferencedImageMaps(referencedImgMaps);
-		sourceMaxTex->AddReferencedImageMaps(referencedImgMaps);
-		targetMinTex->AddReferencedImageMaps(referencedImgMaps);
-		targetMaxTex->AddReferencedImageMaps(referencedImgMaps);
+	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap * > &referencedImgMaps) const {
+		GetValueTex().AddReferencedImageMaps(referencedImgMaps);
+		GetSourceMinTex().AddReferencedImageMaps(referencedImgMaps);
+		GetSourceMaxTex().AddReferencedImageMaps(referencedImgMaps);
+		GetTargetMinTex().AddReferencedImageMaps(referencedImgMaps);
+		GetTargetMaxTex().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex) {
+	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
 		if (valueTex == oldTex)
 			valueTex = newTex;
 		if (sourceMinTex == oldTex)
@@ -72,21 +73,21 @@ public:
 			targetMaxTex = newTex;
 	}
 
-	TextureConstPtr GetValueTex() const { return valueTex; }
-	TextureConstPtr GetSourceMinTex() const { return sourceMinTex; }
-	TextureConstPtr GetSourceMaxTex() const { return sourceMaxTex; }
-	TextureConstPtr GetTargetMinTex() const { return targetMinTex; }
-	TextureConstPtr GetTargetMaxTex() const { return targetMaxTex; }
+	TextureConstRef GetValueTex() const { return valueTex; }
+	TextureConstRef GetSourceMinTex() const { return sourceMinTex; }
+	TextureConstRef GetSourceMaxTex() const { return sourceMaxTex; }
+	TextureConstRef GetTargetMinTex() const { return targetMinTex; }
+	TextureConstRef GetTargetMaxTex() const { return targetMaxTex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache,
 	                                         const bool useRealFileName) const;
 
 private:
-	TextureConstPtr valueTex;
-	TextureConstPtr sourceMinTex;
-	TextureConstPtr sourceMaxTex;
-	TextureConstPtr targetMinTex;
-	TextureConstPtr targetMaxTex;
+	std::reference_wrapper<Texture> valueTex;
+	std::reference_wrapper<Texture> sourceMinTex;
+	std::reference_wrapper<Texture> sourceMaxTex;
+	std::reference_wrapper<Texture> targetMinTex;
+	std::reference_wrapper<Texture> targetMaxTex;
 
 	static float ClampedRemap(float value,
 	                          const float sourceMin, const float sourceMax,

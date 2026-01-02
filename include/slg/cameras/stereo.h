@@ -64,8 +64,8 @@ public:
 
 private:
 	const StereoCameraType stereoType;
-	CameraPtr leftEye;
-	CameraPtr rightEye;
+	CameraUPtr leftEye;
+	CameraUPtr rightEye;
 };
 
 }

@@ -98,7 +98,7 @@ void RenderSession::BeginSceneEdit() {
 
 void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
-	const EditActionList editActions = renderConfig.scene->editActions;
+	const EditActionList editActions = renderConfig.GetScene().editActions;
 
 	if ((renderEngine->GetType() != RTPATHOCL) &&
 			(renderEngine->GetType() != RTPATHCPU)) {
@@ -240,7 +240,7 @@ void RenderSession::Parse(luxrays::PropertiesConstPtr props) {
 		film = renderConfig.AllocFilm();
 
 		// I have to update the camera
-		renderConfig.scene->PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+		renderConfig.GetScene().PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
 		renderEngine->EndFilmEdit(film, &filmMutex);
 	} else {

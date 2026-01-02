@@ -70,7 +70,7 @@ typedef enum {
 
 class RTPathOCLRenderEngine : public TilePathOCLRenderEngine {
 public:
-	RTPathOCLRenderEngine(RenderConfigConstRef cfg);
+	RTPathOCLRenderEngine(RenderConfigRef cfg);
 	virtual ~RTPathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -92,7 +92,7 @@ public:
 	static RenderEngineType GetObjectType() { return RTPATHOCL; }
 	static std::string GetObjectTag() { return "RTPATHOCL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static RenderEngine *FromProperties(RenderConfigConstRef rcfg);
+	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class TilePathOCLRenderEngine;
 	friend class RTPathOCLRenderThread;

@@ -29,9 +29,10 @@ namespace slg {
 
 class RoughMatteTranslucentMaterial : public Material {
 public:
-	RoughMatteTranslucentMaterial(TextureConstPtr frontTransp, TextureConstPtr backTransp,
-			TextureConstPtr emitted, TextureConstPtr bump,
-			TextureConstPtr refl, TextureConstPtr trans, TextureConstPtr s);
+	using TexRef = OptionalPtr<const Texture>;
+	RoughMatteTranslucentMaterial(TexRef frontTransp, TexRef backTransp,
+			TexRef emitted, TexRef bump,
+			TexRef refl, TexRef trans, TexRef s);
 
 	virtual MaterialType GetType() const { return ROUGHMATTETRANSLUCENT; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
@@ -49,19 +50,19 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::unordered_set<TextureConstPtr>  &referencedTexsreferencedTexs) const;
-	virtual void UpdateTextureReferences(TextureConstPtr oldTex, TextureConstPtr newTex);
+	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TextureConstPtr GetKr() const { return Kr; }
-	TextureConstPtr GetKt() const { return Kt; }
-	TextureConstPtr GetSigma() const { return sigma; }
+	TexRef GetKr() const { return Kr; }
+	TexRef GetKt() const { return Kt; }
+	TexRef GetSigma() const { return sigma; }
 
 private:
-	TextureConstPtr Kr;
-	TextureConstPtr Kt;
-	TextureConstPtr sigma;
+	TexRef Kr;
+	TexRef Kt;
+	TexRef sigma;
 };
 
 }

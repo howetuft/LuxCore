@@ -135,7 +135,7 @@ OPENCL_FORCE_NOT_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitP
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		float3 *brickIndex,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 #define BRICK_EPSILON 1e-3f
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
@@ -196,7 +196,7 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		const float modulationBias,
-		__global const TextureMapping3D *mapping
+		__global const TextureMapping3D mapping
 		TEXTURES_PARAM_DECL) {
 	float3 brickIndex;
 	const bool b = BrickTexture_Evaluate(hitPoint,
@@ -241,7 +241,7 @@ OPENCL_FORCE_INLINE float BrickTexture_ConstEvaluateFloat(__global const HitPoin
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		const float modulationBias,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+		__global const TextureMapping3D mapping TEXTURES_PARAM_DECL) {
 	return Spectrum_Y(BrickTexture_ConstEvaluateSpectrum(
 			hitPoint, value1, value2, value3, bond, brickwidth, brickheight,
 			brickdepth, mortarsize, offset, run, mortarwidth, mortarheight, mortardepth,
@@ -266,15 +266,15 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 
 			const float eval = BrickTexture_ConstEvaluateFloat(hitPoint,
 					tex1, tex2, tex3,
-					texture->brick.bond,
-					texture->brick.brickwidth, texture->brick.brickheight,
-					texture->brick.brickdepth, texture->brick.mortarsize,
-					MAKE_FLOAT3(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
-					texture->brick.run, texture->brick.mortarwidth,
-					texture->brick.mortarheight, texture->brick.mortardepth,
-					texture->brick.proportion, texture->brick.invproportion,
-					texture->brick.modulationBias,
-					&texture->brick.mapping
+					texture.brick.bond,
+					texture.brick.brickwidth, texture.brick.brickheight,
+					texture.brick.brickdepth, texture.brick.mortarsize,
+					MAKE_FLOAT3(texture.brick.offsetx, texture.brick.offsety, texture.brick.offsetz),
+					texture.brick.run, texture.brick.mortarwidth,
+					texture.brick.mortarheight, texture.brick.mortardepth,
+					texture.brick.proportion, texture.brick.invproportion,
+					texture.brick.modulationBias,
+					&texture.brick.mapping
 					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
@@ -287,15 +287,15 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 
 			const float3 eval = BrickTexture_ConstEvaluateSpectrum(hitPoint,
 					tex1, tex2, tex3,
-					texture->brick.bond,
-					texture->brick.brickwidth, texture->brick.brickheight,
-					texture->brick.brickdepth, texture->brick.mortarsize,
-					MAKE_FLOAT3(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
-					texture->brick.run, texture->brick.mortarwidth,
-					texture->brick.mortarheight, texture->brick.mortardepth,
-					texture->brick.proportion, texture->brick.invproportion,
-					texture->brick.modulationBias,
-					&texture->brick.mapping
+					texture.brick.bond,
+					texture.brick.brickwidth, texture.brick.brickheight,
+					texture.brick.brickdepth, texture.brick.mortarsize,
+					MAKE_FLOAT3(texture.brick.offsetx, texture.brick.offsety, texture.brick.offsetz),
+					texture.brick.run, texture.brick.mortarwidth,
+					texture.brick.mortarheight, texture.brick.mortardepth,
+					texture.brick.proportion, texture.brick.invproportion,
+					texture.brick.modulationBias,
+					&texture.brick.mapping
 					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
