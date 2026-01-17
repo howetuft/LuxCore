@@ -54,7 +54,7 @@ public:
 
 	void RunApp(
             std::shared_ptr<luxcore::RenderState> startState = nullptr,
-            std::shared_ptr<luxcore::Film> startFilm = nullptr
+            const std::unique_ptr<luxcore::Film> & startFilm = nullptr
           );
 
 	bool isGPURenderingAvailable() const { return isOpenCLAvailable || isCUDAAvailable; }
@@ -118,7 +118,7 @@ private:
 	void LoadRenderConfig(const std::string &configFileName, const std::string &configFilePath);
 	void StartRendering(
             std::shared_ptr<luxcore::RenderState> startState = nullptr,
-            std::shared_ptr<luxcore::Film> startFilm = nullptr
+            const std::unique_ptr<luxcore::Film> & startFilm = nullptr
         );
 	void DeleteRendering();
 

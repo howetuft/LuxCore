@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 std::unique_ptr<SamplerSharedData> TilePathSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen, FilmPtr film) {
+		RandomGenerator *rndGen, OptionalPtr<Film> film) {
 	return std::make_unique<TilePathSamplerSharedData>();
 }
 
@@ -39,11 +39,14 @@ std::unique_ptr<SamplerSharedData> TilePathSamplerSharedData::FromProperties(con
 // TilePath sampler
 //------------------------------------------------------------------------------
 
-TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, FilmPtr flm,
-		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter, true),
-		sobolSequence() {
-	aaSamples = 1;
-}
+TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
+		const FilmSampleSplatter *flmSplatter
+) :
+	Sampler(rnd, flm, flmSplatter, true),
+	sobolSequence(),
+	tileFilm(flm),
+	aaSamples{1}
+{}
 
 TilePathSampler::~TilePathSampler() {
 }
@@ -105,7 +108,7 @@ void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	InitNewSample();
 }
 
-void TilePathSampler::Init(TileWork *tWork, FilmPtr tFilm) {
+void TilePathSampler::Init(TileWork *tWork, OptionalPtr<Film> tFilm) {
 	tileWork = tWork;
 	tileFilm = tFilm;
 
@@ -126,7 +129,7 @@ Properties TilePathSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr TilePathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
-		FilmPtr film, const FilmSampleSplatter *flmSplatter, SamplerSharedData& sharedData) {
+		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<TilePathSampler>(rndGen, film, flmSplatter);
 }
 

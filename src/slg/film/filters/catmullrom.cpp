@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/catmullrom.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -38,12 +39,12 @@ Properties CatmullRomFilter::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("film.filter.type"));
 }
 
-Filter *CatmullRomFilter::FromProperties(const Properties &cfg) {
+FilterUPtr CatmullRomFilter::FromProperties(const Properties &cfg) {
 	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-	return new CatmullRomFilter(filterXWidth, filterYWidth);
+	return std::make_unique<CatmullRomFilter>(filterXWidth, filterYWidth);
 }
 
 slg::ocl::Filter *CatmullRomFilter::FromPropertiesOCL(const Properties &cfg) {

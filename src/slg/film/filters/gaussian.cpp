@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/gaussian.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -39,14 +40,14 @@ Properties GaussianFilter::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha"));
 }
 
-Filter *GaussianFilter::FromProperties(const Properties &cfg) {
+FilterUPtr GaussianFilter::FromProperties(const Properties &cfg) {
 	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
 	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<double>();
 
-	return new GaussianFilter(filterXWidth, filterYWidth, alpha);
+	return std::make_unique<GaussianFilter>(filterXWidth, filterYWidth, alpha);
 }
 
 slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {

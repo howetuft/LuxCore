@@ -19,6 +19,7 @@
 #ifndef _SLG_PATHOCL_H
 #define	_SLG_PATHOCL_H
 
+#include <functional>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/pathoclbase/pathoclbase.h"
@@ -58,15 +59,17 @@ public:
 
 	virtual void Start();
 
+	FilmRef GetThreadFilm();
+
 	friend class PathOCLRenderEngine;
 
 protected:
 	virtual void StartRenderThread();
 	virtual void RenderThreadImpl(std::stop_token stop_token);
-	
-	// Only the first thread allocate a film. It is than used by all
+
+	// Only the first thread allocate a film. It is then used by all
 	// other threads too.
-	FilmPtr threadFilm;
+	FilmUPtr threadFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -114,7 +117,7 @@ protected:
 	u_int GetTotalEyeSPP() const;
 
 	FilmSampleSplatter *lightSampleSplatter;
-	std::unique_ptr<SamplerSharedData> eyeSamplerSharedData;
+	std::shared_ptr<SamplerSharedData> eyeSamplerSharedData;
 
 	bool hasStartFilm, allRenderingThreadsStarted;
 };

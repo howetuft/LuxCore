@@ -32,16 +32,17 @@ namespace slg {
 
 class FilmSampleSplatter {
 public:
-	FilmSampleSplatter(const Filter *flt);
+	FilmSampleSplatter(const FilterUPtr& flt);
 	~FilmSampleSplatter();
 
-	const Filter *GetFilter() const { return filter; }
+	FilterConstRef GetFilter() const { return *filter; }
+	const FilterUPtr& GetFilterPtr() const { return filter; }
 
 	// This method must be thread-safe.
-	void AtomicSplatSample(Film &film, const SampleResult &sampleResult, const float weight) const;
+	void AtomicSplatSample(FilmConstRef film, const SampleResult &sampleResult, const float weight) const;
 
 private:
-	const Filter *filter;
+	const FilterUPtr& filter;
 	FilterLUTs *filterLUTs;
 };
 		

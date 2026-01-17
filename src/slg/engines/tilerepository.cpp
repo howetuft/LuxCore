@@ -18,11 +18,13 @@
 
 #include <mutex>
 #include <boost/format.hpp>
+#include <optional>
 
 #include "slg/engines/tilerepository.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
+#include "slg/usings.h"
 #include "slg/volumes/volume.h"
 
 using namespace std;
@@ -33,11 +35,11 @@ using namespace slg;
 // Tile
 //------------------------------------------------------------------------------
 
-Tile::Tile(TileRepository *repo, const Film &film, const u_int index,
+Tile::Tile(TileRepository *repo, FilmConstRef film, const u_int index,
 		const u_int tileX, const u_int tileY) :
 			tileRepository(repo), tileIndex(index), pass(0), pendingPasses(0),
 			error(numeric_limits<float>::infinity()),
-			done(false), allPassFilm(NULL), evenPassFilm(NULL),
+			done(false), allPassFilm(nullptr), evenPassFilm(nullptr),
 			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
 
@@ -46,8 +48,8 @@ Tile::Tile(TileRepository *repo, const Film &film, const u_int index,
 	coord.width = Min(tileX + tileRepository->tileWidth, filmSubRegion[1] + 1) - tileX;
 	coord.height = Min(tileY + tileRepository->tileHeight, filmSubRegion[3] + 1) - tileY;
 
-	allPassFilm = NULL;
-	evenPassFilm = NULL;
+	allPassFilm = nullptr;
+	evenPassFilm = nullptr;
 	const bool hasVarianceClamping = tileRepository->varianceClamping.hasClamping();
 	const bool hasConvergenceTest = (tileRepository->enableMultipassRendering && (tileRepository->convergenceTestThreshold > 0.f));
 
@@ -63,7 +65,7 @@ Tile::Tile() {
 Tile::~Tile() {
 }
 
-void Tile::InitTileFilm(const Film &film, FilmPtr *tileFilm) {
+void Tile::InitTileFilm(const Film &film, FilmUPtr *tileFilm) {
 	(*tileFilm) = Film::Create(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
 
@@ -306,7 +308,7 @@ void TileRepository::Clear() {
 	convergedTiles.clear();
 }
 
-void TileRepository::Restart(FilmPtr film, const u_int startPass, const u_int multipassIndex) {
+void TileRepository::Restart(FilmRef film, const u_int startPass, const u_int multipassIndex) {
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
@@ -319,7 +321,7 @@ void TileRepository::Restart(FilmPtr film, const u_int startPass, const u_int mu
 	done = false;
 	// Reset the film convergence, it may have been set by previous
 	// rendering (for instance in RTPATHOCL)
-	film->SetConvergence(0.f);
+	film.SetConvergence(0.f);
 	filmTotalYValue = 0.f;
 
 	multipassRenderingIndex = multipassIndex;
@@ -376,7 +378,7 @@ void TileRepository::HilberCurveTiles(
 	}
 }
 
-void TileRepository::InitTiles(const Film &film) {
+void TileRepository::InitTiles(FilmConstRef film) {
 	const double t1 = WallClockTime();
 
 	const u_int *filmSubRegion = film.GetSubRegion();
@@ -417,7 +419,7 @@ void TileRepository::InitTiles(const Film &film) {
 	SLG_LOG(boost::format("Tiles initialization time: %.2f secs") % elapsedTime);
 }
 
-void TileRepository::SetDone(FilmPtr film) {
+void TileRepository::SetDone(FilmRef film) {
 	// Rendering done
 	if (!done) {
 		if (enableRenderingDonePrint) {
@@ -426,8 +428,8 @@ void TileRepository::SetDone(FilmPtr film) {
 		}
 
 		done = true;
-		
-		film->SetConvergence(1.f);
+
+		film.SetConvergence(1.f);
 	}
 }
 
@@ -469,7 +471,7 @@ bool TileRepository::GetNewTileWork(TileWork &tileWork) {
 			return false;
 		}
 	}
-		
+
 	// Add the tile to the pending list (so it is counted multiple times
 	// in case it was pendingTile)
 	pendingTiles.push_back(tileWork.tile);
@@ -477,8 +479,8 @@ bool TileRepository::GetNewTileWork(TileWork &tileWork) {
 	return true;
 }
 
-bool TileRepository::NextTile(FilmPtr film, std::mutex *filmMutex,
-		TileWork &tileWork, FilmPtr tileFilm) {
+bool TileRepository::NextTile(FilmRef film, std::mutex *filmMutex,
+		TileWork &tileWork, FilmRef tileFilm) {
 	// Now I have to lock the repository
 	std::unique_lock<std::mutex> lock(tileMutex);
 
@@ -487,7 +489,7 @@ bool TileRepository::NextTile(FilmPtr film, std::mutex *filmMutex,
 		Tile *tile = tileWork.tile;
 
 		// Add the pass to the tile
-		tileWork.AddPass(*tileFilm);
+		tileWork.AddPass(tileFilm);
 
 		// Remove the first copy of tile from pending list (there can be multiple copy of the same tile)
 		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), tile));
@@ -508,22 +510,22 @@ bool TileRepository::NextTile(FilmPtr film, std::mutex *filmMutex,
 
 		// This allow to avoid to have to clear the film
 		if (enableFirstPassClear && (tileWork.passToRender == 1)) {
-			film->SetFilm(*tileFilm,
+			film.SetFilm(tileFilm,
 					0, 0,
-					Min(tileWidth, film->GetWidth() - tile->coord.x),
-					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					Min(tileWidth, film.GetWidth() - tile->coord.x),
+					Min(tileHeight, film.GetHeight() - tile->coord.y),
 					tile->coord.x, tile->coord.y);
 		} else {
-			film->AddFilm(*tileFilm,
+			film.AddFilm(tileFilm,
 					0, 0,
-					Min(tileWidth, film->GetWidth() - tile->coord.x),
-					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					Min(tileWidth, film.GetWidth() - tile->coord.x),
+					Min(tileHeight, film.GetHeight() - tile->coord.y),
 					tile->coord.x, tile->coord.y);
 		}
 	}
 
 	// For the support of film halt conditions
-	if (film->GetConvergence() == 1.f) {
+	if (film.GetConvergence() == 1.f) {
 		if (pendingTiles.size() == 0) {
 			// Rendering done
 			SetDone(film);

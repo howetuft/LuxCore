@@ -74,13 +74,13 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	void InitTileFilm(const Film &film, FilmPtr *tileFilm);
+	void InitTileFilm(const Film &film, FilmUPtr * tileFilm);
 	void CheckConvergence();
 	void UpdateTileStats();
 	void VarianceClamp(Film &tileFilm);
 	void AddPass(Film &tileFilm, const u_int passRendered);
 
-	FilmPtr allPassFilm, evenPassFilm;
+	FilmUPtr allPassFilm, evenPassFilm;  // Owned by this object
 
 	float allPassFilmTotalYValue;
 	bool hasEnoughWarmUpSample;
@@ -131,14 +131,14 @@ public:
 	~TileRepository();
 
 	void Clear();
-	void Restart(FilmPtr film, const u_int startPass = 0, const u_int multipassIndex = 0);
+	void Restart(FilmRef film, const u_int startPass = 0, const u_int multipassIndex = 0);
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);
 
 	void InitTiles(const Film &film);
-	bool NextTile(FilmPtr film, std::mutex *filmMutex,
-		TileWork &tileWork, FilmPtr tileFilm);
+	bool NextTile(FilmRef film, std::mutex *filmMutex,
+		TileWork &tileWork, FilmRef tileFilm);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static TileRepository *FromProperties(const luxrays::Properties &cfg);
@@ -183,7 +183,7 @@ private:
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
-	void SetDone(FilmPtr film);
+	void SetDone(FilmRef film);
 	bool GetNewTileWork(TileWork &tileWork);
 
 	mutable std::mutex tileMutex;

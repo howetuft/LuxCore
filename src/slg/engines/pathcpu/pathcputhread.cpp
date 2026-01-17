@@ -59,7 +59,7 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	
 	SamplerUPtr lightSampler;
 
-	auto eyeSampler = engine->renderConfig.AllocSampler(rndGen, engine->film,
+	auto eyeSampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(),
 			nullptr, engine->samplerSharedData, Properties());
 	eyeSampler->SetThreadIndex(threadIndex);
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
@@ -73,8 +73,8 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			Property("sampler.imagesamples.enable")(false) <<
 			Property("sampler.metropolis.addonlycaustics")(true);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, engine->lightSampleSplatter,
-				*engine->lightSamplerSharedData);
+		lightSampler = Sampler::FromProperties(props, rndGen, engine->GetFilm(), engine->lightSampleSplatter,
+				engine->lightSamplerSharedData);
 		
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
@@ -87,7 +87,7 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	PathTracerThreadState pathTracerThreadState(device,
 			eyeSampler, lightSampler,
 			engine->renderConfig.GetScene(),
-			engine->film,
+			engine->GetFilm(),
 			&varianceClamping);
 
 	//--------------------------------------------------------------------------
@@ -113,18 +113,18 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 #endif
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
                 if (stop_token.stop_requested())
                         break;
 
 		if (engine->photonGICache) {
-			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			const u_int spp = engine->GetFilm().GetTotalEyeSampleCount() / engine->GetFilm().GetPixelCount();
 			engine->photonGICache->Update(threadIndex, spp);
 		}
 	}
 
-	
+
 	delete rndGen;
 
 	threadDone = true;

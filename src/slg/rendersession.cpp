@@ -38,7 +38,7 @@ void slg::NullDebugHandler(const char *msg) {
 RenderSession::RenderSession(
 	RenderConfigRef rcfg,
 	RenderStatePtr startState,
-	FilmPtr startFilm
+	OptionalPtr<Film> startFilm
 ) : renderConfig(rcfg) {
 	SDL_LOG("Creating session");
 
@@ -82,7 +82,7 @@ void RenderSession::Start() {
 		film = renderConfig.AllocFilm();
 	}
 
-	renderEngine->Start(film, &filmMutex);
+	renderEngine->Start(*film, &filmMutex);
 }
 
 void RenderSession::Stop() {
@@ -198,11 +198,11 @@ void RenderSession::SaveFilm(const string &fileName) {
 	if (renderConfig.GetProperty("film.safesave").Get<bool>()) {
 		SafeSave safeSave(fileName);
 
-		Film::SaveSerialized(safeSave.GetSaveFileName(), film);
+		Film::SaveSerialized(safeSave.GetSaveFileName(), *film);
 
 		safeSave.Process();
 	} else
-		Film::SaveSerialized(fileName, film);
+		Film::SaveSerialized(fileName, *film);
 }
 
 void RenderSession::SaveFilmOutputs() {
@@ -242,7 +242,7 @@ void RenderSession::Parse(luxrays::PropertiesConstPtr props) {
 		// I have to update the camera
 		renderConfig.GetScene().PreprocessCamera(film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
-		renderEngine->EndFilmEdit(film, &filmMutex);
+		renderEngine->EndFilmEdit(*film, &filmMutex);
 	} else {
 		std::unique_lock<std::mutex> lock(filmMutex);
 		film->Parse(props);

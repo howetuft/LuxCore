@@ -24,6 +24,8 @@
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
 #include "luxrays/core/namedobject.h"
+#include "luxrays/usings.h"
+#include "slg/usings.h"
 
 namespace slg {
 
@@ -69,7 +71,7 @@ public:
 	// object Properties (including all defaults values)
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
-	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	static FilterType String2FilterType(const std::string &type);

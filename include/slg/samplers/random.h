@@ -38,7 +38,7 @@ namespace slg {
 
 class RandomSamplerSharedData : public SamplerSharedData {
 public:
-	RandomSamplerSharedData(FilmPtr engineFilm);
+	RandomSamplerSharedData(OptionalPtr<Film> engineFilm);
 	virtual ~RandomSamplerSharedData() { }
 
 	virtual void Reset();
@@ -46,12 +46,14 @@ public:
 	void GetNewBucket(const u_int bucketCount, u_int *newBucketIndex);
 	
 	static std::unique_ptr<SamplerSharedData> FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen, FilmPtr film
+		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen, OptionalPtr<Film> film
 	);
 
-	FilmPtr engineFilm;
+	FilmRef GetEngineFilm() { return *engineFilm; }
+	FilmConstRef GetEngineFilm() const { return *engineFilm; }
 
 private:
+	OptionalPtr<Film> engineFilm;
 	u_int bucketIndex;
 };
 
@@ -61,12 +63,12 @@ private:
 
 class RandomSampler : public Sampler {
 public:
-	RandomSampler(luxrays::RandomGenerator *rnd, FilmPtr flm,
+	RandomSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
 			const u_int overlapping,
-			RandomSamplerSharedData& samplerSharedData
+			SamplerSharedDataSPtr samplerSharedData
 		);
 	virtual ~RandomSampler() { }
 
@@ -89,8 +91,8 @@ public:
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		luxrays::RandomGenerator *rndGen,
-		FilmPtr film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData& sharedData
+		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
@@ -100,7 +102,7 @@ private:
 
 	static const luxrays::Properties &GetDefaultProps();
 	
-	RandomSamplerSharedData& sharedData;
+	std::shared_ptr<RandomSamplerSharedData> sharedData;
 	float adaptiveStrength, adaptiveUserImportanceWeight;
 	u_int bucketSize, tileSize, superSampling, overlapping;
 

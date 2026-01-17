@@ -32,6 +32,7 @@
 #include <bcd/core/SamplesAccumulator.h>
 
 #include "luxrays/usings.h"
+
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -154,7 +155,7 @@ public:
 
 	typedef std::unordered_set<FilmChannelType, std::hash<int> > FilmChannels;
 
-	static FilmPtr Create(
+	static FilmUPtr Create(
 		const u_int width,
 		const u_int height,
 		const u_int *subRegion = nullptr
@@ -241,8 +242,8 @@ public:
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
-	bool HasDataChannel() { return hasDataChannel; }
-	bool HasComposingChannel() { return hasComposingChannel; }
+	bool HasDataChannel() const { return hasDataChannel; }
+	bool HasComposingChannel() const { return hasComposingChannel; }
 
 	void AsyncExecuteImagePipeline(const u_int index);
 	void WaitAsyncExecuteImagePipeline();
@@ -288,15 +289,15 @@ public:
 	double GetTotalTime() const {
 		return luxrays::WallClockTime() - statsStartSampleTime;
 	}
-	double GetAvgSampleSec() {
+	double GetAvgSampleSec() const {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalSampleCount() / t) : 0.0;
 	}
-	double GetAvgEyeSampleSec() {
+	double GetAvgEyeSampleSec() const {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalEyeSampleCount() / t) : 0.0;
 	}
-	double GetAvgLightSampleSec() {
+	double GetAvgLightSampleSec() const {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalLightSampleCount() / t) : 0.0;
 	}
@@ -339,11 +340,11 @@ public:
 	
 	// Atomic method versions
 	void AtomicAddSample(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight = 1.f);
+		const SampleResult &sampleResult, const float weight = 1.f) const;
 	void AtomicAddSampleResultColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight);
+		const SampleResult &sampleResult, const float weight) const;
 	void AtomicAddSampleResultData(const u_int x, const u_int y,
-		const SampleResult &sampleResult);
+		const SampleResult &sampleResult) const;
 
 	void ReadHWBuffer_IMAGEPIPELINE(const u_int index);
 	void WriteHWBuffer_IMAGEPIPELINE(const u_int index);
@@ -470,15 +471,15 @@ public:
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
 
-	static FilmPtr LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, FilmConstPtr film);
+	static FilmUPtr LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, FilmRef film);
 
 	static bool GetFilmSize(const luxrays::Properties &cfg,
 		u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static FilmPtr FromProperties(luxrays::PropertiesConstPtr cfg);
+	static FilmUPtr FromProperties(luxrays::PropertiesConstPtr cfg);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);

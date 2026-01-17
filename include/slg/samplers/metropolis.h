@@ -46,7 +46,7 @@ public:
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
 		luxrays::RandomGenerator *rndGen,
-		FilmPtr film
+		OptionalPtr<Film> film
 	);
 
 	// I'm storing totalLuminance, sampleCount and noBlackSampleCount on shared variables
@@ -76,11 +76,11 @@ typedef enum {
 
 class MetropolisSampler : public Sampler {
 public:
-	MetropolisSampler(luxrays::RandomGenerator *rnd, FilmPtr film,
+	MetropolisSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> film,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const u_int maxRej, const float pLarge, const float imgRange,
 			const bool addOnlyCstcs,
-			SamplerSharedData& samplerSharedData
+			SamplerSharedDataSPtr samplerSharedData
 		);
 	virtual ~MetropolisSampler();
 
@@ -107,15 +107,15 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		FilmPtr film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData& sharedData);
+		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 private:
 	static const luxrays::Properties &GetDefaultProps();
 
-	MetropolisSamplerSharedData& sharedData;
+	std::shared_ptr<MetropolisSamplerSharedData> sharedData;;
 
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;

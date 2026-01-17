@@ -180,11 +180,11 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
-	unique_ptr<Filter> pixelFilter(renderConfig.AllocPixelFilter());
+	std::unique_ptr<Filter> pixelFilter(renderConfig.AllocPixelFilter());
 
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
-	const FilterDistribution filterDistribution(pixelFilter.get(), 64);
+	const FilterDistribution filterDistribution(pixelFilter, 64);
 	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
 			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
@@ -193,20 +193,20 @@ void PathOCLBaseRenderEngine::InitFilm() {
 	if (ctx->GetUseOutOfCoreBuffers() || useFilmOutOfCoreMemory) {
 		// If out-of-core rendering is enabled, I disable Film GPU image pipeline
 		// in order to save more GPU memory
-		film->hwEnable = false;
+		GetFilm().hwEnable = false;
 	}
-	
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
 	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
-		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
+		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, GetFilm());
 
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->Init();
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().Init();
 }
 
 string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderConfig) {

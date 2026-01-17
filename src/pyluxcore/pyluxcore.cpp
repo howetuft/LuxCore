@@ -939,15 +939,23 @@ static void Film_UpdateOutputUInt3(std::shared_ptr<luxcore::detail::FilmImpl> fi
 
 //------------------------------------------------------------------------------
 
-static void Film_AddFilm1(std::shared_ptr<luxcore::detail::FilmImpl> film, std::shared_ptr<luxcore::detail::FilmImpl> srcFilm) {
-  film->AddFilm(srcFilm);
+static void Film_AddFilm1(
+	std::unique_ptr<luxcore::detail::FilmImpl> film,
+	std::unique_ptr<luxcore::detail::FilmImpl> srcFilm
+) {
+  film->AddFilm(*srcFilm);
 }
 
-static void Film_AddFilm2(std::shared_ptr<luxcore::detail::FilmImpl> film, std::shared_ptr<luxcore::detail::FilmImpl> srcFilm,
+static void Film_AddFilm2(
+	std::unique_ptr<luxcore::detail::FilmImpl> film,
+	std::unique_ptr<luxcore::detail::FilmImpl> srcFilm,
     const size_t srcOffsetX, const size_t srcOffsetY,
     const size_t srcWidth, const size_t srcHeight,
-    const size_t dstOffsetX, const size_t dstOffsetY) {
-  film->AddFilm(srcFilm, srcOffsetX,  srcOffsetY, srcWidth,  srcHeight, dstOffsetX,  dstOffsetY);
+    const size_t dstOffsetX, const size_t dstOffsetY
+) {
+	film->AddFilm(
+		*srcFilm, srcOffsetX, srcOffsetY, srcWidth,  srcHeight, dstOffsetX,  dstOffsetY
+	);
 }
 
 static float Film_GetFilmY1(std::shared_ptr<luxcore::detail::FilmImpl> film) {
@@ -2066,9 +2074,9 @@ static void Scene_UpdateObjectTransformation(const SceneImplPtr & scene,
 static py::tuple RenderConfig_LoadResumeFile(const py::str &fileNameStr) {
   const std::string fileName = py::cast<std::string>(fileNameStr);
   RenderStateImplPtr startState;
-  FilmImplPtr startFilm;
+  FilmImplUPtr startFilm;
   auto config = RenderConfigImpl::Create<
-	  const std::string&, RenderStateImplPtr&, FilmImplPtr&
+	  const std::string&, RenderStateImplPtr&, FilmImplUPtr&
   >(fileName, startState, startFilm);
 
   return py::make_tuple(config, startState, startFilm);
@@ -2109,9 +2117,11 @@ static RenderConfigImpl& RenderSession_GetRenderConfig(
 	);
 }
 
-luxcore::detail::FilmImplPtr
-RenderSession_GetFilm(std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession) {
-  return static_pointer_cast<luxcore::detail::FilmImpl>(renderSession->GetFilm());
+luxcore::detail::FilmImplRef
+RenderSession_GetFilm(
+	std::shared_ptr<luxcore::detail::RenderSessionImpl> renderSession
+) {
+  return static_cast<luxcore::detail::FilmImpl&>(renderSession->GetFilm());
 }
 
 static std::shared_ptr<luxcore::detail::RenderStateImpl>
@@ -2613,7 +2623,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 
 	.def(
 		py::init<>(&RenderSessionImpl::Create
-			<RenderConfigImplRef, RenderStateImplPtr&, FilmImplStandalonePtr&>
+			<RenderConfigImpl&, RenderStateImplPtr&, FilmImplStandalone& >
 		),
 		py::keep_alive<1, 2>()
 	)

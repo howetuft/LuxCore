@@ -38,27 +38,27 @@ using SceneConstRef = const Scene&;
 using SceneRef = Scene&;
 
 class SceneObject;
-using SceneObjectRef = SceneObject&;
-using SceneObjectConstRef = const SceneObject&;
 using SceneObjectUPtr = std::unique_ptr<SceneObject>;
 using SceneObjectConstUPtr = std::unique_ptr<const SceneObject>;
+using SceneObjectRef = SceneObject&;
+using SceneObjectConstRef = const SceneObject&;
 
 class Shape;
 using ShapeUPtr = std::unique_ptr<Shape>;
 
 class Film;
-using FilmPtr = std::shared_ptr<Film>;
-using FilmConstPtr = std::shared_ptr<const Film>;
+using FilmUPtr = std::unique_ptr<Film>;
+using FilmConstUPtr = std::unique_ptr<const Film>;
 using FilmConstRef = const Film&;
 using FilmRef = Film&;
 
 class ImageMap;
+using ImageMapUPtr = std::unique_ptr<ImageMap>;
+using ImageMapConstUPtr = std::unique_ptr<const ImageMap>;
 using ImageMapConstRef = const ImageMap&;
 using ImageMapRef = ImageMap&;
-using ImageMapConstUPtr = std::unique_ptr<const ImageMap>;
-using ImageMapUPtr = std::unique_ptr<ImageMap>;
+using ImageMapSPtr = std::shared_ptr<ImageMap>;  // Shared is needed for a singleton
 using ImageMapConstSPtr = std::shared_ptr<const ImageMap>;
-using ImageMapSPtr = std::shared_ptr<ImageMap>;
 
 class ImageMapStorage;
 using ImageMapStorageUPtr = std::unique_ptr<ImageMapStorage>;
@@ -66,50 +66,38 @@ using ImageMapStorageRef = ImageMapStorage&;
 using ImageMapStorageConstRef = const ImageMapStorage&;
 
 class LightSource;
-using LightSourceConstPtr = std::shared_ptr<const LightSource>;
-using LightSourcePtr = std::shared_ptr<LightSource>;
 using LightSourceUPtr = std::unique_ptr<LightSource>;
 using LightSourceRef = LightSource&;
 using LightSourceConstRef = const LightSource&;
 
 class TriangleLight;
-using TriangleLightConstPtr = std::shared_ptr<const TriangleLight>;
-using TriangleLightPtr = std::shared_ptr<TriangleLight>;
-using TriangleLightConstUPtr = std::unique_ptr<const TriangleLight>;
 using TriangleLightUPtr = std::unique_ptr<TriangleLight>;
+using TriangleLightConstUPtr = std::unique_ptr<const TriangleLight>;
 using TriangleLightRef = TriangleLight&;
 using TriangleLightConstRef = const TriangleLight&;
 
 class EnvLightSource;
-using EnvLightSourceConstPtr = std::shared_ptr<const EnvLightSource>;
-using EnvLightSourcePtr = std::shared_ptr<EnvLightSource>;
 using EnvLightSourceUPtr = std::unique_ptr<EnvLightSource>;
 using EnvLightSourceRef = EnvLightSource&;
 
 class LightStrategy;
-using LightStrategyConstPtr = std::shared_ptr<const LightStrategy>;
-using LightStrategyPtr = std::shared_ptr<LightStrategy>;
 using LightStrategyUPtr = std::unique_ptr<LightStrategy>;
 using LightStrategyConstRef = const LightStrategy&;
 
 class Material;
-using MaterialRef = Material&;
-using MaterialConstRef = const Material&;
 using MaterialUPtr = std::unique_ptr<Material>;
 using MaterialConstUPtr = std::unique_ptr<const Material>;
+using MaterialRef = Material&;
+using MaterialConstRef = const Material&;
 using MatRef = OptionalPtr<const Material>;  // This is just for convenience
 
 class RenderConfig;
-using RenderConfigConstPtr = std::shared_ptr<const RenderConfig>;
-using RenderConfigPtr = std::shared_ptr<RenderConfig>;
 using RenderConfigUPtr = std::unique_ptr<RenderConfig>;
 using RenderConfigConstUPtr = std::unique_ptr<const RenderConfig>;
 using RenderConfigRef = RenderConfig &;
 using RenderConfigConstRef = const RenderConfig &;
 
 class RenderSession;
-using RenderSessionConstPtr = std::shared_ptr<const RenderSession>;
-using RenderSessionPtr = std::shared_ptr<RenderSession>;
 using RenderSessionRef = RenderSession &;
 using RenderSessionConstRef = const RenderSession &;
 
@@ -118,12 +106,6 @@ using RenderStateConstPtr = std::shared_ptr<const RenderState>;
 using RenderStatePtr = std::shared_ptr<RenderState>;
 
 class RenderEngine;
-using RenderEngineConstPtr = std::shared_ptr<const RenderEngine>;
-using RenderEnginePtr = std::shared_ptr<RenderEngine>;
-
-class RenderEngine;
-using RenderEngineConstPtr = std::shared_ptr<const RenderEngine>;
-using RenderEnginePtr = std::shared_ptr<RenderEngine>;
 using RenderEngineUPtr = std::unique_ptr<RenderEngine>;
 
 class Texture;
@@ -150,8 +132,6 @@ using TextureMapping3DConstRef = const TextureMapping3D&;
 
 class Volume;
 using VolumeUPtr = std::unique_ptr<Volume>;
-//using VolumePtr = std::shared_ptr<Volume>;
-//using VolumeConstPtr = std::shared_ptr<const Volume>;
 using VolumeRef = Volume&;
 using VolumeConstRef = const Volume&;
 
@@ -160,6 +140,12 @@ using SamplerUPtr = std::unique_ptr<Sampler>;
 
 class SamplerSharedData;
 using SamplerSharedDataUPtr = std::unique_ptr<SamplerSharedData>;
+using SamplerSharedDataSPtr = std::shared_ptr<SamplerSharedData>;
+
+class Filter;
+using FilterUPtr = std::unique_ptr<Filter>;
+using FilterRef = Filter&;
+using FilterConstRef = const Filter&;
 
 }  // namespace slg
 

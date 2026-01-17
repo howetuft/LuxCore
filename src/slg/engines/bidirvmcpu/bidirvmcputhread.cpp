@@ -64,7 +64,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		auto sampler = engine->renderConfig.AllocSampler(
-			rndGen, engine->film,
+			rndGen, engine->GetFilm(),
 			engine->sampleSplatter,
 			engine->samplerSharedData, Properties()
 		);
@@ -279,7 +279,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 		//hashGrid.PrintStatistics();
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
 	}
 

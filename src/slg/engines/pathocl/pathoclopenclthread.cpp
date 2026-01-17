@@ -52,12 +52,12 @@ PathOCLOpenCLRenderThread::~PathOCLOpenCLRenderThread() {
 void PathOCLOpenCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
 		u_int *filmSubRegion) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
-	FilmConstPtr engineFilm = engine->film;
+	FilmConstRef engineFilm = engine->GetFilm();
 
-	*filmWidth = engineFilm->GetWidth();
-	*filmHeight = engineFilm->GetHeight();
+	*filmWidth = engineFilm.GetWidth();
+	*filmHeight = engineFilm.GetHeight();
 
-	const u_int *subRegion = engineFilm->GetSubRegion();
+	const u_int *subRegion = engineFilm.GetSubRegion();
 	filmSubRegion[0] = subRegion[0];
 	filmSubRegion[1] = subRegion[1];
 	filmSubRegion[2] = subRegion[2];
@@ -70,8 +70,8 @@ void PathOCLOpenCLRenderThread::StartRenderThread() {
 	// I have to load the start film otherwise it is overwritten at the first
 	// merge of all thread films
 	if (engine->hasStartFilm && (threadIndex == 0))
-		threadFilms[0]->film->AddFilm(*engine->film);
-	
+		threadFilms[0]->GetFilm().AddFilm(engine->GetFilm());
+
 	PathOCLBaseOCLRenderThread::StartRenderThread();
 }
 
@@ -92,7 +92,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//----------------------------------------------------------------------
 
 	// Clear the frame buffer
-	const u_int filmPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
+	const u_int filmPixelCount = threadFilms[0]->GetFilm().GetWidth() * threadFilms[0]->GetFilm().GetHeight();
 	intersectionDevice->EnqueueKernel(filmClearKernel,
 		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 		HardwareDeviceRange(filmClearWorkGroupSize));
@@ -164,7 +164,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			double totalCount = 0.0;
 			for (size_t i = 0; i < taskCount; ++i)
 				totalCount += gpuTaskStats[i].sampleCount;
-			threadFilms[0]->film->SetSampleCount(totalCount, totalCount, 0.0);
+			threadFilms[0]->GetFilm().SetSampleCount(totalCount, totalCount, 0.0);
 
 			//SLG_LOG("[DEBUG] film transferred");
 		}
@@ -176,7 +176,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		const double timeKernelStart = WallClockTime();
 
 		// This is required for updating film denoiser parameter
-		if (threadFilms[0]->film->GetDenoiser().IsEnabled()) {
+		if (threadFilms[0]->GetFilm().GetDenoiser().IsEnabled()) {
 			std::unique_lock<std::mutex> lock(engine->setKernelArgsMutex);
 			SetAllAdvancePathsKernelArgs(0);
 		}
@@ -206,7 +206,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			iterations = Min<u_int>(iterations + 1, 128);
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
 
 		if (engine->photonGICache) {

@@ -35,7 +35,7 @@ public:
 	RenderSession(
 		RenderConfigRef cfg,
 		RenderStatePtr startState = nullptr,
-		FilmPtr startFilm = nullptr
+		OptionalPtr<Film> startFilm = std::nullopt
 	);
 	~RenderSession();
 
@@ -65,7 +65,7 @@ public:
 	RenderEngineUPtr renderEngine;
 
 	mutable std::mutex filmMutex;
-	FilmPtr film;
+	FilmUPtr film;  // Render session owns the film
 
 protected:
 	bool HasPeriodicFilmOutputsSave();

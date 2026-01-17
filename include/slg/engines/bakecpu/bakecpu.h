@@ -102,6 +102,9 @@ public:
         void operator()() noexcept { }
     };
 
+	FilmRef GetMapFilm() { return *mapFilm; }
+	FilmConstRef GetMapFilm() const { return *mapFilm; }
+
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
@@ -125,15 +128,17 @@ protected:
 	PhotonGICache *photonGICache;
 	FilmSampleSplatter *sampleSplatter;
 	PathTracer pathTracer;
-	std::unique_ptr<SamplerSharedData> lightSamplerSharedData;
+	std::shared_ptr<SamplerSharedData> lightSamplerSharedData;
 
-	FilmPtr mapFilm;
 	std::vector<const SceneObject *> currentSceneObjsToBake;
 	std::vector<float> currentSceneObjsToBakeArea;
 	luxrays::Distribution1D *currentSceneObjsDist;
 	std::vector<luxrays::Distribution1D *> currentSceneObjDist;
 
 	std::barrier<completion_t> *threadsSyncBarrier;
+
+private:
+	FilmUPtr mapFilm;  // Owned by this engine
 };
 
 }

@@ -63,9 +63,9 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 	auto& scene = engine->renderConfig.GetScene();
 	auto& camera = scene.GetCamera();
 
-	SobolSampler sampler(rndGen, engine->film, engine->sampleSplatter, true, 0.f, 0.f,
+	SobolSampler sampler(rndGen, engine->GetFilm(), engine->sampleSplatter, true, 0.f, 0.f,
 		16, 16, 1, 1,
-		*engine->aovWarmupSamplerSharedData
+		engine->aovWarmupSamplerSharedData
 	);
 
 	// Request the samples
@@ -83,7 +83,7 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 		Film::ALBEDO, Film::AVG_SHADING_NORMAL
 	});
 
-	sampleResult.Init(&sampleResultsChannels, engine->film->GetRadianceGroupCount());
+	sampleResult.Init(&sampleResultsChannels, engine->GetFilm().GetRadianceGroupCount());
 
 	// Initialize the max. path depth
 	PathDepthInfo maxPathDepthInfo;
@@ -183,7 +183,7 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 			const double delta = end - lastProgressPrint;
 
 			if (delta > 2.0) {
-				const u_int *filmSubRegion = engine->film->GetSubRegion();
+				const u_int *filmSubRegion = engine->GetFilm().GetSubRegion();
 				const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
 				const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
@@ -205,7 +205,7 @@ void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator
 	if (threadIndex == 0) {
 		const double end = WallClockTime();
 		
-		const u_int *filmSubRegion = engine->film->GetSubRegion();
+		const u_int *filmSubRegion = engine->GetFilm().GetSubRegion();
 		const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
 		const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 		
@@ -226,7 +226,7 @@ SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 
 	sampleResult.Init(
 			fromLight ? &lightSampleResultsChannels : &eyeSampleResultsChannels,
-			engine->film->GetRadianceGroupCount());
+			engine->GetFilm().GetRadianceGroupCount());
 
 	return sampleResult;
 }
@@ -788,7 +788,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		AOVWarmUp(stop_token, rndGen);
 
 	// Setup the sampler
-	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->film, engine->sampleSplatter,
+	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(), engine->sampleSplatter,
 			engine->samplerSharedData, Properties());
 	const u_int sampleSize =
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
@@ -1033,7 +1033,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {
 			for(u_int i = 0; i < sampleResults.size(); ++i)
-				varianceClamping.Clamp(*(engine->film), sampleResults[i]);
+				varianceClamping.Clamp(engine->GetFilm(), sampleResults[i]);
 
 			assert (SampleResult::IsAllValid(sampleResults));
 		}
@@ -1041,12 +1041,12 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		sampler->NextSample(sampleResults);
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
 
 		if (photonGICache) {
-                        const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
-                        photonGICache->Update(threadIndex, spp);
+			const u_int spp = engine->GetFilm().GetTotalEyeSampleCount() / engine->GetFilm().GetPixelCount();
+			photonGICache->Update(threadIndex, spp);
                 }
 	} // ~for
 

@@ -269,11 +269,11 @@ void Film::Output(
 		if (filmOutputs.UseSafeSave()) {
 			SafeSave safeSave(fileName);
 
-			Film::SaveSerialized(safeSave.GetSaveFileName(), shared_from_this());
+			Film::SaveSerialized(safeSave.GetSaveFileName(), *this);
 
 			safeSave.Process();
 		} else
-			Film::SaveSerialized(fileName, shared_from_this());
+			Film::SaveSerialized(fileName, *this);
 
 		return;
 	}

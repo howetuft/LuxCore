@@ -41,17 +41,17 @@ PathCPURenderEngine::~PathCPURenderEngine() {
 }
 
 void PathCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
 	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
-		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->SetThreadCount(renderThreads.size());
-	film->Init();
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetThreadCount(renderThreads.size());
+	GetFilm().Init();
 }
 
 RenderStatePtr PathCPURenderEngine::GetRenderState() {
@@ -132,7 +132,7 @@ void PathCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable)
-		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, GetFilm());
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 

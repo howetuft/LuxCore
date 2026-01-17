@@ -50,7 +50,7 @@ void PathOCLBaseOCLRenderThread::InitFilm() {
 	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
 	for(ThreadFilmPtr threadFilm: threadFilms)
-		threadFilm->Init(renderEngine->film, threadFilmWidth, threadFilmHeight,
+		threadFilm->Init(renderEngine->GetFilm(), threadFilmWidth, threadFilmHeight,
 			threadFilmSubRegion);
 }
 
@@ -357,7 +357,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
-	const u_int *subRegion = renderEngine->film->GetSubRegion();
+	const u_int *subRegion = renderEngine->GetFilm().GetSubRegion();
 	const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
 
 	size_t size = 0;

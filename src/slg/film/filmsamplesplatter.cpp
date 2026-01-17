@@ -28,7 +28,7 @@ using namespace slg;
 // FilmSampleSplatter
 //------------------------------------------------------------------------------
 
-FilmSampleSplatter::FilmSampleSplatter(const Filter *flt) : filter(flt) {
+FilmSampleSplatter::FilmSampleSplatter(const FilterUPtr& flt) : filter(flt) {
 	if (filter) {
 		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
 		filterLUTs = new FilterLUTs(*filter, size);
@@ -40,7 +40,7 @@ FilmSampleSplatter::~FilmSampleSplatter() {
 	delete filterLUTs;
 }
 
-void FilmSampleSplatter::AtomicSplatSample(Film &film, const SampleResult &sampleResult, const float weight) const {
+void FilmSampleSplatter::AtomicSplatSample(FilmConstRef film, const SampleResult &sampleResult, const float weight) const {
 	const u_int *subRegion = film.GetSubRegion();
 
 	if (!filter || (filter->GetType() == FILTER_NONE)) {

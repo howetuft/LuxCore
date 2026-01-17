@@ -20,6 +20,7 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 
 #include "slg/core/indexoctree.h"
@@ -46,7 +47,7 @@ using namespace slg;
 
 template <class T>
 SceneVisibility<T>::TraceVisibilityThread::TraceVisibilityThread(SceneVisibility<T> &svis, const u_int index,
-		SobolSamplerSharedData &sobolSharedData,
+		std::shared_ptr<SobolSamplerSharedData> sobolSharedData,
 		IndexOctree<T> *octree, std::mutex &octreeMutex,
 		std::atomic<u_int> &gParticlesCount,
 		u_int &cacheLookUp, u_int &cacheHits,
@@ -116,7 +117,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
+	SobolSampler sampler(&rnd, std::nullopt, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			visibilitySobolSharedData);
 
@@ -356,7 +357,8 @@ void SceneVisibility<T>::Build() {
 	unique_ptr<IndexOctree<T> > particlesOctree(AllocOctree());
 	std::mutex particlesOctreeMutex;
 
-	SobolSamplerSharedData visibilitySobolSharedData(131, nullptr);
+	auto visibilitySobolSharedData =
+		std::make_shared<SobolSamplerSharedData>(131, OptionalPtr<Film>());
 
 	std::atomic<u_int> globalVisibilityParticlesCount(0);
 	u_int visibilityCacheLookUp = 0;

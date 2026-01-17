@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #include <vector>
 
 
@@ -134,8 +135,8 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + params.threadIndex);
-	SobolSamplerSharedData sobolSharedData(131, nullptr);
-	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
+	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, std::nullopt);
+	SobolSampler sampler(&rnd, std::nullopt, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			sobolSharedData);
 

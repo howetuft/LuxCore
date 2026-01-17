@@ -104,17 +104,17 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 }
 
 void BakeCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
 	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
-		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->SetThreadCount(renderThreads.size());
-	film->Init();
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetThreadCount(renderThreads.size());
+	GetFilm().Init();
 }
 
 RenderStatePtr BakeCPURenderEngine::GetRenderState() {
@@ -185,7 +185,7 @@ void BakeCPURenderEngine::StartLockLess() {
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable)
-		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, GetFilm());
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
@@ -292,15 +292,15 @@ void BakeCPURenderEngine::UpdateFilmLockLess() {
 	std::unique_lock<std::mutex> lock(*filmMutex);
 
 	// Film may have been not initialized because of an error during Start()
-	if (film->IsInitiliazed()) {
-		film->Clear();
-		film->GetDenoiser().Clear();
+	if (GetFilm().IsInitiliazed()) {
+		GetFilm().Clear();
+		GetFilm().GetDenoiser().Clear();
 
 		if (mapFilm) {
-			film->AddFilm(*mapFilm,
+			GetFilm().AddFilm(*mapFilm,
 					0, 0,
-					Min(mapFilm->GetWidth(), film->GetWidth()),
-					Min(mapFilm->GetHeight(), film->GetHeight()),
+					Min(mapFilm->GetWidth(), GetFilm().GetWidth()),
+					Min(mapFilm->GetHeight(), GetFilm().GetHeight()),
 					0, 0);
 
 			// Time to run the halt test on mapFilm too

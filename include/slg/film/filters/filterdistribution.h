@@ -29,7 +29,7 @@ namespace slg {
 
 class FilterDistribution {
 public:
-	FilterDistribution(const Filter *filter, const u_int size);
+	FilterDistribution(const FilterUPtr& filter, const u_int size);
 	~FilterDistribution();
 
 	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
@@ -37,7 +37,7 @@ public:
 	const luxrays::Distribution2D *GetDistribution2D() const { return distrib; }
 
 private:
-	const Filter *filter;
+	const FilterUPtr & filter;
 	u_int size;
 
 	luxrays::Distribution2D *distrib;

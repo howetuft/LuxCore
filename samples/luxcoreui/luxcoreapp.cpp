@@ -296,7 +296,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 		} else if (ext == ".rsm") {
 			// It is a LuxCore resume file
 			std::shared_ptr<RenderState> startState;
-			std::shared_ptr<Film> startFilm;
+			std::unique_ptr<Film> startFilm;
 			config = RenderConfigPtr(RenderConfig::Create(fileName, startState, startFilm));
 
 			StartRendering(startState, startFilm);
@@ -315,7 +315,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 }
 
 void LuxCoreApp::StartRendering(
-    std::shared_ptr<RenderState> startState, std::shared_ptr<Film> startFilm
+    std::shared_ptr<RenderState> startState, const std::unique_ptr<Film> & startFilm
 ) {
 	CloseAllRenderConfigEditors();
 
@@ -369,7 +369,9 @@ void LuxCoreApp::StartRendering(
 
 	// TODO
 	//try {
-		session = RenderSession::Create(config, &startState, &startFilm);
+		session = (startState and startFilm) ?
+			RenderSession::Create(config, startState, *startFilm) :
+			RenderSession::Create(config);
 
 		// Re-start the rendering
 		session->Start();

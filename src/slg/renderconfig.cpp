@@ -334,11 +334,11 @@ void RenderConfig::Delete(const string &prefix) {
 	GetConfig().DeleteAll(GetConfig().GetAllNames(prefix));
 }
 
-Filter *RenderConfig::AllocPixelFilter() const {
+FilterUPtr RenderConfig::AllocPixelFilter() const {
 	return Filter::FromProperties(*cfg);
 }
 
-FilmPtr RenderConfig::AllocFilm() const {
+FilmUPtr RenderConfig::AllocFilm() const {
 	auto film = Film::FromProperties(cfg);
 
 	// Add the channels required by the Sampler
@@ -351,21 +351,21 @@ FilmPtr RenderConfig::AllocFilm() const {
 }
 
 std::unique_ptr<SamplerSharedData> RenderConfig::AllocSamplerSharedData(
-	RandomGenerator *rndGen, FilmPtr film
+	RandomGenerator *rndGen, OptionalPtr<Film> film
 ) const {
 	return SamplerSharedData::FromProperties(*cfg, rndGen, film);
 }
 
 std::unique_ptr<Sampler> RenderConfig::AllocSampler(
-	RandomGenerator *rndGen, FilmPtr film,
+	RandomGenerator *rndGen, OptionalPtr<Film> film,
 	const FilmSampleSplatter *flmSplatter,
-	const std::unique_ptr<SamplerSharedData>& sharedData,
+	const std::shared_ptr<SamplerSharedData> sharedData,
 	const Properties &additionalProps
 ) const {
 	auto& props = *cfg;
 	props << additionalProps;
 
-	return Sampler::FromProperties(props, rndGen, film, flmSplatter, *sharedData);
+	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngineUPtr RenderConfig::AllocRenderEngine() {

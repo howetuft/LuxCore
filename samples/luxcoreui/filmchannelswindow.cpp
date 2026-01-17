@@ -43,8 +43,8 @@ FilmChannelWindow::~FilmChannelWindow() {
 void FilmChannelWindow::RefreshTexture() {
 	app->session->UpdateStats();
 
-	const unsigned int filmWidth = app->session->GetFilm()->GetWidth();
-	const unsigned int filmHeight = app->session->GetFilm()->GetHeight();
+	const unsigned int filmWidth = app->session->GetFilm().GetWidth();
+	const unsigned int filmHeight = app->session->GetFilm().GetHeight();
 	
 	unique_ptr<float[]> pixels(new float[filmWidth * filmHeight * 3]);
 	switch (type) {
@@ -68,7 +68,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_BY_MATERIAL_ID:
 		case Film::CHANNEL_IRRADIANCE:
 		case Film::CHANNEL_BY_OBJECT_ID: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -76,7 +76,7 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -87,7 +87,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_DIRECT_SHADOW_MASK:
 		case Film::CHANNEL_INDIRECT_SHADOW_MASK:
 		case Film::CHANNEL_OBJECT_ID_MASK:{
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize1(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -95,7 +95,7 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_IMAGEPIPELINE: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 			Copy3(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			break;
@@ -104,7 +104,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_RAYCOUNT:
 		case Film::CHANNEL_CONVERGENCE:
 		case Film::CHANNEL_NOISE: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Copy1(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -114,7 +114,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_POSITION:
 		case Film::CHANNEL_GEOMETRY_NORMAL:
 		case Film::CHANNEL_SHADING_NORMAL: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			UpdateStats(filmPixels, filmWidth, filmHeight);
 			AutoLinearToneMap(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -122,7 +122,7 @@ void FilmChannelWindow::RefreshTexture() {
 		}
 		case Film::CHANNEL_MATERIAL_ID:
 		case Film::CHANNEL_OBJECT_ID: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<unsigned int>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<unsigned int>(type, index);
 
 			Copy1UINT(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -130,7 +130,7 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_UV: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Copy2(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -138,7 +138,7 @@ void FilmChannelWindow::RefreshTexture() {
 			break;
 		}
 		case Film::CHANNEL_SAMPLECOUNT: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<unsigned int>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<unsigned int>(type, index);
 
 			Copy1UINT2FLOAT(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -148,7 +148,7 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_MATERIAL_ID_COLOR:
 		case Film::CHANNEL_ALBEDO:
 		case Film::CHANNEL_AVG_SHADING_NORMAL: {
-			auto filmPixels = app->session->GetFilm()->GetChannel<float>(type, index);
+			auto filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
@@ -245,8 +245,8 @@ bool FilmChannelsWindow::HasDenoiser(const u_int index, string &denoiserPrefix) 
 }
 
 void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmChannelType type) {
-	auto film = app->session->GetFilm();
-	unsigned int count = film->GetChannelCount(type);
+	auto& film = app->session->GetFilm();
+	unsigned int count = film.GetChannelCount(type);
 
 	if ((type == Film::CHANNEL_IMAGEPIPELINE) && (denoiserProps.size() != count))
 		denoiserProps.resize(count);

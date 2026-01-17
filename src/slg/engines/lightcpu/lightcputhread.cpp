@@ -50,7 +50,7 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
 	// Setup the sampler
-	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->film,
+	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(),
 			engine->sampleSplatter, engine->samplerSharedData,
 			// Disable image plane meaning for samples 0 and 1
 			Properties() << Property("sampler.imagesamples.enable")(false));
@@ -76,12 +76,12 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		}
 
 		pathTracer.RenderLightSample(device, engine->renderConfig.GetScene(),
-				engine->film, *sampler, sampleResults);
+				engine->GetFilm(), *sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {
 			for(u_int i = 0; i < sampleResults.size(); ++i)
-				varianceClamping.Clamp(*(engine->film), sampleResults[i]);
+				varianceClamping.Clamp(engine->GetFilm(), sampleResults[i]);
 		}
 
 		sampler->NextSample(sampleResults);
@@ -92,7 +92,7 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 #endif
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
 	}
 

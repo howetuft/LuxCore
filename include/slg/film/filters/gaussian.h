@@ -56,7 +56,7 @@ public:
 	static FilterType GetObjectType() { return FILTER_GAUSSIAN; }
 	static std::string GetObjectTag() { return "GAUSSIAN"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	float alpha;

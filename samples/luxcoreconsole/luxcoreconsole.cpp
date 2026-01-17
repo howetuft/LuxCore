@@ -45,10 +45,10 @@ static string GetFileNameExt(const string &fileName) {
 static void BatchRendering(
 	const RenderConfigPtr & config,
 	RenderStatePtr startState,
-	FilmPtr startFilm,
+	Film& startFilm,
 	const bool showDevicesStats
 ) {
-	auto session = RenderSession::Create(config, &startState, &startFilm);
+	auto session = RenderSession::Create(config, startState, startFilm);
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
 	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>(0);
@@ -108,7 +108,7 @@ static void BatchRendering(
 	const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
 	if (renderEngine != "FILESAVER") {
 		// Save the rendered image
-		session->GetFilm()->SaveOutputs();
+		session->GetFilm().SaveOutputs();
 	}
 
 	session.reset();
@@ -194,8 +194,8 @@ int main(int argc, char *argv[]) {
 		std::unique_ptr<Scene> scene;
 		RenderConfigPtr config;
 		RenderStatePtr startRenderState;
-		FilmPtr startFilm;
-		
+		FilmUPtr startFilm;
+
 		if (configFileName.compare("") != 0) {
 			// Clear the file name resolver list
 			luxcore::ClearFileNameResolverPaths();
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
 			std::filesystem::path path(configFileName);
 			luxcore::AddFileNameResolverPath(path.parent_path().generic_string());
 		}
-		
+
 		const string configFileNameExt = GetFileNameExt(configFileName);
 		if (configFileNameExt == ".lxs") {
 			// It is a LuxRender SDL file
@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
 			config->Parse(props);
 		}
 
-		BatchRendering(config, startRenderState, startFilm, showDevicesStats);
+		BatchRendering(config, startRenderState, *startFilm, showDevicesStats);
 
 
 		LC_LOG("Done.");

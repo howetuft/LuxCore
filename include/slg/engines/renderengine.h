@@ -21,6 +21,7 @@
 
 #include <deque>
 #include <boost/heap/priority_queue.hpp>
+#include <functional>
 
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
@@ -61,7 +62,7 @@ public:
 	virtual ~RenderEngine();
 
 	bool IsStarted() const { return started; }
-	virtual void Start(FilmPtr film, std::mutex *flmMutex);
+	virtual void Start(FilmRef film, std::mutex *flmMutex);
 	virtual void Stop();
 
 	bool IsInSceneEdit() const { return editMode; }
@@ -69,7 +70,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(FilmPtr film, std::mutex *flmMutex);
+	virtual void EndFilmEdit(FilmRef film, std::mutex *flmMutex);
 
 	bool IsInPause() const { return pauseMode; }
 	virtual void Pause();
@@ -92,7 +93,7 @@ public:
 			"RenderEngine::GetRenderState() not implemented for render engine: " + GetTag()
 		);
 	}
-	virtual void SetRenderState(RenderStatePtr state, FilmPtr startFilm);
+	virtual void SetRenderState(RenderStatePtr state, OptionalPtr<Film> startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -106,33 +107,40 @@ public:
 		return ctx->GetAvailableDeviceDescriptions();
 	}
 
+	FilmRef GetFilm() {
+		return *film;
+	}
+	FilmConstRef GetFilm() const {
+		return *film;
+	}
+
 	//--------------------------------------------------------------------------
 	// Statistics related methods
 	//--------------------------------------------------------------------------
 
 	u_int GetPass() const {
-		return static_cast<u_int>(film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()));
+		return static_cast<u_int>(GetFilm().GetTotalSampleCount() / (GetFilm().GetWidth() * GetFilm().GetHeight()));
 	}
 	u_int GetEyePass() const {
-		return static_cast<u_int>(film->GetTotalEyeSampleCount() / (film->GetWidth() * film->GetHeight()));
+		return static_cast<u_int>(GetFilm().GetTotalEyeSampleCount() / (GetFilm().GetWidth() * GetFilm().GetHeight()));
 	}
 	u_int GetLightPass() const {
-		return static_cast<u_int>(film->GetTotalLightSampleCount() / (film->GetWidth() * film->GetHeight()));
+		return static_cast<u_int>(GetFilm().GetTotalLightSampleCount() / (GetFilm().GetWidth() * GetFilm().GetHeight()));
 	}
 
-	double GetTotalSampleCount() const { return film->GetTotalSampleCount(); }
-	double GetTotalEyeSampleCount() const { return film->GetTotalEyeSampleCount(); }
-	double GetTotalLightSampleCount() const { return film->GetTotalLightSampleCount(); }
+	double GetTotalSampleCount() const { return GetFilm().GetTotalSampleCount(); }
+	double GetTotalEyeSampleCount() const { return GetFilm().GetTotalEyeSampleCount(); }
+	double GetTotalLightSampleCount() const { return GetFilm().GetTotalLightSampleCount(); }
 
-	double GetTotalSamplesSec() const { return film->GetAvgSampleSec(); }
-	double GetTotalEyeSamplesSec() const { return film->GetAvgEyeSampleSec(); }
-	double GetTotalLightSamplesSec() const { return film->GetAvgLightSampleSec(); }
+	double GetTotalSamplesSec() const { return GetFilm().GetAvgSampleSec(); }
+	double GetTotalEyeSamplesSec() const { return GetFilm().GetAvgEyeSampleSec(); }
+	double GetTotalLightSamplesSec() const { return GetFilm().GetAvgLightSampleSec(); }
 
 	double GetTotalRaysSec() const {
-		const double t = film->GetTotalTime();
+		const double t = GetFilm().GetTotalTime();
 		return (t == 0.0) ? 0.0 : (raysCount / t);
 	}
-	double GetRenderingTime() const { return film->GetTotalTime(); }
+	double GetRenderingTime() const { return GetFilm().GetTotalTime(); }
 
 	//--------------------------------------------------------------------------
 
@@ -180,8 +188,8 @@ protected:
 	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
 	RenderConfigRef renderConfig;
-	Filter *pixelFilter;
-	FilmPtr film;
+	FilterUPtr pixelFilter;
+	OptionalPtr<Film> film;
 	std::mutex *filmMutex;
 
 	// bootStrapSeed is the "father" of all other seeds. Using the same seed should leads
@@ -193,7 +201,7 @@ protected:
 	double raysCount;
 
 	RenderStatePtr startRenderState;
-	FilmPtr startFilm;
+	OptionalPtr<Film> startFilm;
 
 	bool started, editMode, pauseMode;
 };

@@ -35,7 +35,7 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Film)
 
-void Film::SaveSerialized(const string &fileName, FilmConstPtr film) {
+void Film::SaveSerialized(const string &fileName, FilmRef  film) {
 	SerializationOutputFile sof(fileName);
 
 	sof.GetArchive() << film;
@@ -47,10 +47,10 @@ void Film::SaveSerialized(const string &fileName, FilmConstPtr film) {
 	SLG_LOG("Film saved: " << (sof.GetPosition() / 1024) << " Kbytes");
 }
 
-FilmPtr Film::LoadSerialized(const string &fileName) {
+FilmUPtr Film::LoadSerialized(const string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	FilmPtr film;
+	FilmUPtr film;
 	sif.GetArchive() >> film;
 
 	if (!sif.IsGood())

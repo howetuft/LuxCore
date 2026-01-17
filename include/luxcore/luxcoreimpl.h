@@ -58,16 +58,17 @@ using CameraImplPtr = std::shared_ptr<CameraImpl>;
 using CameraImplUPtr = std::unique_ptr<CameraImpl>;
 
 class FilmImpl;
-using FilmImplPtr = std::shared_ptr<FilmImpl>;
+using FilmImplUPtr = std::unique_ptr<FilmImpl>;
+using FilmImplRef = FilmImpl&;
+
 
 class FilmImplStandalone;
-using FilmImplStandalonePtr = std::shared_ptr<FilmImplStandalone>;
+using FilmImplStandaloneUPtr = std::unique_ptr<FilmImplStandalone>;
 
 // Disambiguation: there are luxcore::Film and slg:Film...
 using LuxFilm = luxcore::Film;
-using LuxFilmPtr = std::shared_ptr<luxcore::Film>;
 using LuxFilmRef = luxcore::Film &;
-using LuxFilmConstPtr = std::shared_ptr<const luxcore::Film>;
+using LuxFilmConstRef = const luxcore::Film &;
 
 // Disambiguation: there are luxcore::Camera and slg:Camera...
 using LuxCamera = luxcore::Camera;
@@ -83,16 +84,16 @@ class FilmImpl : public luxcore::Film {
 public:
 
 	// Standalone film
-	static std::shared_ptr<FilmImpl> Create(slg::FilmPtr film);
-	static std::shared_ptr<FilmImpl> Create(const std::string &fileName);
-	static std::shared_ptr<FilmImpl> Create(
+	static FilmImplUPtr Create(slg::FilmUPtr&& film);
+	static FilmImplUPtr Create(const std::string &fileName);
+	static FilmImplUPtr Create(
 		luxrays::PropertiesConstPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
 
 	// Session film
-	static std::shared_ptr<FilmImpl> Create(RenderSessionImplRef session);
+	static FilmImplUPtr Create(RenderSessionImplRef session);
 
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
@@ -100,13 +101,13 @@ public:
 	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
-	void AddFilm(LuxFilmConstPtr film);
+	void AddFilm(LuxFilmConstRef film) override;
 	void AddFilm(
-		LuxFilmConstPtr film,
+		LuxFilmConstRef film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY
-	);
+	) override;
 
 	virtual void SaveOutputs() const = 0;
 	void SaveOutput(
@@ -161,22 +162,21 @@ protected:
 	FilmImpl() {}
 
 private:
-	virtual slg::FilmPtr GetSLGFilm() const = 0;
+	virtual slg::FilmRef GetSLGFilm() const = 0;
 };
 
 
 // FilmImplStandalone is created from another Film
 class FilmImplStandalone : public FilmImpl {
 public:
-	FilmImplStandalone(slg::FilmPtr film);
 	FilmImplStandalone(const std::string &fileName);
 	FilmImplStandalone(
 		luxrays::PropertiesConstPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
+	FilmImplStandalone() = default;
 
-	FilmImplStandalone() = delete;
 
 	virtual void SaveOutputs() const override;
 	virtual void SaveFilm(const std::string &fileName) const override;
@@ -205,12 +205,14 @@ public:
 	virtual bool HasDoneAsyncExecuteImagePipeline() override;
 
 	virtual void ApplyOIDN(const u_int index) override;
+	virtual slg::FilmRef GetSLGFilm() const override;
 
-	slg::FilmPtr standAloneFilm;
+	friend class FilmImpl;
+	friend class RenderSessionImpl;
 
 private:
+	slg::FilmUPtr standAloneFilm;
 
-	virtual slg::FilmPtr GetSLGFilm() const override;
 };
 
 
@@ -253,7 +255,7 @@ public:
 
 private:
 
-	virtual slg::FilmPtr GetSLGFilm() const override;
+	virtual slg::FilmRef GetSLGFilm() const override;
 };
 
 
@@ -476,7 +478,7 @@ public:
 		Private,
 		const std::string fileName,
 		std::shared_ptr<RenderStateImpl>& startState,  // Out
-		std::shared_ptr<FilmImpl>& startFilm  // Out
+		std::unique_ptr<FilmImpl>& startFilm  // Out
 	);
 
 	virtual ~RenderConfigImpl() = default;
@@ -580,9 +582,13 @@ public:
 	// Please use factory function
 	RenderSessionImpl(
 		Private priv,
+		RenderConfigImplRef config
+	);
+	RenderSessionImpl(
+		Private priv,
 		RenderConfigImplRef config,  // Back link, not owned
-		std::shared_ptr<RenderStateImpl> startState = nullptr,
-		std::shared_ptr<FilmImplStandalone> startFilm = nullptr
+		std::shared_ptr<RenderStateImpl>& startState,
+		FilmImplStandalone& startFilm
 	);
 	RenderSessionImpl(
 		Private priv,
@@ -610,7 +616,7 @@ public:
 	void WaitForDone() const override;
 	void WaitNewFrame() override;
 
-	LuxFilmPtr GetFilm() override;
+	LuxFilmRef GetFilm() override;
 
 	void UpdateStats() override;
 	const luxrays::Properties &GetStats() const override;
@@ -633,7 +639,7 @@ private:
 	// RenderSessionImpl creates and owns a slg::RenderSession and a FilmImpl
 	// RenderSession must not be shared
 	std::unique_ptr<slg::RenderSession> renderSession;
-	std::shared_ptr<FilmImpl> film;
+	FilmImplUPtr film;
 	luxrays::Properties stats;
 
 	void InitFilm();

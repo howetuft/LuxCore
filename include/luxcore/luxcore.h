@@ -95,8 +95,10 @@ using PropertiesPtr = std::shared_ptr<luxrays::Properties>;
 using PropertiesConstPtr = std::shared_ptr<const luxrays::Properties>;
 
 class Film;
-using FilmPtr = std::shared_ptr<Film>;
-using FilmConstPtr = std::shared_ptr<const Film>;
+using FilmUPtr = std::unique_ptr<Film>;
+using FilmConstUPtr = std::unique_ptr<const Film>;
+using FilmRef = Film &;
+using FilmConstRef = const Film &;
 
 #define LC_MESH_MAX_DATA_COUNT 8
 
@@ -369,7 +371,7 @@ public:
 	 *
 	 * \param fileName is the name of the file with the serialized film to read.
 	 */
-	static FilmPtr Create(const std::string &fileName);
+	static FilmUPtr Create(const std::string &fileName);
 	/*!
 	 * \brief Create a stand alone Film (i.e. not connected to a rendering session)
 	 * from the properties.
@@ -381,7 +383,7 @@ public:
 	 * Required by BIDIRCPU and LIGHTCPU render engines.
 	 *
 	 */
-	static FilmPtr Create(
+	static FilmUPtr Create(
 		PropertiesConstPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
@@ -425,7 +427,7 @@ public:
 	 * \param film the film to add.
 	 *
 	 */
-	virtual void AddFilm(FilmConstPtr) = 0;
+	virtual void AddFilm(FilmConstRef) = 0;
 	/*!
 	 * \brief Add a film.
 	 *
@@ -439,7 +441,7 @@ public:
 	 *
 	 */
 	virtual void AddFilm(
-		FilmConstPtr film,
+		FilmConstRef film,
 		const unsigned int srcOffsetX, const unsigned int srcOffsetY,
 		const unsigned int srcWidth, const unsigned int srcHeight,
 		const unsigned int dstOffsetX, const unsigned int dstOffsetY) = 0;
@@ -1316,7 +1318,7 @@ public:
 	static std::unique_ptr<RenderConfig> Create(
 		const std::string &fileName,
 		std::shared_ptr<RenderState> & startState,
-		std::shared_ptr<Film> & startFilm
+		std::unique_ptr<Film> & startFilm
 	);
 
 	virtual ~RenderConfig() = default;
@@ -1458,17 +1460,24 @@ public:
 	/*!
 	 * \brief Creates a new RenderSession using the provided RenderConfig.
 	 *
-	 * \param config is the RenderConfig used to create the rendering session. The
-	 * RenderConfig is not deleted by the destructor.
-	 * \param startState is the optional RenderState to use to resume rendering. The
-	 * memory for RenderState is freed by RenderSession.
-	 * \param startFilm is the optional Film to use to resume rendering. The
-	 * memory for Film is freed by RenderSession.
+	 * \param config is the RenderConfig used to create the rendering session.
+	 */
+	static RenderSessionPtr Create(const RenderConfigPtr & config);
+
+	/*!
+	 * \brief Creates a new RenderSession using the provided RenderConfig and
+	 * resume information.
+	 *
+	 * \param config is the RenderConfig used to create the rendering session.
+	 * \param startState is the optional RenderState to use to resume
+	 * rendering. This parameter is usually set by RenderConfig
+	 * \param startFilm is the optional Film to use to resume rendering. This
+	 * parameter is usually set by RenderConfig
 	 */
 	static RenderSessionPtr Create(
 			const RenderConfigPtr & config,
-			std::shared_ptr<RenderState> * startState = nullptr,
-			std::shared_ptr<Film> * startFilm = nullptr
+			std::shared_ptr<RenderState>&  startState,
+			Film& startFilm
 	);
 
 	/*!
@@ -1567,7 +1576,7 @@ public:
 	 *
 	 * \return the reference to the Film.
 	 */
-	virtual FilmPtr GetFilm() = 0;
+	virtual FilmRef GetFilm() = 0;
 
 	/*!
 	 * \brief Updates the statistics.

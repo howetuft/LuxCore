@@ -59,7 +59,7 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	// Setup the sampler
-	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->film, NULL,
+	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(), NULL,
 			engine->samplerSharedData, Properties());
 	(static_cast<RTPathCPUSampler *>(sampler.get()))->SetRenderEngine(engine);
 	sampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
@@ -70,7 +70,7 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->GetFilm(), sampleResults);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
@@ -91,15 +91,15 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 			// Wait for the main thread -> This waits for RTPathCPURenderEngine::ResumeThreads()
 			engine->threadsSyncBarrier->arrive_and_wait();
 
-			(static_cast<RTPathCPUSampler *>(sampler.get()))->Reset(engine->film);
+			(static_cast<RTPathCPUSampler *>(sampler.get()))->Reset(engine->GetFilm());
 		}
 
 		pathTracer.RenderEyeSample(device, engine->renderConfig.GetScene(),
-				engine->film, *sampler, sampleResults);
+				engine->GetFilm(), *sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*(engine->film), sampleResult);
+			varianceClamping.Clamp(engine->GetFilm(), sampleResult);
 
 		sampler->NextSample(sampleResults);
 

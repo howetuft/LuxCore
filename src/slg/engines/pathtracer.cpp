@@ -35,7 +35,7 @@ using namespace slg;
 PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		const SamplerUPtr& eSampler,
 		const SamplerUPtr& lSampler,
-		SceneConstRef scn, FilmPtr flm,
+		SceneConstRef scn, FilmRef flm,
 		const VarianceClamping *varClamping,
 		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
@@ -82,7 +82,7 @@ PathTracer::~PathTracer() {
 	delete pixelFilterDistribution;
 }
 
-void PathTracer::InitPixelFilterDistribution(const Filter *pixelFilter) {
+void PathTracer::InitPixelFilterDistribution(const FilterUPtr& pixelFilter) {
 	// Compile sample distribution
 	delete pixelFilterDistribution;
 	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
@@ -93,11 +93,11 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::InitEyeSampleResults(FilmConstPtr film, vector<SampleResult> &sampleResults,
+void PathTracer::InitEyeSampleResults(FilmConstRef film, vector<SampleResult> &sampleResults,
 		const bool useFilmSplat) {
 	SampleResult &sampleResult = sampleResults[0];
 
-	sampleResult.Init(&eyeSampleResultsChannels, film->GetRadianceGroupCount());
+	sampleResult.Init(&eyeSampleResultsChannels, film.GetRadianceGroupCount());
 	sampleResult.useFilmSplat = useFilmSplat;
 }
 
@@ -345,14 +345,14 @@ void PathTracer::DirectHitInfiniteLight(SceneConstRef scene,
 	}	
 }
 
-void PathTracer::GenerateEyeRay(CameraConstRef camera, FilmConstPtr film, Ray &eyeRay,
+void PathTracer::GenerateEyeRay(CameraConstRef camera, FilmConstRef film, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler& sampler, SampleResult &sampleResult) const {
 	const float filmX = sampler.GetSample(0);
 	const float filmY = sampler.GetSample(1);
 
 	// Use fast pixel filtering, like the one used in TILEPATH.
 
-	const u_int *subRegion = film->GetSubRegion();
+	const u_int *subRegion = film.GetSubRegion();
 	sampleResult.pixelX = Min(Floor2UInt(filmX), subRegion[1]);
 	sampleResult.pixelY = Min(Floor2UInt(filmY), subRegion[3]);
 	assert (sampleResult.pixelX >= subRegion[0]);
@@ -672,7 +672,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 void PathTracer::RenderEyeSample(
 	IntersectionDevice *device,
-	SceneConstRef scene, FilmConstPtr film,
+	SceneConstRef scene, FilmConstRef film,
 	Sampler& sampler,
 	vector<SampleResult> &sampleResults
 ) const {
@@ -690,19 +690,19 @@ void PathTracer::RenderEyeSample(
 //------------------------------------------------------------------------------
 
 SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResults,
-		FilmConstPtr film) {
+		FilmConstRef film) {
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
 	SampleResult &sampleResult = sampleResults[size];
-	sampleResult.Init(&lightSampleResultsChannels, film->GetRadianceGroupCount());
+	sampleResult.Init(&lightSampleResultsChannels, film.GetRadianceGroupCount());
 
 	return sampleResult;
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device,
 		SceneConstRef scene,
-		FilmConstPtr film, const float time,
+		FilmConstRef film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
 		const Spectrum &flux, const LightPathInfo &pathInfo,
@@ -780,7 +780,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 				sampleResult.pixelY = Floor2UInt(filmY);
 
 #if !defined(NDEBUG)
-				const u_int *subRegion = film->GetSubRegion();
+				const u_int *subRegion = film.GetSubRegion();
 #endif
 				assert (sampleResult.pixelX >= subRegion[0]);
 				assert (sampleResult.pixelX <= subRegion[1]);
@@ -801,7 +801,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderLightSample(IntersectionDevice *device,
-		SceneConstRef scene, FilmConstPtr film,
+		SceneConstRef scene, FilmConstRef film,
 		Sampler& sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
 	sampleResults.clear();
@@ -968,7 +968,7 @@ void PathTracer::ApplyVarianceClamp(const PathTracerThreadState &state,
 			// I clamp only eye paths samples (variance clamping would cut
 			// SDS path values due to high scale of PSR samples)
 			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
-				state.varianceClamping->Clamp(*state.film, sampleResult);
+				state.varianceClamping->Clamp(state.GetFilm(), sampleResult);
 		}
 	}
 }
@@ -982,7 +982,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 		RenderEyeSample(
 			state.device,
 			state.scene,
-			state.film,
+			state.GetFilm(),
 			*state.eyeSampler,
 			state.eyeSampleResults
 		);
@@ -990,7 +990,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 		RenderLightSample(
 			state.device,
 			state.scene,
-			state.film,
+			state.GetFilm(),
 			*state.lightSampler,
 			state.lightSampleResults
 		);

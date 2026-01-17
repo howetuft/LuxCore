@@ -33,8 +33,8 @@ Properties NoneFilter::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("film.filter.type"));
 }
 
-Filter *NoneFilter::FromProperties(const Properties &cfg) {
-	return new NoneFilter();
+FilterUPtr NoneFilter::FromProperties(const Properties &cfg) {
+	return std::make_unique<NoneFilter>();
 }
 
 slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {

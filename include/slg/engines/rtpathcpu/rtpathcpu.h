@@ -101,7 +101,7 @@ protected:
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void BeginFilmEdit();
-	virtual void EndFilmEdit(FilmPtr film, std::mutex *flmMutex);
+	virtual void EndFilmEdit(FilmRef film, std::mutex *flmMutex);
 
 	virtual void UpdateFilmLockLess();
 

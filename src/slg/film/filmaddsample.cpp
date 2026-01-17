@@ -258,7 +258,7 @@ void Film::AddSample(const u_int x, const u_int y,
 //------------------------------------------------------------------------------
 
 void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight)  {
+		const SampleResult &sampleResult, const float weight) const {
 	filmDenoiser->AddSample(x, y, sampleResult, weight);
 
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -417,7 +417,7 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 }
 
 void Film::AtomicAddSampleResultData(const u_int x, const u_int y,
-		const SampleResult &sampleResult)  {
+		const SampleResult &sampleResult) const {
 	bool depthWrite = true;
 
 	// Faster than HasChannel(DEPTH)
@@ -464,7 +464,7 @@ void Film::AtomicAddSampleResultData(const u_int x, const u_int y,
 }
 
 void Film::AtomicAddSample(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight) {
+		const SampleResult &sampleResult, const float weight) const {
 	AtomicAddSampleResultColor(x, y, sampleResult, weight);
 	if (hasDataChannel)
 		AtomicAddSampleResultData(x, y, sampleResult);

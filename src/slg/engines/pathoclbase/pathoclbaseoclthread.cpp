@@ -358,7 +358,7 @@ void PathOCLBaseOCLRenderThread::IncThreadFilms() {
 	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
 	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
-	threadFilms.back()->Init(renderEngine->film, threadFilmWidth, threadFilmHeight,
+	threadFilms.back()->Init(renderEngine->GetFilm(), threadFilmWidth, threadFilmHeight,
 			threadFilmSubRegion);
 }
 

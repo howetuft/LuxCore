@@ -73,9 +73,12 @@ protected:
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
 	void RenderTile(const Tile *tile, const u_int filmIndex);
+	FilmRef GetTileFilm() { return *tileFilm; }
+	FilmConstRef GetTileFilm() const { return *tileFilm; }
 
 
-	FilmPtr tileFilm;
+private:
+	FilmUPtr tileFilm;
 };
 
 //------------------------------------------------------------------------------

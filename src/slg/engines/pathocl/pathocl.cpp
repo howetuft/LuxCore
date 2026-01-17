@@ -139,7 +139,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	if (nativeRenderThreadCount > 0) {
-		eyeSamplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, film);
+		eyeSamplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, GetFilm());
 
 	}
 
@@ -174,19 +174,21 @@ void PathOCLRenderEngine::StopLockLess() {
 
 void PathOCLRenderEngine::MergeThreadFilms() {
 	// Film may have been not initialized because of an error during Start()
-	if (film->IsInitiliazed()) {
-		film->Clear();
-		film->GetDenoiser().Clear();
+	if (GetFilm().IsInitiliazed()) {
+		GetFilm().Clear();
+		GetFilm().GetDenoiser().Clear();
 
 		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 			if (renderOCLThreads[i])
-				film->AddFilm(*(((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->film));
+				GetFilm().AddFilm((((PathOCLOpenCLRenderThread *)(renderOCLThreads[i]))->threadFilms[0]->GetFilm()));
 		}
 
 		if (renderNativeThreads.size() > 0) {
 			// All threads use the film of the first one
 			if (renderNativeThreads[0])
-				film->AddFilm(*(((PathOCLNativeRenderThread *)(renderNativeThreads[0]))->threadFilm));
+				GetFilm().AddFilm(
+					*static_cast<PathOCLNativeRenderThread *>(renderNativeThreads[0])->threadFilm
+				);
 		}
 	}
 }
@@ -209,7 +211,7 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 	auto& cfg = renderConfig.GetConfig();
 	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
-		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
+		taskCount = GetFilm().GetWidth() * GetFilm().GetHeight() / intersectionDevices.size();
 	} else {
 		const u_int defaultTaskCount = 512ull * 1024ull;
 
@@ -247,8 +249,8 @@ u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 			if (renderOCLThreads[i]) {
 				const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
-				FilmConstPtr film = thread->threadFilms[0]->film;
-				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+				FilmConstRef film = thread->threadFilms[0]->GetFilm();
+				spp += GetFilm().GetTotalEyeSampleCount() / GetFilm().GetPixelCount();
 			}
 		}
 
@@ -256,8 +258,8 @@ u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 			// All threads use the film of the first one
 			if (renderNativeThreads[0]) {
 				const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
-				FilmConstPtr film = thread->threadFilm;
-				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+				FilmConstRef film = *thread->threadFilm;
+				spp += GetFilm().GetTotalEyeSampleCount() / GetFilm().GetPixelCount();
 			}
 		}
 	}

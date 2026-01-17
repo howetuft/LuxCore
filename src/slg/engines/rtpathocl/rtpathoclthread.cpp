@@ -201,7 +201,12 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                 // in RTPATHOCL)
                 //------------------------------------------------------------------
 
-                engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
+                engine->tileRepository->NextTile(
+					engine->GetFilm(),
+					engine->filmMutex,
+					tileWork,
+					threadFilms[0]->GetFilm()
+				);
 
                 // tileWork can be NULL after a scene edit
                 if (tileWork.HasWork()) {
@@ -218,7 +223,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                                 gpuTaskStats);
                         intersectionDevice->FinishQueue();
 
-                        engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
+                        engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, threadFilms[0]->GetFilm());
 
                         // There is only one tile for each device in RTPATHOCL
                         tileWork.Reset();
@@ -245,7 +250,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                         // This is a special optimized path for CAMERA_EDIT action only
                         // (when custom camera bokeh is not used)
                         //--------------------------------------------------------------
-                        
+
                         if (engine->useFastCameraEditPath) {
                                 engine->useFastCameraEditPath = false;
 
@@ -253,7 +258,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                                 // is done by thread #0 for all threads.
                                 UpdateAllCameraThreadsOCLBuffers();
                                 frameCounter = 0;
-                                engine->film->Reset(true);					
+                                engine->GetFilm().Reset(true);
                         }
 
                         //--------------------------------------------------------------
@@ -283,7 +288,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                                                 // is done by thread #0 for all threads.
                                                 UpdateAllThreadsOCLBuffers();
                                                 frameCounter = 0;
-                                                engine->film->Reset(true);
+                                                engine->GetFilm().Reset(true);
 
                                                 syncBarrier->arrive_and_wait();
                                                 break;
@@ -302,7 +307,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                         }
 
                         // Re-initialize the tile queue for the next frame
-                        engine->tileRepository->Restart(engine->film, frameCounter++);
+                        engine->tileRepository->Restart(engine->GetFilm(), frameCounter++);
                 }
 
                 //------------------------------------------------------------------

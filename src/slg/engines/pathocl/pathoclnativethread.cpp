@@ -46,26 +46,25 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
-		NativeIntersectionDevice *device, PathOCLRenderEngine *re) :
-		PathOCLBaseNativeRenderThread(index, device, re) {
-	threadFilm = NULL;
-}
+	NativeIntersectionDevice *device, PathOCLRenderEngine *re) :
+	PathOCLBaseNativeRenderThread(index, device, re)
+{}
 
 PathOCLNativeRenderThread::~PathOCLNativeRenderThread() {
 }
 
 void PathOCLNativeRenderThread::Start() {
 	if (threadIndex == 0) {
-		// Only the first thread allocate a film. It is than used by all
+		// Only the first thread allocate a film. It is then used by all
 		// other threads too.
 		PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-		const u_int filmWidth = engine->film->GetWidth();
-		const u_int filmHeight = engine->film->GetHeight();
-		const u_int *filmSubRegion = engine->film->GetSubRegion();
+		const u_int filmWidth = engine->GetFilm().GetWidth();
+		const u_int filmHeight = engine->GetFilm().GetHeight();
+		const u_int *filmSubRegion = engine->GetFilm().GetSubRegion();
 
 		threadFilm = Film::Create(filmWidth, filmHeight, filmSubRegion);
-		threadFilm->CopyDynamicSettings(*(engine->film));
+		threadFilm->CopyDynamicSettings(engine->GetFilm());
 		// I'm not removing the pipeline and disabling the film denoiser
 		// in order to support BCD denoiser.
 		threadFilm->SetThreadCount(engine->renderNativeThreads.size());
@@ -82,6 +81,14 @@ void PathOCLNativeRenderThread::StartRenderThread() {
 	}
 
 	PathOCLBaseNativeRenderThread::StartRenderThread();
+}
+
+FilmRef PathOCLNativeRenderThread::GetThreadFilm() {
+	PathOCLRenderEngine * engine = static_cast<PathOCLRenderEngine *>(renderEngine);
+	auto * thread0 = static_cast<PathOCLNativeRenderThread *>(
+		engine->renderNativeThreads[0]
+	);
+	return *thread0->threadFilm;
 }
 
 void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
@@ -101,7 +108,8 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
 	// All threads use the film allocated by the first thread
-	FilmPtr film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
+	FilmRef film = GetThreadFilm();
+	//FilmRef film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
 	
 	// Setup the sampler(s)
 
@@ -122,7 +130,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			Property("sampler.metropolis.addonlycaustics")(true);
 
 		lightSampler = Sampler::FromProperties(props, rndGen, film, engine->lightSampleSplatter,
-				*engine->lightSamplerSharedData);
+				engine->lightSamplerSharedData);
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 	}
@@ -158,7 +166,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 #endif
 
 		// Check halt conditions
-		if (engine->film->GetConvergence() == 1.f)
+		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
                 if (stop_token.stop_requested())
                         break;

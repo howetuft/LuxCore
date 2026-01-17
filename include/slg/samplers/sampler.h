@@ -56,7 +56,7 @@ public:
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
 		luxrays::RandomGenerator *rndGen,
-		FilmPtr film
+		OptionalPtr<Film> film
 	);
 };
 
@@ -76,11 +76,20 @@ typedef enum {
 
 class Sampler : public luxrays::NamedObject {
 public:
-	Sampler(luxrays::RandomGenerator *rnd, FilmPtr flm,
-			const FilmSampleSplatter *flmSplatter,
-			const bool imgSamplesEnable) : NamedObject("sampler"), 
-			threadIndex(0), rndGen(rnd), film(flm), filmSplatter(flmSplatter),
-			imageSamplesEnable(imgSamplesEnable) { }
+	Sampler(
+		luxrays::RandomGenerator *rnd,
+		OptionalPtr<Film> flm,
+		const FilmSampleSplatter *flmSplatter,
+		const bool imgSamplesEnable
+	) :
+		NamedObject("sampler"),
+		threadIndex(0),
+		rndGen(rnd),
+		film(flm),
+		filmSplatter(flmSplatter),
+		imageSamplesEnable(imgSamplesEnable)
+	{}
+
 	virtual ~Sampler() { }
 
 	virtual void SetThreadIndex(const u_int index) { threadIndex = index; }
@@ -106,37 +115,48 @@ public:
 	// Allocate a Object based on the cfg definition
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		FilmPtr film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData& sharedData
+		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
+	static void AddRequiredChannels(
+		Film::FilmChannels &channels, const luxrays::Properties &cfg
+	);
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const SamplerType type);
 
+	FilmRef GetFilm() { return *film; }
+	FilmConstRef GetFilm() const { return *film; }
+
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	
-	void AtomicAddSampleToFilm(const SampleResult &sampleResult, const float weight = 1.f) const {
+
+	void AtomicAddSampleToFilm(
+		const SampleResult &sampleResult, const float weight = 1.f
+	) const {
 		if (sampleResult.useFilmSplat && filmSplatter)
-			filmSplatter->AtomicSplatSample(*film, sampleResult, weight);
+			filmSplatter->AtomicSplatSample(GetFilm(), sampleResult, weight);
 		else
-			film->AtomicAddSample(sampleResult.pixelX, sampleResult.pixelY, sampleResult, weight);
+			GetFilm().AtomicAddSample(
+				sampleResult.pixelX, sampleResult.pixelY, sampleResult, weight
+			);
 	}
 
-	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+	void AtomicAddSamplesToFilm(
+		const std::vector<SampleResult> &sampleResults, const float weight = 1.f
+	) const {
 		for (auto const &sr : sampleResults)
 			AtomicAddSampleToFilm(sr, weight);
 	}
 
 	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;
-	FilmPtr film;
+	OptionalPtr<Film> film;
 	const FilmSampleSplatter *filmSplatter;
-	
+
 	SampleType sampleType;
 	u_int requestedSamples;
 	// If samples 0 and 1 should be expressed in pixels

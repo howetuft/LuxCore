@@ -21,6 +21,7 @@
 
 #include "luxrays/utils/thread.h"
 
+#include "slg/samplers/sampler.h"
 #include "slg/samplers/sobol.h"
 #include "slg/scene/scene.h"
 #include "slg/imagemap/imagemapcache.h"
@@ -60,7 +61,7 @@ void ImageMapResizePolicy::RenderFunc(
 	const std::vector<u_int>& imgMapsIndices,
 	u_int& workCounter,
 	SceneConstRef scene,
-	SobolSamplerSharedData& sobolSharedData,
+	std::shared_ptr<SobolSamplerSharedData> sobolSharedData,
 	std::barrier<completion_t>& threadsSyncBarrier,
 	std::stop_token stop_token
 ) {
@@ -87,9 +88,11 @@ void ImageMapResizePolicy::RenderFunc(
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
-			16, 16, 1, 1,
-			sobolSharedData);
+	SobolSampler sampler(
+		&rnd, std::nullopt, NULL, true, 0.f, 0.f,
+		16, 16, 1, 1,
+		sobolSharedData
+	);
 
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -98,8 +101,8 @@ void ImageMapResizePolicy::RenderFunc(
 		sampleBootSize + // To generate eye ray
 		maxPathDepth * sampleStepSize; // For each path vertex
 	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
-	
-	// Initialize SampleResult 
+
+	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
 	const Film::FilmChannels sampleResultsChannels({
@@ -266,7 +269,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneCon
 
 	std::barrier threadsSyncBarrier(renderThreadCount, completion_t());
 
-	SobolSamplerSharedData sobolSharedData(131, nullptr);
+	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, std::nullopt);
 
 	// Start the preprocessing threads
 	u_int workCounter = 0;
@@ -278,7 +281,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneCon
 			std::cref(imgMapsIndices),
 			std::ref(workCounter),
 			std::ref(scene),
-			std::ref(sobolSharedData),
+			sobolSharedData,
 			std::ref(threadsSyncBarrier)
 		);
 		renderThreads[i] = luxrays::JThread(worker);

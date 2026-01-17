@@ -370,9 +370,9 @@ void LuxCoreApp::MenuFilm() {
   }
   ImGui::Separator();
   if (session && ImGui::MenuItem("Save outputs"))
-    session->GetFilm()->SaveOutputs();
+    session->GetFilm().SaveOutputs();
   if (session && ImGui::MenuItem("Save film"))
-    session->GetFilm()->SaveFilm("film.flm");
+    session->GetFilm().SaveFilm("film.flm");
 }
 
 //------------------------------------------------------------------------------
@@ -380,7 +380,7 @@ void LuxCoreApp::MenuFilm() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuImagePipelines() {
-  const unsigned int imagePipelineCount = session->GetFilm()->GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
+  const unsigned int imagePipelineCount = session->GetFilm().GetChannelCount(Film::CHANNEL_IMAGEPIPELINE);
 
   for (unsigned int i = 0; i < imagePipelineCount; ++i) {
     if (ImGui::MenuItem(string("Pipeline #" + ToString(i)).c_str(), NULL, (i == imagePipelineIndex)))
@@ -463,7 +463,7 @@ void LuxCoreApp::MenuTool() {
     props << Property("screen.tool.type")("OBJECT_SELECTION");
 
     // Check if the session a OBJECT_ID AOV enabled
-    if(!session->GetFilm()->HasOutput(Film::OUTPUT_OBJECT_ID)) {
+    if(!session->GetFilm().HasOutput(Film::OUTPUT_OBJECT_ID)) {
       // Enable OBJECT_ID AOV
       props <<
           Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
@@ -486,7 +486,7 @@ void LuxCoreApp::MenuTool() {
     props << Property("screen.tool.type")("USER_IMPORTANCE_PAINT");
 
     // Check if the session a _USER_IMPORTANCE AOV enabled
-    if(!session->GetFilm()->HasOutput(Film::OUTPUT_USER_IMPORTANCE)) {
+    if(!session->GetFilm().HasOutput(Film::OUTPUT_USER_IMPORTANCE)) {
       // Enable OBJECT_ID AOV
       props <<
           Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.type")("USER_IMPORTANCE") <<

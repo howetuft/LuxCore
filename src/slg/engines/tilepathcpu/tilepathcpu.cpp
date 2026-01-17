@@ -41,9 +41,9 @@ TilePathCPURenderEngine::~TilePathCPURenderEngine() {
 }
 
 void TilePathCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->Init();
+	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().Init();
 }
 
 RenderStatePtr TilePathCPURenderEngine::GetRenderState() {
@@ -95,11 +95,11 @@ void TilePathCPURenderEngine::StartLockLess() {
 
 		startRenderState = nullptr;
 	} else {
-		film->Reset();
+		GetFilm().Reset();
 
 		tileRepository = TileRepository::FromProperties(renderConfig.GetConfig());
 		tileRepository->varianceClamping = VarianceClamping(pathTracer.sqrtVarianceClampMaxValue);
-		tileRepository->InitTiles(*film);
+		tileRepository->InitTiles(GetFilm());
 	}
 
 	//--------------------------------------------------------------------------

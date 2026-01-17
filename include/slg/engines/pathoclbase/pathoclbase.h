@@ -99,7 +99,7 @@ protected:
 	slg::ocl::Filter *oclPixelFilter;
 	PhotonGICache *photonGICache;
 
-	std::unique_ptr<SamplerSharedData> lightSamplerSharedData;
+	std::shared_ptr<SamplerSharedData> lightSamplerSharedData;
 };
 
 }

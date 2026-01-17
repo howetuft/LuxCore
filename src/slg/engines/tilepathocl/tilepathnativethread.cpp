@@ -36,9 +36,8 @@ using namespace std::literals::chrono_literals;
 
 TilePathNativeRenderThread::TilePathNativeRenderThread(const u_int index,
 	NativeIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
-	PathOCLBaseNativeRenderThread(index, device, re) {
-	tileFilm = NULL;
-}
+	PathOCLBaseNativeRenderThread(index, device, re), tileFilm(nullptr)
+{}
 
 TilePathNativeRenderThread::~TilePathNativeRenderThread() {
 }
@@ -51,7 +50,7 @@ void TilePathNativeRenderThread::StartRenderThread() {
 			engine->tileRepository->tileHeight,
 			nullptr
 	);
-	tileFilm->CopyDynamicSettings(*(engine->film));
+	tileFilm->CopyDynamicSettings(engine->GetFilm());
 	tileFilm->Init();
 
 	PathOCLBaseNativeRenderThread::StartRenderThread();
@@ -85,7 +84,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	// Setup the sampler
 	auto genericSampler = engine->renderConfig.AllocSampler(rndGen,
-			engine->film, NULL, NULL, Properties());
+			engine->GetFilm(), NULL, NULL, Properties());
 	genericSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	auto& sampler = dynamic_cast<TilePathSampler&>(*genericSampler);
@@ -93,7 +92,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	// Initialize SampleResult
 	std::vector<SampleResult> sampleResults(1);
-	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->GetFilm(), sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -101,7 +100,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	TileWork tileWork;
 	bool interruptionRequested = stop_token.stop_requested();
-	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, tileFilm) && !interruptionRequested) {
+	while (engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, GetTileFilm()) && !interruptionRequested) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
@@ -115,21 +114,21 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		// Render the tile
 		tileFilm->Reset();
 		if (tileFilm->GetDenoiser().IsEnabled())
-			tileFilm->GetDenoiser().SetReferenceFilm(engine->film, tileWork.GetCoord().x, tileWork.GetCoord().y);
+			tileFilm->GetDenoiser().SetReferenceFilm(engine->GetFilm(), tileWork.GetCoord().x, tileWork.GetCoord().y);
 		//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		sampler.Init(&tileWork, tileFilm);
+		sampler.Init(&tileWork, GetTileFilm());
 
 		for (u_int y = 0; y < tileWork.GetCoord().height && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig.GetScene(),
-								engine->film, sampler, sampleResults);
+								engine->GetFilm(), sampler, sampleResults);
 
 						sampler.NextSample(sampleResults);
 					}
@@ -147,7 +146,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                         break;
 
 		if (engine->photonGICache) {
-			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			const u_int spp = engine->GetFilm().GetTotalEyeSampleCount() / engine->GetFilm().GetPixelCount();
 			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, spp);
 		}
 	}

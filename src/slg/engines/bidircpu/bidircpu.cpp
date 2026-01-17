@@ -125,10 +125,10 @@ void BiDirCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	aovWarmupSPP = Max(0u, cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")).Get<u_int>());
-	if (!film->HasChannel(Film::ALBEDO) && !film->HasChannel(Film::AVG_SHADING_NORMAL))
+	if (!GetFilm().HasChannel(Film::ALBEDO) && !GetFilm().HasChannel(Film::AVG_SHADING_NORMAL))
 		aovWarmupSPP = 0;
 	if (aovWarmupSPP > 0)
-		aovWarmupSamplerSharedData = std::make_unique<SobolSamplerSharedData>(seedBaseGenerator.uintValue(), film);
+		aovWarmupSamplerSharedData = std::make_shared<SobolSamplerSharedData>(seedBaseGenerator.uintValue(), GetFilm());
 
 	//--------------------------------------------------------------------------
 
@@ -139,11 +139,11 @@ void BiDirCPURenderEngine::StartLockLess() {
 }
 
 void BiDirCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->SetThreadCount(renderThreads.size());
-	film->Init();
+	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetThreadCount(renderThreads.size());
+	GetFilm().Init();
 }
 
 void BiDirCPURenderEngine::StopLockLess() {

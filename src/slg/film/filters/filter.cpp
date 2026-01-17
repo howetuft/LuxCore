@@ -70,7 +70,7 @@ Properties Filter::ToProperties(const Properties &cfg) {
 		throw runtime_error("Unknown filter type in Filter::ToProperties(): " + type);
 }
 
-Filter *Filter::FromProperties(const Properties &cfg) {
+FilterUPtr Filter::FromProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("film.filter.type")(BlackmanHarrisFilter::GetObjectTag())).Get<string>();
 
 	FilterRegistry::FromProperties func;

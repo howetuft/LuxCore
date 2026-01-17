@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/blackmanharris.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -33,12 +34,12 @@ Properties BlackmanHarrisFilter::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("film.filter.type"));
 }
 
-Filter *BlackmanHarrisFilter::FromProperties(const Properties &cfg) {
+FilterUPtr BlackmanHarrisFilter::FromProperties(const Properties &cfg) {
 	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-	return new BlackmanHarrisFilter(filterXWidth, filterYWidth);
+	return std::make_unique<BlackmanHarrisFilter>(filterXWidth, filterYWidth);
 }
 
 slg::ocl::Filter *BlackmanHarrisFilter::FromPropertiesOCL(const Properties &cfg) {

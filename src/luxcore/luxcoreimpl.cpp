@@ -54,31 +54,36 @@ using namespace luxcore::detail;
 //------------------------------------------------------------------------------
 
 // Standalone film
-std::shared_ptr<FilmImpl> FilmImpl::Create(slg::FilmPtr film) {
-	return std::make_shared<FilmImplStandalone>(film);
+std::unique_ptr<FilmImpl> FilmImpl::Create(const std::string &fileName) {
+	return std::make_unique<FilmImplStandalone>(fileName);
 }
-std::shared_ptr<FilmImpl> FilmImpl::Create(const std::string &fileName) {
-	return std::make_shared<FilmImplStandalone>(fileName);
-}
-std::shared_ptr<FilmImpl> FilmImpl::Create(
+std::unique_ptr<FilmImpl> FilmImpl::Create(
 	luxrays::PropertiesConstPtr props,
 	const bool hasPixelNormalizedChannel,
 	const bool hasScreenNormalizedChannel
 ) {
-	return std::make_shared<FilmImplStandalone>(
+	return std::make_unique<FilmImplStandalone>(
 		props, hasPixelNormalizedChannel, hasScreenNormalizedChannel
 	);
 }
+// The below factory is mainly intended for deserialization, when
+// the archive yields a FilmUPtr
+std::unique_ptr<FilmImpl> FilmImpl::Create(slg::FilmUPtr&& film) {
+	auto res = std::make_unique<FilmImplStandalone>();
+	res->standAloneFilm = std::move(film);
+	return res;
+}
+
 
 // Session film
-std::shared_ptr<FilmImpl> FilmImpl::Create(RenderSessionImplRef session) {
-	return std::make_shared<FilmImplSession>(session);
+std::unique_ptr<FilmImpl> FilmImpl::Create(RenderSessionImplRef session) {
+	return std::make_unique<FilmImplSession>(session);
 }
 
 unsigned int FilmImpl::GetWidth() const {
 	API_BEGIN_NOARGS();
 
-	const unsigned int result = GetSLGFilm()->GetWidth();
+	const unsigned int result = GetSLGFilm().GetWidth();
 
 	API_RETURN("{}", result);
 
@@ -88,7 +93,7 @@ unsigned int FilmImpl::GetWidth() const {
 unsigned int FilmImpl::GetHeight() const {
 	API_BEGIN_NOARGS();
 
-	const unsigned int result = GetSLGFilm()->GetHeight();
+	const unsigned int result = GetSLGFilm().GetHeight();
 
 	API_RETURN("{}", result);
 
@@ -98,14 +103,18 @@ unsigned int FilmImpl::GetHeight() const {
 PropertiesPtr FilmImpl::GetStats() const {
 	API_BEGIN_NOARGS();
 
-	std::shared_ptr<slg::Film> film = GetSLGFilm();
+	//std::unique_ptr<slg::Film> film = std::make_unique<slg::Film>(
+		
+		//GetSLGFilm()
+	//);
+	auto& film = GetSLGFilm();
 
 	PropertiesPtr statsPtr = std::make_shared<Properties>();
 	Properties& stats = *statsPtr;
 
-	stats.Set(Property("stats.film.total.samplecount")(film->GetTotalSampleCount()));
-	stats.Set(Property("stats.film.spp")(film->GetTotalSampleCount() / static_cast<float>(film->GetWidth() * film->GetHeight())));
-	stats.Set(Property("stats.film.radiancegorup.count")(film->GetRadianceGroupCount()));
+	stats.Set(Property("stats.film.total.samplecount")(film.GetTotalSampleCount()));
+	stats.Set(Property("stats.film.spp")(film.GetTotalSampleCount() / static_cast<float>(film.GetWidth() * film.GetHeight())));
+	stats.Set(Property("stats.film.radiancegorup.count")(film.GetRadianceGroupCount()));
 
 	API_RETURN("{}", ToArgString(stats));
 
@@ -115,7 +124,7 @@ PropertiesPtr FilmImpl::GetStats() const {
 float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
 	API_BEGIN_NOARGS();
 
-	const float result = GetSLGFilm()->GetFilmY(imagePipelineIndex);
+	const float result = GetSLGFilm().GetFilmY(imagePipelineIndex);
 
 	API_RETURN("{}", result);
 
@@ -125,58 +134,56 @@ float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
 void FilmImpl::Clear() {
 	API_BEGIN_NOARGS();
 
-	GetSLGFilm()->Clear();
+	GetSLGFilm().Clear();
 
 	API_END();
 }
 
-void FilmImpl::AddFilm(std::shared_ptr<const Film> film) {
-	auto filmImpl = dynamic_pointer_cast<const FilmImpl>(film);
-	assert (filmImpl);
+void FilmImpl::AddFilm(FilmConstRef film) {
+	auto& filmImpl = dynamic_cast<const FilmImpl&>(film);
 
-	API_BEGIN("{}", (void *)filmImpl.get());
+	API_BEGIN("{}", (void *)std::addressof(filmImpl));
 
-	AddFilm(film, 0, 0, filmImpl->GetWidth(), filmImpl->GetHeight(), 0, 0);
+	AddFilm(film, 0, 0, filmImpl.GetWidth(), filmImpl.GetHeight(), 0, 0);
 
 	API_END();
 }
 
-void FilmImpl::AddFilm(std::shared_ptr<const Film> film,
+void FilmImpl::AddFilm(FilmConstRef film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	auto srcFilmImpl = dynamic_pointer_cast<const FilmImpl>(film);
-	assert (srcFilmImpl);
+	auto& srcFilmImpl = dynamic_cast<const FilmImpl&>(film);
 
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}", (void *)srcFilmImpl.get(), srcOffsetX, srcOffsetY, srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}", (void *)std::addressof(srcFilmImpl), srcOffsetX, srcOffsetY, srcWidth, srcHeight, dstOffsetX, dstOffsetY);
 
-	const FilmImpl *dstFilmImpl = this;
+	const FilmImpl& dstFilmImpl = *this;
 
 	// I have to clip the parameters to avoid an out of bound memory access
 
 	// Check the cases where I have nothing to do
-	if (srcOffsetX >= srcFilmImpl->GetWidth())
+	if (srcOffsetX >= srcFilmImpl.GetWidth())
 		return;
-	if (srcOffsetY >= srcFilmImpl->GetHeight())
+	if (srcOffsetY >= srcFilmImpl.GetHeight())
 		return;
-	if (dstOffsetX >= dstFilmImpl->GetWidth())
+	if (dstOffsetX >= dstFilmImpl.GetWidth())
 		return;
-	if (dstOffsetY >= dstFilmImpl->GetHeight())
+	if (dstOffsetY >= dstFilmImpl.GetHeight())
 		return;
 
 	u_int clippedSrcWidth;
 	// Clip with the src film
-	clippedSrcWidth = Min(srcOffsetX + srcWidth, srcFilmImpl->GetWidth()) - srcOffsetX;
+	clippedSrcWidth = Min(srcOffsetX + srcWidth, srcFilmImpl.GetWidth()) - srcOffsetX;
 	// Clip with the dst film
-	clippedSrcWidth = Min(dstOffsetX + clippedSrcWidth, dstFilmImpl->GetWidth()) - dstOffsetX;
+	clippedSrcWidth = Min(dstOffsetX + clippedSrcWidth, dstFilmImpl.GetWidth()) - dstOffsetX;
 
 	u_int clippedSrcHeight;
 	// Clip with the src film
-	clippedSrcHeight = Min(srcOffsetY + srcHeight, srcFilmImpl->GetHeight()) - srcOffsetY;
+	clippedSrcHeight = Min(srcOffsetY + srcHeight, srcFilmImpl.GetHeight()) - srcOffsetY;
 	// Clip with the dst film
-	clippedSrcHeight = Min(dstOffsetY + clippedSrcHeight, dstFilmImpl->GetHeight()) - dstOffsetY;
+	clippedSrcHeight = Min(dstOffsetY + clippedSrcHeight, dstFilmImpl.GetHeight()) - dstOffsetY;
 
-	GetSLGFilm()->AddFilm(*(srcFilmImpl->GetSLGFilm()),srcOffsetX, srcOffsetY,
+	GetSLGFilm().AddFilm(srcFilmImpl.GetSLGFilm(), srcOffsetX, srcOffsetY,
 			clippedSrcWidth, clippedSrcHeight, dstOffsetX, dstOffsetY);
 
 	API_END();
@@ -189,7 +196,7 @@ void FilmImpl::SaveOutput(
 ) const {
 	API_BEGIN("{}, {}, {}", ToArgString(fileName),ToArgString(type), ToArgString(*props));
 
-	GetSLGFilm()->Output(
+	GetSLGFilm().Output(
 		fileName,
 		static_cast<slg::FilmOutputs::FilmOutputType>(type),
 		props
@@ -201,7 +208,7 @@ void FilmImpl::SaveOutput(
 double FilmImpl::GetTotalSampleCount() const {
 	API_BEGIN_NOARGS();
 
-	const double result = GetSLGFilm()->GetTotalSampleCount();
+	const double result = GetSLGFilm().GetTotalSampleCount();
 
 	API_RETURN("{}", result);
 
@@ -211,7 +218,7 @@ double FilmImpl::GetTotalSampleCount() const {
 bool FilmImpl::HasOutput(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const bool result = GetSLGFilm()->HasOutput(static_cast<slg::FilmOutputs::FilmOutputType>(type));
+	const bool result = GetSLGFilm().HasOutput(static_cast<slg::FilmOutputs::FilmOutputType>(type));
 
 	API_RETURN("{}", result);
 
@@ -221,7 +228,7 @@ bool FilmImpl::HasOutput(const FilmOutputType type) const {
 unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const unsigned int result = GetSLGFilm()->GetOutputCount(static_cast<slg::FilmOutputs::FilmOutputType>(type));
+	const unsigned int result = GetSLGFilm().GetOutputCount(static_cast<slg::FilmOutputs::FilmOutputType>(type));
 
 	API_RETURN("{}", result);
 
@@ -231,7 +238,7 @@ unsigned int FilmImpl::GetOutputCount(const FilmOutputType type) const {
 size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const size_t result = GetSLGFilm()->GetOutputSize(
+	const size_t result = GetSLGFilm().GetOutputSize(
 		static_cast<slg::FilmOutputs::FilmOutputType>(type)
 	);
 
@@ -243,7 +250,7 @@ size_t FilmImpl::GetOutputSize(const FilmOutputType type) const {
 unsigned int FilmImpl::GetRadianceGroupCount() const {
 	API_BEGIN_NOARGS();
 
-	const unsigned int result = GetSLGFilm()->GetRadianceGroupCount();
+	const unsigned int result = GetSLGFilm().GetRadianceGroupCount();
 
 	API_RETURN("{}", result);
 
@@ -262,7 +269,7 @@ void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *b
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const bool result = GetSLGFilm()->HasChannel(static_cast<slg::Film::FilmChannelType>(type));
+	const bool result = GetSLGFilm().HasChannel(static_cast<slg::Film::FilmChannelType>(type));
 
 	API_RETURN("{}", result);
 
@@ -272,7 +279,7 @@ bool FilmImpl::HasChannel(const FilmChannelType type) const {
 unsigned int FilmImpl::GetChannelCount(const FilmChannelType type) const {
 	API_BEGIN("{}", ToArgString(type));
 
-	const unsigned int result = GetSLGFilm()->GetChannelCount(static_cast<slg::Film::FilmChannelType>(type));
+	const unsigned int result = GetSLGFilm().GetChannelCount(static_cast<slg::Film::FilmChannelType>(type));
 
 	API_RETURN("{}", result);
 
@@ -335,7 +342,7 @@ void FilmImplSession::UpdateOutputFloat(const FilmOutputType type, const float *
 
 	std::unique_lock<std::mutex> lock(renderSession.GetSLGRenderSession().filmMutex);
 
-	auto film = renderSession.GetSLGRenderSession().film;
+	const auto& film = renderSession.GetSLGRenderSession().film;
 	const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
 
 		// Only USER_IMPORTANCE can be updated
@@ -483,8 +490,8 @@ void FilmImplSession::SaveFilm(const string &fileName) const {
 	API_END();
 }
 
-slg::FilmPtr FilmImplSession::GetSLGFilm() const {
-	return renderSession.GetSLGRenderSession().film;
+slg::FilmRef FilmImplSession::GetSLGFilm() const {
+	return *renderSession.GetSLGRenderSession().film;
 }
 
 //------------------------------------------------------------------------------
@@ -511,12 +518,9 @@ FilmImplStandalone::FilmImplStandalone(
 	standAloneFilm->Init();
 }
 
-FilmImplStandalone::FilmImplStandalone(std::shared_ptr<slg::Film> film) :
-	standAloneFilm(film)
-{}
+slg::FilmRef FilmImplStandalone::GetSLGFilm() const {
 
-slg::FilmPtr FilmImplStandalone::GetSLGFilm() const {
-	return standAloneFilm;
+	return *standAloneFilm;
 }
 
 void FilmImplStandalone::SaveOutputs() const {
@@ -530,7 +534,7 @@ void FilmImplStandalone::SaveOutputs() const {
 void FilmImplStandalone::SaveFilm(const string &fileName) const {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	slg::Film::SaveSerialized(fileName, standAloneFilm);
+	slg::Film::SaveSerialized(fileName, *standAloneFilm);
 
 	API_END();
 }
@@ -1526,8 +1530,8 @@ T RenderConfigImpl::ReadFromSIF() const {
 RenderConfigImpl::RenderConfigImpl(
 		Private p,
 		const std::string fileName,
-		std::shared_ptr<RenderStateImpl>& startState,
-		std::shared_ptr<FilmImpl>& startFilm
+		std::shared_ptr<RenderStateImpl>& startState,  // Out parameter
+		std::unique_ptr<FilmImpl>& startFilm  // Out parameter
 ) :
 	sif(fileName),
 	renderConfig(ReadFromSIF<slg::RenderConfigUPtr>()),
@@ -1539,10 +1543,10 @@ RenderConfigImpl::RenderConfigImpl(
 	sif->GetArchive() >> st;
 	startState = std::make_shared<RenderStateImpl>(st);
 
-	// Save the film
-	std::shared_ptr<slg::Film> sf;
+	// Load the film
+	std::unique_ptr<slg::Film> sf;
 	sif->GetArchive() >> sf;
-	startFilm = std::make_shared<FilmImplStandalone>(sf);
+	startFilm = FilmImpl::Create(std::move(sf));
 
 	if (!sif->IsGood())
 		throw runtime_error(
@@ -1707,33 +1711,34 @@ void RenderStateImpl::Save(const std::string &fileName) const {
 // RenderSessionImpl
 //------------------------------------------------------------------------------
 
+RenderSessionImpl::RenderSessionImpl(
+	Private priv,
+	RenderConfigImplRef config
+) :
+	renderConfig(config)
+{
+	renderSession = std::make_unique<slg::RenderSession>(
+		*config.renderConfig,
+		slg::RenderStatePtr(nullptr),
+		std::nullopt
+	);
+}
 
 RenderSessionImpl::RenderSessionImpl(
 	Private priv,
 	RenderConfigImplRef config,
-	std::shared_ptr<RenderStateImpl> startState,
-	std::shared_ptr<FilmImplStandalone> startFilm
+	std::shared_ptr<RenderStateImpl>& startState,
+	FilmImplStandalone& startFilm
 ) :
 	renderConfig(config)
 {
 	// Create slg session
 	renderSession = std::make_unique<slg::RenderSession>(
 		*config.renderConfig,
-		startState ? startState->renderState : slg::RenderStatePtr(nullptr),
-		startFilm ? startFilm->standAloneFilm : slg::FilmPtr(nullptr)
+		startState->renderState,
+		OptionalPtr<slg::Film>(startFilm.GetSLGFilm())
 	);
 
-	if (startState) {
-		startState->renderState = nullptr;
-		// startState is not more a valid/usable object after this point, it can
-		// only be deleted
-	}
-
-	if (startFilm) {
-		startFilm->standAloneFilm = nullptr;
-		// startFilm is not more a valid/usable object after this point, it can
-		// only be deleted
-	}
 }
 
 RenderSessionImpl::RenderSessionImpl(
@@ -1753,16 +1758,16 @@ RenderSessionImpl::RenderSessionImpl(
 	renderSession = std::make_unique<slg::RenderSession>(
 		rcfg,
 		startState,
-		startFilm
+		OptionalPtr<slg::Film>(*startFilm)
 	);
 }
 
 void RenderSessionImpl::InitFilm() {
 	// Only for standalone case: we need to create the session film
-	film = std::make_shared<FilmImplSession>(*this);
+	film = std::make_unique<FilmImplSession>(*this);
 }
 
-RenderConfigImplRef  RenderSessionImpl::GetRenderConfig() {
+RenderConfigImplRef RenderSessionImpl::GetRenderConfig() {
 	API_BEGIN_NOARGS();
 
 	API_RETURN("{}", (void *)&renderConfig);
@@ -1892,12 +1897,12 @@ void RenderSessionImpl::WaitNewFrame() {
 	API_END();
 }
 
-LuxFilmPtr RenderSessionImpl::GetFilm() {
+LuxFilmRef RenderSessionImpl::GetFilm() {
 	API_BEGIN_NOARGS();
 
 	API_RETURN("{}", (void *)film.get());
 
-	return film;
+	return *film;
 }
 
 static void SetTileProperties(

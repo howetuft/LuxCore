@@ -49,13 +49,14 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RenderEngine::RenderEngine(RenderConfigRef cfg) :
-	bootStrapSeed(131), seedBaseGenerator(131), renderConfig(cfg) {
-	pixelFilter = NULL;
-	film = NULL;
-	filmMutex = NULL;
-	started = false;
-	editMode = false;
-	pauseMode = false;
+	renderConfig(cfg),
+	bootStrapSeed(131),
+	seedBaseGenerator(131),
+	pixelFilter(nullptr),
+	started(false),
+	editMode(false),
+	pauseMode(false)
+{
 
 	if (renderConfig.GetConfig().IsDefined("renderengine.seed")) {
 		const u_int seed = Max(1u, renderConfig.GetConfig().Get("renderengine.seed").Get<u_int>());
@@ -72,9 +73,6 @@ RenderEngine::RenderEngine(RenderConfigRef cfg) :
 			cfgProps.GetAllProperties("accelerator.") <<
 			cfgProps.GetAllProperties("context.")
 	);
-
-	startRenderState = nullptr;
-	startFilm = nullptr;
 }
 
 RenderEngine::~RenderEngine() {
@@ -82,16 +80,14 @@ RenderEngine::~RenderEngine() {
 		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
-
-	delete pixelFilter;
 }
 
-void RenderEngine::SetRenderState(RenderStatePtr state, FilmPtr oldFilm) {
+void RenderEngine::SetRenderState(RenderStatePtr state, OptionalPtr<Film> oldFilm) {
 	startRenderState = state;
 	startFilm = oldFilm;
 }
 
-void RenderEngine::Start(FilmPtr flm, std::mutex *flmMutex) {
+void RenderEngine::Start(FilmRef flm, std::mutex *flmMutex) {
 	std::lock_guard<std::recursive_mutex> lock(engineMutex);
 
 	assert (!started);
@@ -101,7 +97,6 @@ void RenderEngine::Start(FilmPtr flm, std::mutex *flmMutex) {
 	film = flm;
 	filmMutex = flmMutex;
 
-	delete pixelFilter;
 	pixelFilter = renderConfig.AllocPixelFilter();
 
 	const float epsilonMin = renderConfig.GetProperty("scene.epsilon.min").Get<double>();
@@ -151,8 +146,7 @@ void RenderEngine::Stop() {
 		UpdateFilmLockLess();
 	}
 
-	delete pixelFilter;
-	pixelFilter = NULL;
+	pixelFilter.reset();
 }
 
 void RenderEngine::BeginSceneEdit() {
@@ -198,8 +192,8 @@ void RenderEngine::BeginFilmEdit() {
 	Stop();
 }
 
-void RenderEngine::EndFilmEdit(FilmPtr flm, std::mutex *flmMutex) {
-	film = NULL;
+void RenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
+	film = std::nullopt;
 	filmMutex = NULL;
 
 	Start(flm, flmMutex);

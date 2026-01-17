@@ -70,8 +70,8 @@ public:
 	public:
 		ThreadFilm(PathOCLBaseOCLRenderThread *renderThread);
 		virtual ~ThreadFilm();
-		
-		void Init(FilmPtr engineFilm,
+
+		void Init(FilmRef engineFilm,
 			const u_int threadFilmWidth, const u_int threadFilmHeight,
 			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
@@ -82,7 +82,8 @@ public:
 		void RecvFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
 		void SendFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
 
-		FilmPtr film;
+		FilmRef GetFilm() { return *film; }
+		FilmConstRef GetFilm() const { return *film; }
 
 		// Film buffers
 		std::vector<luxrays::HardwareDeviceBuffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
@@ -134,7 +135,8 @@ public:
 		luxrays::HardwareDeviceBuffer *denoiser_HistoImage_Buff;
 
 	private:
-		FilmPtr engineFilm;
+		FilmUPtr film;
+		OptionalPtr<Film> engineFilm;
 		PathOCLBaseOCLRenderThread *renderThread;
 	};
 

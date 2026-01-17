@@ -66,8 +66,8 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork,
 
 	// To have an asynchronous EnqueueWriteBuffer(), I need to keep a copy of
 	// sharedData around.
-	sharedData.cameraFilmWidth = engine->film->GetWidth();
-	sharedData.cameraFilmHeight =  engine->film->GetHeight();
+	sharedData.cameraFilmWidth = engine->GetFilm().GetWidth();
+	sharedData.cameraFilmHeight =  engine->GetFilm().GetHeight();
 	sharedData.tileStartX =  tileWork.GetCoord().x;
 	sharedData.tileStartY =  tileWork.GetCoord().y;
 	sharedData.tileWidth =  tileWork.GetCoord().width;
@@ -85,15 +85,15 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		const u_int filmIndex) {
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
-	threadFilms[filmIndex]->film->Reset();
-	if (threadFilms[filmIndex]->film->GetDenoiser().IsEnabled())
-		threadFilms[filmIndex]->film->GetDenoiser().CopyReferenceFilm(engine->film);
+	threadFilms[filmIndex]->GetFilm().Reset();
+	if (threadFilms[filmIndex]->GetFilm().GetDenoiser().IsEnabled())
+		threadFilms[filmIndex]->GetFilm().GetDenoiser().CopyReferenceFilm(engine->GetFilm());
 
 	// Clear the frame buffer
 	threadFilms[filmIndex]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
 	// Clear the frame buffer
-	const u_int filmPixelCount = threadFilms[filmIndex]->film->GetWidth() * threadFilms[filmIndex]->film->GetHeight();
+	const u_int filmPixelCount = threadFilms[filmIndex]->GetFilm().GetWidth() * threadFilms[filmIndex]->GetFilm().GetHeight();
 	intersectionDevice->EnqueueKernel(filmClearKernel,
 		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 		HardwareDeviceRange(filmClearWorkGroupSize));
@@ -126,7 +126,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 
 	// Async. transfer of the Film buffers
 	threadFilms[filmIndex]->RecvFilm(intersectionDevice);
-	threadFilms[filmIndex]->film->AddSampleCount(0,
+	threadFilms[filmIndex]->GetFilm().AddSampleCount(0,
 			tileWork.GetCoord().width * tileWork.GetCoord().height *
 			engine->aaSamples * engine->aaSamples, 0.0);
 }
@@ -177,7 +177,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
                 bool allTileDone = true;
                 for (u_int i = 0; i < tileWorks.size(); ++i) {
-                        if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWorks[i], threadFilms[i]->film)) {
+                        if (engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWorks[i], threadFilms[i]->GetFilm())) {
                                 //SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
                                 // Render the tile
@@ -218,7 +218,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                 if (stop_token.stop_requested())
                         break;
                 if (engine->photonGICache) {
-                        const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+                        const u_int spp = engine->GetFilm().GetTotalEyeSampleCount() / engine->GetFilm().GetPixelCount();
 
                         if (engine->photonGICache->Update(threadIndex, spp, pgicUpdateCallBack)) {
                                 InitPhotonGI();

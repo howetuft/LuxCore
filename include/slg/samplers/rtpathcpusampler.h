@@ -43,18 +43,18 @@ public:
 		u_int x, y;
 	};
 
-	RTPathCPUSamplerSharedData(FilmPtr flm);
+	RTPathCPUSamplerSharedData(OptionalPtr<Film> flm);
 	virtual ~RTPathCPUSamplerSharedData() { }
 
 	virtual void Reset();
 
-	void Reset(FilmPtr flm);
+	void Reset(OptionalPtr<Film> flm);
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen, FilmPtr film);
+		luxrays::RandomGenerator *rndGen, OptionalPtr<Film> film);
 
-	FilmPtr engineFilm;
+	OptionalPtr<Film> engineFilm;
 	std::atomic<u_int> step;
 	u_int filmSubRegion[4], filmSubRegionWidth, filmSubRegionHeight;
 	std::vector<PixelCoord> pixelRenderSequence;
@@ -70,9 +70,9 @@ class RTPathCPUSampler : public Sampler {
 public:
 	RTPathCPUSampler(
 		luxrays::RandomGenerator *rnd,
-		FilmPtr flm,
+		OptionalPtr<Film> flm,
 		const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData& samplerSharedData
+		SamplerSharedDataSPtr samplerSharedData
 	);
 	virtual ~RTPathCPUSampler();
 
@@ -83,7 +83,7 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	void SetRenderEngine(RTPathCPURenderEngine *engine);
-	void Reset(FilmPtr flm);
+	void Reset(OptionalPtr<Film> flm);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -94,8 +94,8 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		FilmPtr film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData& sharedData);
+		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
@@ -104,7 +104,7 @@ private:
 
 	void NextPixel();
 
-	RTPathCPUSamplerSharedData& sharedData;
+	std::shared_ptr<RTPathCPUSamplerSharedData> sharedData;
 	RTPathCPURenderEngine *engine;
 
 	u_int myStep, frameHeight;

@@ -60,7 +60,7 @@ public:
 	static FilterType GetObjectType() { return FILTER_MITCHELL_SS; }
 	static std::string GetObjectTag() { return "MITCHELL_SS"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	float B, C, a0, a1;

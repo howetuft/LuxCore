@@ -291,7 +291,6 @@ using PropertiesConstRef = const Properties &;
 using JThread = std::jthread;
 using JThreadPtr = std::unique_ptr<std::jthread>;
 
-
 }
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

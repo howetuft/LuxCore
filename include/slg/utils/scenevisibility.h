@@ -19,6 +19,7 @@
 #ifndef _SLG_SCENEVISIBILITY_H
 #define	_SLG_SCENEVISIBILITY_H
 
+#include <memory>
 #include <vector>
 
 #include "slg/slg.h"
@@ -31,11 +32,17 @@ namespace slg {
 template <class T>
 class SceneVisibility {
 public:
-	SceneVisibility(SceneConstRef scene, std::vector<T> &visibilityParticles,
-			const u_int maxPathDepth, const u_int maxSampleCount,
+	SceneVisibility(
+			SceneConstRef scene,
+			std::vector<T> &visibilityParticles,
+			const u_int maxPathDepth,
+			const u_int maxSampleCount,
 			const float targetHitRate,
-			const float lookUpRadius, const float lookUpNormalAngle,
-			const float timeStart, const float timeEnd);
+			const float lookUpRadius,
+			const float lookUpNormalAngle,
+			const float timeStart,
+			const float timeEnd
+	);
 	virtual ~SceneVisibility();
 
 	void Build();
@@ -44,7 +51,7 @@ protected:
 	class TraceVisibilityThread {
 	public:
 		TraceVisibilityThread(SceneVisibility<T> &sv, const u_int index,
-				SobolSamplerSharedData &visibilitySobolSharedData,
+				std::shared_ptr<SobolSamplerSharedData> visibilitySobolSharedData,
 				IndexOctree<T> *particlesOctree, std::mutex &particlesOctreeMutex,
 				std::atomic<u_int> &globalVisibilityParticlesCount,
 				u_int &visibilityCacheLookUp, u_int &visibilityCacheHits,
@@ -63,7 +70,7 @@ protected:
 		SceneVisibility<T> &sv;
 		const u_int threadIndex;
 
-		SobolSamplerSharedData &visibilitySobolSharedData;
+		std::shared_ptr<SobolSamplerSharedData> visibilitySobolSharedData;
 		IndexOctree<T> *particlesOctree;
 		std::mutex &particlesOctreeMutex;
 		std::atomic<u_int> &globalVisibilityParticlesCount;

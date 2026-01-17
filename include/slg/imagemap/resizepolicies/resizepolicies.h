@@ -79,7 +79,7 @@ private:
 		const std::vector<u_int>& imgMapsIndices,
 		u_int& workCounter,
 		SceneConstRef scene,
-		SobolSamplerSharedData& sobolSharedData,
+		std::shared_ptr<SobolSamplerSharedData> sobolSharedData,
 		std::barrier<completion_t>& threadsSyncBarrier,
 		std::stop_token stop_token
 	);

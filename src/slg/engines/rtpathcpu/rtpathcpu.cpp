@@ -100,7 +100,7 @@ void RTPathCPURenderEngine::BeginSceneEditLockLess() {
 }
 
 void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
-	film->Reset();
+	GetFilm().Reset();
 	samplerSharedData->Reset();
 
 	// Check if the threads were already suspended for pause
@@ -120,13 +120,13 @@ void RTPathCPURenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathCPURenderEngine::EndFilmEdit(FilmPtr flm, std::mutex *flmMutex) {
+void RTPathCPURenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
 	filmMutex = flmMutex;
 	InitFilm();
 
-	((RTPathCPUSamplerSharedData *)samplerSharedData.get())->Reset(film);
+	((RTPathCPUSamplerSharedData *)samplerSharedData.get())->Reset(GetFilm());
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)

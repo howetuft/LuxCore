@@ -34,7 +34,7 @@ namespace slg {
 class FilmConvTest {
 public:
 	FilmConvTest(
-		FilmConstPtr film,
+		OptionalPtr<const Film> film,
 		const float threshold,
 		const u_int warmup,
 		const u_int testStep,
@@ -51,11 +51,13 @@ public:
 	u_int todoPixelsCount;
 	float maxError;
 
+	FilmConstRef GetFilm() const { return *film; }
+
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	FilmConvTest();
+	FilmConvTest() = default;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 
@@ -65,7 +67,8 @@ private:
 	bool useFilter;
 	u_int imagePipelineIndex;
 
-	FilmConstPtr film;
+	OptionalPtr<const Film> film;  // This could be a const ref, but due to
+								   // boost serialization, it isn't...
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
 	double lastSamplesCount;

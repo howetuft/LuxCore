@@ -214,7 +214,7 @@ CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
 }
 
 void CPUNoTileRenderEngine::StartLockLess() {
-	samplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, film);
+	samplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, GetFilm());
 	
 	CPURenderEngine::StartLockLess();
 }
@@ -274,7 +274,7 @@ void CPUTileRenderThread::StartRenderThread() {
 			cpuTileEngine->tileRepository->tileHeight,
 			nullptr
 	);
-	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
+	tileFilm->CopyDynamicSettings(cpuTileEngine->GetFilm());
 	tileFilm->Init();
 
 	CPURenderThread::StartRenderThread();
@@ -301,7 +301,7 @@ void CPUTileRenderEngine::StopLockLess() {
 
 void CPUTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	tileRepository->Clear();
-	tileRepository->InitTiles(*film);
+	tileRepository->InitTiles(GetFilm());
 
 	CPURenderEngine::EndSceneEditLockLess(editActions);
 }

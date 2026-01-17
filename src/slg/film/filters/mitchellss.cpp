@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/mitchellss.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -41,7 +42,7 @@ Properties MitchellSSFilter::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.c"));
 }
 
-Filter *MitchellSSFilter::FromProperties(const Properties &cfg) {
+FilterUPtr MitchellSSFilter::FromProperties(const Properties &cfg) {
 	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
@@ -49,7 +50,7 @@ Filter *MitchellSSFilter::FromProperties(const Properties &cfg) {
 	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.b")).Get<double>();
 	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.c")).Get<double>();
 
-	return new MitchellSSFilter(filterXWidth, filterYWidth, b, c);
+	return std::make_unique<MitchellSSFilter>(filterXWidth, filterYWidth, b, c);
 }
 
 slg::ocl::Filter *MitchellSSFilter::FromPropertiesOCL(const Properties &cfg) {

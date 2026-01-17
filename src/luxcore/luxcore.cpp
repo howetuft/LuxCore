@@ -18,6 +18,7 @@
 
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
+#include <memory>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
@@ -280,23 +281,23 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 // Film
 //------------------------------------------------------------------------------
 
-std::shared_ptr<Film> Film::Create(const std::string &fileName) {
+std::unique_ptr<Film> Film::Create(const std::string &fileName) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	auto result = std::make_shared<luxcore::detail::FilmImplStandalone>(fileName);
+	auto result = std::make_unique<luxcore::detail::FilmImplStandalone>(fileName);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::shared_ptr<Film> Film::Create(
+std::unique_ptr<Film> Film::Create(
 		luxrays::PropertiesConstPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel) {
 	API_BEGIN("{}, {}, {}", ToArgString(props), hasPixelNormalizedChannel, hasScreenNormalizedChannel);
 
-	auto result = std::make_shared<luxcore::detail::FilmImplStandalone>(
+	auto result = std::make_unique<luxcore::detail::FilmImplStandalone>(
 		props, hasPixelNormalizedChannel, hasScreenNormalizedChannel
 	);
 
@@ -527,20 +528,20 @@ std::unique_ptr<RenderConfig> RenderConfig::Create(const std::string &fileName) 
 std::unique_ptr<RenderConfig> RenderConfig::Create(
 	const std::string &fileName,
 	std::shared_ptr<RenderState>& startState,  // In/out
-	std::shared_ptr<Film>& startFilm  // In/out
+	luxcore::FilmUPtr& startFilm  // In/out
 ) {
 	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState.get(), (void *)startFilm.get());
 
 	std::shared_ptr<luxcore::detail::RenderStateImpl> ss;
-	std::shared_ptr<luxcore::detail::FilmImpl> sf;
+	std::unique_ptr<luxcore::detail::FilmImpl> sf;
 	auto rcfg = luxcore::detail::RenderConfigImpl::Create<
 		const std::string &,
 		std::shared_ptr<RenderStateImpl>& ,  // Out
-		std::shared_ptr<FilmImpl>& // Out
+		FilmImplUPtr& // Out
 	>(fileName, ss, sf);
 
 	startState = static_pointer_cast<luxcore::RenderState>(ss);
-	startFilm = static_pointer_cast<luxcore::Film>(sf);
+	startFilm = std::move(sf);
 
 	API_RETURN("{}", (void *)rcfg.get());
 
@@ -580,26 +581,46 @@ RenderState::~RenderState() {
 // RenderSession
 //------------------------------------------------------------------------------
 
+RenderSessionPtr RenderSession::Create(const RenderConfigPtr & config) {
+	API_BEGIN("{}", (void *) &config);
+
+	auto& configImpl = static_cast<RenderConfigImpl &>(*config);
+
+	auto result = RenderSessionImpl::Create(std::ref(configImpl));
+
+	API_RETURN("{}", ToArgString(result));
+
+	return std::move(result);
+}
 RenderSessionPtr RenderSession::Create(
 	const RenderConfigPtr & config,
-	std::shared_ptr<RenderState> * startState,
-	std::shared_ptr<Film> * startFilm
+	std::shared_ptr<RenderState>& startState,
+	FilmRef startFilm
 ) {
-	API_BEGIN("{}, {}, {}", (void *) &config, (void *)startState->get(), (void *)startFilm->get());
+	API_BEGIN(
+		"{}, {}, {}",
+		(void *) &config,
+		(void *)startState.get(),
+		(void *)&startFilm
+	);
 
 	auto& configImpl = static_cast<RenderConfigImpl &>(*config);
 
 	auto startStateImpl = startState ?
-		static_pointer_cast<luxcore::detail::RenderStateImpl>(*startState) :
+		static_pointer_cast<luxcore::detail::RenderStateImpl>(startState) :
 		nullptr;
-	auto startFilmImpl = startFilm ?
-		static_pointer_cast<luxcore::detail::FilmImplStandalone>(*startFilm) :
-		nullptr;
+
+	using FIS = luxcore::detail::FilmImplStandalone;
+	FIS& startFilmImpl = dynamic_cast<FIS&>(startFilm);
+
+	//auto startFilmImpl = startFilm ?
+		//OptionalPtr<FIS>{static_cast<FIS&>(*startFilm)}:
+		//std::nullopt;
 
 	auto result = RenderSessionImpl::Create(
 		std::ref(configImpl),
 		startStateImpl,
-		startFilmImpl
+		std::ref(startFilmImpl)
 	);
 
 	API_RETURN("{}", ToArgString(result));

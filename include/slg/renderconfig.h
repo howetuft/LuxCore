@@ -64,18 +64,18 @@ public:
 	void UpdateFilmProperties(const luxrays::Properties &props);
 	void Delete(const std::string &prefix);
 
-	Filter *AllocPixelFilter() const;
-	FilmPtr AllocFilm() const;
+	FilterUPtr AllocPixelFilter() const;
+	FilmUPtr AllocFilm() const;
 
 	SamplerSharedDataUPtr AllocSamplerSharedData(
-		luxrays::RandomGenerator *rndGen, FilmPtr film
+		luxrays::RandomGenerator *rndGen, OptionalPtr<Film> film
 	) const;
 
 	SamplerUPtr AllocSampler(
 		luxrays::RandomGenerator *rndGen,
-		FilmPtr film,
+		OptionalPtr<Film> film,
 		const FilmSampleSplatter *flmSplatter,
-		const std::unique_ptr<SamplerSharedData>& sharedData,
+		const std::shared_ptr<SamplerSharedData> sharedData,
 		const luxrays::Properties &additionalProps
 	) const;
 

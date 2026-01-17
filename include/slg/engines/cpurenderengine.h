@@ -130,7 +130,7 @@ protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
-	std::unique_ptr<SamplerSharedData> samplerSharedData;
+	std::shared_ptr<SamplerSharedData> samplerSharedData;
 };
 
 //------------------------------------------------------------------------------
@@ -150,7 +150,7 @@ public:
 protected:
 	virtual void StartRenderThread();
 
-	FilmPtr tileFilm;
+	FilmUPtr tileFilm;  // RenderThread owns the film
 };
 
 class CPUTileRenderEngine : public CPURenderEngine {

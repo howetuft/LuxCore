@@ -38,10 +38,10 @@ LightCPURenderEngine::~LightCPURenderEngine() {
 }
 
 void LightCPURenderEngine::InitFilm() {
-	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	film->SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
-	film->SetThreadCount(renderThreads.size());
-	film->Init();
+	GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetThreadCount(renderThreads.size());
+	GetFilm().Init();
 }
 
 RenderStatePtr LightCPURenderEngine::GetRenderState() {

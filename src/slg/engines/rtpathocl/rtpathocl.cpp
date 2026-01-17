@@ -67,7 +67,7 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 	
 	// Disable denoiser statistics collection
-	film->GetDenoiser().SetEnabled(false);
+	GetFilm().GetDenoiser().SetEnabled(false);
 
 	auto& cfg = renderConfig.GetConfig();
 
@@ -155,14 +155,14 @@ void RTPathOCLRenderEngine::BeginFilmEdit() {
 }
 
 // A fast path for film resize
-void RTPathOCLRenderEngine::EndFilmEdit(FilmPtr flm, std::mutex *flmMutex) {
+void RTPathOCLRenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
 	// Update the film pointer
 	film = flm;
 	filmMutex = flmMutex;
 	InitFilm();
 
 	// Disable denoiser statistics collection
-	film->GetDenoiser().SetEnabled(false);
+	GetFilm().GetDenoiser().SetEnabled(false);
 
 	// Create a tile repository based on the new film
 	InitTileRepository();

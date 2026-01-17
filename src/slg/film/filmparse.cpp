@@ -908,7 +908,7 @@ void Film::Parse(PropertiesConstPtr props) {
 			}
 
 			convTest = new FilmConvTest(
-				shared_from_this(), haltNoiseThreshold, haltNoiseThresholdWarmUp,
+				*this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
 				haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
 				haltNoiseThresholdImagePipelineIndex);
 		}
@@ -956,7 +956,7 @@ void Film::Parse(PropertiesConstPtr props) {
 		}
 
 		noiseEstimation = new FilmNoiseEstimation(
-			shared_from_this(), noiseEstimationWarmUp,
+			*this, noiseEstimationWarmUp,
 			noiseEstimationTestStep, noiseEstimationFilterScale,
 			noiseEstimationImagePipelineIndex
 		);

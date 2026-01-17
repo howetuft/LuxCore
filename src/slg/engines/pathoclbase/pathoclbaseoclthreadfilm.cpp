@@ -105,7 +105,7 @@ PathOCLBaseOCLRenderThread::ThreadFilm::~ThreadFilm() {
 	FreeAllOCLBuffers();
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmPtr engineFlm,
+void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmRef engineFlm,
 		const u_int threadFilmWidth, const u_int threadFilmHeight,
 		const u_int *threadFilmSubRegion) {
 	engineFilm = engineFlm;

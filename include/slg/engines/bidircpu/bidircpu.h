@@ -173,7 +173,9 @@ protected:
 	PhotonGICache *photonGICache;
 
 	u_int aovWarmupSPP;
-	std::unique_ptr<SobolSamplerSharedData> aovWarmupSamplerSharedData;
+	// We'll use a shared_ptr for shared data, to ensure correct memory
+	// allocation/deallocation
+	std::shared_ptr<SobolSamplerSharedData> aovWarmupSamplerSharedData;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {

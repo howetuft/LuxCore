@@ -29,7 +29,7 @@
 
 // Nota: there are 3 root files to consider, when debugging objects below:
 // - include/slg/core/statictable.h (this file)
-// - include/slg/core/objectstaticregistry.
+// - include/slg/core/objectstaticregistry.h
 // - src/slg/engines/renderengine.cpp
 // ... but also all src/slg/engines/*.cpp and include/slg/engines/*.h
 
