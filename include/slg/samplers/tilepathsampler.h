@@ -57,7 +57,7 @@ public:
 class TilePathSampler : public Sampler {
 public:
 	TilePathSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
-			const FilmSampleSplatter *flmSplatter);
+			const FilmSampleSplatterUPtr& flmSplatter);
 	virtual ~TilePathSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -84,7 +84,7 @@ public:
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

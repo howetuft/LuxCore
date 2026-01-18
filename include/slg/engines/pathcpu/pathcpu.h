@@ -80,9 +80,9 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	CPURenderThread *NewRenderThread(const u_int index,
+	CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new PathCPURenderThread(this, index, device);
+		return std::make_unique<PathCPURenderThread>(this, index, device);
 	}
 
 	virtual void InitFilm();
@@ -92,7 +92,7 @@ protected:
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
-	FilmSampleSplatter *lightSampleSplatter;
+	FilmSampleSplatterUPtr lightSampleSplatter;
 	std::shared_ptr<SamplerSharedData> lightSamplerSharedData;  // Shared data
 																// are in
 																// shared_ptr

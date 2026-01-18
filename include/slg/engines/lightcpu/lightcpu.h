@@ -83,12 +83,12 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	CPURenderThread *NewRenderThread(const u_int index,
+	CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new LightCPURenderThread(this, index, device);
+		return std::make_unique<LightCPURenderThread>(this, index, device);
 	}
 
-	FilmSampleSplatter *sampleSplatter;
+	FilmSampleSplatterUPtr sampleSplatter;
 	PathTracer pathTracer;
 };
 

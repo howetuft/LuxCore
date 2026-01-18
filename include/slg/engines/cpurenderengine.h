@@ -19,6 +19,7 @@
 #ifndef _SLG_CPURENDERENGINE_H
 #define	_SLG_CPURENDERENGINE_H
 
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
 
 #include "slg/slg.h"
@@ -49,6 +50,13 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
+	luxrays::IntersectionDevice& GetIntersectionDevice() {
+		return *device;
+	}
+	const luxrays::IntersectionDevice& GetIntersectionDevice() const {
+		return *device;
+	}
+
 	friend class CPURenderEngine;
 
 protected:
@@ -58,7 +66,7 @@ protected:
 	virtual void StopRenderThread();
 
 	u_int threadIndex;
-	CPURenderEngine *renderEngine;
+	CPURenderEngine *renderEngine;  // Back link
 
 	luxrays::JThreadPtr renderThread;
 	luxrays::IntersectionDevice *device;
@@ -81,7 +89,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	virtual CPURenderThread *NewRenderThread(const u_int index,
+	virtual CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) = 0;
 
 	virtual void StartLockLess();
@@ -93,7 +101,7 @@ protected:
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
 
-	std::vector<CPURenderThread *> renderThreads;
+	std::vector<CPURenderThreadUPtr> renderThreads;
 };
 
 //------------------------------------------------------------------------------

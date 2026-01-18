@@ -364,16 +364,16 @@ void Film::Resize(const u_int w, const u_int h) {
 	hasDataChannel = false;
 	hasComposingChannel = false;
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, nullptr);
+		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
 		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, nullptr);
+		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = std::make_unique<GenericFrameBuffer<3, 0, float>>(width, height);
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
@@ -383,13 +383,13 @@ void Film::Resize(const u_int w, const u_int h) {
 		ip->SetRadianceGroupCount(radianceGroupCount);
 
 	if (HasChannel(ALPHA)) {
-		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
+		channel_ALPHA = std::make_unique<GenericFrameBuffer<2, 1, float>>(width, height);
 		channel_ALPHA->Clear();
 	}
 	if (HasChannel(IMAGEPIPELINE)) {
-		channel_IMAGEPIPELINEs.resize(imagePipelines.size(), nullptr);
+		channel_IMAGEPIPELINEs.resize(imagePipelines.size());
 		for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i) {
-			channel_IMAGEPIPELINEs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
+			channel_IMAGEPIPELINEs[i] = std::make_unique<GenericFrameBuffer<3, 0, float>>(width, height);
 			channel_IMAGEPIPELINEs[i]->Clear();
 		}
 
@@ -408,204 +408,200 @@ void Film::Resize(const u_int w, const u_int h) {
 		noiseEstimation = nullptr;
 	}
 	if (HasChannel(DEPTH)) {
-		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_DEPTH = std::make_unique<GenericFrameBuffer<1, 0, float>>(width, height);
 		channel_DEPTH->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(POSITION)) {
-		channel_POSITION = new GenericFrameBuffer<3, 0, float>(width, height);
+		channel_POSITION = std::make_unique<GenericFrameBuffer<3, 0, float>>(width, height);
 		channel_POSITION->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(GEOMETRY_NORMAL)) {
-		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
+		channel_GEOMETRY_NORMAL = std::make_unique<GenericFrameBuffer<3, 0, float>>(width, height);
 		channel_GEOMETRY_NORMAL->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(SHADING_NORMAL)) {
-		channel_SHADING_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
+		channel_SHADING_NORMAL = std::make_unique<GenericFrameBuffer<3, 0, float>>(width, height);
 		channel_SHADING_NORMAL->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID)) {
-		channel_MATERIAL_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_MATERIAL_ID = std::make_unique<GenericFrameBuffer<1, 0, u_int>>(width, height);
 		channel_MATERIAL_ID->Clear(numeric_limits<u_int>::max());
 		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE)) {
-		channel_DIRECT_DIFFUSE = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_DIFFUSE = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE_REFLECT)) {
-		channel_DIRECT_DIFFUSE_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_DIFFUSE_REFLECT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_DIFFUSE_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE_TRANSMIT)) {
-		channel_DIRECT_DIFFUSE_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_DIFFUSE_TRANSMIT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_DIFFUSE_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_GLOSSY)) {
-		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_GLOSSY = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_GLOSSY->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_GLOSSY_REFLECT)) {
-		channel_DIRECT_GLOSSY_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_GLOSSY_REFLECT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_GLOSSY_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_GLOSSY_TRANSMIT)) {
-		channel_DIRECT_GLOSSY_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_GLOSSY_TRANSMIT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_DIRECT_GLOSSY_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(EMISSION)) {
-		channel_EMISSION = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_EMISSION = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_EMISSION->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_DIFFUSE)) {
-		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_DIFFUSE_REFLECT)) {
-		channel_INDIRECT_DIFFUSE_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE_REFLECT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_DIFFUSE_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_DIFFUSE_TRANSMIT)) {
-		channel_INDIRECT_DIFFUSE_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE_TRANSMIT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_DIFFUSE_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY)) {
-		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_GLOSSY->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY_REFLECT)) {
-		channel_INDIRECT_GLOSSY_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY_REFLECT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_GLOSSY_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY_TRANSMIT)) {
-		channel_INDIRECT_GLOSSY_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY_TRANSMIT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_GLOSSY_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SPECULAR)) {
-		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_SPECULAR = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_SPECULAR->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SPECULAR_REFLECT)) {
-		channel_INDIRECT_SPECULAR_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_SPECULAR_REFLECT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_SPECULAR_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SPECULAR_TRANSMIT)) {
-		channel_INDIRECT_SPECULAR_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_SPECULAR_TRANSMIT = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_INDIRECT_SPECULAR_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID_MASK)) {
 		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
-			GenericFrameBuffer<2, 1, float> *buf = new GenericFrameBuffer<2, 1, float>(width, height);
-			buf->Clear();
-			channel_MATERIAL_ID_MASKs.push_back(buf);
+			auto buf = std::make_unique<GenericFrameBuffer<2, 1, float>>(width, height);
+			channel_MATERIAL_ID_MASKs.push_back(std::move(buf));
 		}
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_SHADOW_MASK)) {
-		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
+		channel_DIRECT_SHADOW_MASK = std::make_unique<GenericFrameBuffer<2, 1, float>>(width, height);
 		channel_DIRECT_SHADOW_MASK->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SHADOW_MASK)) {
-		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
+		channel_INDIRECT_SHADOW_MASK = std::make_unique<GenericFrameBuffer<2, 1, float>>(width, height);
 		channel_INDIRECT_SHADOW_MASK->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(UV)) {
-		channel_UV = new GenericFrameBuffer<2, 0, float>(width, height);
+		channel_UV = std::make_unique<GenericFrameBuffer<2, 0, float>>(width, height);
 		channel_UV->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(RAYCOUNT)) {
-		channel_RAYCOUNT = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_RAYCOUNT = std::make_unique<GenericFrameBuffer<1, 0, float>>(width, height);
 		channel_RAYCOUNT->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(BY_MATERIAL_ID)) {
 		for (u_int i = 0; i < byMaterialIDs.size(); ++i) {
-			GenericFrameBuffer<4, 1, float> *buf = new GenericFrameBuffer<4, 1, float>(width, height);
-			buf->Clear();
-			channel_BY_MATERIAL_IDs.push_back(buf);
+			auto buf = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
+			channel_BY_MATERIAL_IDs.push_back(std::move(buf));
 		}
 		hasComposingChannel = true;
 	}
 	if (HasChannel(IRRADIANCE)) {
-		channel_IRRADIANCE = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_IRRADIANCE = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_IRRADIANCE->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(OBJECT_ID)) {
-		channel_OBJECT_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_OBJECT_ID = std::make_unique<GenericFrameBuffer<1, 0, u_int>>(width, height);
 		channel_OBJECT_ID->Clear(numeric_limits<u_int>::max());
 		hasDataChannel = true;
 	}
 	if (HasChannel(OBJECT_ID_MASK)) {
 		for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
-			GenericFrameBuffer<2, 1, float> *buf = new GenericFrameBuffer<2, 1, float>(width, height);
-			buf->Clear();
-			channel_OBJECT_ID_MASKs.push_back(buf);
+			auto buf = std::make_unique<GenericFrameBuffer<2, 1, float>>(width, height);
+			channel_OBJECT_ID_MASKs.push_back(std::move(buf));
 		}
 		hasComposingChannel = true;
 	}
 	if (HasChannel(BY_OBJECT_ID)) {
 		for (u_int i = 0; i < byObjectIDs.size(); ++i) {
-			GenericFrameBuffer<4, 1, float> *buf = new GenericFrameBuffer<4, 1, float>(width, height);
-			buf->Clear();
-			channel_BY_OBJECT_IDs.push_back(buf);
+			auto buf = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
+			channel_BY_OBJECT_IDs.push_back(std::move(buf));
 		}
 		hasComposingChannel = true;
 	}
 	if (HasChannel(SAMPLECOUNT)) {
-		channel_SAMPLECOUNT = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_SAMPLECOUNT = std::make_unique<GenericFrameBuffer<1, 0, u_int>>(width, height);
 		channel_SAMPLECOUNT->Clear();
 		hasDataChannel = true;
 	}
 	if (HasChannel(CONVERGENCE)) {
-		channel_CONVERGENCE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_CONVERGENCE = std::make_unique<GenericFrameBuffer<1, 0, float>>(width, height);
 		channel_CONVERGENCE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID_COLOR)) {
-		channel_MATERIAL_ID_COLOR = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_MATERIAL_ID_COLOR = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_MATERIAL_ID_COLOR->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(ALBEDO)) {
-		channel_ALBEDO = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_ALBEDO = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_ALBEDO->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(AVG_SHADING_NORMAL)) {
-		channel_AVG_SHADING_NORMAL = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_AVG_SHADING_NORMAL = std::make_unique<GenericFrameBuffer<4, 1, float>>(width, height);
 		channel_AVG_SHADING_NORMAL->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(NOISE)) {
-		channel_NOISE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_NOISE = std::make_unique<GenericFrameBuffer<1, 0, float>>(width, height);
 		channel_NOISE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(USER_IMPORTANCE)) {
-		channel_USER_IMPORTANCE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_USER_IMPORTANCE = std::make_unique<GenericFrameBuffer<1, 0, float>>(width, height);
 		channel_USER_IMPORTANCE->Clear(1.f);
 		hasDataChannel = true;
 	}

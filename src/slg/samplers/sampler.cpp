@@ -77,7 +77,7 @@ SamplerUPtr Sampler::FromProperties(
 	const Properties &cfg,
 	RandomGenerator *rndGen,
 	OptionalPtr<Film> film,
-	const FilmSampleSplatter *flmSplatter,
+	const FilmSampleSplatterUPtr& flmSplatter,
 	SamplerSharedDataSPtr sharedData
 ) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();

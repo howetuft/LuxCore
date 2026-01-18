@@ -35,55 +35,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void Film::FreeChannels() {
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
-	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
-		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
-	delete channel_ALPHA;
-	for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i)
-		delete channel_IMAGEPIPELINEs[i];
-	delete channel_DEPTH;
-	delete channel_POSITION;
-	delete channel_GEOMETRY_NORMAL;
-	delete channel_SHADING_NORMAL;
-	delete channel_MATERIAL_ID;
-	delete channel_DIRECT_DIFFUSE;
-	delete channel_DIRECT_DIFFUSE_REFLECT;
-	delete channel_DIRECT_DIFFUSE_TRANSMIT;
-	delete channel_DIRECT_GLOSSY;
-	delete channel_DIRECT_GLOSSY_REFLECT;
-	delete channel_DIRECT_GLOSSY_TRANSMIT;
-	delete channel_EMISSION;
-	delete channel_INDIRECT_DIFFUSE;
-	delete channel_INDIRECT_DIFFUSE_REFLECT;
-	delete channel_INDIRECT_DIFFUSE_TRANSMIT;
-	delete channel_INDIRECT_GLOSSY;
-	delete channel_INDIRECT_GLOSSY_REFLECT;
-	delete channel_INDIRECT_GLOSSY_TRANSMIT;
-	delete channel_INDIRECT_SPECULAR;
-	delete channel_INDIRECT_SPECULAR_REFLECT;
-	delete channel_INDIRECT_SPECULAR_TRANSMIT;
-	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
-		delete channel_MATERIAL_ID_MASKs[i];
-	delete channel_DIRECT_SHADOW_MASK;
-	delete channel_INDIRECT_SHADOW_MASK;
-	delete channel_UV;
-	delete channel_RAYCOUNT;
-	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
-		delete channel_BY_MATERIAL_IDs[i];
-	delete channel_IRRADIANCE;
-	delete channel_OBJECT_ID;
-	for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
-		delete channel_OBJECT_ID_MASKs[i];
-	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
-		delete channel_BY_OBJECT_IDs[i];
-	delete channel_SAMPLECOUNT;
-	delete channel_CONVERGENCE;
-	delete channel_MATERIAL_ID_COLOR;
-	delete channel_ALBEDO;
-	delete channel_AVG_SHADING_NORMAL;
-	delete channel_NOISE;
-	delete channel_USER_IMPORTANCE;
 }
 
 void Film::AddChannel(const FilmChannelType type, PropertiesConstPtr prop) {

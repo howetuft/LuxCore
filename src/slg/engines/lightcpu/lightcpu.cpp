@@ -28,14 +28,12 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfigRef rcfg) :
-		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr) {
+		CPUNoTileRenderEngine(rcfg)  {
 	if (rcfg.GetScene().GetCamera().GetType() == Camera::STEREO)
 		throw std::runtime_error("Light render engine doesn't support stereo camera");
 }
 
-LightCPURenderEngine::~LightCPURenderEngine() {
-	delete sampleSplatter;
-}
+LightCPURenderEngine::~LightCPURenderEngine() {}
 
 void LightCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
@@ -86,8 +84,7 @@ void LightCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	delete sampleSplatter;
-	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
 
 	//--------------------------------------------------------------------------
 
@@ -99,8 +96,7 @@ void LightCPURenderEngine::StopLockLess() {
 	
 	pathTracer.DeletePixelFilterDistribution();
 
-	delete sampleSplatter;
-	sampleSplatter = NULL;
+	sampleSplatter.reset();
 }
 
 //------------------------------------------------------------------------------

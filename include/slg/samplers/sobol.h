@@ -92,7 +92,7 @@ public:
 	SobolSampler(
 		luxrays::RandomGenerator *rnd,
 		OptionalPtr<Film> flm,
-		const FilmSampleSplatter *flmSplatter,
+		const FilmSampleSplatterUPtr& flmSplatter,
 		const bool imgSamplesEnable,
 		const float adaptiveStr,
 		const float adaptiveUserImpWeight,
@@ -124,7 +124,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

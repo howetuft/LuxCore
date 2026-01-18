@@ -92,7 +92,7 @@ std::unique_ptr<SamplerSharedData> SobolSamplerSharedData::FromProperties(const 
 SobolSampler::SobolSampler(
 	RandomGenerator *rnd,
 	OptionalPtr<Film> flm,  // Film is optional!
-	const FilmSampleSplatter *flmSplatter,
+	const FilmSampleSplatterUPtr& flmSplatter,
 	const bool imgSamplesEnable,
 	const float adaptiveStr,
 	const float adaptiveUserImpWeight,
@@ -324,7 +324,7 @@ Properties SobolSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 ) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();

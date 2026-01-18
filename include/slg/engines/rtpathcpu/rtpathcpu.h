@@ -89,9 +89,9 @@ protected:
 
 	virtual bool IsRTMode() const { return true; }
 	
-	CPURenderThread *NewRenderThread(const u_int index,
+	CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new RTPathCPURenderThread(this, index, device);
+		return std::make_unique<RTPathCPURenderThread>(this, index, device);
 	}
 
 	virtual void StartLockLess();

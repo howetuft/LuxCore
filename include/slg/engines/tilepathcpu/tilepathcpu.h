@@ -94,9 +94,9 @@ protected:
 	PathTracer pathTracer;
 
 private:
-	virtual CPURenderThread *NewRenderThread(const u_int index,
+	virtual CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
-		return new TilePathCPURenderThread(this, index, device);
+		return std::make_unique<TilePathCPURenderThread>(this, index, device);
 	}
 };
 

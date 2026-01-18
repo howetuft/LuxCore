@@ -21,6 +21,7 @@
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
+#include "slg/usings.h"
 
 namespace slg {
 

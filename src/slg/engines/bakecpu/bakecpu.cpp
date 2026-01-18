@@ -99,7 +99,6 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 	currentSceneObjDist.clear();
 	delete currentSceneObjsDist;
 	delete photonGICache;
-	delete sampleSplatter;
 	delete threadsSyncBarrier;
 }
 
@@ -190,8 +189,7 @@ void BakeCPURenderEngine::StartLockLess() {
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
 
-	delete sampleSplatter;
-	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
 
 	//--------------------------------------------------------------------------
 	
@@ -280,9 +278,6 @@ void BakeCPURenderEngine::StopLockLess() {
 	
 	delete photonGICache;
 	photonGICache = nullptr;
-
-	delete sampleSplatter;
-	sampleSplatter = nullptr;
 
 	delete threadsSyncBarrier;
 	threadsSyncBarrier = nullptr;

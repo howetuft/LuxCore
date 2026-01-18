@@ -77,7 +77,7 @@ typedef enum {
 class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> film,
-			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 			const u_int maxRej, const float pLarge, const float imgRange,
 			const bool addOnlyCstcs,
 			SamplerSharedDataSPtr samplerSharedData
@@ -107,7 +107,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);

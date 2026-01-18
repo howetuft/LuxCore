@@ -30,7 +30,7 @@ using namespace std;
 //------------------------------------------------------------------------------
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfigRef rcfg) :
-		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr),
+		CPUNoTileRenderEngine(rcfg),
 		photonGICache(nullptr) {
 	if (rcfg.GetScene().GetCamera().GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
@@ -132,8 +132,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 
-	delete sampleSplatter;
-	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
@@ -149,8 +148,7 @@ void BiDirCPURenderEngine::InitFilm() {
 void BiDirCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
-	delete sampleSplatter;
-	sampleSplatter = nullptr;
+	sampleSplatter.reset();
 
 	delete photonGICache;
 	photonGICache = nullptr;

@@ -24,6 +24,11 @@
 #include <memory>
 #include "luxrays/usings.h"
 
+// Forward declarations to break circular dependencies
+namespace slg {
+class CPURenderThread;
+}
+
 namespace slg {
 
 class Camera;
@@ -51,6 +56,7 @@ using FilmUPtr = std::unique_ptr<Film>;
 using FilmConstUPtr = std::unique_ptr<const Film>;
 using FilmConstRef = const Film&;
 using FilmRef = Film&;
+using FilmOPtr = OptionalPtr<const Film>;
 
 class ImageMap;
 using ImageMapUPtr = std::unique_ptr<ImageMap>;
@@ -146,6 +152,12 @@ class Filter;
 using FilterUPtr = std::unique_ptr<Filter>;
 using FilterRef = Filter&;
 using FilterConstRef = const Filter&;
+
+class FilmSampleSplatter;
+using FilmSampleSplatterUPtr = std::unique_ptr<FilmSampleSplatter>;
+
+class CPURenderThread;
+using CPURenderThreadUPtr = std::unique_ptr<CPURenderThread>;
 
 }  // namespace slg
 

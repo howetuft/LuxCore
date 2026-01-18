@@ -120,7 +120,7 @@ CPURenderEngine::CPURenderEngine(RenderConfigRef cfg) : RenderEngine(cfg) {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
-	renderThreads.resize(renderThreadCount, NULL);
+	renderThreads.resize(renderThreadCount);
 }
 
 CPURenderEngine::~CPURenderEngine() {
@@ -130,7 +130,7 @@ CPURenderEngine::~CPURenderEngine() {
 		Stop();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
+		renderThreads[i].reset();
 }
 
 void CPURenderEngine::StartLockLess() {
@@ -238,8 +238,9 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 	// Update the ray count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		const CPUNoTileRenderThread *thread = (CPUNoTileRenderThread *)renderThreads[i];
-		totalCount += thread->device->GetTotalRaysCount();
+		const auto& thread = renderThreads[i];
+		//const CPUNoTileRenderThreadUPtr& thread = (CPUNoTileRenderThread *)renderThreads[i];
+		totalCount += thread->GetIntersectionDevice().GetTotalRaysCount();
 	}
 	raysCount = totalCount;
 }
@@ -310,8 +311,8 @@ void CPUTileRenderEngine::UpdateCounters() {
 	// Update the ray count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		const CPUTileRenderThread *thread = (CPUTileRenderThread *)renderThreads[i];
-		totalCount += thread->device->GetTotalRaysCount();
+		const auto& thread = renderThreads[i];
+		totalCount += thread->GetIntersectionDevice().GetTotalRaysCount();
 	}
 	raysCount = totalCount;
 }

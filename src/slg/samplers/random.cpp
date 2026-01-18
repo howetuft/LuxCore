@@ -59,7 +59,7 @@ std::unique_ptr<SamplerSharedData> RandomSamplerSharedData::FromProperties(
 //------------------------------------------------------------------------------
 
 RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
-		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+		const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 		const float adaptiveStr, const float adaptiveUserImpWeight,
 		const u_int bucketSz, const u_int tileSz, const u_int superSmpl,
 		const u_int overlap,
@@ -242,7 +242,7 @@ Properties RandomSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 

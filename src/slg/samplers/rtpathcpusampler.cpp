@@ -98,7 +98,7 @@ std::unique_ptr<SamplerSharedData> RTPathCPUSamplerSharedData::FromProperties(
 RTPathCPUSampler::RTPathCPUSampler(
 	luxrays::RandomGenerator *rnd,
 	OptionalPtr<Film> flm,
-	const FilmSampleSplatter *flmSplatter,
+	const FilmSampleSplatterUPtr& flmSplatter,
 	SamplerSharedDataSPtr samplerSharedData
 ) :	Sampler(rnd, flm, flmSplatter, true), sharedData(dynamic_pointer_cast<RTPathCPUSamplerSharedData>(samplerSharedData)) {
 	film = flm;
@@ -245,7 +245,7 @@ Properties RTPathCPUSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr RTPathCPUSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter, SamplerSharedDataSPtr sharedData) {
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<RTPathCPUSampler>(rndGen, film, flmSplatter, sharedData);
 }
 

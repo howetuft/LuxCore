@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <functional>
 #include <limits>
 #include <algorithm>
 #include <exception>
@@ -566,20 +567,21 @@ void Film::Output(
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
 		buffer.reset(spec);
 
-		GenericFrameBuffer<1, 0, u_int> *channel;
-		switch (type) {
-			case FilmOutputs::MATERIAL_ID:
-				channel = channel_MATERIAL_ID;
-				break;
-			case FilmOutputs::OBJECT_ID:
-				channel = channel_OBJECT_ID;
-				break;
-			case FilmOutputs::SAMPLECOUNT:
-				channel = channel_SAMPLECOUNT;
-				break;
-			default:
-				throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
-		}
+		using Buffer10 = std::unique_ptr< GenericFrameBuffer<1, 0, u_int> >;
+
+		std::optional<std::reference_wrapper<Buffer10>> _channel;
+		auto selector = [&](const FilmOutputs::FilmOutputType t) -> const Buffer10 &
+		{
+			switch (t) {
+				case FilmOutputs::MATERIAL_ID: return std::ref(channel_MATERIAL_ID);
+				case FilmOutputs::OBJECT_ID: return std::ref(channel_OBJECT_ID);
+				case FilmOutputs::SAMPLECOUNT: return std::ref(channel_SAMPLECOUNT);
+				default: throw runtime_error(
+					"Unknown film output type in Film::Output(): " + ToString(type)
+				);
+			}
+		};
+		auto& channel = selector(type);
 
 		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();

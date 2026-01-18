@@ -40,7 +40,7 @@ std::unique_ptr<SamplerSharedData> TilePathSamplerSharedData::FromProperties(con
 //------------------------------------------------------------------------------
 
 TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
-		const FilmSampleSplatter *flmSplatter
+		const FilmSampleSplatterUPtr& flmSplatter
 ) :
 	Sampler(rnd, flm, flmSplatter, true),
 	sobolSequence(),
@@ -129,7 +129,7 @@ Properties TilePathSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr TilePathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter, SamplerSharedDataSPtr sharedData) {
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<TilePathSampler>(rndGen, film, flmSplatter);
 }
 

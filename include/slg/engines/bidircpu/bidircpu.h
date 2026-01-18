@@ -169,7 +169,7 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	FilmSampleSplatter *sampleSplatter;
+	FilmSampleSplatterUPtr sampleSplatter;
 	PhotonGICache *photonGICache;
 
 	u_int aovWarmupSPP;
@@ -178,8 +178,8 @@ protected:
 	std::shared_ptr<SobolSamplerSharedData> aovWarmupSamplerSharedData;
 
 private:
-	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
-		return new BiDirCPURenderThread(this, index, device);
+	CPURenderThreadUPtr NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
+		return std::make_unique<BiDirCPURenderThread>(this, index, device);
 	}
 };
 

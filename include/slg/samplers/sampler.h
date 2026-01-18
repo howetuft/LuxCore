@@ -79,7 +79,7 @@ public:
 	Sampler(
 		luxrays::RandomGenerator *rnd,
 		OptionalPtr<Film> flm,
-		const FilmSampleSplatter *flmSplatter,
+		const FilmSampleSplatterUPtr& flmSplatter,
 		const bool imgSamplesEnable
 	) :
 		NamedObject("sampler"),
@@ -115,7 +115,7 @@ public:
 	// Allocate a Object based on the cfg definition
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
@@ -155,7 +155,7 @@ protected:
 	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;
 	OptionalPtr<Film> film;
-	const FilmSampleSplatter *filmSplatter;
+	const FilmSampleSplatterUPtr& filmSplatter;
 
 	SampleType sampleType;
 	u_int requestedSamples;

@@ -24,6 +24,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <vector>
 #include <unordered_set>
@@ -32,6 +33,7 @@
 #include <bcd/core/SamplesAccumulator.h>
 
 #include "luxrays/usings.h"
+#include "slg/usings.h"
 
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/properties.h"
@@ -407,48 +409,56 @@ public:
 	}
 
 
-	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
-	std::vector<GenericFrameBuffer<3, 0, float> *> channel_IMAGEPIPELINEs;
-	GenericFrameBuffer<1, 0, float> *channel_DEPTH;
-	GenericFrameBuffer<3, 0, float> *channel_POSITION;
-	GenericFrameBuffer<3, 0, float> *channel_GEOMETRY_NORMAL;
-	GenericFrameBuffer<3, 0, float> *channel_SHADING_NORMAL;
-	GenericFrameBuffer<4, 1, float> *channel_AVG_SHADING_NORMAL;
-	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_REFLECT;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_TRANSMIT;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_REFLECT;
-	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_TRANSMIT;
-	GenericFrameBuffer<4, 1, float> *channel_EMISSION;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_REFLECT;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_TRANSMIT;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_REFLECT;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_TRANSMIT;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_REFLECT;
-	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_TRANSMIT;
-	std::vector<GenericFrameBuffer<2, 1, float> *> channel_MATERIAL_ID_MASKs;
-	GenericFrameBuffer<2, 1, float> *channel_DIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, 0, float> *channel_UV;
-	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
-	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_MATERIAL_IDs;
-	GenericFrameBuffer<4, 1, float> *channel_IRRADIANCE;
-	GenericFrameBuffer<1, 0, u_int> *channel_OBJECT_ID;
-	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
-	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
-	GenericFrameBuffer<1, 0, u_int> *channel_SAMPLECOUNT;
-	GenericFrameBuffer<1, 0, float> *channel_CONVERGENCE;
-	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
-	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
-	GenericFrameBuffer<1, 0, float> *channel_NOISE;
-	GenericFrameBuffer<1, 0, float> *channel_USER_IMPORTANCE;
+	std::vector<std::unique_ptr<GenericFrameBuffer<4, 1, float>> >
+		channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<3, 0, float>> >
+		channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<3, 0, float>> >
+		channel_IMAGEPIPELINEs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<2, 1, float>> >
+		channel_MATERIAL_ID_MASKs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<4, 1, float>> >
+		channel_BY_MATERIAL_IDs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<2, 1, float>> >
+		channel_OBJECT_ID_MASKs;
+	std::vector<std::unique_ptr<GenericFrameBuffer<4, 1, float>> >
+		channel_BY_OBJECT_IDs;
+
+	std::unique_ptr<GenericFrameBuffer<2, 1, float>> channel_ALPHA;
+	std::unique_ptr<GenericFrameBuffer<1, 0, float>> channel_DEPTH;
+	std::unique_ptr<GenericFrameBuffer<3, 0, float>> channel_POSITION;
+	std::unique_ptr<GenericFrameBuffer<3, 0, float>> channel_GEOMETRY_NORMAL;
+	std::unique_ptr<GenericFrameBuffer<3, 0, float>> channel_SHADING_NORMAL;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_AVG_SHADING_NORMAL;
+	std::unique_ptr<GenericFrameBuffer<1, 0, u_int>> channel_MATERIAL_ID;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_DIFFUSE;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_DIFFUSE_REFLECT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_DIFFUSE_TRANSMIT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_GLOSSY;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_GLOSSY_REFLECT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_DIRECT_GLOSSY_TRANSMIT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_EMISSION;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_DIFFUSE;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_DIFFUSE_REFLECT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_DIFFUSE_TRANSMIT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_GLOSSY;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_GLOSSY_REFLECT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_GLOSSY_TRANSMIT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_SPECULAR;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_SPECULAR_REFLECT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_INDIRECT_SPECULAR_TRANSMIT;
+	std::unique_ptr<GenericFrameBuffer<2, 1, float>> channel_DIRECT_SHADOW_MASK;
+	std::unique_ptr<GenericFrameBuffer<2, 1, float>> channel_INDIRECT_SHADOW_MASK;
+	std::unique_ptr<GenericFrameBuffer<2, 0, float>> channel_UV;
+	std::unique_ptr<GenericFrameBuffer<1, 0, float>> channel_RAYCOUNT;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_IRRADIANCE;
+	std::unique_ptr<GenericFrameBuffer<1, 0, u_int>> channel_OBJECT_ID;
+	std::unique_ptr<GenericFrameBuffer<1, 0, u_int>> channel_SAMPLECOUNT;
+	std::unique_ptr<GenericFrameBuffer<1, 0, float>> channel_CONVERGENCE;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_MATERIAL_ID_COLOR;
+	std::unique_ptr<GenericFrameBuffer<4, 1, float>> channel_ALBEDO;
+	std::unique_ptr<GenericFrameBuffer<1, 0, float>> channel_NOISE;
+	std::unique_ptr<GenericFrameBuffer<1, 0, float>> channel_USER_IMPORTANCE;
 
 	// (Optional) LuxRays HardwareDevice context
 	bool hwEnable;

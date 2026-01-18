@@ -21,10 +21,13 @@
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/usings.h"
 #include "slg/slg.h"
+#include "slg/usings.h"
 #include "slg/film/framebuffer.h"
 
 namespace slg {
+
 
 //------------------------------------------------------------------------------
 // FilmConvTest
@@ -34,7 +37,7 @@ namespace slg {
 class FilmConvTest {
 public:
 	FilmConvTest(
-		OptionalPtr<const Film> film,
+		OptionalPtr<const Film> flm,
 		const float threshold,
 		const u_int warmup,
 		const u_int testStep,

@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <cstdio>
@@ -65,7 +66,6 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigRef rcfg) :
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	delete lightSampleSplatter;
 }
 
 PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
@@ -148,9 +148,9 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize the PathTracer class
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	delete lightSampleSplatter;
+	lightSampleSplatter.reset();
 	if (pathTracer.hybridBackForwardEnable)
-		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
+		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
 
 	PathOCLBaseRenderEngine::StartLockLess();
 
@@ -163,8 +163,7 @@ void PathOCLRenderEngine::StopLockLess() {
 	PathOCLBaseRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
-	delete lightSampleSplatter;
-	lightSampleSplatter = NULL;
+	lightSampleSplatter.reset();
 
 	eyeSamplerSharedData.reset();
 

@@ -64,7 +64,7 @@ private:
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
-			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
 			const u_int overlapping,
@@ -91,7 +91,8 @@ public:
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatter *flmSplatter,
+		OptionalPtr<Film> film,
+		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

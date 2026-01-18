@@ -37,7 +37,6 @@ PathCPURenderEngine::PathCPURenderEngine(RenderConfigRef rcfg) :
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete photonGICache;
-	delete lightSampleSplatter;
 }
 
 void PathCPURenderEngine::InitFilm() {
@@ -136,9 +135,9 @@ void PathCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	delete lightSampleSplatter;
+	lightSampleSplatter.reset();
 	if (pathTracer.hybridBackForwardEnable)
-		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
+		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
 
 	pathTracer.SetPhotonGICache(photonGICache);
 	
@@ -151,8 +150,6 @@ void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
-	delete lightSampleSplatter;
-	lightSampleSplatter = NULL;
 
 	delete photonGICache;
 	photonGICache = nullptr;
