@@ -64,7 +64,12 @@ private:
 	}
 
 	u_int Hash(const int ix, const int iy, const int iz) const {
-		return (u_int)((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) % gridSize;
+		using myint = long long int;
+		return (u_int)(
+			(myint(ix) * 73856093)
+			^ (myint(iy) * 19349663)
+			^ (myint(iz) * 83492791)
+			) % gridSize;
 	}
 
 	u_int Hash(const luxrays::Point &p) const {

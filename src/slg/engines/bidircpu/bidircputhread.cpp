@@ -20,6 +20,7 @@
 // (http://www.davidovic.cz and http://www.smallvcm.com)
 
 #include <thread>
+#include <cassert>
 #include <boost/format.hpp>
 
 #include "luxrays/utils/thread.h"
@@ -766,7 +767,9 @@ bool BiDirCPURenderThread::Bounce(const float time, const SamplerUPtr& sampler,
 }
 
 void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
-	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread started");
+#ifndef NDEBUG
+	SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread started");
+#endif
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -788,8 +791,13 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		AOVWarmUp(stop_token, rndGen);
 
 	// Setup the sampler
-	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(), engine->sampleSplatter,
-			engine->samplerSharedData, Properties());
+	auto sampler = engine->renderConfig.AllocSampler(
+		rndGen,
+		engine->GetFilm(),
+		engine->sampleSplatter,
+		engine->samplerSharedData,
+		Properties()
+	);
 	const u_int sampleSize =
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -1050,7 +1058,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
                 }
 	} // ~for
 
-	sampler.reset();
+	//sampler.reset();
 	delete rndGen;
 
 	threadDone = true;
@@ -1061,6 +1069,8 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	if (photonGICache)
 		photonGICache->FinishUpdate(threadIndex);
 
-	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread halted");
+#ifndef NDEBUG
+	SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread halted");
+#endif
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

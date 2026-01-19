@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <cassert>
 #include "luxrays/utils/thread.h"
 
 #include "slg/samplers/tilepathsampler.h"
@@ -49,7 +50,9 @@ void TilePathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int si
 }
 
 void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
-	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#ifndef NDEBUG
+	SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#endif
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -141,6 +144,8 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	if (engine->photonGICache)
 		engine->photonGICache->FinishUpdate(threadIndex);
 
-	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#ifndef NDEBUG
+	SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#endif
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

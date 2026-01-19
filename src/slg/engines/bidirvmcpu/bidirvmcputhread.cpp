@@ -19,6 +19,7 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz) and http://www.smallvcm.com)
 #include <thread>
+#include <cassert>
 
 #include "luxrays/utils/thread.h"
 
@@ -40,7 +41,9 @@ BiDirVMCPURenderThread::BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine,
 }
 
 void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
-	//SLG_LOG("[BiDirVMCPURenderThread::" << threadIndex << "] Rendering thread started");
+#ifndef NDEBUG
+	SLG_LOG("[BiDirVMCPURenderThread::" << threadIndex << "] Rendering thread started");
+#endif
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -57,6 +60,9 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	// Setup the samplers
 	std::vector<SamplerUPtr> samplers(engine->lightPathsCount);
+#ifndef NDEBUG
+	SLG_LOG("[BiDirVMCPURenderThread::" << threadIndex << "] Setting up " << samplers.size() << " samplers");
+#endif
 	const u_int sampleSize = 
 		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
@@ -289,6 +295,8 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	threadDone = true;
 
-	//SLG_LOG("[BiDirVMCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+#ifndef NDEBUG
+	SLG_LOG("[BiDirVMCPURenderThread::" << threadIndex << "] Rendering thread halted");
+#endif
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

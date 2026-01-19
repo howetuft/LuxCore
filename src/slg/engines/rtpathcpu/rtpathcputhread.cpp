@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <cassert>
 #include "luxrays/utils/thread.h"
 
 #include "slg/slg.h"
@@ -45,7 +46,9 @@ void RTPathCPURenderThread::StartRenderThread() {
 }
 
 void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
-	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#ifndef NDEBUG
+	SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#endif
 
 	//--------------------------------------------------------------------------
 	// Initialization
@@ -113,6 +116,8 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 
 	threadDone = true;
 
-	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#ifndef NDEBUG
+	SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#endif
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

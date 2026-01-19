@@ -71,7 +71,7 @@ protected:
 	luxrays::JThreadPtr renderThread;
 	luxrays::IntersectionDevice *device;
 
-	bool started, editMode, threadDone;
+	std::atomic<bool> started, editMode, threadDone;
 };
 
 class CPURenderEngine : public RenderEngine {

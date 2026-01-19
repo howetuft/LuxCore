@@ -386,7 +386,9 @@ void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThr
 }
 
 void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
-	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#ifndef NDEBUG
+	SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
+#endif
 
 	// This is really used only by Windows for 64+ threads support
 	SetThreadGroupAffinity(threadIndex);
@@ -560,6 +562,8 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	if (engine->photonGICache)
 		engine->photonGICache->FinishUpdate(threadIndex);
 
-	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#ifndef NDEBUG
+	SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+#endif
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
