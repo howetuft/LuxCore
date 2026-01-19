@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "luxrays/core/randomgen.h"
+#include "luxrays/usings.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -55,7 +56,7 @@ public:
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film
 	);
 };
@@ -77,7 +78,7 @@ typedef enum {
 class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(
-		luxrays::RandomGenerator *rnd,
+		const luxrays::RandomGeneratorUPtr & rnd,
 		OptionalPtr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		const bool imgSamplesEnable
@@ -114,8 +115,10 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
 	static SamplerUPtr FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
+		const luxrays::Properties &cfg,
+		const luxrays::RandomGeneratorUPtr & rndGen,
+		OptionalPtr<Film> film,
+		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
@@ -153,7 +156,7 @@ protected:
 	}
 
 	u_int threadIndex;
-	luxrays::RandomGenerator *rndGen;
+	const luxrays::RandomGeneratorUPtr & rndGen;
 	OptionalPtr<Film> film;
 	const FilmSampleSplatterUPtr& filmSplatter;
 

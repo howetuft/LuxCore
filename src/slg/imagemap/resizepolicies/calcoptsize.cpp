@@ -87,9 +87,9 @@ void ImageMapResizePolicy::RenderFunc(
 	CameraConstRef camera = scene.GetCamera();
 
 	// Initialize the sampler
-	RandomGenerator rnd(1 + threadIndex);
+	auto rnd = std::make_unique<RandomGenerator>(1 + threadIndex);
 	SobolSampler sampler(
-		&rnd, std::nullopt, NULL, true, 0.f, 0.f,
+		rnd, std::nullopt, NULL, true, 0.f, 0.f,
 		16, 16, 1, 1,
 		sobolSharedData
 	);

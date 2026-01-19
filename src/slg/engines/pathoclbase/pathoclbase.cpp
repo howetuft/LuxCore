@@ -203,7 +203,7 @@ void PathOCLBaseRenderEngine::InitFilm() {
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, GetFilm());
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), seedBaseGenerator, GetFilm());
 
 	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
 	GetFilm().Init();

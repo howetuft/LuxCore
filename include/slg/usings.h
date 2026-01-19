@@ -159,6 +159,7 @@ using FilmSampleSplatterUPtr = std::unique_ptr<FilmSampleSplatter>;
 class CPURenderThread;
 using CPURenderThreadUPtr = std::unique_ptr<CPURenderThread>;
 
+
 }  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

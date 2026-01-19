@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 std::unique_ptr<SamplerSharedData> SamplerSharedData::FromProperties(
-	const Properties &cfg, RandomGenerator *rndGen, OptionalPtr<Film> film
+	const Properties &cfg, const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
 ) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
@@ -75,7 +75,7 @@ Properties Sampler::ToProperties(const Properties &cfg) {
 
 SamplerUPtr Sampler::FromProperties(
 	const Properties &cfg,
-	RandomGenerator *rndGen,
+	const std::unique_ptr<RandomGenerator> & rndGen,
 	OptionalPtr<Film> film,
 	const FilmSampleSplatterUPtr& flmSplatter,
 	SamplerSharedDataSPtr sharedData

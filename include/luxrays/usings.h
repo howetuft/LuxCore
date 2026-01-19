@@ -291,6 +291,9 @@ using PropertiesConstRef = const Properties &;
 using JThread = std::jthread;
 using JThreadPtr = std::unique_ptr<std::jthread>;
 
+class RandomGenerator;
+using RandomGeneratorUPtr = std::unique_ptr<RandomGenerator>;
+
 }
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

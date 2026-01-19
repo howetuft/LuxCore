@@ -52,7 +52,7 @@ public:
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen, OptionalPtr<Film> film);
+		const luxrays::RandomGeneratorUPtr &  rndGen, OptionalPtr<Film> film);
 
 	OptionalPtr<Film> engineFilm;
 	std::atomic<u_int> step;
@@ -69,7 +69,7 @@ class RTPathCPURenderEngine;
 class RTPathCPUSampler : public Sampler {
 public:
 	RTPathCPUSampler(
-		luxrays::RandomGenerator *rnd,
+		const luxrays::RandomGeneratorUPtr & rnd,
 		OptionalPtr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr samplerSharedData
@@ -93,7 +93,7 @@ public:
 	static std::string GetObjectTag() { return "RTPATHCPUSAMPLER"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

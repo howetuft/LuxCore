@@ -439,14 +439,17 @@ private:
 
 	mutable luxrays::PropertiesPtr scenePropertiesCache;
 
+	// WARNING: KEEP FOLLOWING DECLARATIONS IN PRESENT ORDER
+	// Order matters for initialization
+
+	// Internal objects (owned)
+	CameraImplUPtr camera;
+	slg::SceneUPtr internalScene;
 
 	// Reference to the working scene. Depending on object construction, it can
 	// be an external scene, or the internal scene below
 	std::reference_wrapper<slg::Scene> sceneRef;
 
-	// Internal objects (owned)
-	slg::SceneUPtr internalScene;
-	CameraImplUPtr camera;
 };
 
 //------------------------------------------------------------------------------

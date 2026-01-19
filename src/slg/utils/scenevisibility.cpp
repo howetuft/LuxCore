@@ -20,6 +20,7 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/core/randomgen.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 
@@ -116,8 +117,8 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 	auto& camera = scene.GetCamera();
 
 	// Initialize the sampler
-	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, std::nullopt, NULL, true, 0.f, 0.f,
+	auto rnd = std::make_unique<RandomGenerator>(1 + threadIndex);
+	SobolSampler sampler(rnd, std::nullopt, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			visibilitySobolSharedData);
 

@@ -63,7 +63,7 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + threadIndex);
 
 	// Setup the sampler
 	auto genericSampler = engine->renderConfig.AllocSampler(rndGen,
@@ -133,8 +133,6 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			engine->photonGICache->Update(threadIndex, spp);
 		}
 	}
-
-	delete rndGen;
 
 	threadDone = true;
 

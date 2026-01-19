@@ -39,7 +39,7 @@ SobolSamplerSharedData::SobolSamplerSharedData(const u_int seed, OptionalPtr<Fil
 }
 
 SobolSamplerSharedData::SobolSamplerSharedData(
-	RandomGenerator *rndGen, OptionalPtr<Film> engineFlm
+	const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> engineFlm
 ) :
 	SamplerSharedData(),
 	engineFilm(engineFlm),
@@ -79,7 +79,7 @@ u_int SobolSamplerSharedData::GetPassCount(const u_int bucketCount) const {
 }
 
 std::unique_ptr<SamplerSharedData> SobolSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen, OptionalPtr<Film> film) {
+		const RandomGeneratorUPtr& rndGen, OptionalPtr<Film> film) {
 	return std::make_unique<SobolSamplerSharedData>(rndGen, film);
 }
 
@@ -90,7 +90,7 @@ std::unique_ptr<SamplerSharedData> SobolSamplerSharedData::FromProperties(const 
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(
-	RandomGenerator *rnd,
+	const RandomGeneratorUPtr & rnd,
 	OptionalPtr<Film> flm,  // Film is optional!
 	const FilmSampleSplatterUPtr& flmSplatter,
 	const bool imgSamplesEnable,
@@ -323,7 +323,7 @@ Properties SobolSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.overlapping"));
 }
 
-SamplerUPtr SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+SamplerUPtr SobolSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 ) {

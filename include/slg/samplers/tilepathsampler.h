@@ -43,7 +43,7 @@ public:
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film
 	);
 
@@ -56,7 +56,7 @@ public:
 
 class TilePathSampler : public Sampler {
 public:
-	TilePathSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
+	TilePathSampler(const luxrays::RandomGeneratorUPtr & rnd, OptionalPtr<Film> flm,
 			const FilmSampleSplatterUPtr& flmSplatter);
 	virtual ~TilePathSampler();
 
@@ -83,7 +83,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);

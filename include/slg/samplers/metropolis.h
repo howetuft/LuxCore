@@ -45,7 +45,7 @@ public:
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film
 	);
 
@@ -76,7 +76,7 @@ typedef enum {
 
 class MetropolisSampler : public Sampler {
 public:
-	MetropolisSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> film,
+	MetropolisSampler(const luxrays::RandomGeneratorUPtr & rnd, OptionalPtr<Film> film,
 			const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 			const u_int maxRej, const float pLarge, const float imgRange,
 			const bool addOnlyCstcs,
@@ -97,7 +97,7 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 	u_int GetLargeMutationCount() const { return largeMutationCount; }
-	
+
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
@@ -106,7 +106,7 @@ public:
 	static std::string GetObjectTag() { return "METROPOLIS"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

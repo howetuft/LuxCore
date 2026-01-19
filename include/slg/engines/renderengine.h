@@ -23,6 +23,7 @@
 #include <boost/heap/priority_queue.hpp>
 #include <functional>
 
+#include "luxrays/core/randomgen.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/usings.h"
@@ -196,7 +197,7 @@ protected:
 	// to the same rendering (in a single thread case). seedBase is generated from
 	// bootStrapSeed.
 	u_int bootStrapSeed, seedBase;
-	luxrays::RandomGenerator seedBaseGenerator;
+	luxrays::RandomGeneratorUPtr seedBaseGenerator;
 
 	double raysCount;
 

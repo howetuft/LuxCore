@@ -55,7 +55,7 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	const PathTracer &pathTracer = engine->pathTracer;
 
 	// (engine->seedBase + 1) seed is used for sharedRndGen
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 
 	// Setup the sampler(s)
 
@@ -127,8 +127,6 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		}
 	}
 
-
-	delete rndGen;
 
 	threadDone = true;
 

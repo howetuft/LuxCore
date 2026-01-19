@@ -54,7 +54,7 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 	auto& scene = engine->renderConfig.GetScene();
 	auto& camera = scene.GetCamera();
 
@@ -291,7 +291,6 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)
 		samplers[samplerIndex].reset();
-	delete rndGen;
 
 	threadDone = true;
 

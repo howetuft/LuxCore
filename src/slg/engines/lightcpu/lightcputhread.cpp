@@ -50,7 +50,7 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 
 	// Setup the sampler
 	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(),
@@ -98,8 +98,6 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		if (engine->GetFilm().GetConvergence() == 1.f)
 			break;
 	}
-
-	delete rndGen;
 
 	threadDone = true;
 

@@ -139,7 +139,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	if (nativeRenderThreadCount > 0) {
-		eyeSamplerSharedData = renderConfig.AllocSamplerSharedData(&seedBaseGenerator, GetFilm());
+		eyeSamplerSharedData = renderConfig.AllocSamplerSharedData(seedBaseGenerator, GetFilm());
 
 	}
 

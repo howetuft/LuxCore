@@ -53,7 +53,10 @@ BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
-void BiDirCPURenderThread::AOVWarmUp(std::stop_token stop_token, RandomGenerator *rndGen) {
+void BiDirCPURenderThread::AOVWarmUp(
+	std::stop_token stop_token,
+	const luxrays::RandomGeneratorUPtr & rndGen
+) {
 	if (threadIndex == 0)
 		SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] AOV warmup started");
 
@@ -781,7 +784,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 	auto& scene = engine->renderConfig.GetScene();
 	auto& camera = scene.GetCamera();
 	PhotonGICache *photonGICache = engine->photonGICache;
@@ -1057,9 +1060,6 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			photonGICache->Update(threadIndex, spp);
                 }
 	} // ~for
-
-	//sampler.reset();
-	delete rndGen;
 
 	threadDone = true;
 

@@ -86,7 +86,7 @@ void RTPathCPUSamplerSharedData::Reset() {
 }
 
 std::unique_ptr<SamplerSharedData> RTPathCPUSamplerSharedData::FromProperties(
-	const Properties &cfg, RandomGenerator *rndGen, OptionalPtr<Film> film
+	const Properties &cfg, const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
 ) {
 	return std::make_unique<RTPathCPUSamplerSharedData>(film);
 }
@@ -96,7 +96,7 @@ std::unique_ptr<SamplerSharedData> RTPathCPUSamplerSharedData::FromProperties(
 //------------------------------------------------------------------------------
 
 RTPathCPUSampler::RTPathCPUSampler(
-	luxrays::RandomGenerator *rnd,
+	const luxrays::RandomGeneratorUPtr & rnd,
 	OptionalPtr<Film> flm,
 	const FilmSampleSplatterUPtr& flmSplatter,
 	SamplerSharedDataSPtr samplerSharedData
@@ -244,7 +244,7 @@ Properties RTPathCPUSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.type"));
 }
 
-SamplerUPtr RTPathCPUSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+SamplerUPtr RTPathCPUSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<RTPathCPUSampler>(rndGen, film, flmSplatter, sharedData);
 }

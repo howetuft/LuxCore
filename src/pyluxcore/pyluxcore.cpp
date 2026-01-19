@@ -2324,7 +2324,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Properties class
   //--------------------------------------------------------------------------
 
-  py::class_<luxrays::Properties, py::smart_holder>(m, "Properties")
+  py::class_<luxrays::Properties, std::shared_ptr<luxrays::Properties>>(m, "Properties")
     .def(py::init<>())
     .def(py::init<std::string>())
     .def(py::init<luxrays::Properties>(), py::keep_alive<1,2>())
@@ -2583,9 +2583,9 @@ PYBIND11_MODULE(pyluxcore, m) {
 			//, py::return_value_policy::move)
     //.def("__init__", make_constructor(RenderConfig_LoadFile))
     //.def(py::init(&RenderConfig_LoadFile)) TODO
-    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, py::return_value_policy::reference_internal)
-    .def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty, py::return_value_policy::reference_internal)
-    .def("GetScene", &RenderConfig_GetScene, py::return_value_policy::reference_internal)
+    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties)
+    .def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
+    .def("GetScene", &RenderConfig_GetScene)
     .def("HasCachedKernels", &luxcore::detail::RenderConfigImpl::HasCachedKernels)
     .def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
     .def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
@@ -2593,7 +2593,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Save", &luxcore::detail::RenderConfigImpl::Save)
     .def("Export", &luxcore::detail::RenderConfigImpl::Export)
     .def_static("LoadResumeFile", &RenderConfig_LoadResumeFile)
-    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, py::return_value_policy::reference_internal)
+    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties)
   ;
 
   //--------------------------------------------------------------------------

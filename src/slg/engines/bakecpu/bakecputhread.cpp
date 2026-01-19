@@ -24,6 +24,7 @@
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
+#include "luxrays/core/randomgen.h"
 
 using namespace std;
 using namespace luxrays;
@@ -430,14 +431,19 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		//----------------------------------------------------------------------
 
 		// (engine->seedBase + 1) seed is used for sharedRndGen
-		RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+		const std::unique_ptr<RandomGenerator> rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 
 		// Setup the sampler(s)
 
 		SamplerUPtr lightSampler;
 
-		auto eyeSampler = engine->renderConfig.AllocSampler(rndGen, engine->GetMapFilm(),
-				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
+		auto eyeSampler = engine->renderConfig.AllocSampler(
+			rndGen,
+			engine->GetMapFilm(),
+			engine->sampleSplatter,
+			engine->samplerSharedData,
+			samplerAdditionalProps
+		);
 		eyeSampler->SetThreadIndex(threadIndex);
 		// Below, I need 7 additional samples
 		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 8);
@@ -451,7 +457,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				Property("sampler.imagesamples.enable")(false) <<
 				Property("sampler.metropolis.addonlycaustics")(true);
 
-			lightSampler = Sampler::FromProperties(props, rndGen, engine->GetMapFilm(), nullptr,
+			lightSampler = Sampler::FromProperties(props, std::cref(rndGen), engine->GetMapFilm(), nullptr,
 					engine->lightSamplerSharedData);
 			lightSampler->SetThreadIndex(threadIndex);
 
@@ -522,7 +528,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 		}
 
-		delete rndGen;
+		//rndGen.reset();
 
 		engine->threadsSyncBarrier->arrive_and_wait();
 

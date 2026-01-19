@@ -105,7 +105,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	SetThreadGroupAffinity(threadIndex);
 
 	// (engine->seedBase + 1) seed is used for sharedRndGen
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
+	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 
 	// All threads use the film allocated by the first thread
 	FilmRef film = GetThreadFilm();
@@ -176,8 +176,6 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		}
 	}
 
-
-	delete rndGen;
 
 	threadDone = true;
 

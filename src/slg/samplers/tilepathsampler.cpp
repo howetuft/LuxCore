@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 std::unique_ptr<SamplerSharedData> TilePathSamplerSharedData::FromProperties(const Properties &cfg,
-		RandomGenerator *rndGen, OptionalPtr<Film> film) {
+		const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film) {
 	return std::make_unique<TilePathSamplerSharedData>();
 }
 
@@ -39,7 +39,7 @@ std::unique_ptr<SamplerSharedData> TilePathSamplerSharedData::FromProperties(con
 // TilePath sampler
 //------------------------------------------------------------------------------
 
-TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
+TilePathSampler::TilePathSampler(const RandomGeneratorUPtr & rnd, OptionalPtr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter
 ) :
 	Sampler(rnd, flm, flmSplatter, true),
@@ -128,7 +128,7 @@ Properties TilePathSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.type"));
 }
 
-SamplerUPtr TilePathSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+SamplerUPtr TilePathSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<TilePathSampler>(rndGen, film, flmSplatter);
 }

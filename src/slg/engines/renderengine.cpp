@@ -51,7 +51,7 @@ using namespace slg;
 RenderEngine::RenderEngine(RenderConfigRef cfg) :
 	renderConfig(cfg),
 	bootStrapSeed(131),
-	seedBaseGenerator(131),
+	seedBaseGenerator(std::make_unique<luxrays::RandomGenerator>(131)),
 	pixelFilter(nullptr),
 	started(false),
 	editMode(false),
@@ -60,7 +60,7 @@ RenderEngine::RenderEngine(RenderConfigRef cfg) :
 
 	if (renderConfig.GetConfig().IsDefined("renderengine.seed")) {
 		const u_int seed = Max(1u, renderConfig.GetConfig().Get("renderengine.seed").Get<u_int>());
-		seedBaseGenerator.init(seed);
+		seedBaseGenerator->init(seed);
 	}
 	GenerateNewSeedBase();
 
@@ -201,13 +201,13 @@ void RenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
 
 void RenderEngine::SetSeed(const unsigned long seed) {
 	bootStrapSeed = seed;
-	seedBaseGenerator.init(seed);
+	seedBaseGenerator->init(seed);
 
 	GenerateNewSeedBase();
 }
 
 void RenderEngine::GenerateNewSeedBase() {
-	seedBase = seedBaseGenerator.uintValue();
+	seedBase = seedBaseGenerator->uintValue();
 }
 
 void RenderEngine::UpdateFilm() {

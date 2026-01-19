@@ -81,8 +81,8 @@ protected:
 		return std::move(t);
 	}
 
-	void AOVWarmUp(std::stop_token stop_token, luxrays::RandomGenerator *rndGen);
-	
+	void AOVWarmUp(std::stop_token stop_token, const luxrays::RandomGeneratorUPtr & rndGen);
+
 	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
 	void RenderFunc(std::stop_token stop_token);
 

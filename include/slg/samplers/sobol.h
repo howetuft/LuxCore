@@ -42,7 +42,7 @@ class SobolSamplerSharedData : public SamplerSharedData {
 public:
 	// Constructors
 	// Note that film is optional for this object
-	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen, OptionalPtr<Film> engineFlm);
+	SobolSamplerSharedData(const luxrays::RandomGeneratorUPtr & rndGen, OptionalPtr<Film> engineFlm);
 	SobolSamplerSharedData(const u_int seed, OptionalPtr<Film> engineFlm);
 	virtual ~SobolSamplerSharedData() { }
 
@@ -56,7 +56,7 @@ public:
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film
 	);
 
@@ -90,7 +90,7 @@ class SobolSampler : public Sampler {
 public:
 
 	SobolSampler(
-		luxrays::RandomGenerator *rnd,
+		const luxrays::RandomGeneratorUPtr & rnd,
 		OptionalPtr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		const bool imgSamplesEnable,
@@ -123,7 +123,8 @@ public:
 	static std::string GetObjectTag() { return "SOBOL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		const luxrays::Properties &cfg,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);

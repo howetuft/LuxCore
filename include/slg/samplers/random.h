@@ -46,7 +46,7 @@ public:
 	void GetNewBucket(const u_int bucketCount, u_int *newBucketIndex);
 	
 	static std::unique_ptr<SamplerSharedData> FromProperties(
-		const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen, OptionalPtr<Film> film
+		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
 	);
 
 	FilmRef GetEngineFilm() { return *engineFilm; }
@@ -63,7 +63,7 @@ private:
 
 class RandomSampler : public Sampler {
 public:
-	RandomSampler(luxrays::RandomGenerator *rnd, OptionalPtr<Film> flm,
+	RandomSampler(const luxrays::RandomGeneratorUPtr & rnd, OptionalPtr<Film> flm,
 			const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
@@ -90,7 +90,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
-		luxrays::RandomGenerator *rndGen,
+		const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
