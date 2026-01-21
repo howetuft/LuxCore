@@ -58,7 +58,7 @@ public:
 		forceWorkGroupSize(0) { }
 	virtual ~DeviceDescription() { }
 
-	const std::string &GetName() const { return name; }
+	const std::string GetName() const { return name; }
 	const DeviceType GetType() const { return type; };
 	virtual int GetComputeUnits() const { return 1; }
 	virtual u_int GetNativeVectorWidthFloat() const { return 4; };

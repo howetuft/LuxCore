@@ -609,7 +609,7 @@ public:
 	 * 
 	 * \return a reference to all Property names defined.
 	 */
-	const std::vector<std::string> &GetAllNames() const;
+	std::vector<std::string> GetAllNames() const;
 	/*!
 	 * \brief Returns all Property names that start with a specific prefix.
 	 *
@@ -646,7 +646,7 @@ public:
 	 *
 	 * \return a vector of Property names.
 	 */
-	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix, const bool sorted = false) const;
+	std::vector<std::string> GetAllUniqueSubNames(const std::string prefix, const bool sorted = false) const;
 	/*!
 	 * \brief Returns if there are at least a Property starting for specific prefix.
 	 *

@@ -186,11 +186,12 @@ PropertiesUPtr luxcore::GetOpenCLDeviceDescs() {
 	API_BEGIN_NOARGS();
 
 	PropertiesUPtr propsPtr = std::make_unique<Properties>();
-	PropertiesRef props = *propsPtr;;
+	PropertiesRef props = *propsPtr;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	Context ctx;
-	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+	std::vector<DeviceDescription *> deviceDescriptions =
+		ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
 	DeviceDescription::Filter((DeviceType)(DEVICE_TYPE_OPENCL_ALL | DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
@@ -233,7 +234,7 @@ PropertiesUPtr luxcore::GetOpenCLDeviceDescs() {
 #if !defined(LUXRAYS_DISABLE_CUDA)
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
-			
+
 			props <<
 					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
 					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
@@ -241,7 +242,7 @@ PropertiesUPtr luxcore::GetOpenCLDeviceDescs() {
 #endif
 	}
 #endif
-	
+
 	API_RETURN("{}", ToArgString(props));
 
 	return propsPtr;

@@ -820,7 +820,7 @@ unsigned int Properties::GetSize() const {
 }
 
 Properties &Properties::Set(const Properties &props) {
-	for(const string &name: props.GetAllNames()) {
+	for(const string name: props.GetAllNames()) {
 		this->Set(props.Get(name));
 	}
 
@@ -828,7 +828,7 @@ Properties &Properties::Set(const Properties &props) {
 }
 
 Properties &Properties::Set(const Properties &props, const string &prefix) {
-	for(const string &name: props.GetAllNames()) {
+	for(const string name: props.GetAllNames()) {
 		Set(props.Get(name).AddedNamePrefix(prefix));
 	}
 
@@ -917,13 +917,15 @@ Properties &Properties::Clear() {
 	return *this;
 }
 
-const vector<string> &Properties::GetAllNames() const {
-	return names;
+std::vector<std::string> Properties::GetAllNames() const {
+	std::vector<std::string> res;
+	std::copy(names.begin(), names.end(), std::back_inserter(res));
+	return res;
 }
 
 vector<string> Properties::GetAllNames(const string &prefix) const {
 	vector<string> namesSubset;
-	for(const string &name: names) {
+	for(const string name: names) {
 		if (name.find(prefix) == 0)
 			namesSubset.push_back(name);
 	}
@@ -935,7 +937,7 @@ std::vector<string> Properties::GetAllNamesRE(const string &regularExpression) c
 	std::regex re(regularExpression);
 
 	std::vector<string> namesSubset;
-	for(const string &name: names) {
+	for(const string name: names) {
 		if (std::regex_match(name, re))
 			namesSubset.push_back(name);
 	}
@@ -943,12 +945,14 @@ std::vector<string> Properties::GetAllNamesRE(const string &regularExpression) c
 	return namesSubset;
 }
 
-std::vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool sorted) const {
+std::vector<std::string> Properties::GetAllUniqueSubNames(
+	const string prefix, const bool sorted
+) const {
 	const size_t fieldsCount = count(prefix.begin(), prefix.end(), '.') + 2;
 
-	set<string> definedNames;
-	vector<string> namesSubset;
-	for(const string &name: names) {
+	std::set<std::string> definedNames;
+	std::vector<std::string> namesSubset;
+	for(const auto name: names) {
 		if (name.find(prefix) == 0) {
 			// Check if it has been already defined
 
@@ -962,7 +966,7 @@ std::vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const
 
 	if (sorted) {
 		std::sort(namesSubset.begin(), namesSubset.end(),
-				[](const string &a, const string &b) -> bool{ 
+			[](const string &a, const string &b) -> bool{
 			// Try to convert a and b to a number
 			int aNumber = 0;
 			bool validA;
@@ -1005,7 +1009,7 @@ std::vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const
 }
 
 bool Properties::HaveNames(const string &prefix) const {
-	for(const string &name: names) {
+	for(const string name: names) {
 		if (name.find(prefix) == 0)
 			return true;
 	}
@@ -1016,7 +1020,7 @@ bool Properties::HaveNames(const string &prefix) const {
 bool Properties::HaveNamesRE(const string &regularExpression) const {
 	std::regex re(regularExpression);
 
-	for(const string &name: names) {
+	for(const string name: names) {
 		if (std::regex_match(name, re))
 			return true;
 	}
@@ -1026,7 +1030,7 @@ bool Properties::HaveNamesRE(const string &regularExpression) const {
 
 std::unique_ptr<Properties> Properties::GetAllProperties(const string &prefix) const {
 	std::unique_ptr<Properties> subset = std::make_unique<Properties>();
-	for(const string &name: names) {
+	for(const string name: names) {
 		if (name.find(prefix) == 0)
 			subset->Set(Get(name));
 	}
@@ -1093,7 +1097,7 @@ string Properties::ToString() const {
 }
 
 Properties &Properties::Set(const Property &prop) {
-	const string &propName = prop.GetName();
+	const string propName = prop.GetName();
 
 	if (!IsDefined(propName)) {
 		// It is a new name
