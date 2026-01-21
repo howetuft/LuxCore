@@ -44,8 +44,8 @@ void LuxCoreApp::BakeAllSceneObjects() {
 
 	// The render configuration and the scene properties
 	auto& renderConfig = session->GetRenderConfig();
-	const Properties &cfgProps =  renderConfig.ToProperties();
-	auto sceneProps =  renderConfig.GetScene().ToProperties();
+	auto& cfgProps =  renderConfig.ToProperties();
+	auto& sceneProps = renderConfig.GetScene().ToProperties();
 
 	// Build the list of scene objects
 	vector<string> objKeys = sceneProps->GetAllUniqueSubNames("scene.objects");
@@ -82,7 +82,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 	// Check the number of image pipelines
 	//
 	// Note: I assume the index starts from 0
-	const u_int imagePiplinesCount = cfgProps.GetAllUniqueSubNames("film.imagepipelines").size();
+	const u_int imagePiplinesCount = cfgProps->GetAllUniqueSubNames("film.imagepipelines").size();
 	LC_LOG("Number of image pipelines: " + imagePiplinesCount)
 
 	// Add a NOP image pipeline
@@ -109,9 +109,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 
 	// Write the complete new render config to file
 	Properties completeBakeCfgProps;
-	completeBakeCfgProps <<
-			cfgProps <<
-			bakeProps;
+	completeBakeCfgProps << *cfgProps << bakeProps;
 	completeBakeCfgProps.Save("render-bakeallobjects.cfg");
 
 	// Write the complete new baked scene to file
@@ -130,10 +128,10 @@ void LuxCoreApp::BakeAllSceneObjects() {
 	// Write the complete new baked config file to file
 	Properties completeBakedCfgProps;
 	completeBakedCfgProps <<
-			cfgProps <<
+			*cfgProps <<
 			Property("scene.file")("scene-bakedallobjects.scn");
 	completeBakedCfgProps.Save("render-bakedallobjects.cfg");
 	
 	// Start the backing rendering
-	RenderConfigParse(std::make_shared<Properties>(completeBakeCfgProps));
+	RenderConfigParse(std::make_unique<Properties>(completeBakeCfgProps));
 }

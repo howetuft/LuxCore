@@ -62,7 +62,7 @@ using namespace slg;
 // Helpers
 //------------------------------------------------------------------------------
 
-static void PrintConfig(PropertiesConstPtr props) {
+static void PrintConfig(PropertiesPtr props) {
 
 	if (not props) return;
 
@@ -86,9 +86,9 @@ static std::unique_ptr<Properties> defaultProperties;
 
 
 // Case #1: a scene is provided by caller
-RenderConfig::RenderConfig(Private p, PropertiesConstPtr props, SceneRef scn)
+RenderConfig::RenderConfig(Private p, PropertiesPtr props, SceneRef scn)
 	:
-	cfg(std::make_shared<Properties>()),
+	cfg(std::make_unique<Properties>()),
 	sceneRef(scn)
 {
 	InitDefaultProperties();
@@ -107,9 +107,9 @@ RenderConfig::RenderConfig(Private p, PropertiesConstPtr props, SceneRef scn)
 
 
 // Case #2: no scene is provided by caller, RenderConfig has to create one
-RenderConfig::RenderConfig(Private p, PropertiesConstPtr props)
+RenderConfig::RenderConfig(Private p, PropertiesPtr props)
 	:
-	cfg(std::make_shared<Properties>()),
+	cfg(std::make_unique<Properties>()),
 	sceneRef(NullScene)  // Temporary, awaiting scene construction
 {
 	InitDefaultProperties();
@@ -119,14 +119,14 @@ RenderConfig::RenderConfig(Private p, PropertiesConstPtr props)
 	PrintConfig(props);
 
 	// No scene has been provided by caller, create one
-	const auto defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
+	const auto defaultSceneName = GetDefaultProperties()->Get("scene.file").Get<string>();
 	const auto sceneFileName = SLG_FileNameResolver.ResolveFile(
 		props->Get(Property("scene.file")(defaultSceneName)).Get<string>()
 	);
 
 	SDL_LOG("Reading scene: " << sceneFileName);
 	internalScene = std::make_unique<Scene>(
-		std::make_shared<Properties>(sceneFileName),
+		std::make_unique<Properties>(sceneFileName),
 		props
 	);
 	sceneRef = *internalScene;
@@ -143,9 +143,9 @@ RenderConfig::RenderConfig(Private p, PropertiesConstPtr props)
 
 // Special private constructor for deserialization
 RenderConfig::RenderConfig(
-	PropertiesPtr p_cfg, SceneRef p_scn, SceneUPtr&& p_internalscene
+	PropertiesUPtr&& p_cfg, SceneRef p_scn, SceneUPtr&& p_internalscene
 ) :
-	cfg(p_cfg),
+	cfg(std::move(p_cfg)),
 	sceneRef(p_scn),
 	internalScene(std::move(p_internalscene))
 {
@@ -161,7 +161,7 @@ void RenderConfig::InitDefaultProperties() {
 		std::unique_lock<std::mutex> lock(defaultPropertiesMutex);
 		if (!defaultProperties.get()) {
 			auto props = std::make_unique<Properties>();
-			*props << RenderConfig::ToProperties(Properties());
+			*props << *RenderConfig::ToProperties(Properties());
 
 			defaultProperties = std::move(props);
 		}
@@ -169,10 +169,10 @@ void RenderConfig::InitDefaultProperties() {
 }
 
 
-const Properties &RenderConfig::GetDefaultProperties() {
+PropertiesPtr RenderConfig::GetDefaultProperties() {
 	InitDefaultProperties();
 
-	return *defaultProperties;
+	return defaultProperties;
 }
 
 
@@ -194,7 +194,7 @@ bool RenderConfig::HasCachedKernels() {
 }
 
 const Property RenderConfig::GetProperty(const string &name) const {
-	return ToProperties().Get(name);
+	return ToProperties()->Get(name);
 }
 
 void RenderConfig::Parse(const Properties &props) {
@@ -208,7 +208,7 @@ void RenderConfig::Parse(const Properties &props) {
 	}
 
 	// Reset the properties cache
-	propsCache.Clear();
+	propsCache->Clear();
 
 	GetConfig().Set(props);
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
@@ -267,7 +267,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		}
 		
 		// Reset the properties cache
-		propsCache.Clear();
+		propsCache->Clear();
 	}
 
 	//--------------------------------------------------------------------------
@@ -289,7 +289,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		}
 
 		// Reset the properties cache
-		propsCache.Clear();
+		propsCache->Clear();
 	}
 
 	//--------------------------------------------------------------------------
@@ -307,7 +307,7 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 		}
 
 		// Reset the properties cache
-		propsCache.Clear();
+		propsCache->Clear();
 	}
 
 	//--------------------------------------------------------------------------
@@ -323,13 +323,13 @@ void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
 			GetConfig().Set(props.Get("film.height"));
 		
 		// Reset the properties cache
-		propsCache.Clear();
+		propsCache->Clear();
 	}
 }
 
 void RenderConfig::Delete(const string &prefix) {
 	// Reset the properties cache
-	propsCache.Clear();
+	propsCache->Clear();
 
 	GetConfig().DeleteAll(GetConfig().GetAllNames(prefix));
 }
@@ -383,15 +383,17 @@ RenderEngineUPtr RenderConfig::AllocRenderEngine() {
 	return RenderEngine::FromProperties(*this);
 }
 
-const Properties &RenderConfig::ToProperties() const {
-	if (!propsCache.GetSize())
+PropertiesPtr RenderConfig::ToProperties() const {
+	if (!propsCache->GetSize())
 		propsCache = ToProperties(*cfg);
 
 	return propsCache;
 }
 
-Properties RenderConfig::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr RenderConfig::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+
+	Properties& props = *props_ptr;
 
 	// LuxRays context
 	props << cfg.Get(Property("context.verbose")(true));
@@ -451,7 +453,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
 	props << cfg.Get(Property("screen.tiles.error.show")(false));
 
-	return props;
+	return std::move(props_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -556,7 +558,7 @@ void slg::RenderConfig::save_construct_data(
     // save data required to construct instance
 
 	// Save Configuration
-	PropertiesPtr completeCfg;
+	PropertiesUPtr completeCfg;
 	completeCfg->Set(*t->cfg);
 	completeCfg->Set(t->saveAdditionalCfg);
 	ar << t->cfg;
@@ -575,7 +577,7 @@ void slg::RenderConfig::load_construct_data(
     // retrieve data from archive required to construct new instance
     // create and load data through pointer to object
     // tracking handles issues of duplicates.
-	PropertiesPtr cfg;
+	PropertiesUPtr cfg;
 	ar >> cfg;
 
 	SceneUPtr sptr;
@@ -585,7 +587,7 @@ void slg::RenderConfig::load_construct_data(
 	ar >> sref;
 
     // invoke inplace constructor to initialize instance of RenderConfig
-	::new(t) RenderConfig(cfg, *sref, std::move(sptr));  // NB: this is a placement new
+	::new(t) RenderConfig(std::move(cfg), *sref, std::move(sptr));  // NB: this is a placement new
 
 }
 

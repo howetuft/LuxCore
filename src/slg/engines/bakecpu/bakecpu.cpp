@@ -316,7 +316,7 @@ Properties BakeCPURenderEngine::ToProperties(const Properties &cfg) {
 			PathTracer::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 
-	props << cfg.GetAllProperties("bake.maps.");
+	props << *cfg.GetAllProperties("bake.maps.");
 
 	return props;
 }

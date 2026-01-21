@@ -206,8 +206,8 @@ void LuxCoreApp::DrawRendering() {
 void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,
     const Property &propPendingPasses,  const Property &propErrors,
     const unsigned int tileCount, const unsigned int tileWidth, const unsigned int tileHeight, const ImU32 col) {
-  const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
-  const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
+  const bool showPassCount = config->GetProperties()->Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+  const bool showError = config->GetProperties()->Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
   int frameBufferWidth, frameBufferHeight;
   glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -266,12 +266,12 @@ void LuxCoreApp::DrawTiles() {
   // Draw the pending, converged and not converged tiles for TILEPATHCPU or TILEPATHOCL
   const Properties &stats = session->GetStats();
 
-  const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
+  const string engineType = config->ToProperties()->Get("renderengine.type").Get<string>();
   if ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL")) {
     const unsigned int tileWidth = stats.Get("stats.tilepath.tiles.size.x").Get<unsigned int>();
     const unsigned int tileHeight = stats.Get("stats.tilepath.tiles.size.y").Get<unsigned int>();
 
-    if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
+    if (config->GetProperties()->Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
       // Draw converged tiles borders
       glColor3f(0.f, 1.f, 0.f);
       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
@@ -286,7 +286,7 @@ void LuxCoreApp::DrawTiles() {
       ImGui::PopStyleColor();
     }
 
-    if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
+    if (config->GetProperties()->Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
       // Draw converged tiles borders
       glColor3f(1.f, 0.f, 0.f);
       ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
@@ -434,7 +434,7 @@ void LuxCoreApp::RunApp(
 
       targetFilmWidth = windowWidth / 2;
       targetFilmHeight = windowHeight / 2;
-      config->Parse(std::make_shared<Properties>(Properties() <<
+      config->Parse(std::make_unique<Properties>(Properties() <<
           Property("film.width")(targetFilmWidth) <<
           Property("film.height")(targetFilmHeight)));
     } else {
@@ -570,7 +570,7 @@ void LuxCoreApp::RunApp(
             unsigned int filmHeight = targetFilmHeight;
             AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 
-			auto props = std::make_shared<Properties>();
+			auto props = std::make_unique<Properties>();
 			*props <<
                 Property("film.width")(filmWidth) <<
                 Property("film.height")(filmHeight);
@@ -675,7 +675,7 @@ void LuxCoreApp::RunApp(
         // I refresh the rendering once every 5secs in image view mode
         const double screenRefreshTime = (currentTool == TOOL_IMAGE_VIEW) ?
           5.0 :
-          config->ToProperties().Get("screen.refresh.interval").Get<unsigned int>() / 1000.0;
+          config->ToProperties()->Get("screen.refresh.interval").Get<unsigned int>() / 1000.0;
 
         currentTime = WallClockTime();
         if (currentTime - lastScreenRefresh >= screenRefreshTime) {

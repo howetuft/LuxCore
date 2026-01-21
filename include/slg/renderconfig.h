@@ -28,9 +28,11 @@
 #include "slg/scene/scene.h"
 #include "slg/usings.h"
 #include <functional>
+#include <memory>
 
 namespace slg {
 using luxrays::PropertiesPtr;
+using luxrays::PropertiesUPtr;
 using luxrays::PropertiesConstPtr;
 using luxrays::PropertiesConstRef;
 using luxrays::PropertiesRef;
@@ -50,10 +52,10 @@ public:
 	// Constructors are private, please use factory instead
 
 	// Case #1: External scene provided
-	RenderConfig(Private, PropertiesConstPtr props, SceneRef scene);
+	RenderConfig(Private, PropertiesPtr props, SceneRef scene);
 
 	// Case #2: No external scene provided, will generate an internal one
-	RenderConfig(Private, PropertiesConstPtr props);
+	RenderConfig(Private, PropertiesPtr props);
 
 	bool HasCachedKernels();
 
@@ -81,10 +83,10 @@ public:
 
 	RenderEngineUPtr AllocRenderEngine();
 
-	const luxrays::Properties &ToProperties() const;
+	PropertiesPtr ToProperties() const;
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static const luxrays::Properties &GetDefaultProperties();
+	static PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesPtr GetDefaultProperties();
 
 	static RenderConfigUPtr LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(
@@ -107,6 +109,7 @@ public:
 	SceneRef GetScene() { return sceneRef; }
 	PropertiesConstRef GetConfig() const { return *cfg; }
 	PropertiesRef GetConfig() { return *cfg; }
+	PropertiesPtr GetConfigPtr() { return cfg; }
 
 
 	// Serialization stuff
@@ -124,16 +127,17 @@ public:
 private:
 
 	// For deserialization only
-	RenderConfig(PropertiesPtr p_cfg, SceneRef p_scn, SceneUPtr&& p_internalscene);
+	RenderConfig(PropertiesUPtr&& p_cfg, SceneRef p_scn, SceneUPtr&& p_internalscene);
 
 	static void InitDefaultProperties();
 
-	mutable luxrays::Properties propsCache;
+	mutable luxrays::PropertiesUPtr propsCache{std::make_unique<luxrays::Properties>()};
 	// This is a temporary field used to exchange data between SaveSerialized())
 	// and save()
 	mutable luxrays::Properties saveAdditionalCfg;
 
-	luxrays::PropertiesPtr cfg;
+	// RenderConfig owns its configuration
+	luxrays::PropertiesUPtr cfg;
 
 	// RenderConfig owns the scene... or not
 	// There are 2 cases:

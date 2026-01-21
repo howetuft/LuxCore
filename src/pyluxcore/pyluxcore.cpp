@@ -139,10 +139,10 @@ static py::list GetOpenCLDeviceList() {
 }
 
 static void LuxCore_KernelCacheFill1() {
-  KernelCacheFill(std::make_shared<Properties>());
+  KernelCacheFill(std::make_unique<Properties>());
 }
 
-static void LuxCore_KernelCacheFill2(const PropertiesPtr & config) {
+static void LuxCore_KernelCacheFill2(PropertiesPtr config) {
   KernelCacheFill(config);
 }
 
@@ -609,7 +609,7 @@ static PropertyPtr Property_InitWithList(const py::str &name, const py::list &l)
 // Glue for Properties class
 //------------------------------------------------------------------------------
 
-static py::list Properties_GetAllNamesRE(luxrays::PropertiesConstPtr props, const std::string &pattern) {
+static py::list Properties_GetAllNamesRE(luxrays::PropertiesPtr props, const std::string &pattern) {
   py::list l;
   const std::vector<std::string> &keys = props->GetAllNamesRE(pattern);
   for(const std::string &key: keys) {
@@ -2500,12 +2500,12 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::keep_alive<1, 2>()
 	)
     .def(
-		py::init(&SceneImpl::Create<luxrays::PropertiesConstPtr, luxrays::PropertiesConstPtr>),
+		py::init(&SceneImpl::Create<luxrays::PropertiesPtr, luxrays::PropertiesPtr>),
 		py::keep_alive<1, 2>(),
 		py::keep_alive<1, 3>()
 	)
     .def(
-		py::init(&SceneImpl::Create<luxrays::PropertiesConstPtr>),
+		py::init(&SceneImpl::Create<luxrays::PropertiesPtr>),
 		py::keep_alive<1, 2>()
 	)
     .def(
@@ -2569,11 +2569,11 @@ PYBIND11_MODULE(pyluxcore, m) {
 
   py::class_<luxcore::detail::RenderConfigImpl, py::smart_holder>(m, "RenderConfig")
     .def(
-		py::init(&RenderConfigImpl::Create<luxrays::PropertiesConstPtr>),
+		py::init(&RenderConfigImpl::Create<luxrays::PropertiesPtr>),
 		py::keep_alive<1, 2>()
 	)
     .def(
-		py::init(&RenderConfigImpl::Create<luxrays::PropertiesConstPtr, SceneImpl&>),
+		py::init(&RenderConfigImpl::Create<luxrays::PropertiesPtr, SceneImpl&>),
 		py::keep_alive<1, 2>(),
 		py::keep_alive<1, 3>()
 	)

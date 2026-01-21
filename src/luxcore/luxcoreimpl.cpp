@@ -58,7 +58,7 @@ std::unique_ptr<FilmImpl> FilmImpl::Create(const std::string &fileName) {
 	return std::make_unique<FilmImplStandalone>(fileName);
 }
 std::unique_ptr<FilmImpl> FilmImpl::Create(
-	luxrays::PropertiesConstPtr props,
+	luxrays::PropertiesPtr props,
 	const bool hasPixelNormalizedChannel,
 	const bool hasScreenNormalizedChannel
 ) {
@@ -100,7 +100,7 @@ unsigned int FilmImpl::GetHeight() const {
 	return result;
 }
 
-PropertiesPtr FilmImpl::GetStats() const {
+PropertiesUPtr FilmImpl::GetStats() const {
 	API_BEGIN_NOARGS();
 
 	//std::unique_ptr<slg::Film> film = std::make_unique<slg::Film>(
@@ -109,7 +109,7 @@ PropertiesPtr FilmImpl::GetStats() const {
 	//);
 	auto& film = GetSLGFilm();
 
-	PropertiesPtr statsPtr = std::make_shared<Properties>();
+	auto statsPtr = std::make_unique<Properties>();
 	Properties& stats = *statsPtr;
 
 	stats.Set(Property("stats.film.total.samplecount")(film.GetTotalSampleCount()));
@@ -118,7 +118,7 @@ PropertiesPtr FilmImpl::GetStats() const {
 
 	API_RETURN("{}", ToArgString(stats));
 
-	return statsPtr;
+	return std::move(statsPtr);
 }
 
 float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
@@ -192,7 +192,7 @@ void FilmImpl::AddFilm(FilmConstRef film,
 void FilmImpl::SaveOutput(
 	const std::string &fileName,
 	const FilmOutputType type,
-	const PropertiesConstPtr props
+	PropertiesPtr props
 ) const {
 	API_BEGIN("{}, {}, {}", ToArgString(fileName),ToArgString(type), ToArgString(*props));
 
@@ -408,7 +408,7 @@ float * FilmImplSession::UpdateChannelFloat(const FilmChannelType type,
 	return result;
 }
 
-void FilmImplSession::Parse(PropertiesConstPtr props) {
+void FilmImplSession::Parse(PropertiesPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	throw runtime_error("Film::Parse() can be used only with a stand alone Film");
@@ -503,7 +503,7 @@ FilmImplStandalone::FilmImplStandalone(const std::string &fileName) {
 }
 
 FilmImplStandalone::FilmImplStandalone(
-	luxrays::PropertiesConstPtr props,
+	luxrays::PropertiesPtr props,
 	const bool hasPixelNormalizedChannel,
 	const bool hasScreenNormalizedChannel
 ) {
@@ -628,7 +628,7 @@ float *FilmImplStandalone::UpdateChannelFloat(const FilmChannelType type,
 	return result;
 }
 
-void FilmImplStandalone::Parse(PropertiesConstPtr props) {
+void FilmImplStandalone::Parse(PropertiesPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	standAloneFilm->Parse(props);
@@ -802,33 +802,33 @@ void CameraImpl::RotateDown(const float angle) {
 // is just requested to keep a reference on it
 SceneImpl::SceneImpl(Private p, slg::SceneRef scn) :
 	camera(std::make_unique<CameraImpl>(*this)),
-	scenePropertiesCache(std::make_shared<luxrays::Properties>()),
+	scenePropertiesCache(std::make_unique<luxrays::Properties>()),
 	internalScene(nullptr),
 	sceneRef(scn)
 {}
 
 // Other cases: SceneImpl owns the scene.
-SceneImpl::SceneImpl(Private p, luxrays::PropertiesConstPtr resizePolicyProps) :
+SceneImpl::SceneImpl(Private p, luxrays::PropertiesPtr resizePolicyProps) :
 	camera(std::make_unique<CameraImpl>(*this)),
-	scenePropertiesCache(std::make_shared<luxrays::Properties>()),
+	scenePropertiesCache(std::make_unique<luxrays::Properties>()),
 	internalScene(std::make_unique<slg::Scene>(resizePolicyProps)),
 	sceneRef(*internalScene)
 {}
 
 SceneImpl::SceneImpl(
 	Private p,
-	luxrays::PropertiesConstPtr props,
-	luxrays::PropertiesConstPtr resizePolicyProps
+	luxrays::PropertiesPtr props,
+	luxrays::PropertiesPtr resizePolicyProps
 ) :
 	camera(std::make_unique<CameraImpl>(*this)),
-	scenePropertiesCache(std::make_shared<luxrays::Properties>()),
+	scenePropertiesCache(std::make_unique<luxrays::Properties>()),
 	internalScene(std::make_unique<slg::Scene>(props, resizePolicyProps)),
 	sceneRef(*internalScene)
 {}
 
 static slg::SceneUPtr LoadScene(
 	const string fileName,
-	luxrays::PropertiesConstPtr resizePolicyProps
+	luxrays::PropertiesPtr resizePolicyProps
 ) {
 	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
@@ -837,7 +837,7 @@ static slg::SceneUPtr LoadScene(
 	} else if (ext == ".scn") {
 		// The file is in a text format
 		return std::make_unique<slg::Scene>(
-			std::make_shared<Properties>(fileName), resizePolicyProps
+			std::make_unique<Properties>(fileName), resizePolicyProps
 		);
 	} else {
 		throw runtime_error("Unknown scene file extension: " + fileName);
@@ -849,12 +849,12 @@ static slg::SceneUPtr LoadScene(
 SceneImpl::SceneImpl(
 	Private p,
 	const string fileName,
-	luxrays::PropertiesConstPtr resizePolicyProps
+	luxrays::PropertiesPtr resizePolicyProps
 ) :
 	internalScene(LoadScene(fileName, resizePolicyProps)),
 	sceneRef(*internalScene),
 	camera(std::make_unique<CameraImpl>(*this)),
-	scenePropertiesCache(std::make_shared<luxrays::Properties>())
+	scenePropertiesCache(std::make_unique<luxrays::Properties>())
 {}
 
 
@@ -1105,7 +1105,7 @@ const unsigned int  SceneImpl::GetObjectCount() const {
 	return result;
 }
 
-void SceneImpl::Parse(PropertiesConstPtr props) {
+void SceneImpl::Parse(PropertiesPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	// Invalidate the scene properties cache
@@ -1432,7 +1432,7 @@ void SceneImpl::DefineMesh(std::unique_ptr<ExtTriangleMesh>&& mesh) {
 	API_END();
 }
 
-PropertiesConstPtr SceneImpl::ToProperties() const {
+PropertiesPtr SceneImpl::ToProperties() const {
 	API_BEGIN_NOARGS();
 
 	if (!scenePropertiesCache->GetSize())
@@ -1479,20 +1479,20 @@ auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
 // Case #1: Non owing constructor: RenderConfigImpl is provided a scene (as a ref)
 RenderConfigImpl::RenderConfigImpl(
 	Private p,
-	PropertiesConstPtr props,
+	PropertiesPtr props,
 	SceneImpl& scn
 ) :
 	sceneRef(scn),
-	renderConfig(slg::RenderConfig::Create(props, std::ref(scn.GetSlgScene())))
+	renderConfig(slg::RenderConfig::Create(std::ref(props), std::ref(scn.GetSlgScene())))
 {}
 
 // Other cases: RenderConfigImpl is requested to build the scene from the properties
 // In these cases, RenderConfigImpl owns the scene
 RenderConfigImpl::RenderConfigImpl(
 	Private p,
-	PropertiesConstPtr props
+	PropertiesPtr props
 ) :
-	renderConfig(slg::RenderConfig::Create(props)),  // Build an internal scene
+	renderConfig(slg::RenderConfig::Create(std::ref(props))),  // Build an internal scene
 	internalScene(SceneImpl::Create<slg::SceneRef>(renderConfig->GetScene())),
 	sceneRef(*internalScene)
 {}
@@ -1554,10 +1554,10 @@ RenderConfigImpl::RenderConfigImpl(
 		);
 }
 
-const Properties &RenderConfigImpl::GetProperties() const {
+PropertiesPtr RenderConfigImpl::GetProperties() const {
 	API_BEGIN_NOARGS();
 
-	const auto& result = renderConfig->GetConfig();
+	auto& result = renderConfig->GetConfigPtr();
 
 	//API_RETURN("{}", ToArgString(result));
 	API_END();
@@ -1575,10 +1575,10 @@ const Property RenderConfigImpl::GetProperty(const std::string &name) const {
 	return result;
 }
 
-const Properties &RenderConfigImpl::ToProperties() const {
+PropertiesPtr RenderConfigImpl::ToProperties() const {
 	API_BEGIN_NOARGS();
 
-	const Properties &result = renderConfig->ToProperties();
+	PropertiesPtr result = renderConfig->ToProperties();
 
 	//API_RETURN("{}", ToArgString(result));
 	API_END();
@@ -1616,7 +1616,7 @@ bool RenderConfigImpl::HasCachedKernels() const {
 	return result;
 }
 
-void RenderConfigImpl::Parse(PropertiesConstPtr props) {
+void RenderConfigImpl::Parse(PropertiesPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	renderConfig->Parse(*props);
@@ -1677,10 +1677,10 @@ void RenderConfigImpl::ExportGLTF(const std::string &fileName) const {
 	API_END();
 }
 
-const Properties &RenderConfigImpl::GetDefaultProperties() {
+PropertiesPtr RenderConfigImpl::GetDefaultProperties() {
 	API_BEGIN_NOARGS();
 
-	const Properties &result = slg::RenderConfig::GetDefaultProperties();
+	auto& result = slg::RenderConfig::GetDefaultProperties();
 
 	API_END();
 
@@ -2088,7 +2088,7 @@ const Properties &RenderSessionImpl::GetStats() const {
 	return result;
 }
 
-void RenderSessionImpl::Parse(PropertiesConstPtr props) {
+void RenderSessionImpl::Parse(luxrays::PropertiesPtr props) {
 	API_BEGIN("{}", ToArgString(props));
 
 	renderSession->Parse(props);

@@ -40,34 +40,34 @@ PixelFilterWindow::PixelFilterWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Pix
 		.SetDefault("BLACKMANHARRIS");
 }
 
-void PixelFilterWindow::RefreshObjectProperties(Properties &props) {
+void PixelFilterWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("film.filter");
+		*props = *config->ToProperties()->GetAllProperties("film.filter");
 	} catch(exception &ex) {
 		LA_LOG("PixelFilter parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("film.filter");
+		*props = *config->GetProperties()->GetAllProperties("film.filter");
 	}
 }
 
-void PixelFilterWindow::ParseObjectProperties(const Properties &props) {
-	app->RenderConfigParse(std::make_shared<Properties>(props.GetAllProperties("film.filter")));
+void PixelFilterWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+	app->RenderConfigParse(std::make_unique<Properties>(*props->GetAllProperties("film.filter")));
 }
 
-bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool PixelFilterWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 	// film.filter.type
 	//--------------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get(Property("film.filter.type")(typeTable.GetDefaultTag())).Get<string>();
+	const string currentSamplerType = props->Get(Property("film.filter.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);
 
 	if (ImGui::Combo("Pixel Filter type", &typeIndex, typeTable.GetTagList())) {
-		props.Clear();
+		props->Clear();
 
-		props << Property("film.filter.type")(typeTable.GetTag(typeIndex));
+		*props << Property("film.filter.type")(typeTable.GetTag(typeIndex));
 
 		return true;
 	}
@@ -83,31 +83,31 @@ bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (typeIndex != typeTable.GetVal("NONE")) {
 		float fval;
 
-		if (props.IsDefined("film.filter.xwidth") || props.IsDefined("film.filter.ywidth")) {
-			fval = props.Get("film.filter.xwidth").Get<float>();
+		if (props->IsDefined("film.filter.xwidth") || props->IsDefined("film.filter.ywidth")) {
+			fval = props->Get("film.filter.xwidth").Get<float>();
 			if (ImGui::SliderFloat("Horizontal radius", &fval, .1f, 3.f)) {
-				props.Set(Property("film.filter.xwidth")(fval));
+				props->Set(Property("film.filter.xwidth")(fval));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("film.filter.xwidth");
 
-			fval = props.Get("film.filter.ywidth").Get<float>();
+			fval = props->Get("film.filter.ywidth").Get<float>();
 			if (ImGui::SliderFloat("Vertical radius", &fval, .1f, 3.f)) {
-				props.Set(Property("film.filter.ywidth")(fval));
+				props->Set(Property("film.filter.ywidth")(fval));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("film.filter.ywidth");
 		} else {
-			fval = props.Get("film.filter.width").Get<float>();
+			fval = props->Get("film.filter.width").Get<float>();
 			if (ImGui::SliderFloat("Radius", &fval, .1f, 3.f)) {
-				props.Set(Property("film.filter.width")(fval));
+				props->Set(Property("film.filter.width")(fval));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("film.filter.width");
 
 			if (ImGui::Button("Separate filter horizontal and vertical radius")) {
-				props.Set(Property("film.filter.xwidth")(1.5f));
-				props.Set(Property("film.filter.ywidth")(2.5f));
+				props->Set(Property("film.filter.xwidth")(1.5f));
+				props->Set(Property("film.filter.ywidth")(2.5f));
 				modifiedProps = true;
 			}
 		}
@@ -120,9 +120,9 @@ bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (typeIndex == typeTable.GetVal("GAUSSIAN")) {
 		float fval;
 
-		fval = props.Get("film.filter.gaussian.alpha").Get<float>();
+		fval = props->Get("film.filter.gaussian.alpha").Get<float>();
 		if (ImGui::SliderFloat("Alpha", &fval, .1f, 10.f)) {
-			props.Set(Property("film.filter.gaussian.alpha")(fval));
+			props->Set(Property("film.filter.gaussian.alpha")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("film.filter.gaussian.alpha");

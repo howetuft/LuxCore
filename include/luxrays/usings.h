@@ -283,8 +283,9 @@ using VectorUPtr = std::unique_ptr<Vector>;
 using VectorConstUPtr = std::unique_ptr<const Vector>;
 
 class Properties;
-using PropertiesPtr = std::shared_ptr<Properties>;
-using PropertiesConstPtr = std::shared_ptr<const Properties>;
+using PropertiesPtr = const std::unique_ptr<Properties> &;
+using PropertiesConstPtr = const std::unique_ptr<const Properties> &;
+using PropertiesUPtr = std::unique_ptr<Properties>;
 using PropertiesRef = Properties &;
 using PropertiesConstRef = const Properties &;
 

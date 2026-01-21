@@ -65,10 +65,13 @@ public:
 	bool HasType(const FilmOutputType type) const { return (std::count(types.begin(), types.end(), type) > 0); }
 	FilmOutputType GetType(const u_int index) const { return types[index]; }
 	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
-	const luxrays::PropertiesConstPtr GetProperties(const u_int index) const { return outputProps[index]; }
+	const luxrays::PropertiesPtr GetProperties(const u_int index) { return outputProps[index]; }
 
-	void Add(const FilmOutputType type, const std::string &fileName,
-		luxrays::PropertiesConstPtr prop = NULL);
+	void Add(
+		const FilmOutputType type,
+		const std::string &fileName,
+		luxrays::PropertiesUPtr&& prop = nullptr
+	);
 
 	bool UseSafeSave() const { return safeSave; }
 	void SetSafeSave(const bool v) { safeSave = v; }
@@ -89,7 +92,7 @@ private:
 
 	std::vector<FilmOutputType> types;
 	std::vector<std::string> fileNames;
-	std::vector<luxrays::PropertiesConstPtr> outputProps;
+	std::vector<luxrays::PropertiesUPtr> outputProps;
 
 	bool safeSave;
 };

@@ -32,8 +32,8 @@ using namespace luxcore;
 
 void ObjectEditorWindow::Open() {
 	if (!opened) {
-		objectGUIProps.Clear();
-		objectEditorProps.Clear();
+		objectGUIProps->Clear();
+		objectEditorProps->Clear();
 
 		ObjectWindow::Open();
 	}
@@ -41,8 +41,8 @@ void ObjectEditorWindow::Open() {
 
 void ObjectEditorWindow::Close() {
 	if (opened) {
-		objectGUIProps.Clear();
-		objectEditorProps.Clear();
+		objectGUIProps->Clear();
+		objectEditorProps->Clear();
 
 		ObjectWindow::Close();
 	}
@@ -58,7 +58,7 @@ void ObjectEditorWindow::ParseGUIProperties() {
 	ParseObjectProperties(objectGUIProps);
 
 	// It will be filled at the next iteration
-	objectGUIProps.Clear();
+	objectGUIProps->Clear();
 }
 
 void ObjectEditorWindow::RefreshEditorProperties() {
@@ -67,7 +67,7 @@ void ObjectEditorWindow::RefreshEditorProperties() {
 	modifiedEditorProps = false;
 
 	strncpy(advancedEditorText,
-			objectEditorProps.ToString().c_str(),
+			objectEditorProps->ToString().c_str(),
 			LA_ARRAYSIZE(advancedEditorText));
 	modifiedEditorProps = false;
 }
@@ -76,7 +76,7 @@ void ObjectEditorWindow::ParseEditorProperties() {
 	ParseObjectProperties(objectEditorProps);
 
 	// It will be filled at the next iteration
-	objectEditorProps.Clear();
+	objectEditorProps->Clear();
 }
 
 void ObjectEditorWindow::Draw() {
@@ -85,7 +85,7 @@ void ObjectEditorWindow::Draw() {
 
 	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		// Check if I have fill object properties
-		if (!objectGUIProps.GetSize() || !objectEditorProps.GetSize()) {
+		if (!objectGUIProps->GetSize() || !objectEditorProps->GetSize()) {
 			// object properties are empty
 			RefreshGUIProperties();
 			RefreshEditorProperties();
@@ -152,8 +152,8 @@ void ObjectEditorWindow::Draw() {
 			ImGui::SameLine();
 
 			if (ImGui::Button(modifiedEditorProps ? "Parse (*)" : "Parse")) {
-				objectEditorProps.Clear();
-				objectEditorProps.SetFromString(string(advancedEditorText));
+				objectEditorProps->Clear();
+				objectEditorProps->SetFromString(string(advancedEditorText));
 
 				ParseEditorProperties();
 			}
@@ -168,9 +168,9 @@ void ObjectEditorWindow::Draw() {
 	if (!opened) {
 		// Clear the properties when the window is closed so they are
 		// re-initialized the next time.
-		if (objectGUIProps.GetSize())
-			objectGUIProps.Clear();
-		if (objectEditorProps.GetSize())
-			objectEditorProps.Clear();
+		if (objectGUIProps->GetSize())
+			objectGUIProps->Clear();
+		if (objectEditorProps->GetSize())
+			objectEditorProps->Clear();
 	}
 }

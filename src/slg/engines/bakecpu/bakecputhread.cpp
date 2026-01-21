@@ -542,7 +542,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 						engine->marginPixels, engine->marginSamplesThreshold, true);
 
 			// Save the rendered map
-			auto props = std::make_shared<Properties>();
+			auto props = std::make_unique<Properties>();
 			*props << Property("index")(mapInfo.imagePipelineIndex);
 			engine->GetMapFilm().Output(
 				mapInfo.fileName,

@@ -1024,14 +1024,15 @@ bool Properties::HaveNamesRE(const string &regularExpression) const {
 	return false;
 }
 
-Properties Properties::GetAllProperties(const string &prefix) const {
-	Properties subset;
+std::unique_ptr<Properties> Properties::GetAllProperties(const string &prefix) const {
+	std::unique_ptr<Properties> subset = std::make_unique<Properties>();
 	for(const string &name: names) {
 		if (name.find(prefix) == 0)
-			subset.Set(Get(name));
+			subset->Set(Get(name));
 	}
 
-	return subset;
+	return std::move(subset);
+
 }
 
 bool Properties::IsDefined(const string &propName) const {

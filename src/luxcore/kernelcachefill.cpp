@@ -135,7 +135,7 @@ static void CreateBox(
 	}
 
 	// Add the object to the scene
-	PropertiesPtr props = std::make_shared<Properties>();;
+	auto props = std::make_unique<Properties>();;
 	props->SetFromString(
 		"scene.objects." + objName + ".shape = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
@@ -153,7 +153,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	auto sceneptr = Scene::Create();
 	auto& scene = *sceneptr;
 
-	auto scnProps = std::make_shared<Properties>(scnSetUpProps);
+	auto scnProps = std::make_unique<Properties>(scnSetUpProps);
 
 	*scnProps <<
 			Property("scene.camera.lookat.orig")(1.f , 6.f , 3.f) <<
@@ -202,7 +202,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	if (geometrySetUp == "test") {
 		// Define materials and meshes
 		if (hasTriangleLight) {
-			PropertiesPtr props = std::make_shared<Properties>();
+			auto props = std::make_unique<Properties>();
 			*props <<
 				Property("scene.materials.triangle_light.type")("matte") <<
 				Property("scene.materials.triangle_light.emission")(
@@ -225,7 +225,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 		for (u_int i = 0; i < materialSetUpProp.GetSize(); ++i) {
 			const string materialType = materialSetUpProp.Get<string>(i);
 
-			auto props = std::make_shared<Properties>();
+			auto props = std::make_unique<Properties>();
 			*props << Property("scene.materials." + materialType + "_mat.type")(materialType);
 			scene.Parse(props);
 
@@ -237,7 +237,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 		for (u_int i = 0; i < textureSetUpProp.GetSize(); ++i) {
 			const string textureType = textureSetUpProp.Get<string>(i);
 
-			auto props = std::make_shared<Properties>();
+			auto props = std::make_unique<Properties>();
 			*props <<
 					Property("scene.textures." + textureType + "_tex.type")(textureType) <<
 					Property("scene.materials." + textureType + "_tmat.type")("matte") <<
@@ -257,12 +257,12 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 
 	// Do the render
 
-	auto cfgProps = std::make_shared<Properties>(cfgSetUpProps);
+	auto cfgProps = std::make_unique<Properties>(cfgSetUpProps);
 	*cfgProps <<
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");
 
-	RenderConfigPtr config = RenderConfig::Create(cfgProps, sceneptr);
+	RenderConfigPtr config = RenderConfig::Create(std::move(cfgProps), sceneptr);
 	auto session = RenderSession::Create(config);
 
 	// Start the rendering
@@ -280,7 +280,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 }
 
 static void KernelCacheFillImpl(
-	const PropertiesPtr & configPtr,
+	PropertiesPtr configPtr,
 	void (*ProgressHandler)(const size_t, const size_t)
 ) {
 	auto& config = *configPtr;
@@ -321,7 +321,7 @@ static void KernelCacheFillImpl(
 
 #endif
 
-void luxcore::KernelCacheFill(const PropertiesPtr & config, void (*ProgressHandler)(const size_t, const size_t)) {
+void luxcore::KernelCacheFill(PropertiesPtr config, void (*ProgressHandler)(const size_t, const size_t)) {
 	API_BEGIN("{}, {}", ToArgString(config),(void *)ProgressHandler);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

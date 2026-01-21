@@ -32,38 +32,38 @@ using namespace luxcore;
 OCLDeviceWindow::OCLDeviceWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "OpenCL devices") {
 }
 
-Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const Properties &cfgProps) const {
-	Properties props = 
-			cfgProps.GetAllProperties("opencl.platform") <<
-			cfgProps.GetAllProperties("opencl.cpu") <<
-			cfgProps.GetAllProperties("opencl.gpu") <<
-			cfgProps.GetAllProperties("opencl.devices.select");
+Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const std::unique_ptr<Properties> & cfgProps) const {
+	Properties props =
+			*cfgProps->GetAllProperties("opencl.platform") <<
+			*cfgProps->GetAllProperties("opencl.cpu") <<
+			*cfgProps->GetAllProperties("opencl.gpu") <<
+			*cfgProps->GetAllProperties("opencl.devices.select");
 
 	return props;
 }
 
-void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
+void OCLDeviceWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = GetOpenCLDeviceProperties(config->ToProperties());
+		*props = GetOpenCLDeviceProperties(config->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("OCLDevice parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetOpenCLDeviceProperties(config->GetProperties());
+		*props = GetOpenCLDeviceProperties(config->GetProperties());
 	}
 }
 
-void OCLDeviceWindow::ParseObjectProperties(const Properties &props) {
+void OCLDeviceWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
 	app->RenderConfigParse(
-            std::make_shared<Properties>(GetOpenCLDeviceProperties(props))
+            std::make_unique<Properties>(GetOpenCLDeviceProperties(props))
         );
 }
 
-bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	int oclPlatformIndex = props.Get("opencl.platform.index").Get<int>();
+bool OCLDeviceWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
+	int oclPlatformIndex = props->Get("opencl.platform.index").Get<int>();
 	if (ImGui::InputInt("OpenCL platform index", &oclPlatformIndex)) {
-		props.Set(Property("opencl.platform.index")(oclPlatformIndex));
+		props->Set(Property("opencl.platform.index")(oclPlatformIndex));
 		modifiedProps = true;
 	}
 	LuxCoreApp::HelpMarker("opencl.platform.index");
@@ -74,10 +74,10 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		const vector<string> oclDevDescPrefixs = oclDevDescs.GetAllUniqueSubNames("opencl.device");
 
 		// Get the device selection string
-		string selection = props.Get("opencl.devices.select").Get<string>();
+		string selection = props->Get("opencl.devices.select").Get<string>();
 		if (selection.length() != oclDevDescPrefixs.size()) {
-			const bool useCPU = props.Get("opencl.cpu.use").Get<bool>();
-			const bool useGPU = props.Get("opencl.gpu.use").Get<bool>();
+			const bool useCPU = props->Get("opencl.cpu.use").Get<bool>();
+			const bool useGPU = props->Get("opencl.gpu.use").Get<bool>();
 
 			selection.resize(oclDevDescPrefixs.size(), '0');
 			for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
@@ -95,9 +95,9 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			int ival;
 			bool bval;
 
-			bval = props.Get("opencl.cpu.use").Get<bool>();
+			bval = props->Get("opencl.cpu.use").Get<bool>();
 			if (ImGui::Checkbox("Use all CPU devices", &bval)) {
-				props.Set(Property("opencl.cpu.use")(bval));
+				props->Set(Property("opencl.cpu.use")(bval));
 				modifiedProps = true;
 
 				for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
@@ -110,9 +110,9 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("opencl.cpu.use");
 
-			bval = props.Get("opencl.gpu.use").Get<bool>();
+			bval = props->Get("opencl.gpu.use").Get<bool>();
 			if (ImGui::Checkbox("Use all GPU devices", &bval)) {
-				props.Set(Property("opencl.gpu.use")(bval));
+				props->Set(Property("opencl.gpu.use")(bval));
 				modifiedProps = true;
 
 				for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
@@ -124,16 +124,16 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("opencl.gpu.use");
 
-			ival = props.Get("opencl.cpu.workgroup.size").Get<int>();
+			ival = props->Get("opencl.cpu.workgroup.size").Get<int>();
 			if (ImGui::InputInt("Workgroup size for CPU devices", &ival)) {
-				props.Set(Property("opencl.cpu.workgroup.size")(ival));
+				props->Set(Property("opencl.cpu.workgroup.size")(ival));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("opencl.cpu.workgroup.size");
 
-			ival = props.Get("opencl.gpu.workgroup.size").Get<int>();
+			ival = props->Get("opencl.gpu.workgroup.size").Get<int>();
 			if (ImGui::InputInt("Workgroup size for GPU devices", &ival)) {
-				props.Set(Property("opencl.gpu.workgroup.size")(ival));
+				props->Set(Property("opencl.gpu.workgroup.size")(ival));
 				modifiedProps = true;
 			}
 			LuxCoreApp::HelpMarker("opencl.gpu.workgroup.size");
@@ -166,15 +166,15 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		}
 
 		if (modifiedProps)
-			props.Set(Property("opencl.devices.select")(selection));
+			props->Set(Property("opencl.devices.select")(selection));
 	} catch(exception &ex) {
 		// A not valid OpenCL platform index
 		LA_LOG("Wrong OpenCL platform index: " << oclPlatformIndex << endl << ex.what());
 
-		props.Set(Property("opencl.platform.index")(-1));
-		props.Set(Property("opencl.cpu.use")(false));
-		props.Set(Property("opencl.cpu.use")(true));
-		props.Set(Property("opencl.devices.select")(""));
+		props->Set(Property("opencl.platform.index")(-1));
+		props->Set(Property("opencl.cpu.use")(false));
+		props->Set(Property("opencl.cpu.use")(true));
+		props->Set(Property("opencl.devices.select")(""));
 		modifiedProps = true;
 
 		return true;

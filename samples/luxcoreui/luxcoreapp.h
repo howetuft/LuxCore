@@ -107,8 +107,8 @@ private:
 	void DrawBackgroundLogo();
 	void UpdateMoveStep();
 	void SetRenderingEngineType(const std::string &engineType);
-	void RenderConfigParse(std::shared_ptr<const luxrays::Properties> samplerProps);
-	void RenderSessionParse(std::shared_ptr<const luxrays::Properties> samplerProps);
+	void RenderConfigParse(const std::unique_ptr<luxrays::Properties> & samplerProps);
+	void RenderSessionParse(const std::unique_ptr<luxrays::Properties> & samplerProps);
 	void AdjustFilmResolutionToWindowSize(unsigned int *filmWidth, unsigned int *filmHeight);
 	void SetFilmResolution(const unsigned int filmWidth, const unsigned int filmHeight);
 	void IncScreenRefreshInterval();

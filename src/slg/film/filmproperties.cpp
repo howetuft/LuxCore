@@ -44,8 +44,8 @@ Properties Film::ToProperties(const Properties &cfg) {
 			FilmOutputs::ToProperties(cfg);
 
 	// Add also all image pipeline definitions
-	props << cfg.GetAllProperties("film.imagepipeline.");
-	props << cfg.GetAllProperties("film.imagepipelines.");
+	props << *cfg.GetAllProperties("film.imagepipeline.");
+	props << *cfg.GetAllProperties("film.imagepipelines.");
 
 	return props;
 }
@@ -102,7 +102,7 @@ bool Film::GetFilmSize(const Properties &cfg,
 	return subRegionUsed;
 }
 
-FilmUPtr Film::FromProperties(PropertiesConstPtr cfg) {
+FilmUPtr Film::FromProperties(PropertiesPtr cfg) {
 	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
@@ -149,7 +149,7 @@ FilmUPtr Film::FromProperties(PropertiesConstPtr cfg) {
 	// Add the default output
 	//--------------------------------------------------------------------------
 
-	auto filmProps = std::make_shared<Properties>();
+	auto filmProps = std::make_unique<Properties>();
 	*filmProps <<
 		Property("film.outputs.0.type")("RGB_IMAGEPIPELINE") <<
 		Property("film.outputs.0.filename")("image.png");

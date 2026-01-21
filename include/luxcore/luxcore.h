@@ -91,8 +91,8 @@ class RenderSession;
 using RenderSessionPtr = std::unique_ptr<RenderSession>;
 
 using luxrays::Properties;
-using PropertiesPtr = std::shared_ptr<luxrays::Properties>;
-using PropertiesConstPtr = std::shared_ptr<const luxrays::Properties>;
+using PropertiesPtr = const std::unique_ptr<luxrays::Properties> &;
+using PropertiesUPtr = std::unique_ptr<luxrays::Properties>;
 
 class Film;
 using FilmUPtr = std::unique_ptr<Film>;
@@ -167,8 +167,8 @@ CPP_EXPORT CPP_API void SetEnableLogSubSystem(const LogSubSystemType type, const
  */
 CPP_EXPORT CPP_API void ParseLXS(
 	const std::string &fileName,
-	std::shared_ptr<luxrays::Properties> renderConfigProps,
-	std::shared_ptr<luxrays::Properties> sceneProps
+	const std::unique_ptr<luxrays::Properties>& renderConfigProps,
+	const std::unique_ptr<luxrays::Properties>& sceneProps
 );
 
 /*!
@@ -184,7 +184,7 @@ CPP_EXPORT CPP_API void ParseLXS(
  * Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL").
  */
 CPP_EXPORT CPP_API void KernelCacheFill(
-	const PropertiesPtr & config,
+	PropertiesPtr config,
 	void (*ProgressHandler)(const size_t, const size_t) = NULL
 );
 
@@ -204,7 +204,7 @@ CPP_EXPORT CPP_API void KernelCacheFill(
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not. This is now always false.
  */
-CPP_EXPORT CPP_API PropertiesPtr GetPlatformDesc();
+CPP_EXPORT CPP_API std::unique_ptr<Properties> GetPlatformDesc();
 
 /*!
  * \brief Return the list of OpenCL devices available. For instance:
@@ -227,7 +227,7 @@ CPP_EXPORT CPP_API PropertiesPtr GetPlatformDesc();
  * - opencl.device.2.maxmemory = 16765145088
  * - opencl.device.2.maxmemoryallocsize = 4191286272
  */
-CPP_EXPORT CPP_API PropertiesPtr GetOpenCLDeviceDescs();
+CPP_EXPORT CPP_API std::unique_ptr<Properties> GetOpenCLDeviceDescs();
 
 /*!
  * \brief Convert an image file to TX format
@@ -384,7 +384,7 @@ public:
 	 *
 	 */
 	static FilmUPtr Create(
-		PropertiesConstPtr props,
+		PropertiesPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
@@ -407,7 +407,7 @@ public:
 	 *
 	 * \return a Properties container with the statistics.
 	 */
-	virtual PropertiesPtr GetStats() const = 0;
+	virtual std::unique_ptr<Properties> GetStats() const = 0;
 	/*!
 	 * \brief Returns the Film average luminance. It can be used to
 	 * estimate a good value for variance clamping.
@@ -468,7 +468,7 @@ public:
 	virtual void SaveOutput(
 		const std::string &fileName,
 		const FilmOutputType type,
-		PropertiesConstPtr props
+		PropertiesPtr props
 	) const = 0;
 
 	/*!
@@ -622,7 +622,7 @@ public:
 	 *
 	 * \param props are the Properties to set.
 	 */
-	virtual void Parse(PropertiesConstPtr props) = 0;
+	virtual void Parse(PropertiesPtr props) = 0;
 
 	/*!
 	 * \brief Delete all image pipelines and goes the default image
@@ -852,7 +852,7 @@ public:
 	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
 	static ScenePtr Create(
-		PropertiesConstPtr resizePolicyProps = nullptr
+		PropertiesPtr resizePolicyProps = nullptr
 	);
 	/*!
 	 * \brief Creates a new Scene as defined by props.
@@ -862,8 +862,8 @@ public:
 	 */
 
 	static ScenePtr Create(
-		PropertiesConstPtr props,
-		PropertiesConstPtr resizePolicyProps = nullptr
+		PropertiesPtr props,
+		PropertiesPtr resizePolicyProps = nullptr
 	);
 	/*!
 	 * \brief Creates a new Scene as defined in fileName file.
@@ -877,7 +877,7 @@ public:
 	 */
 	static ScenePtr Create(
 		const std::string &fileName,
-		PropertiesConstPtr resizePolicyProps = nullptr
+		PropertiesPtr resizePolicyProps = nullptr
 	);
 
 	virtual ~Scene();
@@ -1093,7 +1093,7 @@ public:
 	 * \param props are the Properties with the definition of camera, textures,
 	 * materials and/or objects.
 	 */
-	virtual void Parse(PropertiesConstPtr props) = 0;
+	virtual void Parse(PropertiesPtr props) = 0;
 
 	/*!
 	 * \brief Duplicate an object in an instance using the passed transformation.
@@ -1223,7 +1223,7 @@ public:
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	virtual PropertiesConstPtr ToProperties() const = 0;
+	virtual PropertiesPtr ToProperties() const = 0;
 	/*!
 	 * \brief Serializes a Scene in a file.
 	 *
@@ -1280,7 +1280,7 @@ public:
 	 * \param props are the Properties used to build the new RenderConfig.
 	 */
 	static std::unique_ptr<RenderConfig> Create(
-		PropertiesConstPtr props = nullptr
+		PropertiesUPtr&& props = nullptr
 	);
 
 	/*!
@@ -1295,7 +1295,7 @@ public:
 	 * the destructor.
 	 */
 	static std::unique_ptr<RenderConfig> Create(
-		PropertiesConstPtr props,
+		PropertiesUPtr&& props,
 		const std::unique_ptr<luxcore::Scene>& scene
 	);
 
@@ -1328,7 +1328,7 @@ public:
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	virtual const luxrays::Properties &GetProperties() const = 0;
+	virtual PropertiesPtr GetProperties() const = 0;
 	/*!
 	 * \brief Returns the Property with the given name or the default value if it
 	 * has not been defined.
@@ -1343,7 +1343,7 @@ public:
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	virtual const luxrays::Properties &ToProperties() const = 0;
+	virtual PropertiesPtr ToProperties() const = 0;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
@@ -1359,7 +1359,7 @@ public:
 	 *
 	 * \param props are the Properties to set.
 	 */
-	virtual void Parse(PropertiesConstPtr props) = 0;
+	virtual void Parse(PropertiesPtr props) = 0;
 	/*!
 	 * \brief Deletes any configuration Property starting with the given prefix.
 	 * This method can be used only when the RenderConfig is not in use by a
@@ -1428,7 +1428,7 @@ public:
 	 *
 	 * \return the default Properties.
 	 */
-	static const luxrays::Properties &GetDefaultProperties();
+	static PropertiesPtr GetDefaultProperties();
 };
 
 /*!
@@ -1599,7 +1599,7 @@ public:
 	 * \param props are the Properties with the definition of: film.imagepipeline(s).*
 	 * (including radiance channel scales), film.outputs.*, film.width or film.height.
 	 */
-	virtual void Parse(PropertiesConstPtr props) = 0;
+	virtual void Parse(PropertiesPtr props) = 0;
 
 	/*!
 	 * \brief Save all the rendering related information (the LuxCore RenderConfig,

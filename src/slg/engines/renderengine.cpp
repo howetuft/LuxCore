@@ -65,13 +65,13 @@ RenderEngine::RenderEngine(RenderConfigRef cfg) :
 	GenerateNewSeedBase();
 
 	// Create LuxRays context
-	const Properties cfgProps = renderConfig.ToProperties();
+	const auto& cfgProps = renderConfig.ToProperties();
 	ctx = std::make_unique<Context>(
 		LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
 		Properties() <<
-			cfgProps.Get("opencl.platform.index") <<
-			cfgProps.GetAllProperties("accelerator.") <<
-			cfgProps.GetAllProperties("context.")
+			cfgProps->Get("opencl.platform.index") <<
+			*cfgProps->GetAllProperties("accelerator.") <<
+			*cfgProps->GetAllProperties("context.")
 	);
 }
 

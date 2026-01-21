@@ -55,11 +55,11 @@ public:
 	virtual void Draw();
 
 private:
-	luxrays::Properties GetFilmOutputsProperties(const luxrays::Properties &cfgProps) const;
+        std::unique_ptr<luxrays::Properties> GetFilmOutputsProperties(const std::unique_ptr<luxrays::Properties> & cfgProps) const;
 
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	virtual void RefreshObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual void ParseObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual bool DrawObjectGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modified);
 
 	void DeleteWindow(const std::string &key);
 	void DeleteWindow(const luxcore::Film::FilmOutputType type, const unsigned int index);

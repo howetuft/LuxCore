@@ -37,33 +37,33 @@ SamplerWindow::SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") {
 		.SetDefault("SOBOL");
 }
 
-void SamplerWindow::RefreshObjectProperties(Properties &props) {
+void SamplerWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("sampler");
+		*props = *config->ToProperties()->GetAllProperties("sampler");
 	} catch(exception &ex) {
 		LA_LOG("Sampler parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("sampler");
+		*props = *config->GetProperties()->GetAllProperties("sampler");
 	}
 }
 
-void SamplerWindow::ParseObjectProperties(const Properties &props) {
-	app->RenderConfigParse(std::make_shared<Properties>(props.GetAllProperties("sampler")));
+void SamplerWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+	app->RenderConfigParse(std::make_unique<Properties>(*props->GetAllProperties("sampler")));
 }
 
-bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool SamplerWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 	// sampler.type
 	//--------------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get(Property("sampler.type")(typeTable.GetDefaultTag())).Get<string>();
+	const string currentSamplerType = props->Get(Property("sampler.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);
 	if (ImGui::Combo("Sampler type", &typeIndex, typeTable.GetTagList())) {
-		props.Clear();
+		props->Clear();
 
-		props << Property("sampler.type")(typeTable.GetTag(typeIndex));
+		*props << Property("sampler.type")(typeTable.GetTag(typeIndex));
 
 		return true;
 	}
@@ -77,16 +77,16 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RANDOM")) {
-		float fval = props.Get("sampler.random.adaptive.strength").Get<float>();
+		float fval = props->Get("sampler.random.adaptive.strength").Get<float>();
 		if (ImGui::SliderFloat("Adaptive strength", &fval, 0.f, .95f)) {
-			props.Set(Property("sampler.random.adaptive.strength")(fval));
+			props->Set(Property("sampler.random.adaptive.strength")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.random.adaptive.strength");
 
-		fval = props.Get("sampler.random.adaptive.userimportanceweight").Get<float>();
+		fval = props->Get("sampler.random.adaptive.userimportanceweight").Get<float>();
 		if (ImGui::SliderFloat("User importance weight", &fval, 0.f, 1.f)) {
-			props.Set(Property("sampler.random.adaptive.userimportanceweight")(fval));
+			props->Set(Property("sampler.random.adaptive.userimportanceweight")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.random.adaptive.userimportanceweight");
@@ -97,16 +97,16 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("SOBOL")) {
-		float fval = props.Get("sampler.sobol.adaptive.strength").Get<float>();
+		float fval = props->Get("sampler.sobol.adaptive.strength").Get<float>();
 		if (ImGui::SliderFloat("Adaptive strength", &fval, 0.f, .95f)) {
-			props.Set(Property("sampler.sobol.adaptive.strength")(fval));
+			props->Set(Property("sampler.sobol.adaptive.strength")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.strength");
 
-		fval = props.Get("sampler.sobol.adaptive.userimportanceweight").Get<float>();
+		fval = props->Get("sampler.sobol.adaptive.userimportanceweight").Get<float>();
 		if (ImGui::SliderFloat("User importance weight", &fval, 0.f, 1.f)) {
-			props.Set(Property("sampler.sobol.adaptive.userimportanceweight")(fval));
+			props->Set(Property("sampler.sobol.adaptive.userimportanceweight")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.userimportanceweight");
@@ -120,23 +120,23 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		int ival;
 		float fval;
 
-		fval = props.Get("sampler.metropolis.largesteprate").Get<float>();
+		fval = props->Get("sampler.metropolis.largesteprate").Get<float>();
 		if (ImGui::SliderFloat("Large step rate", &fval, 0.f, 1.f)) {
-			props.Set(Property("sampler.metropolis.largesteprate")(fval));
+			props->Set(Property("sampler.metropolis.largesteprate")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.metropolis.largesteprate");
 
-		ival = props.Get("sampler.metropolis.maxconsecutivereject").Get<float>();
+		ival = props->Get("sampler.metropolis.maxconsecutivereject").Get<float>();
 		if (ImGui::SliderInt("Max. consecutive rejections", &ival, 0, 32768)) {
-			props.Set(Property("sampler.metropolis.maxconsecutivereject")(ival));
+			props->Set(Property("sampler.metropolis.maxconsecutivereject")(ival));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.metropolis.maxconsecutivereject");
 
-		fval = props.Get("sampler.metropolis.imagemutationrate").Get<float>();
+		fval = props->Get("sampler.metropolis.imagemutationrate").Get<float>();
 		if (ImGui::SliderFloat("Mutation rate", &fval, 0.f, 1.f)) {
-			props.Set(Property("sampler.metropolis.imagemutationrate")(fval));
+			props->Set(Property("sampler.metropolis.imagemutationrate")(fval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.metropolis.imagemutationrate");

@@ -30,9 +30,9 @@ public:
 	virtual ~SamplerWindow() { }
 
 private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	virtual void RefreshObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual void ParseObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual bool DrawObjectGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modified);
 	
 	TypeTable typeTable;
 };

@@ -32,69 +32,69 @@ using namespace luxcore;
 HaltConditionsWindow::HaltConditionsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Halt conditions") {
 }
 
-void HaltConditionsWindow::RefreshObjectProperties(Properties &props) {
+void HaltConditionsWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("batch.halt");
+		*props = *config->ToProperties()->GetAllProperties("batch.halt");
 	} catch(exception &ex) {
 		LA_LOG("Halt conditions parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("batch.halt");
+		*props = *config->GetProperties()->GetAllProperties("batch.halt");
 	}
 }
 
-void HaltConditionsWindow::ParseObjectProperties(const Properties &props) {
-	app->RenderConfigParse(std::make_shared<luxrays::Properties>(props.GetAllProperties("batch.halt")));
+void HaltConditionsWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+	app->RenderConfigParse(std::make_unique<luxrays::Properties>(*props->GetAllProperties("batch.halt")));
 }
 
-bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool HaltConditionsWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	if (ImGui::CollapsingHeader("Halt threshold", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-		float fval = props.Get("batch.haltnoisethreshold").Get<float>();
+		float fval = props->Get("batch.haltnoisethreshold").Get<float>();
 		if (ImGui::InputFloat("Convergence threshold", &fval)) {
-			props.Set(Property("batch.haltnoisethreshold")(fval));
+			props->Set(Property("batch.haltnoisethreshold")(fval));
 			modifiedProps = true;
 		}
 
-		int ival = props.Get("batch.haltnoisethreshold.warmup").Get<int>();
+		int ival = props->Get("batch.haltnoisethreshold.warmup").Get<int>();
 		if (ImGui::InputInt("Warm up samples/pixel", &ival)) {
-			props.Set(Property("batch.haltnoisethreshold.warmup")(ival));
+			props->Set(Property("batch.haltnoisethreshold.warmup")(ival));
 			modifiedProps = true;
 		}
 
-		ival = props.Get("batch.haltnoisethreshold.step").Get<int>();
+		ival = props->Get("batch.haltnoisethreshold.step").Get<int>();
 		if (ImGui::InputInt("Samples/pixel steps", &ival)) {
-			props.Set(Property("batch.haltnoisethreshold.step")(ival));
+			props->Set(Property("batch.haltnoisethreshold.step")(ival));
 			modifiedProps = true;
 		}
 		
-		bool bval = props.Get("batch.haltnoisethreshold.filter.enable").Get<bool>();
+		bool bval = props->Get("batch.haltnoisethreshold.filter.enable").Get<bool>();
 		if (ImGui::Checkbox("Use box filter for CONVERGENCE AOV", &bval)) {
-			props.Set(Property("batch.haltnoisethreshold.filter.enable")(bval));
+			props->Set(Property("batch.haltnoisethreshold.filter.enable")(bval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("batch.haltnoisethreshold.filter.enable");
 
-		bval = props.Get("batch.haltnoisethreshold.stoprendering.enable").Get<bool>();
+		bval = props->Get("batch.haltnoisethreshold.stoprendering.enable").Get<bool>();
 		if (ImGui::Checkbox("Stop the rendering", &bval)) {
-			props.Set(Property("batch.haltnoisethreshold.stoprendering.enable")(bval));
+			props->Set(Property("batch.haltnoisethreshold.stoprendering.enable")(bval));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("batch.haltnoisethreshold.stoprendering.enable");
 	}
 	
 	if (ImGui::CollapsingHeader("Halt time", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-		float fval = props.Get("batch.halttime").Get<float>();
+		float fval = props->Get("batch.halttime").Get<float>();
 		if (ImGui::InputFloat("Total time in secs", &fval)) {
-			props.Set(Property("batch.halttime")(fval));
+			props->Set(Property("batch.halttime")(fval));
 			modifiedProps = true;
 		}
 	}
 	
 	if (ImGui::CollapsingHeader("Halt samples/pixel", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
-		int ival = props.Get("batch.haltspp").Get<int>();
+		int ival = props->Get("batch.haltspp").Get<int>();
 		if (ImGui::InputInt("Total samples/pixel", &ival)) {
-			props.Set(Property("batch.haltspp")(ival));
+			props->Set(Property("batch.haltspp")(ival));
 			modifiedProps = true;
 		}
 	}

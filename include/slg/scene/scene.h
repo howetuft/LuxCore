@@ -94,11 +94,11 @@ class SampleResult;
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene(luxrays::PropertiesConstPtr resizePolicyProps = nullptr);
+	Scene(luxrays::PropertiesPtr resizePolicyProps = nullptr);
 	// Constructor used to create a scene from properties
 	Scene(
-		luxrays::PropertiesConstPtr scnProps,
-		luxrays::PropertiesConstPtr resizePolicyProps
+		luxrays::PropertiesPtr&& scnProps,
+		luxrays::PropertiesPtr resizePolicyProps
 	);
 	~Scene();
 
@@ -191,7 +191,7 @@ public:
 	bool IsMaterialDefined(const std::string &matName) const;
 	bool IsMeshDefined(const std::string &meshName) const;
 
-	void Parse(luxrays::PropertiesConstPtr props);
+	void Parse(luxrays::PropertiesPtr props);
 	void DeleteObject(const std::string &objName);
 	void DeleteObjects(std::vector<std::string> &objNames);
 	void DeleteLight(const std::string &lightName);
@@ -253,7 +253,7 @@ private:
 						//
 	ColorSpaceConverters colorSpaceConv;
 
-	void Init(luxrays::PropertiesConstPtr resizePolicyProps);
+	void Init(luxrays::PropertiesPtr resizePolicyProps);
 
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);

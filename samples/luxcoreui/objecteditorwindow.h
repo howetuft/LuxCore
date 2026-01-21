@@ -42,16 +42,16 @@ protected:
 	void RefreshEditorProperties();
 	void ParseEditorProperties();
 
-	virtual void RefreshObjectProperties(luxrays::Properties &props) = 0;
-	virtual void ParseObjectProperties(const luxrays::Properties &props) = 0;
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) = 0;
+	virtual void RefreshObjectProperties(const std::unique_ptr<luxrays::Properties> & props) = 0;
+	virtual void ParseObjectProperties(const std::unique_ptr<luxrays::Properties> & props) = 0;
+	virtual bool DrawObjectGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps) = 0;
 
 	std::string objectName;
 
-	luxrays::Properties objectGUIProps;
+        std::unique_ptr<luxrays::Properties> objectGUIProps{std::make_unique<luxrays::Properties>()};
 	bool modifiedGUIProps;
 
-	luxrays::Properties objectEditorProps;
+        std::unique_ptr<luxrays::Properties> objectEditorProps{std::make_unique<luxrays::Properties>()};
 	char advancedEditorText[1024 * 32];
 	bool modifiedEditorProps;
 };

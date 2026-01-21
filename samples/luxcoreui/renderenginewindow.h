@@ -21,6 +21,7 @@
 
 #include "objecteditorwindow.h"
 #include "typetable.h"
+#include <memory>
 
 class LuxCoreApp;
 
@@ -32,20 +33,20 @@ public:
 	virtual void Open();
 
 private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	virtual void RefreshObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual void ParseObjectProperties(const std::unique_ptr<luxrays::Properties> & props);
+	virtual bool DrawObjectGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modified);
 	
 	void DrawVarianceClampingSuggestedValue(const std::string &prefix,
-			luxrays::Properties &props, bool &modifiedProps);
+			const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
 
-	luxrays::Properties GetAllRenderEngineProperties(const luxrays::Properties &cfgProps) const;
-	void PathGUI(luxrays::Properties &props, bool &modifiedProps);
-	void PathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
-	void TilePathGUI(luxrays::Properties &props, bool &modifiedProps);
-	void TilePathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
-	void BiDirGUI(luxrays::Properties &props, bool &modifiedProps);
-	void ThreadsGUI(luxrays::Properties &props, bool &modifiedProps);
+        std::unique_ptr<luxrays::Properties> GetAllRenderEngineProperties(const std::unique_ptr<luxrays::Properties> & cfgProps) const;
+	void PathGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
+	void PathOCLGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
+	void TilePathGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
+	void TilePathOCLGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
+	void BiDirGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
+	void ThreadsGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modifiedProps);
 
 	TypeTable typeTable;
 	float suggestedVerianceClampingValue;

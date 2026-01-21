@@ -40,34 +40,34 @@ AcceleratorWindow::AcceleratorWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Acc
 		.SetDefault("AUTO");
 }
 
-void AcceleratorWindow::RefreshObjectProperties(Properties &props) {
+void AcceleratorWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("accelerator");
+		*props = *config->ToProperties()->GetAllProperties("accelerator");
 	} catch(exception &ex) {
 		LA_LOG("Accelerator parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("accelerator");
+		*props = *config->GetProperties()->GetAllProperties("accelerator");
 	}
 }
 
-void AcceleratorWindow::ParseObjectProperties(const Properties &props) {
-	app->RenderConfigParse(std::make_shared<Properties>(props.GetAllProperties("accelerator")));
+void AcceleratorWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+	app->RenderConfigParse(props->GetAllProperties("accelerator"));
 }
 
-bool AcceleratorWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool AcceleratorWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	//------------------------------------------------------------------
 	// accelerator.type
 	//------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get(Property("accelerator.type")(typeTable.GetDefaultTag())).Get<string>();
+	const string currentSamplerType = props->Get(Property("accelerator.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);
 
 	if (ImGui::Combo("Ray/triangle intersection accelerator type", &typeIndex, typeTable.GetTagList())) {
-		props.Clear();
+		props->Clear();
 
-		props << Property("accelerator.type")(typeTable.GetTag(typeIndex));
+		*props << Property("accelerator.type")(typeTable.GetTag(typeIndex));
 
 		return true;
 	}
@@ -76,12 +76,12 @@ bool AcceleratorWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("accelerator.type");
 
-	bool bval = props.Get("accelerator.instances.enable").Get<float>();
+	bool bval = props->Get("accelerator.instances.enable").Get<float>();
 	if (ImGui::Checkbox("Instances support", &bval)) {
-		props.Set(Property("accelerator.instances.enable")(bval));
+		props->Set(Property("accelerator.instances.enable")(bval));
 		modifiedProps = true;
 	}
 	LuxCoreApp::HelpMarker("accelerator.instances.enable");
-	
+
 	return false;
 }

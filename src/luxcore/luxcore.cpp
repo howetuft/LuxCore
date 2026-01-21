@@ -57,8 +57,8 @@ extern string currentFile;
 extern unsigned int lineNum;
 
 extern Properties overwriteProps;
-extern PropertiesPtr renderConfigProps;
-extern PropertiesPtr sceneProps;
+extern Properties * renderConfigProps;
+extern Properties * sceneProps;
 
 } }
 
@@ -73,8 +73,8 @@ void luxcore::ParseLXS(
 	static std::mutex parseLXSMutex;
 	std::unique_lock<std::mutex> lock(parseLXSMutex);
 
-	luxcore::parselxs::renderConfigProps = renderConfigProps;
-	luxcore::parselxs::sceneProps = sceneProps;
+	luxcore::parselxs::renderConfigProps = renderConfigProps.get();
+	luxcore::parselxs::sceneProps = sceneProps.get();
 	luxcore::parselxs::ResetParser();
 
 	bool parseSuccess = false;
@@ -135,10 +135,10 @@ void luxcore::MakeTx(const string &srcFileName, const string &dstFileName) {
 // GetPlatformDesc
 //------------------------------------------------------------------------------
 
-PropertiesPtr luxcore::GetPlatformDesc() {
+PropertiesUPtr luxcore::GetPlatformDesc() {
 	API_BEGIN_NOARGS();
 
-	PropertiesPtr propsPtr = std::make_shared<Properties>();
+	auto propsPtr = std::make_unique<Properties>();
 	PropertiesRef props = *propsPtr;;
 
 	static const string luxCoreVersion(LUXCORE_VERSION);
@@ -182,10 +182,10 @@ PropertiesPtr luxcore::GetPlatformDesc() {
 // GetOpenCLDeviceDescs
 //------------------------------------------------------------------------------
 
-PropertiesPtr luxcore::GetOpenCLDeviceDescs() {
+PropertiesUPtr luxcore::GetOpenCLDeviceDescs() {
 	API_BEGIN_NOARGS();
 
-	PropertiesPtr propsPtr = std::make_shared<Properties>();
+	PropertiesUPtr propsPtr = std::make_unique<Properties>();
 	PropertiesRef props = *propsPtr;;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -292,7 +292,7 @@ std::unique_ptr<Film> Film::Create(const std::string &fileName) {
 }
 
 std::unique_ptr<Film> Film::Create(
-		luxrays::PropertiesConstPtr props,
+		luxrays::PropertiesPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel) {
 	API_BEGIN("{}, {}, {}", ToArgString(props), hasPixelNormalizedChannel, hasScreenNormalizedChannel);
@@ -383,11 +383,11 @@ Camera::~Camera() {
 //------------------------------------------------------------------------------
 
 std::unique_ptr<Scene> Scene::Create(
-		luxrays::PropertiesConstPtr resizePolicyProps
+		luxrays::PropertiesPtr resizePolicyProps
 ) {
 	API_BEGIN("{}", (void *)resizePolicyProps.get());
 
-	auto result = luxcore::detail::SceneImpl::Create(resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(std::ref(resizePolicyProps));
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -395,12 +395,14 @@ std::unique_ptr<Scene> Scene::Create(
 }
 
 std::unique_ptr<Scene> Scene::Create(
-	luxrays::PropertiesConstPtr props,
-	luxrays::PropertiesConstPtr resizePolicyProps
+	luxrays::PropertiesPtr props,
+	luxrays::PropertiesPtr resizePolicyProps
 ) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)resizePolicyProps.get());
 
-	auto result = luxcore::detail::SceneImpl::Create(props, resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(
+		std::ref(props), std::ref(resizePolicyProps)
+	);
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -409,11 +411,13 @@ std::unique_ptr<Scene> Scene::Create(
 
 std::unique_ptr<Scene> Scene::Create(
 	const string &fileName,
-	luxrays::PropertiesConstPtr resizePolicyProps
+	luxrays::PropertiesPtr resizePolicyProps
 ) {
 	API_BEGIN("{}, {}", ToArgString(fileName), (void *)resizePolicyProps.get());
 
-	auto result = luxcore::detail::SceneImpl::Create(fileName, resizePolicyProps);
+	auto result = luxcore::detail::SceneImpl::Create(
+		fileName, std::ref(resizePolicyProps)
+	);
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -489,7 +493,7 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 //------------------------------------------------------------------------------
 
 std::unique_ptr<RenderConfig> RenderConfig::Create(
-	PropertiesConstPtr props,
+	PropertiesUPtr&& props,
 	const std::unique_ptr<luxcore::Scene>& scn  // We don't take ownership of the input scene
 ) {
 	API_BEGIN("{}, {}", ToArgString(props), (void *)scn.get());
@@ -497,18 +501,18 @@ std::unique_ptr<RenderConfig> RenderConfig::Create(
 	SceneImpl& scnImpl = dynamic_cast<luxcore::detail::SceneImpl&>(*scn);
 
 	auto result = luxcore::detail::RenderConfigImpl::Create<
-		luxrays::PropertiesConstPtr, SceneImpl&
-	>(props, scnImpl);
+		luxrays::PropertiesUPtr, SceneImpl&
+	>(std::move(props), scnImpl);
 
 	API_RETURN("{}", (void *)result.get());
 
 	return result;
 }
 
-std::unique_ptr<RenderConfig> RenderConfig::Create(PropertiesConstPtr props) {
+std::unique_ptr<RenderConfig> RenderConfig::Create(PropertiesUPtr&& props) {
 	API_BEGIN("{}", ToArgString(props));
 
-	auto result = luxcore::detail::RenderConfigImpl::Create(props);
+	auto result = luxcore::detail::RenderConfigImpl::Create(std::ref(props));
 
 	API_RETURN("{}", (void *)result.get());
 
@@ -548,10 +552,10 @@ std::unique_ptr<RenderConfig> RenderConfig::Create(
 	return rcfg;
 }
 
-const Properties &RenderConfig::GetDefaultProperties() {
+PropertiesPtr RenderConfig::GetDefaultProperties() {
 	API_BEGIN_NOARGS();
 
-	const Properties &result = luxcore::detail::RenderConfigImpl::GetDefaultProperties();
+	auto& result = luxcore::detail::RenderConfigImpl::GetDefaultProperties();
 
 	API_RETURN("{}", ToArgString(result));
 

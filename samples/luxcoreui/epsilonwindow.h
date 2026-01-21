@@ -33,13 +33,13 @@ public:
 	virtual ~EpsilonWindow() { }
 
 private:
-        std::shared_ptr<luxrays::Properties> GetEpsilonProperties(
-            const luxrays::Properties &cfgProps
+        std::unique_ptr<luxrays::Properties> GetEpsilonProperties(
+            const std::unique_ptr<luxrays::Properties> & cfgProps
           ) const;
 
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	virtual void RefreshObjectProperties(const std::unique_ptr<luxrays::Properties>  & props);
+	virtual void ParseObjectProperties(const std::unique_ptr<luxrays::Properties>  & props);
+	virtual bool DrawObjectGUI(const std::unique_ptr<luxrays::Properties> & props, bool &modified);
 };
 
 #endif	/* _LUXCOREAPP_EPSILONWINDOW_H */

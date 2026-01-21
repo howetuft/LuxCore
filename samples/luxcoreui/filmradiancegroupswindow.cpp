@@ -32,27 +32,27 @@ using namespace luxcore;
 FilmRadianceGroupsWindow::FilmRadianceGroupsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Film Radiance Group(s)") {
 }
 
-Properties FilmRadianceGroupsWindow::GetFilmRadianceGroupsProperties(const Properties &cfgProps) const {
-	return cfgProps.GetAllProperties("film.imagepipelines." + ToString(app->imagePipelineIndex) + ".radiancescales");
+std::unique_ptr<Properties> FilmRadianceGroupsWindow::GetFilmRadianceGroupsProperties(PropertiesPtr cfgProps) const {
+	return cfgProps->GetAllProperties("film.imagepipelines." + ToString(app->imagePipelineIndex) + ".radiancescales");
 }
 
-void FilmRadianceGroupsWindow::RefreshObjectProperties(Properties &props) {
+void FilmRadianceGroupsWindow::RefreshObjectProperties(const std::unique_ptr<luxrays::Properties>&props) {
 	auto& config = app->config;
 	try {
-		props = GetFilmRadianceGroupsProperties(config->ToProperties());
+		*props = *GetFilmRadianceGroupsProperties(config->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("FilmRadianceGroupsWindow parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = GetFilmRadianceGroupsProperties(config->GetProperties());
+		*props = *GetFilmRadianceGroupsProperties(config->GetProperties());
 	}
 }
 
-void FilmRadianceGroupsWindow::ParseObjectProperties(const Properties &props) {
-	app->RenderSessionParse(std::make_shared<Properties>(GetFilmRadianceGroupsProperties(props)));
+void FilmRadianceGroupsWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+	app->RenderSessionParse(std::make_unique<Properties>(*GetFilmRadianceGroupsProperties(props)));
 }
 
-bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool FilmRadianceGroupsWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	const unsigned int radianceGroupCount = app->session->GetFilm().GetRadianceGroupCount();
 
 	for (unsigned int radianceGroupIndex = 0; radianceGroupIndex < radianceGroupCount; ++radianceGroupIndex) {
@@ -69,12 +69,12 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 			// Enable widget
 			//------------------------------------------------------------------
 
-			bool enabled = props.Get(Property(prefix + ".enabled")(true)).Get<bool>();
+			bool enabled = props->Get(Property(prefix + ".enabled")(true)).Get<bool>();
 			const bool enabledChanged = ImGui::Checkbox("Enabled", &enabled);
 			LuxCoreApp::HelpMarker((prefix + ".globalscale").c_str());
 
 			if (enabledChanged) {
-				props.Set(Property(prefix + ".enabled")(enabled));
+				props->Set(Property(prefix + ".enabled")(enabled));
 				modifiedProps = true;
 			}
 
@@ -83,9 +83,9 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 				// Global scale widget
 				//--------------------------------------------------------------
 
-				float globalScale = props.Get(Property(prefix + ".globalscale")(1.f)).Get<float>();
+				float globalScale = props->Get(Property(prefix + ".globalscale")(1.f)).Get<float>();
 				if (ImGui::InputFloat("Global scale", &globalScale)) {
-					props.Set(Property(prefix + ".globalscale")(globalScale));
+					props->Set(Property(prefix + ".globalscale")(globalScale));
 					modifiedProps = true;
 				}
 				LuxCoreApp::HelpMarker((prefix + ".globalscale").c_str());
@@ -94,17 +94,17 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 				// Temperature widget
 				//--------------------------------------------------------------
 
-				float temperature = props.Get(Property(prefix + ".temperature")(0.f)).Get<float>();
+				float temperature = props->Get(Property(prefix + ".temperature")(0.f)).Get<float>();
 				bool showTemperature = (temperature > 0.f);
 				if (ImGui::Checkbox("Use temperature", &showTemperature)) {
 					temperature = showTemperature ? 6500.f : 0.f;
-					props.Set(Property(prefix + ".temperature")(temperature));
+					props->Set(Property(prefix + ".temperature")(temperature));
 					modifiedProps = true;
 				}
 
 				if (showTemperature) {
 					if (ImGui::SliderFloat("Temperature", &temperature, 1000.f, 11000.f)) {
-						props.Set(Property(prefix + ".temperature")(temperature));
+						props->Set(Property(prefix + ".temperature")(temperature));
 						modifiedProps = true;
 					}
 				}
@@ -117,13 +117,13 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 
 				if (!showTemperature) {
 					float rgbScale[3];
-					const Property p = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f));
+					const Property p = props->Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f));
 					rgbScale[0] = p.Get<float>(0);
 					rgbScale[1] = p.Get<float>(1);
 					rgbScale[2] = p.Get<float>(2);
 
 					if (ImGui::ColorEdit3("RGB scale", rgbScale)) {
-						props.Set(Property(prefix + ".rgbscale")(rgbScale[0], rgbScale[1], rgbScale[2]));
+						props->Set(Property(prefix + ".rgbscale")(rgbScale[0], rgbScale[1], rgbScale[2]));
 						modifiedProps = true;
 					}
 

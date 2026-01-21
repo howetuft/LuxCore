@@ -37,35 +37,35 @@ LightStrategyWindow::LightStrategyWindow(LuxCoreApp *a) : ObjectEditorWindow(a, 
 		.SetDefault("LOG_POWER");
 }
 
-void LightStrategyWindow::RefreshObjectProperties(Properties &props) {
+void LightStrategyWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("lightstrategy");
+		*props = *config->ToProperties()->GetAllProperties("lightstrategy");
 	} catch(exception &ex) {
 		LA_LOG("LightStrategy parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("lightstrategy");
+		*props = *config->GetProperties()->GetAllProperties("lightstrategy");
 	}
 }
 
-void LightStrategyWindow::ParseObjectProperties(const Properties &props) {
-    auto subprops = std::make_shared<Properties>(props.GetAllProperties("lightstrategy"));
-	app->RenderConfigParse(subprops);
+void LightStrategyWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
+    auto subprops = props->GetAllProperties("lightstrategy");
+    app->RenderConfigParse(subprops);
 }
 
-bool LightStrategyWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+bool LightStrategyWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {
 	//--------------------------------------------------------------------------
 	// lightstrategy.type
 	//--------------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get(Property("lightstrategy.type")(typeTable.GetDefaultTag())).Get<string>();
+	const string currentSamplerType = props->Get(Property("lightstrategy.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);
 
 	if (ImGui::Combo("Light Strategy type", &typeIndex, typeTable.GetTagList())) {
-		props.Clear();
+		props->Clear();
 
-		props << Property("lightstrategy.type")(typeTable.GetTag(typeIndex));
+		*props << Property("lightstrategy.type")(typeTable.GetTag(typeIndex));
 
 		return true;
 	}

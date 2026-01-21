@@ -87,7 +87,7 @@ public:
 	static FilmImplUPtr Create(slg::FilmUPtr&& film);
 	static FilmImplUPtr Create(const std::string &fileName);
 	static FilmImplUPtr Create(
-		luxrays::PropertiesConstPtr props,
+		luxrays::PropertiesPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
@@ -97,7 +97,7 @@ public:
 
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
-	PropertiesPtr GetStats() const;
+	luxrays::PropertiesUPtr GetStats() const;
 	float GetFilmY(const unsigned int imagePipelineIndex = 0) const;
 
 	void Clear();
@@ -113,7 +113,7 @@ public:
 	void SaveOutput(
 		const std::string &fileName,
 		const FilmOutputType type,
-		luxrays::PropertiesConstPtr props
+		luxrays::PropertiesPtr props
 	) const;
 	virtual void SaveFilm(const std::string &fileName) const = 0;
 
@@ -145,7 +145,7 @@ public:
 	virtual unsigned int *UpdateChannelUInt(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 
-	virtual void Parse(luxrays::PropertiesConstPtr props) = 0;
+	virtual void Parse(luxrays::PropertiesPtr props) = 0;
 
 	virtual void DeleteAllImagePipelines() = 0;
 
@@ -171,7 +171,7 @@ class FilmImplStandalone : public FilmImpl {
 public:
 	FilmImplStandalone(const std::string &fileName);
 	FilmImplStandalone(
-		luxrays::PropertiesConstPtr props,
+		luxrays::PropertiesPtr props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel
 	);
@@ -195,7 +195,7 @@ public:
 		const unsigned int index, const bool executeImagePipeline) override;
 
 
-	virtual void Parse(luxrays::PropertiesConstPtr props) override;
+	virtual void Parse(luxrays::PropertiesPtr props) override;
 
 	virtual void DeleteAllImagePipelines() override;
 
@@ -240,7 +240,7 @@ public:
 		const unsigned int index, const bool executeImagePipeline) override;
 
 
-	virtual void Parse(luxrays::PropertiesConstPtr props) override;
+	virtual void Parse(luxrays::PropertiesPtr props) override;
 
 	virtual void DeleteAllImagePipelines() override;
 
@@ -307,16 +307,16 @@ public:
 
 	// Constructors are private - please use factory
 	SceneImpl(Private, slg::SceneRef scn);  // Non owning constructor
-	SceneImpl(Private, luxrays::PropertiesConstPtr resizePolicyProps = nullptr);
+	SceneImpl(Private, luxrays::PropertiesPtr resizePolicyProps = nullptr);
 	SceneImpl(
 		Private,
-		luxrays::PropertiesConstPtr props,
-		luxrays::PropertiesConstPtr resizePolicyProps
+		luxrays::PropertiesPtr props,
+		luxrays::PropertiesPtr resizePolicyProps
 	);
 	SceneImpl(
 		Private,
 		const std::string fileName,
-		luxrays::PropertiesConstPtr resizePolicyProps = nullptr
+		luxrays::PropertiesPtr resizePolicyProps = nullptr
 	);
 
 	void GetBBox(float min[3], float max[3]) const;
@@ -364,7 +364,7 @@ public:
 	const unsigned int GetLightCount() const;
 	const unsigned int GetObjectCount() const;
 
-	void Parse(luxrays::PropertiesConstPtr props);
+	void Parse(luxrays::PropertiesPtr props);
 
 	void DuplicateObject(
 		const std::string &srcObjName, const std::string &dstObjName,
@@ -418,7 +418,7 @@ public:
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType, WrapType wrapType);
 
-	luxrays::PropertiesConstPtr ToProperties() const;
+	luxrays::PropertiesPtr ToProperties() const;
 	void Save(const std::string &fileName);
 
 	// Note: this method is not part of LuxCore API and it is used only internally
@@ -437,7 +437,7 @@ public:
 
 private:
 
-	mutable luxrays::PropertiesPtr scenePropertiesCache;
+	mutable luxrays::PropertiesUPtr scenePropertiesCache;
 
 	// WARNING: KEEP FOLLOWING DECLARATIONS IN PRESENT ORDER
 	// Order matters for initialization
@@ -472,10 +472,10 @@ public:
 	// Constructors (private, please use factory instead)
 	RenderConfigImpl(  // Non owning constructor (scene is external)
 		Private,
-		luxrays::PropertiesConstPtr props,
+		luxrays::PropertiesPtr props,
 		SceneImpl& scene
 	);
-	RenderConfigImpl(Private, luxrays::PropertiesConstPtr props);
+	RenderConfigImpl(Private, luxrays::PropertiesPtr props);
 	RenderConfigImpl(Private, const std::string fileName);
 	RenderConfigImpl(
 		Private,
@@ -486,16 +486,16 @@ public:
 
 	virtual ~RenderConfigImpl() = default;
 
-	const luxrays::Properties &GetProperties() const;
+	luxrays::PropertiesPtr GetProperties() const;
 	const luxrays::Property GetProperty(const std::string &name) const;
-	const luxrays::Properties &ToProperties() const;
+	luxrays::PropertiesPtr ToProperties() const;
 
 	const Scene& GetScene() const override;
 	Scene& GetScene() override;
 
 	bool HasCachedKernels() const;
 
-	void Parse(luxrays::PropertiesConstPtr props);
+	void Parse(luxrays::PropertiesPtr props);
 
 	void Delete(const std::string &prefix);
 
@@ -508,7 +508,7 @@ public:
 	void Export(const std::string &dirName) const;
 	void ExportGLTF(const std::string &fileName) const;
 
-	static const luxrays::Properties &GetDefaultProperties();
+	static luxrays::PropertiesPtr GetDefaultProperties();
 
 	template<typename T> T ReadFromSIF() const;
 
@@ -624,7 +624,7 @@ public:
 	void UpdateStats() override;
 	const luxrays::Properties &GetStats() const override;
 
-	void Parse(luxrays::PropertiesConstPtr props) override;
+	void Parse(luxrays::PropertiesPtr props) override;
 
 	void SaveResumeFile(const std::string &fileName) override;
 

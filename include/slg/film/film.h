@@ -178,7 +178,7 @@ public:
 	void Resize(const u_int w, const u_int h);
 	void Reset(const bool onlyCounters = false);
 	void Clear();
-	void Parse(luxrays::PropertiesConstPtr props);
+	void Parse(luxrays::PropertiesPtr props);
 
 	//--------------------------------------------------------------------------
 	// Dynamic settings
@@ -224,7 +224,7 @@ public:
 
 	// This one must be called before Init()
 	void AddChannel(const FilmChannelType type,
-		luxrays::PropertiesConstPtr prop = nullptr);
+		luxrays::PropertiesPtr prop = nullptr);
 	// This one must be called before Init()
 	void RemoveChannel(const FilmChannelType type);
 	// This one must be called before Init()
@@ -264,7 +264,7 @@ public:
 	void Output(
 		const std::string &fileName,
 		const FilmOutputs::FilmOutputType type,
-		luxrays::PropertiesConstPtr props,
+		luxrays::PropertiesPtr props,
 		const bool executeImagePipeline = true
 	);
 
@@ -489,7 +489,7 @@ public:
 		u_int *filmSubRegion);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static FilmUPtr FromProperties(luxrays::PropertiesConstPtr cfg);
+	static FilmUPtr FromProperties(luxrays::PropertiesPtr cfg);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);

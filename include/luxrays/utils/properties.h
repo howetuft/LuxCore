@@ -671,7 +671,7 @@ public:
 	 *
 	 * \return a copy of all Property matching the prefix.
 	 */
-	Properties GetAllProperties(const std::string &prefix) const;
+	std::unique_ptr<Properties> GetAllProperties(const std::string &prefix) const;
 	/*!
 	 * \brief Returns a property.
 	 *
