@@ -2119,12 +2119,12 @@ static RenderConfigImpl& RenderSession_GetRenderConfig(
 	);
 }
 
-luxcore::detail::FilmImplRef
-RenderSession_GetFilm(
-	const std::unique_ptr<luxcore::detail::RenderSessionImpl> & renderSession
-) {
-  return static_cast<luxcore::detail::FilmImpl&>(renderSession->GetFilm());
-}
+//luxcore::detail::FilmImplRef
+//RenderSession_GetFilm(
+	//const std::unique_ptr<luxcore::detail::RenderSessionImpl> & renderSession
+//) {
+  //return static_cast<luxcore::detail::FilmImpl&>(renderSession->GetFilm());
+//}
 
 static std::shared_ptr<luxcore::detail::RenderStateImpl>
 RenderSession_GetRenderState(
@@ -2261,7 +2261,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Property class
   //--------------------------------------------------------------------------
 
-  py::class_<luxrays::Property, py::smart_holder(m, "Property")
+  py::class_<luxrays::Property, py::smart_holder>(m, "Property")
     .def(py::init<std::string>())
     .def(py::init<std::string, bool>())
     .def(py::init<std::string, long long>())
@@ -2285,7 +2285,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def<double (luxrays::Property::*)(const u_int) const>
       ("GetFloat", &luxrays::Property::Get)
     .def<std::string (luxrays::Property::*)(const u_int) const>
-      ("GetString", &luxrays::Property::Get)
+      ("GetString", &luxrays::Property::Get, py::return_value_policy::copy)
     .def("GetBlob", &Property_GetBlobByIndex)
 
     .def("GetBool", &Property_GetBool)
@@ -2351,8 +2351,8 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("GetAllProperties", &luxrays::Properties::GetAllProperties, py::return_value_policy::reference_internal)
 
     .def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
-      ("Get", &luxrays::Properties::Get, py::return_value_policy::reference_internal)
-    .def("Get", &Properties_GetWithDefaultValues, py::return_value_policy::reference_internal)
+      ("Get", &luxrays::Properties::Get, py::return_value_policy::copy)
+    .def("Get", &Properties_GetWithDefaultValues, py::return_value_policy::copy)
 
     .def("GetSize", &luxrays::Properties::GetSize)
 
@@ -2638,7 +2638,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
     .def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
     .def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
-    .def("GetFilm", &RenderSession_GetFilm, py::return_value_policy::reference_internal)
+    .def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilmPtr)
     .def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
     .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, py::return_value_policy::reference_internal)
     .def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)

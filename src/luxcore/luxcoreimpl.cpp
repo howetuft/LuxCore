@@ -1905,6 +1905,14 @@ LuxFilmRef RenderSessionImpl::GetFilm() {
 	return *film;
 }
 
+FilmImplPtr RenderSessionImpl::GetFilmPtr() {
+	API_BEGIN_NOARGS();
+
+	API_RETURN("{}", (void *)film.get());
+
+	return film;
+}
+
 static void SetTileProperties(
 	Properties &props,
 	const string &prefix,

@@ -23,6 +23,7 @@
 #include <format>
 
 #include <luxcore/luxcore.h>
+#include <memory>
 #include <slg/usings.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
@@ -59,6 +60,7 @@ using CameraImplUPtr = std::unique_ptr<CameraImpl>;
 
 class FilmImpl;
 using FilmImplUPtr = std::unique_ptr<FilmImpl>;
+using FilmImplPtr = const std::unique_ptr<FilmImpl> &;
 using FilmImplRef = FilmImpl&;
 
 
@@ -68,6 +70,8 @@ using FilmImplStandaloneUPtr = std::unique_ptr<FilmImplStandalone>;
 // Disambiguation: there are luxcore::Film and slg:Film...
 using LuxFilm = luxcore::Film;
 using LuxFilmRef = luxcore::Film &;
+using LuxFilmUPtr = std::unique_ptr<luxcore::Film>;
+using LuxFilmPtr = const std::unique_ptr<luxcore::Film> &;
 using LuxFilmConstRef = const luxcore::Film &;
 
 // Disambiguation: there are luxcore::Camera and slg:Camera...
@@ -620,6 +624,7 @@ public:
 	void WaitNewFrame() override;
 
 	LuxFilmRef GetFilm() override;
+	FilmImplPtr GetFilmPtr();
 
 	void UpdateStats() override;
 	const luxrays::Properties &GetStats() const override;
