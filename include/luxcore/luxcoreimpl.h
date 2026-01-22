@@ -99,6 +99,8 @@ public:
 	// Session film
 	static FilmImplUPtr Create(RenderSessionImplRef session);
 
+	virtual ~FilmImpl() = default;
+
 	unsigned int GetWidth() const;
 	unsigned int GetHeight() const;
 	luxrays::PropertiesUPtr GetStats() const;
@@ -180,6 +182,7 @@ public:
 		const bool hasScreenNormalizedChannel
 	);
 	FilmImplStandalone() = default;
+	virtual ~FilmImplStandalone() = default;
 
 
 	virtual void SaveOutputs() const override;
@@ -224,6 +227,7 @@ private:
 class FilmImplSession : public FilmImpl {
 public:
 	FilmImplSession(RenderSessionImplRef session);
+	virtual ~FilmImplSession() = default;
 
 	FilmImplSession() = delete;
 

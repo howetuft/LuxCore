@@ -719,15 +719,20 @@ typedef struct {
 // File GetOutput() related functions
 //------------------------------------------------------------------------------
 
-static void Film_GetOutputFloat1(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
-    py::object &obj, const size_t index, const bool executeImagePipeline) {
-  const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
+static void Film_GetOutputFloat1(
+	luxcore::detail::FilmImpl& film,
+	const Film::FilmOutputType type,
+    py::object &obj,
+	const size_t index,
+	const bool executeImagePipeline
+) {
+  const size_t outputSize = film.GetOutputSize(type) * sizeof(float);
 
   if (PyObject_CheckBuffer(obj.ptr())) {
     Py_buffer view;
     if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
       if ((size_t)view.len >= outputSize) {
-        if(!film->HasOutput(type)) {
+        if(!film.HasOutput(type)) {
           const std::string errorMsg = "Film Output not available: " + luxrays::ToString(type);
           PyBuffer_Release(&view);
           throw std::runtime_error(errorMsg);
@@ -735,7 +740,7 @@ static void Film_GetOutputFloat1(const std::unique_ptr<luxcore::detail::FilmImpl
 
         float *buffer = (float *)view.buf;
 
-        film->GetOutput<float>(type, buffer, index, executeImagePipeline);
+        film.GetOutput<float>(type, buffer, index, executeImagePipeline);
 
         PyBuffer_Release(&view);
       } else {
@@ -763,11 +768,11 @@ static void Film_GetOutputFloat1(const std::unique_ptr<luxcore::detail::FilmImpl
       if (bglBuffer->type == 0x1406) {
         if (bglBuffer->ndimensions == 1) {
           if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize) {
-            if(!film->HasOutput(type)) {
+            if(!film.HasOutput(type)) {
               throw std::runtime_error("Film Output not available: " + luxrays::ToString(type));
             }
 
-            film->GetOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
+            film.GetOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
           } else
             throw std::runtime_error("Not enough space in the Blender bgl.Buffer of Film.GetOutputFloat() method: " +
                 luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
@@ -782,21 +787,25 @@ static void Film_GetOutputFloat1(const std::unique_ptr<luxcore::detail::FilmImpl
   }
 }
 
-static void Film_GetOutputFloat2(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
-    py::object &obj) {
+static void Film_GetOutputFloat2(
+	FilmImpl & film,
+	const Film::FilmOutputType type,
+    py::object &obj
+) {
   Film_GetOutputFloat1(film, type, obj, 0, true);
 }
 
 static void Film_GetOutputFloat3(
-    const std::unique_ptr<luxcore::detail::FilmImpl> & film,
+    FilmImpl & film,
     const Film::FilmOutputType type,
     py::object &obj,
-    const size_t index) {
+    const size_t index
+) {
   Film_GetOutputFloat1(film, type, obj, index, true);
 }
 
 static void Film_GetOutputUInt1(
-    const std::unique_ptr<luxcore::detail::FilmImpl> & film,
+    FilmImpl & film,
     const Film::FilmOutputType type,
     py::object &obj,
     const size_t index,
@@ -804,8 +813,8 @@ static void Film_GetOutputUInt1(
   if (PyObject_CheckBuffer(obj.ptr())) {
     Py_buffer view;
     if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
-      if ((size_t)view.len >= film->GetOutputSize(type) * sizeof(u_int)) {
-        if(!film->HasOutput(type)) {
+      if ((size_t)view.len >= film.GetOutputSize(type) * sizeof(u_int)) {
+        if(!film.HasOutput(type)) {
           const std::string errorMsg = "Film Output not available: " + luxrays::ToString(type);
           PyBuffer_Release(&view);
           throw std::runtime_error(errorMsg);
@@ -813,12 +822,12 @@ static void Film_GetOutputUInt1(
 
         u_int *buffer = (u_int *)view.buf;
 
-        film->GetOutput<unsigned int>(type, buffer, index, executeImagePipeline);
+        film.GetOutput<unsigned int>(type, buffer, index, executeImagePipeline);
 
         PyBuffer_Release(&view);
       } else {
         const std::string errorMsg = "Not enough space in the buffer of Film.GetOutputUInt() method: " +
-            luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int));
+            luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film.GetOutputSize(type) * sizeof(u_int));
         PyBuffer_Release(&view);
 
         throw std::runtime_error(errorMsg);
@@ -833,12 +842,12 @@ static void Film_GetOutputUInt1(
   }
 }
 
-static void Film_GetOutputUInt2(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt2(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_GetOutputUInt1(film, type, obj, 0, true);
 }
 
-static void Film_GetOutputUInt3(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_GetOutputUInt3(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_GetOutputUInt1(film, type, obj, index, true);
 }
@@ -848,18 +857,18 @@ static void Film_GetOutputUInt3(const std::unique_ptr<luxcore::detail::FilmImpl>
 //------------------------------------------------------------------------------
 
 static void Film_UpdateOutputFloat1(
-    const std::unique_ptr<luxcore::detail::FilmImpl> & film,
+    FilmImpl & film,
     const Film::FilmOutputType type,
     py::object &obj,
     const size_t index,
     const bool executeImagePipeline) {
-  const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
+  const size_t outputSize = film.GetOutputSize(type) * sizeof(float);
 
   if (PyObject_CheckBuffer(obj.ptr())) {
     Py_buffer view;
     if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
       if ((size_t)view.len >= outputSize) {
-        if(!film->HasOutput(type)) {
+        if(!film.HasOutput(type)) {
           const std::string errorMsg = "Film Output not available: " + luxrays::ToString(type);
           PyBuffer_Release(&view);
           throw std::runtime_error(errorMsg);
@@ -867,7 +876,7 @@ static void Film_UpdateOutputFloat1(
 
         float *buffer = (float *)view.buf;
 
-        film->UpdateOutput<float>(type, buffer, index, executeImagePipeline);
+        film.UpdateOutput<float>(type, buffer, index, executeImagePipeline);
 
         PyBuffer_Release(&view);
       } else {
@@ -895,11 +904,11 @@ static void Film_UpdateOutputFloat1(
       if (bglBuffer->type == 0x1406) {
         if (bglBuffer->ndimensions == 1) {
           if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize) {
-            if(!film->HasOutput(type)) {
+            if(!film.HasOutput(type)) {
               throw std::runtime_error("Film Output not available: " + luxrays::ToString(type));
             }
 
-            film->UpdateOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
+            film.UpdateOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
           } else
             throw std::runtime_error("Not enough space in the Blender bgl.Buffer of Film.UpdateOutputFloat() method: " +
                 luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
@@ -914,27 +923,27 @@ static void Film_UpdateOutputFloat1(
   }
 }
 
-static void Film_UpdateOutputFloat2(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_UpdateOutputFloat2(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_UpdateOutputFloat1(film, type, obj, 0, false);
 }
 
-static void Film_UpdateOutputFloat3(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_UpdateOutputFloat3(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_UpdateOutputFloat1(film, type, obj, index, false);
 }
 
-static void Film_UpdateOutputUInt1(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt1(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj, const size_t index, const bool executeImagePipeline) {
   throw std::runtime_error("Film Output not available: " + luxrays::ToString(type));
 }
 
-static void Film_UpdateOutputUInt2(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt2(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj) {
   Film_UpdateOutputUInt1(film, type, obj, 0, false);
 }
 
-static void Film_UpdateOutputUInt3(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const Film::FilmOutputType type,
+static void Film_UpdateOutputUInt3(FilmImpl & film, const Film::FilmOutputType type,
     py::object &obj, const size_t index) {
   Film_UpdateOutputUInt1(film, type, obj, index, false);
 }
@@ -960,19 +969,19 @@ static void Film_AddFilm2(
 	);
 }
 
-static float Film_GetFilmY1(const std::unique_ptr<luxcore::detail::FilmImpl> & film) {
-  return film->GetFilmY();
+static float Film_GetFilmY1(FilmImpl & film) {
+  return film.GetFilmY();
 }
 
-static float Film_GetFilmY2(const std::unique_ptr<luxcore::detail::FilmImpl> & film, const size_t imagePipelineIndex) {
-  return film->GetFilmY(imagePipelineIndex);
+static float Film_GetFilmY2(FilmImpl & film, const size_t imagePipelineIndex) {
+  return film.GetFilmY(imagePipelineIndex);
 }
 
 static void Film_ApplyOIDN(
-	const std::unique_ptr<luxcore::detail::FilmImpl> & film,
+	FilmImpl & film,
 	const size_t imagePipelineIndex
 ) {
-	film->ApplyOIDN(imagePipelineIndex);
+	film.ApplyOIDN(imagePipelineIndex);
 }
 
 //------------------------------------------------------------------------------
@@ -2271,10 +2280,10 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def(py::init(&Property_InitWithList))
 
     //.def("GetName", &luxrays::Property::GetName, py::return_value_policy<copy_const_reference>())
-    .def("GetName", &luxrays::Property::GetName, py::return_value_policy::copy)
+    .def("GetName", &luxrays::Property::GetName)
     .def("GetSize", &luxrays::Property::GetSize)
     //.def("Clear", &luxrays::Property::Clear, py::py::return_value_policy::move)
-    .def("Clear", &luxrays::Property::Clear, py::return_value_policy::move)
+    .def("Clear", &luxrays::Property::Clear)
 
     .def("Get", &Property_Get)
 
@@ -2285,7 +2294,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def<double (luxrays::Property::*)(const u_int) const>
       ("GetFloat", &luxrays::Property::Get)
     .def<std::string (luxrays::Property::*)(const u_int) const>
-      ("GetString", &luxrays::Property::Get, py::return_value_policy::copy)
+      ("GetString", &luxrays::Property::Get)
     .def("GetBlob", &Property_GetBlobByIndex)
 
     .def("GetBool", &Property_GetBool)
@@ -2304,19 +2313,19 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("GetValuesString", &luxrays::Property::GetValuesString)
     .def("ToString", &luxrays::Property::ToString)
 
-    .def("Add", &Property_Add, py::return_value_policy::move)
-    .def("AddAllBool", &Property_AddAllBool, py::return_value_policy::move)
-    .def("AddAllInt", &Property_AddAllInt, py::return_value_policy::move)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong, py::return_value_policy::move)
-    .def("AddAllFloat", &Property_AddAllFloat, py::return_value_policy::move)
-    .def("AddAllBool", &Property_AddAllBoolStride, py::return_value_policy::move)
-    .def("AddAllInt", &Property_AddAllIntStride, py::return_value_policy::move)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride, py::return_value_policy::move)
-    .def("AddAllFloat", &Property_AddAllFloatStride, py::return_value_policy::move)
+    .def("Add", &Property_Add)
+    .def("AddAllBool", &Property_AddAllBool)
+    .def("AddAllInt", &Property_AddAllInt)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong)
+    .def("AddAllFloat", &Property_AddAllFloat)
+    .def("AddAllBool", &Property_AddAllBoolStride)
+    .def("AddAllInt", &Property_AddAllIntStride)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride)
+    .def("AddAllFloat", &Property_AddAllFloatStride)
     .def<luxrays::Property &(*)(PropertyPtr , const py::list &)>
-      ("Set", &Property_Set, py::return_value_policy::move)
+      ("Set", &Property_Set)
     .def<luxrays::Property &(*)(PropertyPtr , const size_t, const py::object &)>
-      ("Set", &Property_Set, py::return_value_policy::move)
+      ("Set", &Property_Set)
 
     //.def(self_ns::str(self))  TODO
     .def("__str__", &luxrays::Property::ToString)
@@ -2424,16 +2433,28 @@ PYBIND11_MODULE(pyluxcore, m) {
     })
   ;
 
-  //py::class_<luxcore::detail::FilmImpl, const std::unique_ptr<luxcore::detail::FilmImpl> &>(m, "Film")
+  //py::class_<luxcore::detail::FilmImpl, FilmImpl &>(m, "Film")
   py::class_<luxcore::detail::FilmImpl, py::smart_holder>(m, "Film")
-    .def(py::init([](std::string s){ return luxcore::detail::FilmImpl::Create(s); }
-	))
-    .def(py::init([](
-		luxrays::PropertiesPtr props,
-		bool hasPixelNormalizedChannel,
-		bool hasScreenNormalizedChannel
-	) { return luxcore::detail::FilmImpl::Create(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel); }
-	))
+    .def(
+		py::init(
+			[](std::string s) -> FilmImplUPtr {
+				return luxcore::detail::FilmImpl::Create(s);
+			}
+		)
+	)
+    .def(
+		py::init(
+			[] (
+				luxrays::PropertiesPtr props,
+				bool hasPixelNormalizedChannel,
+				bool hasScreenNormalizedChannel
+			) -> FilmImplUPtr {
+				return luxcore::detail::FilmImpl::Create(
+					props, hasPixelNormalizedChannel, hasScreenNormalizedChannel
+				);
+			}
+		)
+	)
     //.def(py::init<std::string>([](std::string s){ return luxcore::detail::FilmImpl::Create(s);})
     //.def(py::init<luxrays::Properties, bool, bool>())
     .def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
