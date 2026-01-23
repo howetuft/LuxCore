@@ -36,12 +36,6 @@ using namespace luxrays;
 
 namespace luxrays {
 
-bool isOpenCLAvilable = false;
-bool isCudaAvilable = false;
-bool isOptixAvilable = false;
-
-std::locale cLocale("C");
-
 void Init() {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
