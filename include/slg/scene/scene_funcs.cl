@@ -55,7 +55,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		rayVolumeIndex = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolumeIndex : bsdf->hitPoint.interiorVolumeIndex;
 	} else if (rayVolumeIndex == NULL_INDEX) {
 		// No volume information, I use the default volume
-		rayVolumeIndex = scene.defaultVolumeIndex;
+		rayVolumeIndex = scene->defaultVolumeIndex;
 	}
 
 	// Check if there is volume scatter event

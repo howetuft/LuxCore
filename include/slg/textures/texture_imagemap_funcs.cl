@@ -62,11 +62,11 @@ OPENCL_FORCE_INLINE float3 YCbCrToRGB(const float3 YCbCr) {
 OPENCL_FORCE_INLINE float3 ImageMapTexture_SampleTile(__global const Texture* restrict tex,
 		const float2 vertex, const float2 offset
 		TEXTURES_PARAM_DECL) {
-	__global const ImageMap *randomImageMap = &imageMapDescs[tex.imageMapTex.randomImageMapIndex];
-	__global const ImageMap *imageMap = &imageMapDescs[tex.imageMapTex.imageMapIndex];
-	__global const ImageMap *randomizedTilingLUT = &imageMapDescs[tex.imageMapTex.randomizedTilingLUTIndex];
+	__global const ImageMap *randomImageMap = &imageMapDescs[tex->imageMapTex.randomImageMapIndex];
+	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
+	__global const ImageMap *randomizedTilingLUT = &imageMapDescs[tex->imageMapTex.randomizedTilingLUTIndex];
 	
-	const float2 noiseP = MAKE_FLOAT2(vertex.x / randomImageMap.width, vertex.y / randomImageMap.height);
+	const float2 noiseP = MAKE_FLOAT2(vertex.x / randomImageMap->width, vertex.y / randomImageMap->height);
 	const float3 noise = ImageMap_GetSpectrum(randomImageMap, noiseP.x, noiseP.y IMAGEMAPS_PARAM);
 	const float2 pos = MAKE_FLOAT2(.25f, .25f) + MAKE_FLOAT2(noise.x, noise.y) * .5f + offset;
 
@@ -155,7 +155,7 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_RandomizedTilingGetSpectrumValue(
 
 	YCbCr.x = ImageMapTexture_SoftClipContrast(YCbCr.x, uvWeights.x + uvWeights.y + uvWeights.z);
 
-	YCbCr.x = ImageMap_GetFloat(&imageMapDescs[tex.imageMapTex.randomizedTilingInvLUTIndex], YCbCr.x, .5f IMAGEMAPS_PARAM);
+	YCbCr.x = ImageMap_GetFloat(&imageMapDescs[tex->imageMapTex.randomizedTilingInvLUTIndex], YCbCr.x, .5f IMAGEMAPS_PARAM);
 
 	return YCbCrToRGB(YCbCr);
 }
@@ -163,25 +163,25 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_RandomizedTilingGetSpectrumValue(
 OPENCL_FORCE_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture* restrict tex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
-	const float2 pos = TextureMapping2D_Map(&tex.imageMapTex.mapping, hitPoint TEXTURES_PARAM);
+	const float2 pos = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint TEXTURES_PARAM);
 
-	const float value = (tex.imageMapTex.randomizedTiling) ?
+	const float value = (tex->imageMapTex.randomizedTiling) ?
 		Spectrum_Y(ImageMapTexture_RandomizedTilingGetSpectrumValue(tex, pos TEXTURES_PARAM)) :
-		ImageMap_GetFloat(&imageMapDescs[tex.imageMapTex.imageMapIndex], pos.x, pos.y IMAGEMAPS_PARAM);
+		ImageMap_GetFloat(&imageMapDescs[tex->imageMapTex.imageMapIndex], pos.x, pos.y IMAGEMAPS_PARAM);
 	
-	return tex.imageMapTex.gain * value;
+	return tex->imageMapTex.gain * value;
 }
 
 OPENCL_FORCE_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
-	const float2 pos = TextureMapping2D_Map(&tex.imageMapTex.mapping, hitPoint TEXTURES_PARAM);
+	const float2 pos = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint TEXTURES_PARAM);
 
-	const float3 value = (tex.imageMapTex.randomizedTiling) ?
+	const float3 value = (tex->imageMapTex.randomizedTiling) ?
 		ImageMapTexture_RandomizedTilingGetSpectrumValue(tex, pos TEXTURES_PARAM) :
-		ImageMap_GetSpectrum(&imageMapDescs[tex.imageMapTex.imageMapIndex], pos.x, pos.y IMAGEMAPS_PARAM);
+		ImageMap_GetSpectrum(&imageMapDescs[tex->imageMapTex.imageMapIndex], pos.x, pos.y IMAGEMAPS_PARAM);
 
-	return tex.imageMapTex.gain * value;
+	return tex->imageMapTex.gain * value;
 }
 
 // Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl

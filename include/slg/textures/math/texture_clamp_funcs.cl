@@ -46,7 +46,7 @@ OPENCL_FORCE_NOT_INLINE void ClampTexture_EvalOp(
 			EvalStack_PopFloat(tex1);
 
 			const float eval = ClampTexture_ConstEvaluateFloat(tex1,
-					texture.clampTex.minVal, texture.clampTex.maxVal);
+					texture->clampTex.minVal, texture->clampTex.maxVal);
 			EvalStack_PushFloat(eval);
 			break;
 		}
@@ -55,7 +55,7 @@ OPENCL_FORCE_NOT_INLINE void ClampTexture_EvalOp(
 			EvalStack_PopFloat3(tex1);
 
 			const float3 eval = ClampTexture_ConstEvaluateSpectrum(tex1,
-					texture.clampTex.minVal, texture.clampTex.maxVal);
+					texture->clampTex.minVal, texture->clampTex.maxVal);
 			EvalStack_PushFloat3(eval);
 			break;
 		}

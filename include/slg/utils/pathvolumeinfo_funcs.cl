@@ -234,7 +234,7 @@ OPENCL_FORCE_INLINE void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeIn
 
 		if (exteriorVolumeIndex == NULL_INDEX) {
 			// No volume information, I use the default volume
-			exteriorVolumeIndex = scene.defaultVolumeIndex;
+			exteriorVolumeIndex = scene->defaultVolumeIndex;
 		}
 	} else {
 		// From inside to outside the object
@@ -250,7 +250,7 @@ OPENCL_FORCE_INLINE void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeIn
 		
 		if (interiorVolumeIndex == NULL_INDEX) {
 			// No volume information, I use the default volume
-			interiorVolumeIndex = scene.defaultVolumeIndex;
+			interiorVolumeIndex = scene->defaultVolumeIndex;
 		}
 
 		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matInteriorVolumeIndex

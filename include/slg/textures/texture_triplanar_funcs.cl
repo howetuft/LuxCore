@@ -40,12 +40,12 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_TRIPLANAR_STEP_1: {
 			// Save original UV
-			EvalStack_PushFloat(hitPoint.defaultUV.u);
-			EvalStack_PushFloat(hitPoint.defaultUV.v);
+			EvalStack_PushFloat(hitPoint->defaultUV.u);
+			EvalStack_PushFloat(hitPoint->defaultUV.v);
 
 			// Compute localPoint
 			float3 localShadeN;
-			const float3 localPoint = TextureMapping3D_Map(&texture.triplanarTex.mapping,
+			const float3 localPoint = TextureMapping3D_Map(&texture->triplanarTex.mapping,
 					hitPoint, &localShadeN TEXTURES_PARAM);
 
 			// Compute the 3 weights
@@ -67,8 +67,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.defaultUV.u = localPoint.y;
-			hitPointTmp.defaultUV.v = localPoint.z;
+			hitPointTmp->defaultUV.u = localPoint.y;
+			hitPointTmp->defaultUV.v = localPoint.z;
 			break;
 		}
 		case EVAL_TRIPLANAR_STEP_2: {
@@ -79,8 +79,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.defaultUV.u = localPoint.x;
-			hitPointTmp.defaultUV.v = localPoint.z;
+			hitPointTmp->defaultUV.u = localPoint.x;
+			hitPointTmp->defaultUV.v = localPoint.z;
 			break;
 		}
 		case EVAL_TRIPLANAR_STEP_3: {
@@ -91,8 +91,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.defaultUV.u = localPoint.x;
-			hitPointTmp.defaultUV.v = localPoint.y;
+			hitPointTmp->defaultUV.u = localPoint.x;
+			hitPointTmp->defaultUV.v = localPoint.y;
 			break;
 		}
 		case EVAL_FLOAT:
@@ -115,8 +115,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Restore original UV
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			EvalStack_PopFloat(hitPointTmp.defaultUV.v);
-			EvalStack_PopFloat(hitPointTmp.defaultUV.u);
+			EvalStack_PopFloat(hitPointTmp->defaultUV.v);
+			EvalStack_PopFloat(hitPointTmp->defaultUV.u);
 
 			const float3 result = tex1 * weightX + tex2 * weightY + tex3 * weightZ;
 			if (evalType == EVAL_FLOAT) {
@@ -128,14 +128,14 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 		}
 		case EVAL_BUMP_TRIPLANAR_STEP_1: {
 			// Save original hit point
-			const float3 p = VLOAD3F(&hitPoint.p.x);
+			const float3 p = VLOAD3F(&hitPoint->p.x);
 			EvalStack_PushFloat3(p);
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.p.x = p.x + sampleDistance;
-			hitPointTmp.p.y = p.y;
-			hitPointTmp.p.z = p.z;
+			hitPointTmp->p.x = p.x + sampleDistance;
+			hitPointTmp->p.y = p.y;
+			hitPointTmp->p.z = p.z;
 			break;
 		}
 		case EVAL_BUMP_TRIPLANAR_STEP_2: {
@@ -146,9 +146,9 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.p.x = p.x;
-			hitPointTmp.p.y = p.y + sampleDistance;
-			hitPointTmp.p.z = p.z;
+			hitPointTmp->p.x = p.x;
+			hitPointTmp->p.y = p.y + sampleDistance;
+			hitPointTmp->p.z = p.z;
 			break;
 		}
 		case EVAL_BUMP_TRIPLANAR_STEP_3: {
@@ -159,9 +159,9 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp.p.x = p.x;
-			hitPointTmp.p.y = p.y;
-			hitPointTmp.p.z = p.z + sampleDistance;
+			hitPointTmp->p.x = p.x;
+			hitPointTmp->p.y = p.y;
+			hitPointTmp->p.z = p.z + sampleDistance;
 			break;
 		}
 		case EVAL_BUMP_GENERIC_OFFSET_U:
@@ -173,7 +173,7 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 					hitPoint, sampleDistance);
 			break;
 		case EVAL_BUMP:
-			if (texture.triplanarTex.enableUVlessBumpMap) {
+			if (texture->triplanarTex.enableUVlessBumpMap) {
 				float evalFloatTexBase, evalFloatTexOffsetX,
 						evalFloatTexOffsetY, evalFloatTexOffsetZ;
 
@@ -186,7 +186,7 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 				float3 p;
 				EvalStack_PopFloat3(p);
 				__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-				VSTORE3F(p, &hitPointTmp.p.x);
+				VSTORE3F(p, &hitPointTmp->p.x);
 
 				// Read base textures evaluation
 				EvalStack_PopFloat(evalFloatTexBase);
