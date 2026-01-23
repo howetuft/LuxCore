@@ -623,18 +623,23 @@ static int cuewNvrtcInit(void) {
   /* Library paths. */
 #ifdef _WIN32
   /* Expected in c:/windows/system or similar, no path needed. */
-  const char *nvrtc_paths[] = {"nvrtc64_120_0.dll",
-                               "nvrtc64_101_0.dll",
-                               "nvrtc64_100_0.dll",
-                               "nvrtc64_91.dll",
-                               "nvrtc64_90.dll",
-                               "nvrtc64_80.dll",
-                               NULL};
+  const char *nvrtc_paths[] = {
+    "nvrtc64_130_0.dll",
+    "nvrtc64_120_0.dll",
+    "nvrtc64_101_0.dll",
+    "nvrtc64_100_0.dll",
+    "nvrtc64_91.dll",
+    "nvrtc64_90.dll",
+    "nvrtc64_80.dll",
+    NULL};
 #elif defined(__APPLE__)
   /* Default installation path. */
   const char *nvrtc_paths[] = {"@executable_path/libnvrtc.dylib", "../Resources/libs/libnvrtc.dylib", "@loader_path/libnvrtc.dylib", NULL};
 #else
-  const char *nvrtc_paths[] = {"libnvrtc.so.12",
+  const char *nvrtc_paths[] = {
+    "libnvrtc.so",
+    "libnvrtc.so.13",
+    "libnvrtc.so.12",
 #  if defined(__x86_64__) || defined(_M_X64)
                                "/usr/local/cuda/lib64/libnvrtc.so.12",
 #else

@@ -55,7 +55,7 @@ set(LUXCOREUI_SRCS
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
 target_link_libraries(luxcoreui PRIVATE
-  luxrays
+  #luxrays
   boost::boost
   luxcore
   imgui::imgui

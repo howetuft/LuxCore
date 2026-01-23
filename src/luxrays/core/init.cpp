@@ -65,6 +65,22 @@ void Init() {
 			//
 			// In all above cases, I just disable CUDA (but with this solution, at
 			/// the moment I have no way to report the type of error).
+			switch(err) {
+				case CUDA_ERROR_INVALID_VALUE:
+					std::cerr << "Cuda error: invalid value\n"; break;
+				case CUDA_ERROR_INVALID_DEVICE:
+					std::cerr << "Cuda error: invalid device\n"; break;
+				case CUDA_ERROR_SYSTEM_DRIVER_MISMATCH:
+					std::cerr << "Cuda error: system driver mismatch\n"; break;
+				case CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE:
+					std::cerr << "Cuda error: compat not supported on device\n"; break;
+				case CUDA_ERROR_OUT_OF_MEMORY:
+					std::cerr << "Cuda error: out of memory\n"; break;
+				default:
+					std::cerr << "Cuda error: undefined\n"; break;
+			}
+
+
 		} else {
 			isCudaAvilable = true;
 

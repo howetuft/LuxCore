@@ -96,6 +96,13 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
 
+	// Accelerate compilation
+	cudaOpts.push_back("--Ofast-compile=min");
+	cudaOpts.push_back("--split-compile=0");
+
+	// Enable pre-compiled headers
+	cudaOpts.push_back("--pch");
+
 	// Enable debug info
 	//cudaOpts.push_back("-G");
 	// Enable only debug line info
@@ -114,7 +121,7 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 
 	size_t logSize;
 	CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
-	unique_ptr<char> log(new char[logSize]);
+	auto log = std::make_unique<char[]>(logSize);
 	CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
 
 	*error = string(log.get());
