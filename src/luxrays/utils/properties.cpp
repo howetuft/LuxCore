@@ -79,7 +79,7 @@ Blob::Blob(const string &base64Data) {
 
 Blob &Blob::operator=(const Blob &blob) {
 
-	data.reset(new char[blob.size]);
+	data = std::make_unique<char[]>(blob.size);
 	size = blob.size;
 
 	copy(blob.data.get(), blob.data.get() + blob.size, data.get());

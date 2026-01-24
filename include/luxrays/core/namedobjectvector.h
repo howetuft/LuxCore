@@ -66,6 +66,7 @@ struct UndefinedNamedObjectError : public std::runtime_error {
 class NamedObjectVector {
 public:
 	NamedObjectVector();
+	virtual ~NamedObjectVector() = default;
 
 	/// DefineObj allows to transfer the given named object to the object container.
 	/// The container takes ownership of the transfered object.
@@ -134,10 +135,13 @@ private:
 		boost::bimaps::unordered_set_of<luxrays::NamedObjectRefWrapper>
 	>;
 
+	// Declaration order matters for construction/destruction!
+	// Please do not modify
 	std::vector<NamedObjectUPtr> objs;
-
 	Name2IndexType name2index;
 	Index2ObjType index2obj;
+
+
 };
 
 // Specialization (declaration) of DefineObj for NamedObject class, so that

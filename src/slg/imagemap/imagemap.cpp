@@ -605,7 +605,7 @@ ImageMapStorageUPtr ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const Channe
 					std::move(newPixels), width, height, wrapType, filterType
 				);
 			} else {
-				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
+				auto newPixels = std::make_unique<ImageMapPixel<T, 1>[]>(pixelCount);
 
 				const ImageMapPixel<T, CHANNELS> *src = pixels.get();
 				ImageMapPixel<T, 1> *dst = newPixels.get();

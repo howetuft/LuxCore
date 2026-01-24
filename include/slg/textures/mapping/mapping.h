@@ -56,7 +56,7 @@ typedef enum {
 class TextureMapping2D{
 public:
 	TextureMapping2D(const u_int index) : dataIndex(index) { }
-	virtual ~TextureMapping2D() { }
+	virtual ~TextureMapping2D() = default;
 
 	u_int GetDataIndex() const { return dataIndex; }
 

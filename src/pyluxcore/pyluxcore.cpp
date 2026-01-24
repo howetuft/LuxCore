@@ -2335,7 +2335,7 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Properties class
   //--------------------------------------------------------------------------
 
-  py::class_<luxrays::Properties, py::smart_holder>(m, "Properties")
+  py::class_<luxrays::Properties, std::unique_ptr<Properties>>(m, "Properties")
     .def(py::init<>())
     .def(py::init<std::string>())
     .def(py::init<luxrays::Properties>(), py::keep_alive<1,2>())
@@ -2534,7 +2534,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::init(&SceneImpl::Create<std::string>),
 		py::keep_alive<1, 2>()
 	)
-    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, py::return_value_policy::reference_internal)
+    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties)
     .def("GetCamera", &Scene_GetCamera, py::return_value_policy::reference_internal)
     .def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
     .def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
