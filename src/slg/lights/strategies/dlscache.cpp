@@ -60,7 +60,7 @@ OptionalPtr<LightSource> LightStrategyDLSCache::SampleLights(
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 
 			if (*pdf > 0.f)
-				return scene.lightDefs.GetLightSource(lightIndex);
+				return scene.GetLightSources().GetLightSource(lightIndex);
 			else
 				return std::nullopt;
 		} else
@@ -88,11 +88,13 @@ OptionalPtr<LightSource> LightStrategyDLSCache::SampleLights(SceneConstRef scene
 	return distributionStrategy->SampleLights(scene, u, pdf);
 }
 
-Properties LightStrategyDLSCache::ToProperties() const {
+PropertiesUPtr LightStrategyDLSCache::ToProperties() const {
 	const DLSCParams &params = DLSCache.GetParams();
-
-	return Properties() <<
-			Property("lightstrategy.type")(LightStrategyType2String(GetType())) <<
+	
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				Property("lightstrategy.type")(LightStrategyType2String(GetType())) <<
 			Property("lightstrategy.entry.radius")(params.visibility.lookUpRadius) <<
 			Property("lightstrategy.entry.normalangle")(params.visibility.lookUpNormalAngle) <<
 			Property("lightstrategy.entry.maxpasses")(params.entry.maxPasses) <<
@@ -103,13 +105,16 @@ Properties LightStrategyDLSCache::ToProperties() const {
 			Property("lightstrategy.maxsamplescount")(params.visibility.maxSampleCount) <<
 			Property("lightstrategy.persistent.file")(params.persistent.fileName) <<
 			Property("lightstrategy.persistent.safesave")(params.persistent.safeSave);
+	
+	return props;
 }
 
 // Static methods used by LightStrategyRegistry
 
-Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.type")) <<
+PropertiesUPtr LightStrategyDLSCache::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("lightstrategy.type")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.radius")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")) <<
@@ -120,7 +125,9 @@ Properties LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")) <<
 			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave"));
+	return props;
 }
+
 
 LightStrategyUPtr LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	DLSCParams params;

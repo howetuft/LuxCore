@@ -17,7 +17,9 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <memory>
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/cpurenderengine.h"
@@ -179,9 +181,10 @@ void CPURenderEngine::WaitForDone() const {
 		renderThreads[i]->WaitForDone();
 }
 
-Properties CPURenderEngine::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("native.threads.count"));
+PropertiesUPtr CPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props << cfg.Get(GetDefaultProps().Get("native.threads.count"));
+	return props;
 }
 
 const Properties &CPURenderEngine::GetDefaultProps() {
@@ -246,7 +249,7 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 	raysCount = totalCount;
 }
 
-Properties CPUNoTileRenderEngine::ToProperties(const Properties &cfg) {
+PropertiesUPtr CPUNoTileRenderEngine::ToProperties(const Properties &cfg) {
 	return CPURenderEngine::ToProperties(cfg);
 }
 
@@ -318,9 +321,13 @@ void CPUTileRenderEngine::UpdateCounters() {
 	raysCount = totalCount;
 }
 
-Properties CPUTileRenderEngine::ToProperties(const Properties &cfg) {
-	return CPURenderEngine::ToProperties(cfg) <<
-			TileRepository::ToProperties(cfg);
+PropertiesUPtr CPUTileRenderEngine::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
+	props
+		<< *CPURenderEngine::ToProperties(cfg)
+		<< *TileRepository::ToProperties(cfg);
+	return props_ptr;
 }
 
 const Properties &CPUTileRenderEngine::GetDefaultProps() {

@@ -168,12 +168,12 @@ Spectrum SphereLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	}
 }
 
-Properties SphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr SphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("sphere"));
-	props.Set(Property(prefix + ".radius")(radius));
+	props->Set(Property(prefix + ".type")("sphere"));
+	props->Set(Property(prefix + ".radius")(radius));
 
 	return props;
 }

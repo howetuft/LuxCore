@@ -58,7 +58,7 @@ public:
 	float GetD() const { return d; }
 	TextureConstRef GetKt() const { return kt; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	float d;

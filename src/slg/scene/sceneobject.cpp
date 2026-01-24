@@ -54,17 +54,17 @@ bool SceneObject::UpdateMeshReference(luxrays::ExtMeshConstRef oldMesh, luxrays:
 		return false;
 }
 
-Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
+PropertiesUPtr SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 		const bool useRealFileName) const {
-	Properties props;
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
-    props.Set(Property("scene.objects." + name + ".material")(GetMaterial().GetName()));
+    props->Set(Property("scene.objects." + name + ".material")(GetMaterial().GetName()));
 	const string fileName = useRealFileName ?
 		extMeshCache.GetRealFileName(mesh) : extMeshCache.GetSequenceFileName(mesh);
-	props.Set(Property("scene.objects." + name + ".ply")(fileName));
-	props.Set(Property("scene.objects." + name + ".camerainvisible")(cameraInvisible));
-	props.Set(Property("scene.objects." + name + ".id")(objID));
+	props->Set(Property("scene.objects." + name + ".ply")(fileName));
+	props->Set(Property("scene.objects." + name + ".camerainvisible")(cameraInvisible));
+	props->Set(Property("scene.objects." + name + ".id")(objID));
 
 	switch (GetMesh().GetType()) {
 		case TYPE_EXT_TRIANGLE: {
@@ -73,19 +73,19 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 			Transform trans;
 			extMesh.GetLocal2World(0.f, trans);
 
-			props.Set(Property("scene.objects." + name + ".appliedtransformation")(trans.m));
+			props->Set(Property("scene.objects." + name + ".appliedtransformation")(trans.m));
 			break;
 		}
 		case TYPE_EXT_TRIANGLE_INSTANCE: {
 			// I have to output also the transformation
 			auto& inst = static_cast<const ExtInstanceTriangleMesh &>(GetMesh());
-			props.Set(Property("scene.objects." + name + ".transformation")(inst.GetTransformation().m));
+			props->Set(Property("scene.objects." + name + ".transformation")(inst.GetTransformation().m));
 			break;
 		}
 		case TYPE_EXT_TRIANGLE_MOTION: {
 			// I have to output also the motion blur key transformations
 			auto& mot = static_cast<const ExtMotionTriangleMesh &>(GetMesh());
-			props.Set(mot.GetMotionSystem().ToProperties("scene.objects." + name, true));
+			props->Set(mot.GetMotionSystem().ToProperties("scene.objects." + name, true));
 			break;
 		}
 		default:
@@ -96,12 +96,12 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 	if (bakeMap) {
 		switch (bakeMapType) {
 			case COMBINED:
-				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
-				props.Set(Property("scene.objects." + name + ".bake.combined.uvindex")(bakeMapUVIndex));
+				props->Set(bakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
+				props->Set(Property("scene.objects." + name + ".bake.combined.uvindex")(bakeMapUVIndex));
 				break;
 			case LIGHTMAP:
-				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.lightmap", useRealFileName));
-				props.Set(Property("scene.objects." + name + ".bake.lightmap.uvindex")(bakeMapUVIndex));
+				props->Set(bakeMap->ToProperties("scene.objects." + name + ".bake.lightmap", useRealFileName));
+				props->Set(Property("scene.objects." + name + ".bake.lightmap.uvindex")(bakeMapUVIndex));
 				break;
 			default:
 				throw runtime_error("Unknown bake map type in SceneObject::ToProperties(): " + ToString(bakeMapType));

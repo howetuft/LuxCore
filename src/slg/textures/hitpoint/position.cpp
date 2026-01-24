@@ -35,11 +35,11 @@ Spectrum PositionTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(&hitPoint.p.x);
 }
 
-Properties PositionTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr PositionTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("position"));
+	props->Set(Property("scene.textures." + name + ".type")("position"));
 
 	return props;
 }

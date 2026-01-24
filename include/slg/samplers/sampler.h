@@ -104,7 +104,7 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
 
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -112,7 +112,7 @@ public:
 
 	// Transform the current configuration Properties in a complete list of
 	// object Properties (including all defaults values)
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,

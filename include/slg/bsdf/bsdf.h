@@ -117,12 +117,8 @@ public:
 	bool IsShadowCatcherOnlyInfiniteLights() const { return material->IsShadowCatcherOnlyInfiniteLights(); }
 	bool IsCameraInvisible() const;
 	bool IsVolume() const {
-		try {
-			dynamic_cast<const Volume &>(*material);
-		} catch (const std::bad_cast& e) {
-			return false;
-		}
-		return true;
+		auto ptr = dynamic_cast<const Volume *>(material.operator->());
+		return bool(ptr);
 	}
 	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsHoldout() const { return material->IsHoldout(); }

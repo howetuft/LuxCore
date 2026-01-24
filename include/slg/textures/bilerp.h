@@ -54,7 +54,7 @@ public:
 	TextureConstRef GetTexture10() const { return t10; }
 	TextureConstRef GetTexture11() const { return t11; }
 
-	virtual luxrays::Properties ToProperties(
+	virtual luxrays::PropertiesUPtr ToProperties(
 		const ImageMapCache &imgMapCache, const bool useRealFileName
 	) const;
 

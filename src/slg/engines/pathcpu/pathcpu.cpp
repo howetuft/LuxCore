@@ -48,12 +48,12 @@ void PathCPURenderEngine::InitFilm() {
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().SetThreadCount(renderThreads.size());
 	GetFilm().Init();
 }
 
-RenderStatePtr PathCPURenderEngine::GetRenderState() {
+RenderStateSPtr PathCPURenderEngine::GetRenderState() {
 	return std::make_shared<PathCPURenderState>(bootStrapSeed, photonGICache);
 }
 
@@ -166,11 +166,11 @@ void PathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr PathCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
 	
-	props << CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+	*props << *CPUNoTileRenderEngine::ToProperties(cfg) <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			PathTracer::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 

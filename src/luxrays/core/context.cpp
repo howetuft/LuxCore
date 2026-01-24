@@ -170,7 +170,7 @@ Context::~Context() {
 		delete deviceDescriptions[i];
 }
 
-void Context::SetDataSet(DataSetPtr dataSet) {
+void Context::SetDataSet(DataSetSPtr dataSet) {
 	assert (!started);
 
 	currentDataSet = dataSet;

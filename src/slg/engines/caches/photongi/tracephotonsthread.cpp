@@ -69,7 +69,7 @@ void TracePhotonsThread::Start() {
 }
 
 void TracePhotonsThread::Join() {
-	if (renderThread) {
+	if (renderThread and renderThread->joinable()) {
 		renderThread->join();
 	}
 }
@@ -131,7 +131,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 	// Select one light source
 	float lightPickPdf;
-	auto light = scene.lightDefs.GetEmitLightStrategy().
+	auto light = scene.GetLightSources().GetEmitLightStrategy().
 			SampleLights(scene, samples[1], &lightPickPdf);
 
 	if (light) {

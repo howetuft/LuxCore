@@ -59,7 +59,7 @@ public:
 
 	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 
-	virtual void SetDataSet(DataSetPtr newDataSet);
+	virtual void SetDataSet(DataSetSPtr newDataSet);
 
 	friend class Context;
 

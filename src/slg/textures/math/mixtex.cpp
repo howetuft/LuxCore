@@ -78,14 +78,14 @@ Normal MixTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) co
 	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
 }
 
-Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr MixTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("mix"));
-	props.Set(Property("scene.textures." + name + ".amount")(GetAmountTexture().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("mix"));
+	props->Set(Property("scene.textures." + name + ".amount")(GetAmountTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
 
 	return props;
 }

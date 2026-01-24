@@ -148,7 +148,7 @@ Spectrum InfiniteLight::Emit(SceneConstRef scene,
     float d1, d2;
     ConcentricSampleDisk(u2, u3, &d1, &d2);
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
 	const Point rayOrig = pDisk - envRadius * rayDir;
@@ -191,7 +191,7 @@ Spectrum InfiniteLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 
 	const Vector shadowRayDir = Normalize(lightToWorld * localDir);
 	
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
@@ -244,21 +244,21 @@ void InfiniteLight::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMod
 	}
 }
 
-Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	auto props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("infinite"));
+	props->Set(Property(prefix + ".type")("infinite"));
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
-	props.Set(Property(prefix + ".file")(fileName));
-	props.Set(imageMap->ToProperties(prefix, false));
-	props.Set(Property(prefix + ".gamma")(1.f));
-	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
+	props->Set(Property(prefix + ".file")(fileName));
+	props->Set(imageMap->ToProperties(prefix, false));
+	props->Set(Property(prefix + ".gamma")(1.f));
+	props->Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
 
-	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
+	props->Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)
-		props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
+		*props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
 
 	return props;
 }

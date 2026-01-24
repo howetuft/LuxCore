@@ -62,7 +62,7 @@ public:
 		referencedImgMaps.insert(imageMap.ptr());
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	OptionalPtr<const ImageMap> imageMap;
 	bool sampleUpperHemisphereOnly;

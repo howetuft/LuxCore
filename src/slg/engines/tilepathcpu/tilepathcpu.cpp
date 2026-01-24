@@ -42,11 +42,11 @@ TilePathCPURenderEngine::~TilePathCPURenderEngine() {
 
 void TilePathCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().Init();
 }
 
-RenderStatePtr TilePathCPURenderEngine::GetRenderState() {
+RenderStateSPtr TilePathCPURenderEngine::GetRenderState() {
 	return std::make_shared<TilePathCPURenderState>(bootStrapSeed, tileRepository, photonGICache);
 }
 
@@ -140,11 +140,11 @@ void TilePathCPURenderEngine::StopLockLess() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
 	
-	props <<
-			CPUTileRenderEngine::ToProperties(cfg) <<
+	*props <<
+				CPUTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
 			PathTracer::ToProperties(cfg) <<

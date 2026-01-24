@@ -89,16 +89,16 @@ float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
-Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr MarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("marble"));
-	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
-	props.Set(Property("scene.textures." + name + ".roughness")(omega));
-	props.Set(Property("scene.textures." + name + ".scale")(scale));
-	props.Set(Property("scene.textures." + name + ".variation")(variation));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("marble"));
+	props->Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props->Set(Property("scene.textures." + name + ".roughness")(omega));
+	props->Set(Property("scene.textures." + name + ".scale")(scale));
+	props->Set(Property("scene.textures." + name + ".variation")(variation));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

@@ -205,7 +205,7 @@ void PathOCLBaseRenderEngine::InitFilm() {
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), seedBaseGenerator, GetFilm());
 
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().Init();
 }
 

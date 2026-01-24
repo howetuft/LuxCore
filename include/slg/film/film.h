@@ -465,7 +465,7 @@ public:
 	int hwDeviceIndex;
 
 	luxrays::ContextUPtr ctx;
-	luxrays::DataSetPtr dataSet;
+	luxrays::DataSetSPtr dataSet;
 	luxrays::HardwareDevice *hardwareDevice;
 
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
@@ -488,7 +488,7 @@ public:
 		u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion);
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static FilmUPtr FromProperties(luxrays::PropertiesPtr cfg);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);

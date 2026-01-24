@@ -57,7 +57,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 protected:
 	virtual void UpdateAvgPassThroughTransparency();

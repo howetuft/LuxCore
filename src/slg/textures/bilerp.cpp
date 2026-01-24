@@ -51,19 +51,19 @@ Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	);
 }
 
-Properties BilerpTexture::ToProperties(
+PropertiesUPtr BilerpTexture::ToProperties(
 	const ImageMapCache &imgMapCache,
 	const bool useRealFileName
 ) const
 {
-	Properties props;
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("bilerp"));
-	props.Set(Property("scene.textures." + name + ".texture00")(GetTexture00().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture01")(GetTexture01().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture10")(GetTexture10().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture11")(GetTexture11().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("bilerp"));
+	props->Set(Property("scene.textures." + name + ".texture00")(GetTexture00().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture01")(GetTexture01().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture10")(GetTexture10().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture11")(GetTexture11().GetSDLValue()));
 
 	return props;
 }

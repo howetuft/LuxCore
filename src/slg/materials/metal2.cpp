@@ -227,20 +227,20 @@ void Metal2Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef 
 		glossiness = ComputeGlossiness(nu, nv);
 }
 
-Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
-	Properties props;
+PropertiesUPtr Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("metal2"));
+	props->Set(Property("scene.materials." + name + ".type")("metal2"));
 	if (fresnelTex)
-		props.Set(Property("scene.materials." + name + ".fresnel")(fresnelTex->GetSDLValue()));
+		props->Set(Property("scene.materials." + name + ".fresnel")(fresnelTex->GetSDLValue()));
 	if (n)
-		props.Set(Property("scene.materials." + name + ".n")(n->GetSDLValue()));
+		props->Set(Property("scene.materials." + name + ".n")(n->GetSDLValue()));
 	if (k)
-		props.Set(Property("scene.materials." + name + ".k")(k->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+		props->Set(Property("scene.materials." + name + ".k")(k->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

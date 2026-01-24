@@ -66,7 +66,7 @@ void ProjectiveCamera::UpdateAuto(SceneConstRef scene) {
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
-		if (scene.dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit))
+		if (scene.GetDataSet().GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit))
 			focalDistance = rayHit.t;
 	}
 
@@ -214,25 +214,25 @@ void ProjectiveCamera::Rotate(const float angle, const luxrays::Vector &axis) {
 		target = orig + newDir;
 }
 
-Properties ProjectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props = Camera::ToProperties(imgMapCache, useRealFileName);
+PropertiesUPtr ProjectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	PropertiesUPtr props = Camera::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property("scene.camera.lookat.orig")(orig));
-	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up));
+	props->Set(Property("scene.camera.lookat.orig")(orig));
+	props->Set(Property("scene.camera.lookat.target")(target));
+	props->Set(Property("scene.camera.up")(up));
 
 	if (!autoUpdateScreenWindow)
-		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
+		props->Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
 
 	if (enableClippingPlane) {
-		props.Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
-		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
-		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
+		props->Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
+		props->Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
+		props->Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
 	}
 
-	props.Set(Property("scene.camera.lensradius")(lensRadius));
-	props.Set(Property("scene.camera.focaldistance")(focalDistance));
-	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
+	props->Set(Property("scene.camera.lensradius")(lensRadius));
+	props->Set(Property("scene.camera.focaldistance")(focalDistance));
+	props->Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	return props;
 }

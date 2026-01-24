@@ -67,7 +67,7 @@ public:
 	TextureConstRef GetOffset() const { return offset; }
 	const float GetStrength() const { return strength; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	void GetTmpHitPoint(const HitPoint &hitPoint, HitPoint &tmpHitPoint) const;

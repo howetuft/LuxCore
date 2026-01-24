@@ -128,7 +128,7 @@ void CompiledScene::CompileLightStrategy() {
 	// Compile lightDistribution
 	//--------------------------------------------------------------------------
 
-	auto& illuminateLightStrategy = scene.lightDefs.GetIlluminateLightStrategy();
+	auto& illuminateLightStrategy = scene.GetLightSources().GetIlluminateLightStrategy();
 	
 	// Check if it is an DistributionLightStrategy
 	try {
@@ -173,7 +173,7 @@ void CompiledScene::CompileLightStrategy() {
 	infiniteLightSourcesDistribution = nullptr;
 	infiniteLightSourcesDistributionSize = 0;
 
-	auto& infiniteLightStrategy = scene.lightDefs.GetInfiniteLightStrategy();
+	auto& infiniteLightStrategy = scene.GetLightSources().GetInfiniteLightStrategy();
 
 	// Check if it is an DistributionLightStrategy
 	try {
@@ -316,7 +316,7 @@ void CompiledScene::CompileLights() {
 
 	const double tStart = WallClockTime();
 
-	const u_int lightCount = scene.lightDefs.GetSize();
+	const u_int lightCount = scene.GetLightSources().GetSize();
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
 	envLightDistributions.clear();
@@ -324,7 +324,7 @@ void CompiledScene::CompileLights() {
 	CompileELVC(OptionalPtr<const EnvLightVisibilityCache>(std::nullopt));
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto& l = scene.lightDefs.GetLightSource(i);
+		auto& l = scene.GetLightSources().GetLightSource(i);
 
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
 		oclLight->lightSceneIndex = l.lightSceneIndex;
@@ -354,7 +354,7 @@ void CompiledScene::CompileLights() {
 				auto emissionFunc = tl.lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
 					oclLight->triangle.average = emissionFunc->Average();
-					oclLight->triangle.imageMapIndex = scene.imgMapCache.GetImageMapIndex(
+					oclLight->triangle.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(
 							// I use only ImageMapSphericalFunction
 
 							((const ImageMapSphericalFunction *)(emissionFunc->GetFunc()))->GetImageMap());
@@ -377,7 +377,7 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, il.GetTemperatureScale());
 
 				// InfiniteLight data
-				oclLight->notIntersectable.infinite.imageMapIndex = scene.imgMapCache.GetImageMapIndex(il.imageMap);
+				oclLight->notIntersectable.infinite.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(il.imageMap);
 
 				// Compile the image map Distribution2D
 				const Distribution2D * dist;
@@ -544,7 +544,7 @@ void CompiledScene::CompileLights() {
 					oclLight->notIntersectable.mapPoint.emittedFactor.c,
 					&funcData);
 				oclLight->notIntersectable.mapPoint.average = funcData->Average();
-				oclLight->notIntersectable.mapPoint.imageMapIndex = scene.imgMapCache.GetImageMapIndex(*mpl.imageMap);
+				oclLight->notIntersectable.mapPoint.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(*mpl.imageMap);
 				break;
 			}
 			case TYPE_SPOT: {
@@ -586,7 +586,7 @@ void CompiledScene::CompileLights() {
 
 				// ProjectionLight data
 				oclLight->notIntersectable.projection.imageMapIndex = (pl.imageMap) ?
-					scene.imgMapCache.GetImageMapIndex(*pl.imageMap) :
+					scene.GetImageMaps().GetImageMapIndex(*pl.imageMap) :
 					NULL_INDEX;
 
 				const Transform *alignedWorld2Light, *lightProjection;
@@ -745,7 +745,7 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersectable.mapSphere.sphere.radius = msl.radius;
 
 				oclLight->notIntersectable.mapSphere.average = funcData->Average();
-				oclLight->notIntersectable.mapSphere.imageMapIndex = scene.imgMapCache.GetImageMapIndex(*msl.imageMap);
+				oclLight->notIntersectable.mapSphere.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(*msl.imageMap);
 				break;
 			}
 			default:
@@ -756,8 +756,8 @@ void CompiledScene::CompileLights() {
 			envLightIndices.push_back(i);
 	}
 
-	lightIndexOffsetByMeshIndex = scene.lightDefs.GetLightIndexOffsetByMeshIndex();
-	lightIndexByTriIndex = scene.lightDefs.GetLightIndexByTriIndex();
+	lightIndexOffsetByMeshIndex = scene.GetLightSources().GetLightIndexOffsetByMeshIndex();
+	lightIndexByTriIndex = scene.GetLightSources().GetLightIndexByTriIndex();
 
 	CompileLightStrategy();
 

@@ -142,9 +142,9 @@ public:
 	// Methods dedicated to DataSet definition
 	//--------------------------------------------------------------------------
 
-	DataSetPtr GetCurrentDataSet() const { return currentDataSet; }
+	DataSetSPtr GetCurrentDataSet() const { return currentDataSet; }
 
-	void SetDataSet(DataSetPtr dataSet);
+	void SetDataSet(DataSetSPtr dataSet);
 	void UpdateDataSet();
 
 	//--------------------------------------------------------------------------
@@ -190,7 +190,7 @@ private:
 
 	LuxRaysDebugHandler debugHandler;
 
-	DataSetPtr currentDataSet;
+	DataSetSPtr currentDataSet;
 	std::vector<DeviceDescription *> deviceDescriptions;
 
 	// All intersection devices

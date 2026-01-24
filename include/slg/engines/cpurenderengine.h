@@ -82,7 +82,7 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 
 	friend class CPURenderThread;
 
@@ -127,7 +127,7 @@ public:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 
 	friend class CPUNoTileRenderThread;
 
@@ -172,7 +172,7 @@ public:
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 
 	friend class CPUTileRenderThread;
 

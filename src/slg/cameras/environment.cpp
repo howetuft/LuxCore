@@ -202,18 +202,18 @@ void EnvironmentCamera::Rotate(const float angle, const luxrays::Vector &axis) {
 		target = orig + newDir;
 }
 
-Properties EnvironmentCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props = Camera::ToProperties(imgMapCache, useRealFileName);
+PropertiesUPtr EnvironmentCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	PropertiesUPtr props = Camera::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property("scene.camera.type")("environment"));
-	props.Set(Property("scene.camera.lookat.orig")(orig));
-	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up));
+	props->Set(Property("scene.camera.type")("environment"));
+	props->Set(Property("scene.camera.lookat.orig")(orig));
+	props->Set(Property("scene.camera.lookat.target")(target));
+	props->Set(Property("scene.camera.up")(up));
 
 	if (!autoUpdateScreenWindow)
-		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
+		props->Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
 	
-	props.Set(Property("scene.camera.environment.degrees")(degrees));
+	props->Set(Property("scene.camera.environment.degrees")(degrees));
 	
 	return props;
 }

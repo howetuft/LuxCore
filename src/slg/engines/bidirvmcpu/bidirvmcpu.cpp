@@ -37,7 +37,7 @@ void BiDirVMCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	lightPathsCount = Max(1024u, cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")).Get<u_int>());
-	baseRadius = cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.GetScene().dataSet->GetBSphere().rad;
+	baseRadius = cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.GetScene().GetDataSet().GetBSphere().rad;
 	radiusAlpha = cfg.Get(GetDefaultProps().Get("bidirvm.alpha")).Get<double>();
 
 	BiDirCPURenderEngine::StartLockLess();
@@ -47,12 +47,16 @@ void BiDirVMCPURenderEngine::StartLockLess() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
-	return BiDirCPURenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+PropertiesUPtr BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = BiDirCPURenderEngine::ToProperties(cfg);
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
+	
+	return props;
 }
 
 RenderEngine *BiDirVMCPURenderEngine::FromProperties(RenderConfigRef rcfg) {

@@ -57,7 +57,7 @@ void CompiledScene::CompileCamera() {
 	camera.base.shutterOpen = sceneCamera.shutterOpen;
 	camera.base.shutterClose = sceneCamera.shutterClose;
 	camera.base.volumeIndex = sceneCamera.HasVolume() ?
-		scene.matDefs.GetMaterialIndex(sceneCamera.GetVolume()) : NULL_INDEX;
+		scene.GetMaterials().GetMaterialIndex(sceneCamera.GetVolume()) : NULL_INDEX;
 
 	if (sceneCamera.motionSystem) {
 		if (sceneCamera.motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)

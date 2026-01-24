@@ -57,14 +57,14 @@ Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		GetOutsideTex().GetSpectrumValue(hitPoint);
 }
 
-Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("dots"));
-	props.Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".outside")(GetOutsideTex().GetSDLValue()));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("dots"));
+	props->Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".outside")(GetOutsideTex().GetSDLValue()));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

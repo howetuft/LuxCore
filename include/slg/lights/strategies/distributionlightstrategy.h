@@ -54,7 +54,7 @@ public:
 	) const override;
 	
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 	
 	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
 	

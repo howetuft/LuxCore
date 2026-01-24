@@ -234,14 +234,14 @@ void TwoSidedMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRe
 	Preprocess();
 }
 
-Properties TwoSidedMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
-	Properties props;
+PropertiesUPtr TwoSidedMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("twosided"));
-	props.Set(Property("scene.materials." + name + ".frontmaterial")(frontMat->GetName()));
-	props.Set(Property("scene.materials." + name + ".backmaterial")(backMat->GetName()));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+	props->Set(Property("scene.materials." + name + ".type")("twosided"));
+	props->Set(Property("scene.materials." + name + ".frontmaterial")(frontMat->GetName()));
+	props->Set(Property("scene.materials." + name + ".backmaterial")(backMat->GetName()));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

@@ -208,23 +208,23 @@ bool ProjectionLight::IsAlwaysInShadow(SceneConstRef scene,
 	return (Dot(-dir, lightNormal) < 0.f);
 }
 
-Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("projection"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".power")(power));
-	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficiency")(efficiency));
-	props.Set(Property(prefix + ".position")(localPos));
-	props.Set(Property(prefix + ".target")(localTarget));
-	props.Set(Property(prefix + ".fov")(fov));
+	props->Set(Property(prefix + ".type")("projection"));
+	props->Set(Property(prefix + ".color")(color));
+	props->Set(Property(prefix + ".power")(power));
+	props->Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
+	props->Set(Property(prefix + ".efficiency")(efficiency));
+	props->Set(Property(prefix + ".position")(localPos));
+	props->Set(Property(prefix + ".target")(localTarget));
+	props->Set(Property(prefix + ".fov")(fov));
 
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
-	props.Set(Property(prefix + ".mapfile")(fileName));
-	props.Set(imageMap->ToProperties(prefix, false));
+	props->Set(Property(prefix + ".mapfile")(fileName));
+	props->Set(*imageMap->ToProperties(prefix, false));
 
 	return props;
 }

@@ -38,7 +38,7 @@ public:
 		OpenCLDeviceDescription *desc, const size_t devIndex);
 	virtual ~OpenCLIntersectionDevice();
 
-	virtual void SetDataSet(DataSetPtr newDataSet);
+	virtual void SetDataSet(DataSetSPtr newDataSet);
 	virtual void Start();
 	virtual void Stop();
 

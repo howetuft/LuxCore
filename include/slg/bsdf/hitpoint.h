@@ -26,7 +26,6 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/usings.h"
 #include "slg/usings.h"
 
 namespace slg {

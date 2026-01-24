@@ -43,7 +43,7 @@ public:
 
 	static LightStrategyType GetObjectType() { return TYPE_LOG_POWER; }
 	static std::string GetObjectTag() { return "LOG_POWER"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 
 protected:

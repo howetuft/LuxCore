@@ -567,7 +567,7 @@ void CompiledScene::CompileMaterials() {
 
 	CompileTextures();
 
-	const u_int materialsCount = scene.matDefs.GetSize();
+	const u_int materialsCount = scene.GetMaterials().GetSize();
 	SLG_LOG("Compile " << materialsCount << " Materials");
 
 	//--------------------------------------------------------------------------
@@ -579,7 +579,7 @@ void CompiledScene::CompileMaterials() {
 	mats.resize(materialsCount);
 
 	for (u_int i = 0; i < materialsCount; ++i) {
-		auto& m = scene.matDefs.GetMaterial(i);
+		auto& m = scene.GetMaterials().GetMaterial(i);
 		slg::ocl::Material *mat = &mats[i];
 		//SLG_LOG(" Type: " << m.GetType());
 
@@ -590,13 +590,13 @@ void CompiledScene::CompileMaterials() {
 		// Material transparency
 		auto frontTranspTex = m.GetFrontTransparencyTexture();
 		if (frontTranspTex) {
-			mat->frontTranspTexIndex = scene.texDefs.GetTextureIndex(frontTranspTex);
+			mat->frontTranspTexIndex = scene.GetTextures().GetTextureIndex(frontTranspTex);
 		} else
 			mat->frontTranspTexIndex = NULL_INDEX;
 
 		auto backTranspTex = m.GetBackTransparencyTexture();
 		if (backTranspTex) {
-			mat->backTranspTexIndex = scene.texDefs.GetTextureIndex(backTranspTex);
+			mat->backTranspTexIndex = scene.GetTextures().GetTextureIndex(backTranspTex);
 		} else
 			mat->backTranspTexIndex = NULL_INDEX;
 
@@ -605,7 +605,7 @@ void CompiledScene::CompileMaterials() {
 		// Material emission
 		auto emitTex = m.GetEmitTexture();
 		if (emitTex)
-			mat->emitTexIndex = scene.texDefs.GetTextureIndex(emitTex);
+			mat->emitTexIndex = scene.GetTextures().GetTextureIndex(emitTex);
 		else
 			mat->emitTexIndex = NULL_INDEX;
 		ASSIGN_SPECTRUM(mat->emittedFactor, m.GetEmittedFactor());
@@ -615,7 +615,7 @@ void CompiledScene::CompileMaterials() {
 		// Material bump mapping
 		auto bumpTex = m.GetBumpTexture();
 		if (bumpTex)
-			mat->bumpTexIndex = scene.texDefs.GetTextureIndex(bumpTex);
+			mat->bumpTexIndex = scene.GetTextures().GetTextureIndex(bumpTex);
 		else
 			mat->bumpTexIndex = NULL_INDEX;
 
@@ -626,9 +626,9 @@ void CompiledScene::CompileMaterials() {
 
 		// Material volumes
 		auto interiorVol = m.GetInteriorVolume();
-		mat->interiorVolumeIndex = interiorVol ? scene.matDefs.GetMaterialIndex(interiorVol) : NULL_INDEX;
+		mat->interiorVolumeIndex = interiorVol ? scene.GetMaterials().GetMaterialIndex(interiorVol) : NULL_INDEX;
 		auto exteriorVol = m.GetExteriorVolume();
-		mat->exteriorVolumeIndex = exteriorVol ? scene.matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
+		mat->exteriorVolumeIndex = exteriorVol ? scene.GetMaterials().GetMaterialIndex(exteriorVol) : NULL_INDEX;
 		mat->glossiness = m.GetGlossiness();
 		mat->avgPassThroughTransparency = m.GetAvgPassThroughTransparency();
 		mat->isShadowCatcher = m.IsShadowCatcher();
@@ -646,48 +646,48 @@ void CompiledScene::CompileMaterials() {
 				auto& mm = dynamic_cast<const MatteMaterial &>(m);
 
 				mat->type = slg::ocl::MATTE;
-				mat->matte.kdTexIndex = scene.texDefs.GetTextureIndex(mm.GetKd());
+				mat->matte.kdTexIndex = scene.GetTextures().GetTextureIndex(mm.GetKd());
 				break;
 			}
 			case ROUGHMATTE: {
 				auto& mm = dynamic_cast<const RoughMatteMaterial &>(m);
 
 				mat->type = slg::ocl::ROUGHMATTE;
-				mat->roughmatte.kdTexIndex = scene.texDefs.GetTextureIndex(mm.GetKd());
-				mat->roughmatte.sigmaTexIndex = scene.texDefs.GetTextureIndex(mm.GetSigma());
+				mat->roughmatte.kdTexIndex = scene.GetTextures().GetTextureIndex(mm.GetKd());
+				mat->roughmatte.sigmaTexIndex = scene.GetTextures().GetTextureIndex(mm.GetSigma());
 				break;
 			}
 			case MIRROR: {
 				auto& mm = dynamic_cast<const MirrorMaterial &>(m);
 
 				mat->type = slg::ocl::MIRROR;
-				mat->mirror.krTexIndex = scene.texDefs.GetTextureIndex(mm.GetKr());
+				mat->mirror.krTexIndex = scene.GetTextures().GetTextureIndex(mm.GetKr());
 				break;
 			}
 			case GLASS: {
 				auto& gm = dynamic_cast<const GlassMaterial &>(m);
 
 				mat->type = slg::ocl::GLASS;
-				mat->glass.krTexIndex = scene.texDefs.GetTextureIndex(gm.GetKr());
-				mat->glass.ktTexIndex = scene.texDefs.GetTextureIndex(gm.GetKt());
+				mat->glass.krTexIndex = scene.GetTextures().GetTextureIndex(gm.GetKr());
+				mat->glass.ktTexIndex = scene.GetTextures().GetTextureIndex(gm.GetKt());
 				if (gm.GetExteriorIOR())
-					mat->glass.exteriorIorTexIndex = scene.texDefs.GetTextureIndex(gm.GetExteriorIOR());
+					mat->glass.exteriorIorTexIndex = scene.GetTextures().GetTextureIndex(gm.GetExteriorIOR());
 				else
 					mat->glass.exteriorIorTexIndex = NULL_INDEX;
 				if (gm.GetInteriorIOR())
-					mat->glass.interiorIorTexIndex = scene.texDefs.GetTextureIndex(gm.GetInteriorIOR());
+					mat->glass.interiorIorTexIndex = scene.GetTextures().GetTextureIndex(gm.GetInteriorIOR());
 				else
 					mat->glass.interiorIorTexIndex = NULL_INDEX;
 				if (gm.GetCauchyB())
-					mat->glass.cauchyBTex = scene.texDefs.GetTextureIndex(gm.GetCauchyB());
+					mat->glass.cauchyBTex = scene.GetTextures().GetTextureIndex(gm.GetCauchyB());
 				else
 					mat->glass.cauchyBTex = NULL_INDEX;
 				if (gm.GetFilmThickness())
-					mat->glass.filmThicknessTexIndex = scene.texDefs.GetTextureIndex(gm.GetFilmThickness());
+					mat->glass.filmThicknessTexIndex = scene.GetTextures().GetTextureIndex(gm.GetFilmThickness());
 				else
 					mat->glass.filmThicknessTexIndex = NULL_INDEX;
 				if (gm.GetFilmIOR())
-					mat->glass.filmIorTexIndex = scene.texDefs.GetTextureIndex(gm.GetFilmIOR());
+					mat->glass.filmIorTexIndex = scene.GetTextures().GetTextureIndex(gm.GetFilmIOR());
 				else
 					mat->glass.filmIorTexIndex = NULL_INDEX;
 				break;
@@ -696,22 +696,22 @@ void CompiledScene::CompileMaterials() {
 				auto& am = dynamic_cast<const ArchGlassMaterial &>(m);
 
 				mat->type = slg::ocl::ARCHGLASS;
-				mat->archglass.krTexIndex = scene.texDefs.GetTextureIndex(am.GetKr());
-				mat->archglass.ktTexIndex = scene.texDefs.GetTextureIndex(am.GetKt());
+				mat->archglass.krTexIndex = scene.GetTextures().GetTextureIndex(am.GetKr());
+				mat->archglass.ktTexIndex = scene.GetTextures().GetTextureIndex(am.GetKt());
 				if (am.GetExteriorIOR())
-					mat->archglass.exteriorIorTexIndex = scene.texDefs.GetTextureIndex(am.GetExteriorIOR());
+					mat->archglass.exteriorIorTexIndex = scene.GetTextures().GetTextureIndex(am.GetExteriorIOR());
 				else
 					mat->archglass.exteriorIorTexIndex = NULL_INDEX;
 				if (am.GetInteriorIOR())
-					mat->archglass.interiorIorTexIndex = scene.texDefs.GetTextureIndex(am.GetInteriorIOR());
+					mat->archglass.interiorIorTexIndex = scene.GetTextures().GetTextureIndex(am.GetInteriorIOR());
 				else
 					mat->archglass.interiorIorTexIndex = NULL_INDEX;
 				if (am.GetFilmThickness())
-					mat->archglass.filmThicknessTexIndex = scene.texDefs.GetTextureIndex(am.GetFilmThickness());
+					mat->archglass.filmThicknessTexIndex = scene.GetTextures().GetTextureIndex(am.GetFilmThickness());
 				else
 					mat->archglass.filmThicknessTexIndex = NULL_INDEX;
 				if (am.GetFilmIOR())
-					mat->archglass.filmIorTexIndex = scene.texDefs.GetTextureIndex(am.GetFilmIOR());
+					mat->archglass.filmIorTexIndex = scene.GetTextures().GetTextureIndex(am.GetFilmIOR());
 				else
 					mat->archglass.filmIorTexIndex = NULL_INDEX;
 				break;
@@ -720,9 +720,9 @@ void CompiledScene::CompileMaterials() {
 				auto& mm = dynamic_cast<const MixMaterial &>(m);
 
 				mat->type = slg::ocl::MIX;
-				mat->mix.matAIndex = scene.matDefs.GetMaterialIndex(mm.GetMaterialA());
-				mat->mix.matBIndex = scene.matDefs.GetMaterialIndex(mm.GetMaterialB());
-				mat->mix.mixFactorTexIndex = scene.texDefs.GetTextureIndex(mm.GetMixFactor());
+				mat->mix.matAIndex = scene.GetMaterials().GetMaterialIndex(mm.GetMaterialA());
+				mat->mix.matBIndex = scene.GetMaterials().GetMaterialIndex(mm.GetMaterialB());
+				mat->mix.mixFactorTexIndex = scene.GetTextures().GetTextureIndex(mm.GetMixFactor());
 				break;
 			}
 			case NULLMAT: {
@@ -733,37 +733,37 @@ void CompiledScene::CompileMaterials() {
 				auto& mt = dynamic_cast<const MatteTranslucentMaterial &>(m);
 
 				mat->type = slg::ocl::MATTETRANSLUCENT;
-				mat->matteTranslucent.krTexIndex = scene.texDefs.GetTextureIndex(mt.GetKr());
-				mat->matteTranslucent.ktTexIndex = scene.texDefs.GetTextureIndex(mt.GetKt());
+				mat->matteTranslucent.krTexIndex = scene.GetTextures().GetTextureIndex(mt.GetKr());
+				mat->matteTranslucent.ktTexIndex = scene.GetTextures().GetTextureIndex(mt.GetKt());
 				break;
 			}
 			case ROUGHMATTETRANSLUCENT: {
 				auto& rmt = dynamic_cast<const RoughMatteTranslucentMaterial &>(m);
 
 				mat->type = slg::ocl::ROUGHMATTETRANSLUCENT;
-				mat->roughmatteTranslucent.krTexIndex = scene.texDefs.GetTextureIndex(rmt.GetKr());
-				mat->roughmatteTranslucent.ktTexIndex = scene.texDefs.GetTextureIndex(rmt.GetKt());
-				mat->roughmatteTranslucent.sigmaTexIndex = scene.texDefs.GetTextureIndex(rmt.GetSigma());
+				mat->roughmatteTranslucent.krTexIndex = scene.GetTextures().GetTextureIndex(rmt.GetKr());
+				mat->roughmatteTranslucent.ktTexIndex = scene.GetTextures().GetTextureIndex(rmt.GetKt());
+				mat->roughmatteTranslucent.sigmaTexIndex = scene.GetTextures().GetTextureIndex(rmt.GetSigma());
 				break;
 			}
 			case GLOSSY2: {
 				auto& g2m = dynamic_cast<const Glossy2Material &>(m);
 
 				mat->type = slg::ocl::GLOSSY2;
-				mat->glossy2.kdTexIndex = scene.texDefs.GetTextureIndex(g2m.GetKd());
-				mat->glossy2.ksTexIndex = scene.texDefs.GetTextureIndex(g2m.GetKs());
+				mat->glossy2.kdTexIndex = scene.GetTextures().GetTextureIndex(g2m.GetKd());
+				mat->glossy2.ksTexIndex = scene.GetTextures().GetTextureIndex(g2m.GetKs());
 
 				auto nuTex = g2m.GetNu();
 				auto nvTex = g2m.GetNv();
-				mat->glossy2.nuTexIndex = scene.texDefs.GetTextureIndex(nuTex);
-				mat->glossy2.nvTexIndex = scene.texDefs.GetTextureIndex(nvTex);
+				mat->glossy2.nuTexIndex = scene.GetTextures().GetTextureIndex(nuTex);
+				mat->glossy2.nvTexIndex = scene.GetTextures().GetTextureIndex(nvTex);
 
 				auto depthTex = g2m.GetDepth();
-				mat->glossy2.kaTexIndex = scene.texDefs.GetTextureIndex(g2m.GetKa());
-				mat->glossy2.depthTexIndex = scene.texDefs.GetTextureIndex(depthTex);
+				mat->glossy2.kaTexIndex = scene.GetTextures().GetTextureIndex(g2m.GetKa());
+				mat->glossy2.depthTexIndex = scene.GetTextures().GetTextureIndex(depthTex);
 
 				auto indexTex = g2m.GetIndex();
-				mat->glossy2.indexTexIndex = scene.texDefs.GetTextureIndex(indexTex);
+				mat->glossy2.indexTexIndex = scene.GetTextures().GetTextureIndex(indexTex);
 				mat->glossy2.multibounce = g2m.IsMultibounce () ? 1 : 0;
 				mat->glossy2.doublesided = g2m.IsDoubleSided () ? 1 : 0;
 				break;
@@ -773,50 +773,50 @@ void CompiledScene::CompileMaterials() {
 
 				mat->type = slg::ocl::METAL2;
 				if (m2m.GetFresnel())
-					mat->metal2.fresnelTexIndex = scene.texDefs.GetTextureIndex(m2m.GetFresnel());
+					mat->metal2.fresnelTexIndex = scene.GetTextures().GetTextureIndex(m2m.GetFresnel());
 				else
 					mat->metal2.fresnelTexIndex = NULL_INDEX;
 				if (m2m.GetN())
-					mat->metal2.nTexIndex = scene.texDefs.GetTextureIndex(m2m.GetN());
+					mat->metal2.nTexIndex = scene.GetTextures().GetTextureIndex(m2m.GetN());
 				else
 					mat->metal2.nTexIndex = NULL_INDEX;
 				if (m2m.GetK())
-					mat->metal2.kTexIndex = scene.texDefs.GetTextureIndex(m2m.GetK());
+					mat->metal2.kTexIndex = scene.GetTextures().GetTextureIndex(m2m.GetK());
 				else
 					mat->metal2.kTexIndex = NULL_INDEX;
 
 				auto nuTex = m2m.GetNu();
 				auto nvTex = m2m.GetNv();
-				mat->metal2.nuTexIndex = scene.texDefs.GetTextureIndex(nuTex);
-				mat->metal2.nvTexIndex = scene.texDefs.GetTextureIndex(nvTex);
+				mat->metal2.nuTexIndex = scene.GetTextures().GetTextureIndex(nuTex);
+				mat->metal2.nvTexIndex = scene.GetTextures().GetTextureIndex(nvTex);
 				break;
 			}
 			case ROUGHGLASS: {
 				auto& rgm = dynamic_cast<const RoughGlassMaterial &>(m);
 
 				mat->type = slg::ocl::ROUGHGLASS;
-				mat->roughglass.krTexIndex = scene.texDefs.GetTextureIndex(rgm.GetKr());
-				mat->roughglass.ktTexIndex = scene.texDefs.GetTextureIndex(rgm.GetKt());
+				mat->roughglass.krTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetKr());
+				mat->roughglass.ktTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetKt());
 				if (rgm.GetExteriorIOR())
-					mat->roughglass.exteriorIorTexIndex = scene.texDefs.GetTextureIndex(rgm.GetExteriorIOR());
+					mat->roughglass.exteriorIorTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetExteriorIOR());
 				else
 					mat->roughglass.exteriorIorTexIndex = NULL_INDEX;
 				if (rgm.GetInteriorIOR())
-					mat->roughglass.interiorIorTexIndex = scene.texDefs.GetTextureIndex(rgm.GetInteriorIOR());
+					mat->roughglass.interiorIorTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetInteriorIOR());
 				else
 					mat->roughglass.interiorIorTexIndex = NULL_INDEX;
 
 				auto nuTex = rgm.GetNu();
 				auto nvTex = rgm.GetNv();
-				mat->roughglass.nuTexIndex = scene.texDefs.GetTextureIndex(nuTex);
-				mat->roughglass.nvTexIndex = scene.texDefs.GetTextureIndex(nvTex);
+				mat->roughglass.nuTexIndex = scene.GetTextures().GetTextureIndex(nuTex);
+				mat->roughglass.nvTexIndex = scene.GetTextures().GetTextureIndex(nvTex);
 				
 				if (rgm.GetFilmThickness())
-					mat->roughglass.filmThicknessTexIndex = scene.texDefs.GetTextureIndex(rgm.GetFilmThickness());
+					mat->roughglass.filmThicknessTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetFilmThickness());
 				else
 					mat->roughglass.filmThicknessTexIndex = NULL_INDEX;
 				if (rgm.GetFilmIOR())
-					mat->roughglass.filmIorTexIndex = scene.texDefs.GetTextureIndex(rgm.GetFilmIOR());
+					mat->roughglass.filmIorTexIndex = scene.GetTextures().GetTextureIndex(rgm.GetFilmIOR());
 				else
 					mat->roughglass.filmIorTexIndex = NULL_INDEX;
 				break;
@@ -825,11 +825,11 @@ void CompiledScene::CompileMaterials() {
 				auto& vm = dynamic_cast<const VelvetMaterial &>(m);
 
 				mat->type = slg::ocl::VELVET;
-				mat->velvet.kdTexIndex = scene.texDefs.GetTextureIndex(vm.GetKd());
-				mat->velvet.p1TexIndex = scene.texDefs.GetTextureIndex(vm.GetP1());
-				mat->velvet.p2TexIndex = scene.texDefs.GetTextureIndex(vm.GetP2());
-				mat->velvet.p3TexIndex = scene.texDefs.GetTextureIndex(vm.GetP3());
-				mat->velvet.thicknessTexIndex = scene.texDefs.GetTextureIndex(vm.GetThickness());
+				mat->velvet.kdTexIndex = scene.GetTextures().GetTextureIndex(vm.GetKd());
+				mat->velvet.p1TexIndex = scene.GetTextures().GetTextureIndex(vm.GetP1());
+				mat->velvet.p2TexIndex = scene.GetTextures().GetTextureIndex(vm.GetP2());
+				mat->velvet.p3TexIndex = scene.GetTextures().GetTextureIndex(vm.GetP3());
+				mat->velvet.thicknessTexIndex = scene.GetTextures().GetTextureIndex(vm.GetThickness());
 				break;
 			}
 			case CLOTH: {
@@ -837,10 +837,10 @@ void CompiledScene::CompileMaterials() {
 
 				mat->type = slg::ocl::CLOTH;
 				mat->cloth.Preset = cm.GetPreset();
-				mat->cloth.Weft_KdIndex = scene.texDefs.GetTextureIndex(cm.GetWeftKd());
-				mat->cloth.Weft_KsIndex = scene.texDefs.GetTextureIndex(cm.GetWeftKs());
-				mat->cloth.Warp_KdIndex = scene.texDefs.GetTextureIndex(cm.GetWarpKd());
-				mat->cloth.Warp_KsIndex = scene.texDefs.GetTextureIndex(cm.GetWarpKs());
+				mat->cloth.Weft_KdIndex = scene.GetTextures().GetTextureIndex(cm.GetWeftKd());
+				mat->cloth.Weft_KsIndex = scene.GetTextures().GetTextureIndex(cm.GetWeftKs());
+				mat->cloth.Warp_KdIndex = scene.GetTextures().GetTextureIndex(cm.GetWarpKd());
+				mat->cloth.Warp_KsIndex = scene.GetTextures().GetTextureIndex(cm.GetWarpKs());
 				mat->cloth.Repeat_U = cm.GetRepeatU();
 				mat->cloth.Repeat_V = cm.GetRepeatV();
 				mat->cloth.specularNormalization = cm.GetSpecularNormalization();
@@ -849,47 +849,47 @@ void CompiledScene::CompileMaterials() {
 			case CARPAINT: {
 				auto& cm = dynamic_cast<const CarPaintMaterial &>(m);
 				mat->type = slg::ocl::CARPAINT;
-				mat->carpaint.KdTexIndex = scene.texDefs.GetTextureIndex(cm.Kd);
-				mat->carpaint.Ks1TexIndex = scene.texDefs.GetTextureIndex(cm.Ks1);
-				mat->carpaint.Ks2TexIndex = scene.texDefs.GetTextureIndex(cm.Ks2);
-				mat->carpaint.Ks3TexIndex = scene.texDefs.GetTextureIndex(cm.Ks3);
-				mat->carpaint.M1TexIndex = scene.texDefs.GetTextureIndex(cm.M1);
-				mat->carpaint.M2TexIndex = scene.texDefs.GetTextureIndex(cm.M2);
-				mat->carpaint.M3TexIndex = scene.texDefs.GetTextureIndex(cm.M3);
-				mat->carpaint.R1TexIndex = scene.texDefs.GetTextureIndex(cm.R1);
-				mat->carpaint.R2TexIndex = scene.texDefs.GetTextureIndex(cm.R2);
-				mat->carpaint.R3TexIndex = scene.texDefs.GetTextureIndex(cm.R3);
-				mat->carpaint.KaTexIndex = scene.texDefs.GetTextureIndex(cm.Ka);
-				mat->carpaint.depthTexIndex = scene.texDefs.GetTextureIndex(cm.depth);
+				mat->carpaint.KdTexIndex = scene.GetTextures().GetTextureIndex(cm.Kd);
+				mat->carpaint.Ks1TexIndex = scene.GetTextures().GetTextureIndex(cm.Ks1);
+				mat->carpaint.Ks2TexIndex = scene.GetTextures().GetTextureIndex(cm.Ks2);
+				mat->carpaint.Ks3TexIndex = scene.GetTextures().GetTextureIndex(cm.Ks3);
+				mat->carpaint.M1TexIndex = scene.GetTextures().GetTextureIndex(cm.M1);
+				mat->carpaint.M2TexIndex = scene.GetTextures().GetTextureIndex(cm.M2);
+				mat->carpaint.M3TexIndex = scene.GetTextures().GetTextureIndex(cm.M3);
+				mat->carpaint.R1TexIndex = scene.GetTextures().GetTextureIndex(cm.R1);
+				mat->carpaint.R2TexIndex = scene.GetTextures().GetTextureIndex(cm.R2);
+				mat->carpaint.R3TexIndex = scene.GetTextures().GetTextureIndex(cm.R3);
+				mat->carpaint.KaTexIndex = scene.GetTextures().GetTextureIndex(cm.Ka);
+				mat->carpaint.depthTexIndex = scene.GetTextures().GetTextureIndex(cm.depth);
 				break;
 			}
 			case GLOSSYTRANSLUCENT: {
 				auto& gtm = dynamic_cast<const GlossyTranslucentMaterial &>(m);
 
 				mat->type = slg::ocl::GLOSSYTRANSLUCENT;
-				mat->glossytranslucent.kdTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKd());
-				mat->glossytranslucent.ktTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKt());
-				mat->glossytranslucent.ksTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKs());
-				mat->glossytranslucent.ksbfTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKs_bf());
+				mat->glossytranslucent.kdTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKd());
+				mat->glossytranslucent.ktTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKt());
+				mat->glossytranslucent.ksTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKs());
+				mat->glossytranslucent.ksbfTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKs_bf());
 
 				auto nuTex = gtm.GetNu();
 				auto nvTex = gtm.GetNv();
-				mat->glossytranslucent.nuTexIndex = scene.texDefs.GetTextureIndex(nuTex);
-				mat->glossytranslucent.nvTexIndex = scene.texDefs.GetTextureIndex(nvTex);
+				mat->glossytranslucent.nuTexIndex = scene.GetTextures().GetTextureIndex(nuTex);
+				mat->glossytranslucent.nvTexIndex = scene.GetTextures().GetTextureIndex(nvTex);
 				auto nubfTex = gtm.GetNu_bf();
 				auto nvbfTex = gtm.GetNv_bf();
-				mat->glossytranslucent.nubfTexIndex = scene.texDefs.GetTextureIndex(nubfTex);
-				mat->glossytranslucent.nvbfTexIndex = scene.texDefs.GetTextureIndex(nvbfTex);
+				mat->glossytranslucent.nubfTexIndex = scene.GetTextures().GetTextureIndex(nubfTex);
+				mat->glossytranslucent.nvbfTexIndex = scene.GetTextures().GetTextureIndex(nvbfTex);
 
 				auto depthTex = gtm.GetDepth();
-				mat->glossytranslucent.kaTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKa());
-				mat->glossytranslucent.depthTexIndex = scene.texDefs.GetTextureIndex(depthTex);
-				mat->glossytranslucent.kabfTexIndex = scene.texDefs.GetTextureIndex(gtm.GetKa_bf());
-				mat->glossytranslucent.depthbfTexIndex = scene.texDefs.GetTextureIndex(depthTex);
+				mat->glossytranslucent.kaTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKa());
+				mat->glossytranslucent.depthTexIndex = scene.GetTextures().GetTextureIndex(depthTex);
+				mat->glossytranslucent.kabfTexIndex = scene.GetTextures().GetTextureIndex(gtm.GetKa_bf());
+				mat->glossytranslucent.depthbfTexIndex = scene.GetTextures().GetTextureIndex(depthTex);
 
 				auto indexTex = gtm.GetIndex();
-				mat->glossytranslucent.indexTexIndex = scene.texDefs.GetTextureIndex(indexTex);
-				mat->glossytranslucent.indexbfTexIndex = scene.texDefs.GetTextureIndex(indexTex);
+				mat->glossytranslucent.indexTexIndex = scene.GetTextures().GetTextureIndex(indexTex);
+				mat->glossytranslucent.indexbfTexIndex = scene.GetTextures().GetTextureIndex(indexTex);
 
 				mat->glossytranslucent.multibounce = gtm.IsMultibounce() ? 1 : 0;
 				mat->glossytranslucent.multibouncebf = gtm.IsMultibounce_bf() ? 1 : 0;
@@ -899,20 +899,20 @@ void CompiledScene::CompileMaterials() {
 				auto& gcm = dynamic_cast<const GlossyCoatingMaterial &>(m);
 
 				mat->type = slg::ocl::GLOSSYCOATING;
-				mat->glossycoating.matBaseIndex = scene.matDefs.GetMaterialIndex(gcm.GetMaterialBase());
-				mat->glossycoating.ksTexIndex = scene.texDefs.GetTextureIndex(gcm.GetKs());
+				mat->glossycoating.matBaseIndex = scene.GetMaterials().GetMaterialIndex(gcm.GetMaterialBase());
+				mat->glossycoating.ksTexIndex = scene.GetTextures().GetTextureIndex(gcm.GetKs());
 
 				auto nuTex = gcm.GetNu();
 				auto nvTex = gcm.GetNv();
-				mat->glossycoating.nuTexIndex = scene.texDefs.GetTextureIndex(nuTex);
-				mat->glossycoating.nvTexIndex = scene.texDefs.GetTextureIndex(nvTex);
+				mat->glossycoating.nuTexIndex = scene.GetTextures().GetTextureIndex(nuTex);
+				mat->glossycoating.nvTexIndex = scene.GetTextures().GetTextureIndex(nvTex);
 
 				auto depthTex = gcm.GetDepth();
-				mat->glossycoating.kaTexIndex = scene.texDefs.GetTextureIndex(gcm.GetKa());
-				mat->glossycoating.depthTexIndex = scene.texDefs.GetTextureIndex(depthTex);
+				mat->glossycoating.kaTexIndex = scene.GetTextures().GetTextureIndex(gcm.GetKa());
+				mat->glossycoating.depthTexIndex = scene.GetTextures().GetTextureIndex(depthTex);
 
 				auto indexTex = gcm.GetIndex();
-				mat->glossycoating.indexTexIndex = scene.texDefs.GetTextureIndex(indexTex);
+				mat->glossycoating.indexTexIndex = scene.GetTextures().GetTextureIndex(indexTex);
 				mat->glossycoating.multibounce = gcm.IsMultibounce() ? 1 : 0;
 				break;
 			}
@@ -920,27 +920,27 @@ void CompiledScene::CompileMaterials() {
 				auto& dm = dynamic_cast<const DisneyMaterial &>(m);
 
 				mat->type = slg::ocl::DISNEY;
-				mat->disney.baseColorTexIndex = scene.texDefs.GetTextureIndex(dm.GetBaseColor());
-				mat->disney.subsurfaceTexIndex = scene.texDefs.GetTextureIndex(dm.GetSubsurface());
-				mat->disney.roughnessTexIndex = scene.texDefs.GetTextureIndex(dm.GetRoughness());
-				mat->disney.metallicTexIndex = scene.texDefs.GetTextureIndex(dm.GetMetallic());
-				mat->disney.specularTexIndex = scene.texDefs.GetTextureIndex(dm.GetSpecular());
-				mat->disney.specularTintTexIndex = scene.texDefs.GetTextureIndex(dm.GetSpecularTint());
-				mat->disney.clearcoatTexIndex = scene.texDefs.GetTextureIndex(dm.GetClearcoat());
-				mat->disney.clearcoatGlossTexIndex = scene.texDefs.GetTextureIndex(dm.GetClearcoatGloss());
-				mat->disney.anisotropicTexIndex = scene.texDefs.GetTextureIndex(dm.GetAnisotropic());
-				mat->disney.sheenTexIndex = scene.texDefs.GetTextureIndex(dm.GetSheen());
-				mat->disney.sheenTintTexIndex = scene.texDefs.GetTextureIndex(dm.GetSheenTint());
+				mat->disney.baseColorTexIndex = scene.GetTextures().GetTextureIndex(dm.GetBaseColor());
+				mat->disney.subsurfaceTexIndex = scene.GetTextures().GetTextureIndex(dm.GetSubsurface());
+				mat->disney.roughnessTexIndex = scene.GetTextures().GetTextureIndex(dm.GetRoughness());
+				mat->disney.metallicTexIndex = scene.GetTextures().GetTextureIndex(dm.GetMetallic());
+				mat->disney.specularTexIndex = scene.GetTextures().GetTextureIndex(dm.GetSpecular());
+				mat->disney.specularTintTexIndex = scene.GetTextures().GetTextureIndex(dm.GetSpecularTint());
+				mat->disney.clearcoatTexIndex = scene.GetTextures().GetTextureIndex(dm.GetClearcoat());
+				mat->disney.clearcoatGlossTexIndex = scene.GetTextures().GetTextureIndex(dm.GetClearcoatGloss());
+				mat->disney.anisotropicTexIndex = scene.GetTextures().GetTextureIndex(dm.GetAnisotropic());
+				mat->disney.sheenTexIndex = scene.GetTextures().GetTextureIndex(dm.GetSheen());
+				mat->disney.sheenTintTexIndex = scene.GetTextures().GetTextureIndex(dm.GetSheenTint());
 				if (dm.GetFilmAmount())
-					mat->disney.filmAmountTexIndex = scene.texDefs.GetTextureIndex(dm.GetFilmAmount());
+					mat->disney.filmAmountTexIndex = scene.GetTextures().GetTextureIndex(dm.GetFilmAmount());
 				else
 					mat->disney.filmAmountTexIndex = NULL_INDEX;
 				if (dm.GetFilmThickness())
-					mat->disney.filmThicknessTexIndex = scene.texDefs.GetTextureIndex(dm.GetFilmThickness());
+					mat->disney.filmThicknessTexIndex = scene.GetTextures().GetTextureIndex(dm.GetFilmThickness());
 				else
 					mat->disney.filmThicknessTexIndex = NULL_INDEX;
 				if (dm.GetFilmIOR())
-					mat->disney.filmIorTexIndex = scene.texDefs.GetTextureIndex(dm.GetFilmIOR());
+					mat->disney.filmIorTexIndex = scene.GetTextures().GetTextureIndex(dm.GetFilmIOR());
 				else
 					mat->disney.filmIorTexIndex = NULL_INDEX;
 				break;
@@ -949,8 +949,8 @@ void CompiledScene::CompileMaterials() {
 				auto& tsm = dynamic_cast<const TwoSidedMaterial &>(m);
 
 				mat->type = slg::ocl::TWOSIDED;
-				mat->twosided.frontMatIndex = scene.matDefs.GetMaterialIndex(tsm.GetFrontMaterial());
-				mat->twosided.backMatIndex = scene.matDefs.GetMaterialIndex(tsm.GetBackMaterial());
+				mat->twosided.frontMatIndex = scene.GetMaterials().GetMaterialIndex(tsm.GetFrontMaterial());
+				mat->twosided.backMatIndex = scene.GetMaterials().GetMaterialIndex(tsm.GetBackMaterial());
 				break;
 			}
 			//------------------------------------------------------------------
@@ -961,10 +961,10 @@ void CompiledScene::CompileMaterials() {
 			case HETEROGENEOUS_VOL: {
 				auto& v = dynamic_cast<const Volume &>(m);
 				mat->volume.iorTexIndex = v.HasIORTexture() ?
-					scene.texDefs.GetTextureIndex(v.GetIORTexture()) :
+					scene.GetTextures().GetTextureIndex(v.GetIORTexture()) :
 					NULL_INDEX;
 				mat->volume.volumeEmissionTexIndex = v.HasVolumeEmissionTexture() ?
-					scene.texDefs.GetTextureIndex(v.GetVolumeEmissionTexture()) :
+					scene.GetTextures().GetTextureIndex(v.GetVolumeEmissionTexture()) :
 					NULL_INDEX;
 				mat->volume.volumeLightID = v.GetVolumeLightID();
 				mat->volume.priority = v.GetPriority();
@@ -973,24 +973,24 @@ void CompiledScene::CompileMaterials() {
 					case CLEAR_VOL: {
 						auto& cv = dynamic_cast<const ClearVolume &>(m);
 						mat->type = slg::ocl::CLEAR_VOL;
-						mat->volume.clear.sigmaATexIndex = scene.texDefs.GetTextureIndex(cv.GetSigmaA());
+						mat->volume.clear.sigmaATexIndex = scene.GetTextures().GetTextureIndex(cv.GetSigmaA());
 						break;
 					}
 					case HOMOGENEOUS_VOL: {
 						auto& hv = dynamic_cast<const HomogeneousVolume &>(m);
 						mat->type = slg::ocl::HOMOGENEOUS_VOL;
-						mat->volume.homogenous.sigmaATexIndex = scene.texDefs.GetTextureIndex(hv.GetSigmaA());
-						mat->volume.homogenous.sigmaSTexIndex = scene.texDefs.GetTextureIndex(hv.GetSigmaS());
-						mat->volume.homogenous.gTexIndex = scene.texDefs.GetTextureIndex(hv.GetG());
+						mat->volume.homogenous.sigmaATexIndex = scene.GetTextures().GetTextureIndex(hv.GetSigmaA());
+						mat->volume.homogenous.sigmaSTexIndex = scene.GetTextures().GetTextureIndex(hv.GetSigmaS());
+						mat->volume.homogenous.gTexIndex = scene.GetTextures().GetTextureIndex(hv.GetG());
 						mat->volume.homogenous.multiScattering = hv.IsMultiScattering();
 						break;
 					}
 					case HETEROGENEOUS_VOL: {
 						auto& hv = dynamic_cast<const HeterogeneousVolume &>(m);
 						mat->type = slg::ocl::HETEROGENEOUS_VOL;
-						mat->volume.heterogenous.sigmaATexIndex = scene.texDefs.GetTextureIndex(hv.GetSigmaA());
-						mat->volume.heterogenous.sigmaSTexIndex = scene.texDefs.GetTextureIndex(hv.GetSigmaS());
-						mat->volume.heterogenous.gTexIndex = scene.texDefs.GetTextureIndex(hv.GetG());
+						mat->volume.heterogenous.sigmaATexIndex = scene.GetTextures().GetTextureIndex(hv.GetSigmaA());
+						mat->volume.heterogenous.sigmaSTexIndex = scene.GetTextures().GetTextureIndex(hv.GetSigmaS());
+						mat->volume.heterogenous.gTexIndex = scene.GetTextures().GetTextureIndex(hv.GetG());
 						mat->volume.heterogenous.stepSize = hv.GetStepSize();
 						mat->volume.heterogenous.maxStepsCount = hv.GetMaxStepsCount();
 						mat->volume.heterogenous.multiScattering = hv.IsMultiScattering();
@@ -1016,8 +1016,8 @@ void CompiledScene::CompileMaterials() {
 	// Default scene volume
 	//--------------------------------------------------------------------------
 
-	defaultWorldVolumeIndex = scene.defaultWorldVolume ?
-		scene.matDefs.GetMaterialIndex(scene.defaultWorldVolume) : NULL_INDEX;
+	defaultWorldVolumeIndex = scene.HasDefaultWorldVolume() ?
+		scene.GetMaterials().GetMaterialIndex(scene.GetDefaultWorldVolume()) : NULL_INDEX;
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

@@ -66,16 +66,16 @@ float RemapTexture::Filter() const {
 	return ClampedRemap(valueFilter, sourceMinFilter, sourceMaxFilter, targetMinFilter, targetMaxFilter);
 }
 
-Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("remap"));
-	props.Set(Property("scene.textures." + name + ".value")(GetValueTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".sourcemin")(GetSourceMinTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".sourcemax")(GetSourceMaxTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".targetmin")(GetTargetMinTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".targetmax")(GetTargetMaxTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("remap"));
+	props->Set(Property("scene.textures." + name + ".value")(GetValueTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".sourcemin")(GetSourceMinTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".sourcemax")(GetSourceMaxTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".targetmin")(GetTargetMinTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".targetmax")(GetTargetMaxTex().GetSDLValue()));
 
 	return props;
 }

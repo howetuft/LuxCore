@@ -264,7 +264,7 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 
 void LuxCoreApp::DrawTiles() {
   // Draw the pending, converged and not converged tiles for TILEPATHCPU or TILEPATHOCL
-  const Properties &stats = session->GetStats();
+  const auto& stats = *session->GetStats();
 
   const string engineType = config->ToProperties()->Get("renderengine.type").Get<string>();
   if ((engineType == "TILEPATHCPU") || (engineType == "TILEPATHOCL")) {
@@ -317,7 +317,7 @@ void LuxCoreApp::DrawTiles() {
 }
 
 void LuxCoreApp::DrawCaptions() {
-  const Properties &stats = session->GetStats();
+  const Properties &stats = *session->GetStats();
   int frameBufferWidth, frameBufferHeight;
   glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 

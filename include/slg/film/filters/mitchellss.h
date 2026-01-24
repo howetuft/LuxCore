@@ -51,7 +51,7 @@ public:
 	}
 
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
@@ -59,7 +59,7 @@ public:
 
 	static FilterType GetObjectType() { return FILTER_MITCHELL_SS; }
 	static std::string GetObjectTag() { return "MITCHELL_SS"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 

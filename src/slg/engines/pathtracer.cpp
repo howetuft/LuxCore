@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 
+#include "luxrays/utils/properties.h"
 #include "slg/usings.h"
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -143,8 +144,8 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		// Select the light strategy to use
 		auto& lightStrategy =
 			bsdf.IsShadowCatcherOnlyInfiniteLights() ?
-			scene.lightDefs.GetInfiniteLightStrategy() :
-			scene.lightDefs.GetIlluminateLightStrategy();
+			scene.GetLightSources().GetInfiniteLightStrategy() :
+			scene.GetLightSources().GetIlluminateLightStrategy();
 
 		// Pick a light source to sample
 		const Normal landingNormal = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
@@ -292,7 +293,7 @@ void PathTracer::DirectHitFiniteLight(SceneConstRef scene,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
-			auto& lightStrategy = scene.lightDefs.GetIlluminateLightStrategy();
+			auto& lightStrategy = scene.GetLightSources().GetIlluminateLightStrategy();
 			const float lightPickProb = lightStrategy.SampleLightPdf(
 				*lightSource,
 				ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
@@ -322,7 +323,7 @@ void PathTracer::DirectHitInfiniteLight(SceneConstRef scene,
 	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
 		return;
 
-	for(auto& envLight: scene.lightDefs.GetEnvLightSources()) {
+	for(auto& envLight: scene.GetLightSources().GetEnvLightSources()) {
 		// Check if the light source is visible according the settings
 		if (!CheckDirectHitVisibilityFlags(envLight, pathInfo.depth, pathInfo.lastBSDFEvent))
 			continue;
@@ -332,7 +333,7 @@ void PathTracer::DirectHitInfiniteLight(SceneConstRef scene,
 		if (!envRadiance.Black()) {
 			float weight;
 			if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
-				const float lightPickProb = scene.lightDefs.GetIlluminateLightStrategy().
+				const float lightPickProb = scene.GetLightSources().GetIlluminateLightStrategy().
 						SampleLightPdf(envLight, ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
 				// MIS between BSDF sampling and direct light sampling
@@ -813,7 +814,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 
 	// Select one light source
 	float lightPickPdf;
-	auto light = scene.lightDefs.GetEmitLightStrategy().
+	auto light = scene.GetLightSources().GetEmitLightStrategy().
 			SampleLights(scene, sampler.GetSample(0), &lightPickPdf);
 
 	if (light) {
@@ -1073,9 +1074,10 @@ void PathTracer::ParseOptions(
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties PathTracer::ToProperties(const Properties &cfg) {
-	Properties props;
-	
+PropertiesUPtr PathTracer::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
+
 	if (cfg.IsDefined("path.maxdepth") &&
 			!cfg.IsDefined("path.pathdepth.total") &&
 			!cfg.IsDefined("path.pathdepth.diffuse") &&
@@ -1105,9 +1107,9 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
-			Sampler::ToProperties(cfg);
+			*Sampler::ToProperties(cfg);
 
-	return props;
+	return props_ptr;
 }
 
 const Properties &PathTracer::GetDefaultProps() {

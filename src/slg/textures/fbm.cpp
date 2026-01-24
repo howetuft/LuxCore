@@ -37,14 +37,14 @@ Spectrum FBMTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr FBMTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fbm"));
-	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
-	props.Set(Property("scene.textures." + name + ".roughness")(omega));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("fbm"));
+	props->Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props->Set(Property("scene.textures." + name + ".roughness")(omega));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

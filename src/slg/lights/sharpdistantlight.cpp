@@ -77,7 +77,7 @@ Spectrum SharpDistantLight::Emit(SceneConstRef scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	float d1, d2;
@@ -100,7 +100,7 @@ Spectrum SharpDistantLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Vector shadowRayDir = -absoluteLightDir;
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
@@ -123,13 +123,13 @@ Spectrum SharpDistantLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	return temperatureScale * gain * color;
 }
 
-Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("sharpdistant"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".direction")(localLightDir));
+	props->Set(Property(prefix + ".type")("sharpdistant"));
+	props->Set(Property(prefix + ".color")(color));
+	props->Set(Property(prefix + ".direction")(localLightDir));
 
 	return props;
 }

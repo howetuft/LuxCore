@@ -61,7 +61,7 @@ public:
 	virtual float Evaluate(const float x, const float y) const = 0;
 
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by ObjectRegistry
@@ -69,7 +69,7 @@ public:
 
 	// Transform the current configuration Properties in a complete list of
 	// object Properties (including all defaults values)
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
 	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);

@@ -47,14 +47,14 @@ Spectrum BrightContrastTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return (GetTex().GetSpectrumValue(hitPoint) * a + Spectrum(b)).Clamp();
 }
 
-Properties BrightContrastTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BrightContrastTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("brightcontrast"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTex().GetName()));
-	props.Set(Property("scene.textures." + name + ".brightness")(GetBrightnessTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".contrast")(GetContrastTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("brightcontrast"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTex().GetName()));
+	props->Set(Property("scene.textures." + name + ".brightness")(GetBrightnessTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".contrast")(GetContrastTex().GetSDLValue()));
 
 	return props;
 }

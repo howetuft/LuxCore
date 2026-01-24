@@ -76,12 +76,12 @@ protected:
 	IntersectionDevice();
 	virtual ~IntersectionDevice();
 
-	virtual void SetDataSet(DataSetPtr);
+	virtual void SetDataSet(DataSetSPtr);
 	virtual void Start();
 
 	//DataSet *dataSet;
 	//const Accelerator *accel;
-	DataSetPtr dataSet;
+	DataSetSPtr dataSet;
 	AcceleratorConstPtr accel;
 	double statsStartTime;
 	u_longlong statsTotalSerialRayCount, statsTotalDataParallelRayCount;

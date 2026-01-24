@@ -384,7 +384,7 @@ Spectrum SkyLight2::Emit(SceneConstRef scene,
     float d1, d2;
     ConcentricSampleDisk(u2, u3, &d1, &d2);
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
 	const Point rayOrig = pDisk - envRadius * rayDir;
@@ -425,7 +425,7 @@ Spectrum SkyLight2::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
@@ -494,24 +494,24 @@ void SkyLight2::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
 	}
 }
 
-Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("sky2"));
-	props.Set(Property(prefix + ".dir")(localSunDir));
-	props.Set(Property(prefix + ".turbidity")(turbidity));
-	props.Set(Property(prefix + ".groundalbedo")(groundAlbedo));
-	props.Set(Property(prefix + ".ground.enable")(hasGround));
-	props.Set(Property(prefix + ".ground.color")(groundColor));
-	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
-	props.Set(Property(prefix + ".distribution.width")(distributionWidth));
-	props.Set(Property(prefix + ".distribution.height")(distributionHeight));
+	props->Set(Property(prefix + ".type")("sky2"));
+	props->Set(Property(prefix + ".dir")(localSunDir));
+	props->Set(Property(prefix + ".turbidity")(turbidity));
+	props->Set(Property(prefix + ".groundalbedo")(groundAlbedo));
+	props->Set(Property(prefix + ".ground.enable")(hasGround));
+	props->Set(Property(prefix + ".ground.color")(groundColor));
+	props->Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
+	props->Set(Property(prefix + ".distribution.width")(distributionWidth));
+	props->Set(Property(prefix + ".distribution.height")(distributionHeight));
 
-	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
+	props->Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)
-		props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
-
+		*props << EnvLightVisibilityCache::Params2Props(prefix, visibilityMapCacheParams);
+	
 	return props;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

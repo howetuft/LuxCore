@@ -37,7 +37,7 @@ void slg::NullDebugHandler(const char *msg) {
 
 RenderSession::RenderSession(
 	RenderConfigRef rcfg,
-	RenderStatePtr startState,
+	RenderStateSPtr startState,
 	OptionalPtr<Film> startFilm
 ) : renderConfig(rcfg) {
 	SDL_LOG("Creating session");
@@ -98,7 +98,7 @@ void RenderSession::BeginSceneEdit() {
 
 void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
-	const EditActionList editActions = renderConfig.GetScene().editActions;
+	const EditActionList& editActions = renderConfig.GetScene().GetEditActions();
 
 	if ((renderEngine->GetType() != RTPATHOCL) &&
 			(renderEngine->GetType() != RTPATHCPU)) {
@@ -216,7 +216,7 @@ void RenderSession::SaveFilmOutputs() {
 	film->Output();
 }
 
-RenderStatePtr RenderSession::GetRenderState() {
+RenderStateSPtr RenderSession::GetRenderState() {
 	// Check if we are in the right state
 	if (!IsInPause())
 		throw runtime_error("A rendering state can be retrieved only while the rendering session is paused");

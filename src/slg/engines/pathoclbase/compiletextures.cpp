@@ -1158,7 +1158,7 @@ void CompiledScene::CompileTextureOps() {
 }
 
 void CompiledScene::CompileTextures() {
-	const u_int texturesCount = scene.texDefs.GetSize();
+	const u_int texturesCount = scene.GetTextures().GetSize();
 	SLG_LOG("Compile " << texturesCount << " Textures");
 	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
 
@@ -1171,7 +1171,7 @@ void CompiledScene::CompileTextures() {
 	texs.resize(texturesCount);
 
 	for (u_int i = 0; i < texturesCount; ++i) {
-		auto& t = scene.texDefs.GetTexture(i);
+		auto& t = scene.GetTextures().GetTexture(i);
 		slg::ocl::Texture *tex = &texs[i];
 
 		switch (t.GetType()) {
@@ -1196,14 +1196,14 @@ void CompiledScene::CompileTextures() {
 				auto& im = imt.GetImageMap();
 				tex->imageMapTex.gain = imt.GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt.GetTextureMapping());
-				tex->imageMapTex.imageMapIndex = scene.imgMapCache.GetImageMapIndex(im);
+				tex->imageMapTex.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(im);
 
 				if (imt.HasRandomizedTiling()) {
 					tex->imageMapTex.randomizedTiling = true;
 
-					tex->imageMapTex.randomizedTilingLUTIndex = scene.imgMapCache.GetImageMapIndex(imt.GetRandomizedTilingLUT());
-					tex->imageMapTex.randomizedTilingInvLUTIndex = scene.imgMapCache.GetImageMapIndex(imt.GetRandomizedTilingInvLUT());
-					tex->imageMapTex.randomImageMapIndex = scene.imgMapCache.GetImageMapIndex(*ImageMapTexture::randomImageMap);
+					tex->imageMapTex.randomizedTilingLUTIndex = scene.GetImageMaps().GetImageMapIndex(imt.GetRandomizedTilingLUT());
+					tex->imageMapTex.randomizedTilingInvLUTIndex = scene.GetImageMaps().GetImageMapIndex(imt.GetRandomizedTilingInvLUT());
+					tex->imageMapTex.randomImageMapIndex = scene.GetImageMaps().GetImageMapIndex(*ImageMapTexture::randomImageMap);
 				} else {
 					tex->imageMapTex.randomizedTiling = false;
 					tex->imageMapTex.randomizedTilingLUTIndex = NULL_INDEX;
@@ -1217,10 +1217,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::SCALE_TEX;
 				TextureConstRef tex1 = st.GetTexture1();
-				tex->scaleTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->scaleTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = st.GetTexture2();
-				tex->scaleTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->scaleTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case FRESNEL_APPROX_N: {
@@ -1228,7 +1228,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::FRESNEL_APPROX_N;
 				auto& tx = ft.GetTexture();
-				tex->fresnelApproxN.texIndex = scene.texDefs.GetTextureIndex(tx);
+				tex->fresnelApproxN.texIndex = scene.GetTextures().GetTextureIndex(tx);
 				break;
 			}
 			case FRESNEL_APPROX_K: {
@@ -1236,7 +1236,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::FRESNEL_APPROX_K;
 				TextureConstRef tx = ft.GetTexture();
-				tex->fresnelApproxK.texIndex = scene.texDefs.GetTextureIndex(tx);
+				tex->fresnelApproxK.texIndex = scene.GetTextures().GetTextureIndex(tx);
 				break;
 			}
 			case CHECKERBOARD2D: {
@@ -1245,10 +1245,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::CHECKERBOARD2D;
 				CompileTextureMapping2D(&tex->checkerBoard2D.mapping, cb.GetTextureMapping());
 				TextureConstRef tex1 = cb.GetTexture1();
-				tex->checkerBoard2D.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->checkerBoard2D.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = cb.GetTexture2();
-				tex->checkerBoard2D.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->checkerBoard2D.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case CHECKERBOARD3D: {
@@ -1257,10 +1257,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::CHECKERBOARD3D;
 				CompileTextureMapping3D(&tex->checkerBoard3D.mapping, cb.GetTextureMapping());
 				TextureConstRef tex1 = cb.GetTexture1();
-				tex->checkerBoard3D.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->checkerBoard3D.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = cb.GetTexture2();
-				tex->checkerBoard3D.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->checkerBoard3D.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case MIX_TEX: {
@@ -1268,12 +1268,12 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::MIX_TEX;
 				TextureConstRef amount = mt.GetAmountTexture();
-				tex->mixTex.amountTexIndex = scene.texDefs.GetTextureIndex(amount);
+				tex->mixTex.amountTexIndex = scene.GetTextures().GetTextureIndex(amount);
 
 				TextureConstRef tex1 = mt.GetTexture1();
-				tex->mixTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->mixTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 				TextureConstRef tex2 = mt.GetTexture2();
-				tex->mixTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->mixTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case CLOUD_TEX: {
@@ -1322,10 +1322,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::DOTS;
 				CompileTextureMapping2D(&tex->dots.mapping, dt.GetTextureMapping());
 				TextureConstRef insideTex = dt.GetInsideTex();
-				tex->dots.insideIndex = scene.texDefs.GetTextureIndex(insideTex);
+				tex->dots.insideIndex = scene.GetTextures().GetTextureIndex(insideTex);
 
 				TextureConstRef outsideTex = dt.GetOutsideTex();
-				tex->dots.outsideIndex = scene.texDefs.GetTextureIndex(outsideTex);
+				tex->dots.outsideIndex = scene.GetTextures().GetTextureIndex(outsideTex);
 				break;
 			}
 			case BRICK: {
@@ -1334,11 +1334,11 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::BRICK;
 				CompileTextureMapping3D(&tex->brick.mapping, bt.GetTextureMapping());
 				TextureConstRef tex1 = bt.GetTexture1();
-				tex->brick.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->brick.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 				TextureConstRef tex2 = bt.GetTexture2();
-				tex->brick.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->brick.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				TextureConstRef tex3 = bt.GetTexture3();
-				tex->brick.tex3Index = scene.texDefs.GetTextureIndex(tex3);
+				tex->brick.tex3Index = scene.GetTextures().GetTextureIndex(tex3);
 
 				switch (bt.GetBond()) {
 					case FLEMISH:
@@ -1383,10 +1383,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::ADD_TEX;
 				TextureConstRef tex1 = st.GetTexture1();
-				tex->addTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->addTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = st.GetTexture2();
-				tex->addTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->addTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case SUBTRACT_TEX: {
@@ -1394,10 +1394,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::SUBTRACT_TEX;
 				TextureConstRef tex1 = st.GetTexture1();
-				tex->subtractTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->subtractTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = st.GetTexture2();
-				tex->subtractTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->subtractTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
             case ROUNDING_TEX: {
@@ -1405,10 +1405,10 @@ void CompiledScene::CompileTextures() {
 
                 tex->type = slg::ocl::ROUNDING_TEX;
                 TextureConstRef texture = rt.GetTexture();
-                tex->roundingTex.textureIndex = scene.texDefs.GetTextureIndex(texture);
+                tex->roundingTex.textureIndex = scene.GetTextures().GetTextureIndex(texture);
 
                 TextureConstRef increment = rt.GetIncrement();
-                tex->roundingTex.incrementIndex = scene.texDefs.GetTextureIndex(increment);
+                tex->roundingTex.incrementIndex = scene.GetTextures().GetTextureIndex(increment);
                 break;
             }
             case MODULO_TEX: {
@@ -1416,10 +1416,10 @@ void CompiledScene::CompileTextures() {
 
                 tex->type = slg::ocl::MODULO_TEX;
                 TextureConstRef texture = mt.GetTexture();
-                tex->moduloTex.textureIndex = scene.texDefs.GetTextureIndex(texture);
+                tex->moduloTex.textureIndex = scene.GetTextures().GetTextureIndex(texture);
 
                 TextureConstRef modulo = mt.GetModulo();
-                tex->moduloTex.moduloIndex = scene.texDefs.GetTextureIndex(modulo);
+                tex->moduloTex.moduloIndex = scene.GetTextures().GetTextureIndex(modulo);
                 break;
             }
 
@@ -1952,7 +1952,7 @@ void CompiledScene::CompileTextures() {
 				}
 
 				TextureConstRef amount = bt.GetAmountTexture();
-				tex->band.amountTexIndex = scene.texDefs.GetTextureIndex(amount);
+				tex->band.amountTexIndex = scene.GetTextures().GetTextureIndex(amount);
 
 				const vector<float> &offsets = bt.GetOffsets();
 				const vector<Spectrum> &values = bt.GetValues();
@@ -2013,7 +2013,7 @@ void CompiledScene::CompileTextures() {
 
                 tex->type = slg::ocl::NORMALMAP_TEX;
                 auto& normalTex = nmt.GetTexture();
-				tex->normalMap.texIndex = scene.texDefs.GetTextureIndex(normalTex);
+				tex->normalMap.texIndex = scene.GetTextures().GetTextureIndex(normalTex);
 				tex->normalMap.scale = nmt.GetScale();
 				break;
             }
@@ -2040,7 +2040,7 @@ void CompiledScene::CompileTextures() {
 				tex->densityGrid.nx = dgt.GetWidth();
 				tex->densityGrid.ny = dgt.GetHeight();
 				tex->densityGrid.nz = dgt.GetDepth();
-				tex->densityGrid.imageMapIndex = scene.imgMapCache.GetImageMapIndex(dgt.GetImageMap());
+				tex->densityGrid.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(dgt.GetImageMap());
 				break;
 			}
 			case FRESNELCOLOR_TEX: {
@@ -2048,7 +2048,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::FRESNELCOLOR_TEX;
 				TextureConstRef krTex = fct.GetKr();
-				tex->fresnelColor.krIndex = scene.texDefs.GetTextureIndex(krTex);
+				tex->fresnelColor.krIndex = scene.GetTextures().GetTextureIndex(krTex);
 				break;
 			}
 			case FRESNELCONST_TEX: {
@@ -2064,7 +2064,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::ABS_TEX;
 				TextureConstRef refTex = at.GetTexture();
-				tex->absTex.texIndex = scene.texDefs.GetTextureIndex(refTex);
+				tex->absTex.texIndex = scene.GetTextures().GetTextureIndex(refTex);
 				break;
 			}
 			case CLAMP_TEX: {
@@ -2072,7 +2072,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::CLAMP_TEX;
 				TextureConstRef refTex = ct.GetTexture();
-				tex->clampTex.texIndex = scene.texDefs.GetTextureIndex(refTex);
+				tex->clampTex.texIndex = scene.GetTextures().GetTextureIndex(refTex);
 				tex->clampTex.minVal = ct.GetMinVal();
 				tex->clampTex.maxVal = ct.GetMaxVal();
 				break;
@@ -2084,10 +2084,10 @@ void CompiledScene::CompileTextures() {
 				TextureConstRef t01 = bt.GetTexture01();
 				TextureConstRef t10 = bt.GetTexture10();
 				TextureConstRef t11 = bt.GetTexture11();
-				tex->bilerpTex.t00Index = scene.texDefs.GetTextureIndex(t00);
-				tex->bilerpTex.t01Index = scene.texDefs.GetTextureIndex(t01);
-				tex->bilerpTex.t10Index = scene.texDefs.GetTextureIndex(t10);
-				tex->bilerpTex.t11Index = scene.texDefs.GetTextureIndex(t11);
+				tex->bilerpTex.t00Index = scene.GetTextures().GetTextureIndex(t00);
+				tex->bilerpTex.t01Index = scene.GetTextures().GetTextureIndex(t01);
+				tex->bilerpTex.t10Index = scene.GetTextures().GetTextureIndex(t10);
+				tex->bilerpTex.t11Index = scene.GetTextures().GetTextureIndex(t11);
 				break;
 			}
 			case COLORDEPTH_TEX: {
@@ -2095,7 +2095,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::COLORDEPTH_TEX;
 				TextureConstRef ktTex = ct.GetKt();
-				tex->colorDepthTex.ktIndex = scene.texDefs.GetTextureIndex(ktTex);
+				tex->colorDepthTex.ktIndex = scene.GetTextures().GetTextureIndex(ktTex);
 				tex->colorDepthTex.dVal = ct.GetD();
 				break;
 			}
@@ -2103,10 +2103,10 @@ void CompiledScene::CompileTextures() {
 				auto& ht = dynamic_cast<const HsvTexture &>(t);
 
 				tex->type = slg::ocl::HSV_TEX;
-				tex->hsvTex.texIndex = scene.texDefs.GetTextureIndex(ht.GetTexture());
-				tex->hsvTex.hueTexIndex = scene.texDefs.GetTextureIndex(ht.GetHue());
-				tex->hsvTex.satTexIndex = scene.texDefs.GetTextureIndex(ht.GetSaturation());
-				tex->hsvTex.valTexIndex = scene.texDefs.GetTextureIndex(ht.GetValue());
+				tex->hsvTex.texIndex = scene.GetTextures().GetTextureIndex(ht.GetTexture());
+				tex->hsvTex.hueTexIndex = scene.GetTextures().GetTextureIndex(ht.GetHue());
+				tex->hsvTex.satTexIndex = scene.GetTextures().GetTextureIndex(ht.GetSaturation());
+				tex->hsvTex.valTexIndex = scene.GetTextures().GetTextureIndex(ht.GetValue());
 				break;
 			}
 			case DIVIDE_TEX: {
@@ -2114,10 +2114,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::DIVIDE_TEX;
 				TextureConstRef tex1 = dt.GetTexture1();
-				tex->divideTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->divideTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				TextureConstRef tex2 = dt.GetTexture2();
-				tex->divideTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->divideTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case REMAP_TEX: {
@@ -2125,15 +2125,15 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::REMAP_TEX;
 				auto& valueTex = rt.GetValueTex();
-				tex->remapTex.valueTexIndex = scene.texDefs.GetTextureIndex(valueTex);
+				tex->remapTex.valueTexIndex = scene.GetTextures().GetTextureIndex(valueTex);
 				auto& sourceMinTex = rt.GetSourceMinTex();
-				tex->remapTex.sourceMinTexIndex = scene.texDefs.GetTextureIndex(sourceMinTex);
+				tex->remapTex.sourceMinTexIndex = scene.GetTextures().GetTextureIndex(sourceMinTex);
 				auto& sourceMaxTex = rt.GetSourceMaxTex();
-				tex->remapTex.sourceMaxTexIndex = scene.texDefs.GetTextureIndex(sourceMaxTex);
+				tex->remapTex.sourceMaxTexIndex = scene.GetTextures().GetTextureIndex(sourceMaxTex);
 				auto& targetMinTex = rt.GetTargetMinTex();
-				tex->remapTex.targetMinTexIndex = scene.texDefs.GetTextureIndex(targetMinTex);
+				tex->remapTex.targetMinTexIndex = scene.GetTextures().GetTextureIndex(targetMinTex);
 				auto& targetMaxTex = rt.GetTargetMaxTex();
-				tex->remapTex.targetMaxTexIndex = scene.texDefs.GetTextureIndex(targetMaxTex);
+				tex->remapTex.targetMaxTexIndex = scene.GetTextures().GetTextureIndex(targetMaxTex);
 				break;
 			}
 			case OBJECTID_TEX: {
@@ -2153,10 +2153,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::DOT_PRODUCT_TEX;
 				auto& tex1 = dpt.GetTexture1();
-				tex->dotProductTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->dotProductTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				auto& tex2 = dpt.GetTexture2();
-				tex->dotProductTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->dotProductTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case GREATER_THAN_TEX: {
@@ -2164,10 +2164,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::GREATER_THAN_TEX;
 				auto& tex1 = gtt.GetTexture1();
-				tex->greaterThanTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->greaterThanTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				auto& tex2 = gtt.GetTexture2();
-				tex->greaterThanTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->greaterThanTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case LESS_THAN_TEX: {
@@ -2175,10 +2175,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::LESS_THAN_TEX;
 				auto& tex1 = ltt.GetTexture1();
-				tex->lessThanTex.tex1Index = scene.texDefs.GetTextureIndex(tex1);
+				tex->lessThanTex.tex1Index = scene.GetTextures().GetTextureIndex(tex1);
 
 				auto& tex2 = ltt.GetTexture2();
-				tex->lessThanTex.tex2Index = scene.texDefs.GetTextureIndex(tex2);
+				tex->lessThanTex.tex2Index = scene.GetTextures().GetTextureIndex(tex2);
 				break;
 			}
 			case POWER_TEX: {
@@ -2186,10 +2186,10 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::POWER_TEX;
 				auto& base = pt.GetBase();
-				tex->powerTex.baseTexIndex = scene.texDefs.GetTextureIndex(base);
+				tex->powerTex.baseTexIndex = scene.GetTextures().GetTextureIndex(base);
 
 				auto& exponent = pt.GetExponent();
-				tex->powerTex.exponentTexIndex = scene.texDefs.GetTextureIndex(exponent);
+				tex->powerTex.exponentTexIndex = scene.GetTextures().GetTextureIndex(exponent);
 				break;
 			}
 			case SHADING_NORMAL_TEX: {
@@ -2205,7 +2205,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::SPLIT_FLOAT3;
 				auto& t = sf3t.GetTexture();
-				tex->splitFloat3Tex.texIndex = scene.texDefs.GetTextureIndex(t);
+				tex->splitFloat3Tex.texIndex = scene.GetTextures().GetTextureIndex(t);
 
 				tex->splitFloat3Tex.channelIndex = sf3t.GetChannel();
 				break;
@@ -2215,11 +2215,11 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::MAKE_FLOAT3;
 				auto& t1 = mf3t.GetTexture1();
-				tex->makeFloat3Tex.tex1Index = scene.texDefs.GetTextureIndex(t1);
+				tex->makeFloat3Tex.tex1Index = scene.GetTextures().GetTextureIndex(t1);
 				auto& t2 = mf3t.GetTexture2();
-				tex->makeFloat3Tex.tex2Index = scene.texDefs.GetTextureIndex(t2);
+				tex->makeFloat3Tex.tex2Index = scene.GetTextures().GetTextureIndex(t2);
 				auto& t3 = mf3t.GetTexture3();
-				tex->makeFloat3Tex.tex3Index = scene.texDefs.GetTextureIndex(t3);
+				tex->makeFloat3Tex.tex3Index = scene.GetTextures().GetTextureIndex(t3);
 				break;
 			}
 			case BRIGHT_CONTRAST_TEX: {
@@ -2227,11 +2227,11 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::BRIGHT_CONTRAST_TEX;
 				auto& t = bct.GetTex();
-				tex->brightContrastTex.texIndex = scene.texDefs.GetTextureIndex(t);
+				tex->brightContrastTex.texIndex = scene.GetTextures().GetTextureIndex(t);
 				auto& b = bct.GetBrightnessTex();
-				tex->brightContrastTex.brightnessTexIndex = scene.texDefs.GetTextureIndex(b);
+				tex->brightContrastTex.brightnessTexIndex = scene.GetTextures().GetTextureIndex(b);
 				auto& c = bct.GetContrastTex();
-				tex->brightContrastTex.contrastTexIndex = scene.texDefs.GetTextureIndex(c);
+				tex->brightContrastTex.contrastTexIndex = scene.GetTextures().GetTextureIndex(c);
 				break;
 			}
 			case TRIPLANAR_TEX: {
@@ -2240,11 +2240,11 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::TRIPLANAR_TEX;
 				CompileTextureMapping3D(&tex->triplanarTex.mapping, trit.GetTextureMapping());
 				auto& t1 = trit.GetTexture1();
-				tex->triplanarTex.tex1Index = scene.texDefs.GetTextureIndex(t1);
+				tex->triplanarTex.tex1Index = scene.GetTextures().GetTextureIndex(t1);
 				auto& t2 = trit.GetTexture2();
-				tex->triplanarTex.tex2Index = scene.texDefs.GetTextureIndex(t2);
+				tex->triplanarTex.tex2Index = scene.GetTextures().GetTextureIndex(t2);
 				auto& t3 = trit.GetTexture3();
-				tex->triplanarTex.tex3Index = scene.texDefs.GetTextureIndex(t3);
+				tex->triplanarTex.tex3Index = scene.GetTextures().GetTextureIndex(t3);
 				tex->triplanarTex.enableUVlessBumpMap = trit.IsUVlessBumpMap();
 				break;
 			}
@@ -2253,7 +2253,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::RANDOM_TEX;
 				auto& t1 = rt.GetTexture();
-				tex->randomTex.texIndex = scene.texDefs.GetTextureIndex(t1);
+				tex->randomTex.texIndex = scene.GetTextures().GetTextureIndex(t1);
 				break;
 			}
 			case WIREFRAME_TEX: {
@@ -2262,10 +2262,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::WIREFRAME_TEX;
 				tex->wireFrameTex.width = wft.GetWidth();
 				auto& borderTex = wft.GetBorderTex();
-				tex->wireFrameTex.borderTexIndex = scene.texDefs.GetTextureIndex(borderTex);
+				tex->wireFrameTex.borderTexIndex = scene.GetTextures().GetTextureIndex(borderTex);
 
 				auto& insideTex = wft.GetInsideTex();
-				tex->wireFrameTex.insideTexIndex = scene.texDefs.GetTextureIndex(insideTex);
+				tex->wireFrameTex.insideTexIndex = scene.GetTextures().GetTextureIndex(insideTex);
 				break;
 			}
 			case DISTORT_TEX: {
@@ -2274,10 +2274,10 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::DISTORT_TEX;
 				tex->distortTex.strength = dt.GetStrength();
 				auto& texture = dt.GetTex();
-				tex->distortTex.texIndex = scene.texDefs.GetTextureIndex(texture);
+				tex->distortTex.texIndex = scene.GetTextures().GetTextureIndex(texture);
 
 				auto& offsetTex = dt.GetOffset();
-				tex->distortTex.offsetTexIndex = scene.texDefs.GetTextureIndex(offsetTex);
+				tex->distortTex.offsetTexIndex = scene.GetTextures().GetTextureIndex(offsetTex);
 				break;
 			}
 			case BOMBING_TEX: {
@@ -2292,13 +2292,13 @@ void CompiledScene::CompileTextures() {
 				tex->bombingTex.multiBulletCount = bt.GetMultiBulletCount();
 
 				auto& backgroundTex = bt.GetBackgroundTex();
-				tex->bombingTex.backgroundTex = scene.texDefs.GetTextureIndex(backgroundTex);
+				tex->bombingTex.backgroundTex = scene.GetTextures().GetTextureIndex(backgroundTex);
 				auto& bulletTexIndex = bt.GetBulletTex();
-				tex->bombingTex.bulletTexIndex = scene.texDefs.GetTextureIndex(bulletTexIndex);
+				tex->bombingTex.bulletTexIndex = scene.GetTextures().GetTextureIndex(bulletTexIndex);
 				auto& bulletMaskTexIndex = bt.GetBulletMaskTex();
-				tex->bombingTex.bulletMaskTexIndex = scene.texDefs.GetTextureIndex(bulletMaskTexIndex);
+				tex->bombingTex.bulletMaskTexIndex = scene.GetTextures().GetTextureIndex(bulletMaskTexIndex);
 
-				tex->bombingTex.randomImageMapIndex = scene.imgMapCache.GetImageMapIndex(*ImageMapTexture::randomImageMap);
+				tex->bombingTex.randomImageMapIndex = scene.GetImageMaps().GetImageMapIndex(*ImageMapTexture::randomImageMap);
 				break;
 			}
 			default:

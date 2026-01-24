@@ -62,7 +62,7 @@ public:
 
 	FilmRef GetEngineFilm() { return *engineFilm; }
 	FilmConstRef GetEngineFilm() const { return *engineFilm; }
-	bool HasEngineFilm() { return true;  /* TODO */ }
+	bool HasEngineFilm() { return bool(engineFilm); }
 
 	std::shared_ptr<u_int> seedBase;
 	u_int filmRegionPixelCount;
@@ -111,7 +111,7 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	u_int GetPassCount() const;
 
@@ -121,7 +121,7 @@ public:
 
 	static SamplerType GetObjectType() { return SOBOL; }
 	static std::string GetObjectTag() { return "SOBOL"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		const luxrays::RandomGeneratorUPtr & rndGen,

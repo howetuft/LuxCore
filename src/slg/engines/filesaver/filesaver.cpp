@@ -156,7 +156,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		{ "wrapT", 0x812F } // GL_CLAMP_TO_EDGE
 	}));
 
-	const u_int sceneObjectsCount =  renderConfig.GetScene().objDefs.GetSize();
+	const u_int sceneObjectsCount =  renderConfig.GetScene().GetObjects().GetSize();
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < sceneObjectsCount; ++i) {
 		if (WallClockTime() - lastPrint > 2.0) {
@@ -164,7 +164,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			lastPrint = WallClockTime();
 		}
 
-		auto& scnObj = renderConfig.GetScene().objDefs.GetSceneObject(i);
+		auto& scnObj = renderConfig.GetScene().GetObjects().GetSceneObject(i);
 		auto& mesh = scnObj.GetExtMesh();
 		// TODO: other mesh types
 		if (mesh.GetType() != TYPE_EXT_TRIANGLE)
@@ -454,10 +454,10 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 	{
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
-		Properties props = renderConfig.GetScene().ToProperties(false);
+		PropertiesUPtr props = renderConfig.GetScene().ToProperties(false);
 
 		// Write the scene file
-		props.Save(sceneFileName);
+		props->Save(sceneFileName);
 	}
 
 	//--------------------------------------------------------------------------
@@ -467,11 +467,11 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 		// Write the image map information
 		SDL_LOG("Saving image maps information:");
 		std::vector<std::reference_wrapper<const ImageMap>> ims;
-		renderConfig.GetScene().imgMapCache.GetImageMaps(ims);
+		renderConfig.GetScene().GetImageMaps().GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
 			// Avoid to save ImageMapTexture::randomImageMap
 			if (&ims[i].get() != ImageMapTexture::randomImageMap.get()) {
-				const string fileName = (dirPath / renderConfig.GetScene().imgMapCache.GetSequenceFileName(ims[i])).generic_string();
+				const string fileName = (dirPath / renderConfig.GetScene().GetImageMaps().GetSequenceFileName(ims[i])).generic_string();
 				SDL_LOG("  " + fileName);
 				ims[i].get().WriteImage(fileName);
 			}
@@ -479,7 +479,7 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 
 		// Write the mesh information
 		SDL_LOG("Saving meshes information:");
-		const u_int meshCount =  renderConfig.GetScene().extMeshCache.GetSize();
+		const u_int meshCount =  renderConfig.GetScene().GetExtMeshes().GetSize();
 		double lastPrint = WallClockTime();
 		for (u_int i = 0; i < meshCount; ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
@@ -487,13 +487,13 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 				lastPrint = WallClockTime();
 			}
 
-			auto& mesh = renderConfig.GetScene().extMeshCache.GetExtMesh(i);
+			auto& mesh = renderConfig.GetScene().GetExtMeshes().GetExtMesh(i);
 			// The only meshes I need to save are the real one. The others (instances, etc.)
 			// will reference only true one.
 			if (mesh.GetType() != TYPE_EXT_TRIANGLE)
 				continue;
 
-			const string fileName = (dirPath / renderConfig.GetScene().extMeshCache.GetSequenceFileName(mesh)).generic_string();
+			const string fileName = (dirPath / renderConfig.GetScene().GetExtMeshes().GetSequenceFileName(mesh)).generic_string();
 
 			//SDL_LOG("  " + fileName);
 			mesh.Save(fileName);
@@ -505,12 +505,14 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+PropertiesUPtr FileSaverRenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.format")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
+	return props;
 }
 
 RenderEngine *FileSaverRenderEngine::FromProperties(RenderConfigRef rcfg) {

@@ -63,7 +63,7 @@ public:
 	virtual LightStrategyType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	// Used for OpenCL data translation
 	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy->GetLightsDistribution(); }
@@ -78,7 +78,7 @@ public:
 
 	static LightStrategyType GetObjectType() { return TYPE_DLS_CACHE; }
 	static std::string GetObjectTag() { return "DLS_CACHE"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 
 protected:

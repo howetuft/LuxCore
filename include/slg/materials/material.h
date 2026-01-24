@@ -239,7 +239,7 @@ public:
 	// Update any reference to oldTex with newTex
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
-	virtual luxrays::Properties ToProperties(
+	virtual luxrays::PropertiesUPtr ToProperties(
 		const ImageMapCache &imgMapCache, const bool useRealFileName
 	) const;
 

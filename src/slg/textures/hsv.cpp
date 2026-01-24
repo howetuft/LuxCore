@@ -68,15 +68,15 @@ float HsvTexture::Filter() const {
 			GetHue().Filter(), GetSaturation().Filter(), GetValue().Filter()).Filter();	
 }
 
-Properties HsvTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HsvTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hsv"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".hue")(GetHue().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".saturation")(GetSaturation().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".value")(GetValue().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("hsv"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".hue")(GetHue().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".saturation")(GetSaturation().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".value")(GetValue().GetSDLValue()));
 
 	return props;
 }

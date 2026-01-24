@@ -35,11 +35,11 @@ Spectrum ShadingNormalTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(&hitPoint.shadeN.x);
 }
 
-Properties ShadingNormalTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ShadingNormalTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("shadingnormal"));
+	props->Set(Property("scene.textures." + name + ".type")("shadingnormal"));
 
 	return props;
 }

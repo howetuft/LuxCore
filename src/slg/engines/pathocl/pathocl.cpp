@@ -78,7 +78,7 @@ PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_i
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 
-RenderStatePtr PathOCLRenderEngine::GetRenderState() {
+RenderStateSPtr PathOCLRenderEngine::GetRenderState() {
 	return std::make_shared<PathOCLRenderState>(bootStrapSeed, photonGICache);
 }
 
@@ -270,8 +270,9 @@ u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr PathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
 
 	props <<
 			OCLRenderEngine::ToProperties(cfg) <<
@@ -282,7 +283,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			Sampler::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 
-	return props;
+	return props_ptr;
 }
 
 RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {

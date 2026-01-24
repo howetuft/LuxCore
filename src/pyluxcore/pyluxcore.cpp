@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and   *
  * limitations under the License.                      *
  ***************************************************************************/
+#include "luxrays/utils/properties.h"
 #include <pybind11/detail/using_smart_holder.h>
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
@@ -52,6 +53,7 @@ namespace py = pybind11;
 using PropertyUPtr = std::unique_ptr<luxrays::Property>;
 using PropertyPtr = const std::unique_ptr<luxrays::Property> &;
 using SceneImplPtr = std::unique_ptr<luxcore::detail::SceneImpl>;
+using PropertiesUPtr = std::unique_ptr<luxrays::Properties>;
 
 
 namespace luxcore {
@@ -582,9 +584,9 @@ static luxrays::Property &Property_Set(PropertyPtr prop, const size_t i,
 
       PyBuffer_Release(&view);
     } else
-      throw std::runtime_error("Unable to get a data view in Property.Set() method: " + objType);
+      throw std::runtime_error("Unable to get a data view in Property->Set() method: " + objType);
   } else
-    throw std::runtime_error("Unsupported data type used for Property.Set() method: " + objType);
+    throw std::runtime_error("Unsupported data type used for Property->Set() method: " + objType);
 
   return *prop;
 }
@@ -2335,18 +2337,37 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Properties class
   //--------------------------------------------------------------------------
 
-  py::class_<luxrays::Properties, std::unique_ptr<Properties>>(m, "Properties")
-    .def(py::init<>())
-    .def(py::init<std::string>())
-    .def(py::init<luxrays::Properties>(), py::keep_alive<1,2>())
+  py::class_<luxrays::Properties, py::smart_holder>(m, "Properties")
+    .def(
+		py::init(
+			[]() -> std::unique_ptr<luxrays::Properties>
+			{ return std::make_unique<luxrays::Properties>(); }
+		)
+	)
+    .def(
+		py::init(
+			[](std::string s) -> std::unique_ptr<luxrays::Properties>
+			{ return std::make_unique<luxrays::Properties>(s); }
+		)
+	)
+    .def(
+		py::init(
+			[](luxrays::Properties p) -> std::unique_ptr<luxrays::Properties>
+			{ return std::make_unique<luxrays::Properties>(p); }
+		),
+		py::keep_alive<1,2>()
+	)
 
     // Required because Properties::Set is overloaded
-    .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Property &)>
+	.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Property &)>
       ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+
     .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
       ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+
     .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &, const std::string &)>
       ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+
     .def("SetFromFile", &luxrays::Properties::SetFromFile, py::return_value_policy::reference_internal)
     .def("SetFromString", &luxrays::Properties::SetFromString, py::return_value_policy::reference_internal)
 

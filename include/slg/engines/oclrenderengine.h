@@ -35,7 +35,7 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(RenderConfigRef cfg, const bool supportsNativeThreads);
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 
 protected:
 	static const luxrays::Properties &GetDefaultProps();

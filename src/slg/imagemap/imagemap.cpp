@@ -35,6 +35,7 @@ namespace OCIO = OCIO_NAMESPACE;
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
 #include "slg/utils/filenameresolver.h"
+#include "slg/usings.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1561,8 +1562,9 @@ ImageMapUPtr ImageMap::FromProperties(const Properties &props, const string &pre
 	return im;
 }
 
-Properties ImageMap::ToProperties(const string &prefix, const bool includeBlobImg) const {
-	Properties props;
+PropertiesUPtr ImageMap::ToProperties(const string &prefix, const bool includeBlobImg) const {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
 
 	props <<
 			// The image is internally stored always in NOP_COLORSPACE
@@ -1578,7 +1580,7 @@ Properties ImageMap::ToProperties(const string &prefix, const bool includeBlobIm
 				Property(prefix + ".blob.height")(pixelStorage->height) <<
 				Property(prefix + ".blob.channelcount")(pixelStorage->GetChannelCount());
 
-	return props;
+	return props_ptr;
 }
 
 

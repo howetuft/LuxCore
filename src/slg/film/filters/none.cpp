@@ -28,9 +28,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::NoneFilter)
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties NoneFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type"));
+PropertiesUPtr NoneFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type"));
+	
+	return props;
 }
 
 FilterUPtr NoneFilter::FromProperties(const Properties &cfg) {

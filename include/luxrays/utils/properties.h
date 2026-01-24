@@ -552,11 +552,27 @@ public:
 	/*!
 	 * \brief Sets the list of Property.
 	 * 
+	 * \param prop is the list of Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &Set(const std::unique_ptr<Properties> &prop);
+	/*!
+	 * \brief Sets the list of Property.
+	 * 
 	 * \param props is the list of Property to set.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
 	Properties &operator<<(const Properties &props);
+	/*!
+	 * \brief Sets the list of Property.
+	 * 
+	 * \param props is the list of Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &operator<<(const std::unique_ptr<Properties> &props);
 	/*!
 	 * \brief Sets the list of Property while adding a prefix to all names.
 	 * 

@@ -273,15 +273,15 @@ float DensityGridTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
-Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("densitygrid"));
-	props.Set(Property("scene.textures." + name + ".nx")(nx));
-	props.Set(Property("scene.textures." + name + ".ny")(ny));
-	props.Set(Property("scene.textures." + name + ".nz")(nz));
-	props.Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap.GetStorage().wrapType)));
+	props->Set(Property("scene.textures." + name + ".type")("densitygrid"));
+	props->Set(Property("scene.textures." + name + ".nx")(nx));
+	props->Set(Property("scene.textures." + name + ".ny")(ny));
+	props->Set(Property("scene.textures." + name + ".nz")(nz));
+	props->Set(Property("scene.textures." + name + ".wrap")(ImageMapStorage::WrapType2String(imageMap.GetStorage().wrapType)));
 	
 	Property dataProp("scene.textures." + name + ".data");
 	auto& imgStorage = imageMap.GetStorage();
@@ -291,9 +291,9 @@ Properties DensityGridTexture::ToProperties(const ImageMapCache &imgMapCache, co
 			for (int x = 0; x < nx; ++x)
 				dataProp.Add<float>(imgStorage.GetFloat((z * ny + y) * nx + x));
 
-	props.Set(dataProp);
+	props->Set(dataProp);
 	
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

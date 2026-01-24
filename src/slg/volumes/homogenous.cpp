@@ -183,16 +183,16 @@ void HomogeneousVolume::UpdateTextureReferences(
 		schlickScatter.SetG(newTex);
 }
 
-Properties HomogeneousVolume::ToProperties() const {
-	Properties props;
+PropertiesUPtr HomogeneousVolume::ToProperties() const {
+	PropertiesUPtr props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.volumes." + name + ".type")("homogeneous"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
-	props.Set(Property("scene.volumes." + name + ".scattering")(GetSigmaS().GetSDLValue()));
-	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.GetG().GetSDLValue()));
-	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
-	props.Set(Volume::ToProperties());
+	props->Set(Property("scene.volumes." + name + ".type")("homogeneous"));
+	props->Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
+	props->Set(Property("scene.volumes." + name + ".scattering")(GetSigmaS().GetSDLValue()));
+	props->Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.GetG().GetSDLValue()));
+	props->Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
+	props->Set(Volume::ToProperties());
 
 	return props;
 }

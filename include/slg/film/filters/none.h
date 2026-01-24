@@ -48,7 +48,7 @@ public:
 
 	static FilterType GetObjectType() { return FILTER_NONE; }
 	static std::string GetObjectTag() { return "NONE"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static FilterUPtr FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 

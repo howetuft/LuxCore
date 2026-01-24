@@ -105,7 +105,7 @@ public:
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const = 0;
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	virtual void UpdateVolumeReferences(VolumeConstRef oldVol, VolumeConstRef newVol);
 
 	static CameraUPtr AllocCamera(const luxrays::Properties &props);

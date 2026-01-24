@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 
@@ -47,7 +48,7 @@ public:
 	void SetName(const std::string &nm) { name = nm; }
 
 	// Returns the Properties required to create this object
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	// Most sub-class will implement the many standard static methods used
 	// in ObjectStaticRegistry

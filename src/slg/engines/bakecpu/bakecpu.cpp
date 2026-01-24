@@ -111,12 +111,12 @@ void BakeCPURenderEngine::InitFilm() {
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().SetThreadCount(renderThreads.size());
 	GetFilm().Init();
 }
 
-RenderStatePtr BakeCPURenderEngine::GetRenderState() {
+RenderStateSPtr BakeCPURenderEngine::GetRenderState() {
 	return std::make_shared<BakeCPURenderState>(bootStrapSeed, photonGICache);
 }
 
@@ -212,7 +212,7 @@ void BakeCPURenderEngine::StartLockLess() {
 		const BakeMapInfo &mapInfo = mapInfos[mapInfoIndex];
 
 		for (auto const &objName : mapInfo.objectNames) {
-			auto& sceneObj = renderConfig.GetScene().objDefs.GetSceneObject(objName);
+			auto& sceneObj = renderConfig.GetScene().GetObjects().GetSceneObject(objName);
 			auto& mesh = sceneObj.GetExtMesh();
 
 			Transform localToWorld;
@@ -308,16 +308,16 @@ void BakeCPURenderEngine::UpdateFilmLockLess() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties BakeCPURenderEngine::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr BakeCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
 	
-	props << CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			PathTracer::ToProperties(cfg) <<
-			PhotonGICache::ToProperties(cfg);
+	*props << *CPUNoTileRenderEngine::ToProperties(cfg) <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			*PathTracer::ToProperties(cfg) <<
+			*PhotonGICache::ToProperties(cfg);
 
-	props << *cfg.GetAllProperties("bake.maps.");
-
+	*props << *cfg.GetAllProperties("bake.maps.");
+	
 	return props;
 }
 

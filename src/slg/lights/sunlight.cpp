@@ -152,7 +152,7 @@ Spectrum SunLight::Emit(SceneConstRef scene,
 		const float u2, const float u3, const float passThroughEvent,
 		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	// Set ray origin and direction for infinite light ray
@@ -186,7 +186,7 @@ Spectrum SunLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
-	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const Point worldCenter = scene.GetDataSet().GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
@@ -231,14 +231,14 @@ Spectrum SunLight::GetRadiance(SceneConstRef scene,
 	return color;
 }
 
-Properties SunLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr SunLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = EnvLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("sun"));
-	props.Set(Property(prefix + ".dir")(localSunDir));
-	props.Set(Property(prefix + ".turbidity")(turbidity));
-	props.Set(Property(prefix + ".relsize")(relSize));
+	props->Set(Property(prefix + ".type")("sun"));
+	props->Set(Property(prefix + ".dir")(localSunDir));
+	props->Set(Property(prefix + ".turbidity")(turbidity));
+	props->Set(Property(prefix + ".relsize")(relSize));
 
 	return props;
 }

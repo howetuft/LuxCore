@@ -73,7 +73,7 @@ public:
 	TextureConstRef GetAmount() const { return amount; }
 	TextureRef GetAmount() { return amount; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static InterpolationType String2InterpolationType(const std::string &type);
 	static std::string InterpolationType2String(const InterpolationType type);

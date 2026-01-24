@@ -34,12 +34,12 @@ Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return hitPoint.GetColor(dataIndex);
 }
 
-Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
-	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
+	props->Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
+	props->Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -56,12 +56,12 @@ Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(hitPoint.GetAlpha(dataIndex));
 }
 
-Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
-	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
+	props->Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
+	props->Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -83,13 +83,13 @@ Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(v);
 }
 
-Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
-	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
-	props.Set(Property("scene.textures." + name + ".channel")(
+	props->Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
+	props->Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
+	props->Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
 
 	return props;

@@ -119,16 +119,16 @@ Spectrum PointLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
-Properties PointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr PointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("point"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".power")(power));
-	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficiency")(efficiency));
-	props.Set(Property(prefix + ".position")(localPos));
+	props->Set(Property(prefix + ".type")("point"));
+	props->Set(Property(prefix + ".color")(color));
+	props->Set(Property(prefix + ".power")(power));
+	props->Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
+	props->Set(Property(prefix + ".efficiency")(efficiency));
+	props->Set(Property(prefix + ".position")(localPos));
 
 	return props;
 }

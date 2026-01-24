@@ -43,14 +43,14 @@ Spectrum CheckerBoard2DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return GetTexture2().GetSpectrumValue(hitPoint);
 }
 
-Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("checkerboard2d"));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("checkerboard2d"));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -73,14 +73,14 @@ Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return GetTexture2().GetSpectrumValue(hitPoint);
 }
 
-Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("checkerboard3d"));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("checkerboard3d"));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

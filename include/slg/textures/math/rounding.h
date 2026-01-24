@@ -63,7 +63,7 @@ public:
     TextureConstRef GetTexture() const { return texture; }
     TextureConstRef GetIncrement() const { return increment; }
 
-    virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+    virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
     std::reference_wrapper<Texture> texture;

@@ -110,7 +110,7 @@ bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
 	return !(it == accels.end());
 }
 
-AcceleratorConstPtr DataSet::GetAccelerator(const AcceleratorType accelType) {
+AcceleratorConstPtr DataSet::GetAccelerator(const AcceleratorType accelType) const {
 	auto it = accels.find(accelType);
 	if (it == accels.end()) {
 		std::unique_lock<std::mutex> lock(accelsMutex);

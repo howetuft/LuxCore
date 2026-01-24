@@ -1591,7 +1591,7 @@ public:
 	 *
 	 * \return a Properties container with the statistics.
 	 */
-	virtual const luxrays::Properties &GetStats() const = 0;
+	virtual const std::unique_ptr<luxrays::Properties> & GetStats() const = 0;
 
 	/*!
 	 * \brief Dynamic edit the definition of RenderConfig properties.

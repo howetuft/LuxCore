@@ -631,7 +631,7 @@ public:
 	FilmImplPtr GetFilmPtr();
 
 	void UpdateStats() override;
-	const luxrays::Properties &GetStats() const override;
+	const luxrays::PropertiesUPtr &GetStats() const override;
 
 	void Parse(luxrays::PropertiesPtr props) override;
 
@@ -652,7 +652,7 @@ private:
 	// RenderSession must not be shared
 	std::unique_ptr<slg::RenderSession> renderSession;
 	FilmImplUPtr film;
-	luxrays::Properties stats;
+	luxrays::PropertiesUPtr stats;
 
 	void InitFilm();
 

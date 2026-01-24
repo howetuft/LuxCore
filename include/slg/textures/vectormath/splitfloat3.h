@@ -57,7 +57,7 @@ public:
 	TextureConstRef GetTexture() const { return tex; }
 	u_int GetChannel() const { return channel; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::reference_wrapper<Texture> tex;

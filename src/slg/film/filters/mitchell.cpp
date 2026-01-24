@@ -24,21 +24,27 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilter)
 
-Properties MitchellFilter::ToProperties() const {
-	return Filter::ToProperties() <<
+PropertiesUPtr MitchellFilter::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Filter::ToProperties() <<
 			Property("film.filter.filter.mitchell.b")(B) <<
 			Property("film.filter.filter.mitchell.c")(C);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties MitchellFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
+PropertiesUPtr MitchellFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
 			cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")) <<
 			cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c"));
+	
+	return props;
 }
 
 FilterUPtr MitchellFilter::FromProperties(const Properties &cfg) {

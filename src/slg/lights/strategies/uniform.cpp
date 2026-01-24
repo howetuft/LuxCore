@@ -31,7 +31,7 @@ void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTa
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene.lightDefs.GetSize();
+	const u_int lightCount = scene.GetLightSources().GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -39,7 +39,7 @@ void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTa
 	lightPower.reserve(lightCount);
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto& l = scene.lightDefs.GetLightSource(i);
+		auto& l = scene.GetLightSources().GetLightSource(i);
 
 		switch (taskType) {
 			case TASK_EMIT: {
@@ -71,9 +71,13 @@ void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTa
 
 // Static methods used by LightStrategyRegistry
 
-Properties LightStrategyUniform::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+PropertiesUPtr LightStrategyUniform::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+	
+	return props;
 }
 
 LightStrategyUPtr LightStrategyUniform::FromProperties(const Properties &cfg) {

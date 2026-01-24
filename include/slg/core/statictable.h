@@ -29,9 +29,16 @@
 
 // Nota: there are 3 root files to consider, when debugging objects below:
 // - include/slg/core/statictable.h (this file)
+//
 // - include/slg/core/objectstaticregistry.h
+// - include/slg/engines/renderengineregistry.h
+// - include/slg/lights/strategies/lightstrategyregistry.h
+// - include/slg/film/filters/filterregistry.h
+// - include/slg/samplers/samplerregistry.h
+//
 // - src/slg/engines/renderengine.cpp
-// ... but also all src/slg/engines/*.cpp and include/slg/engines/*.h
+//
+// ...and also all src/slg/engines/*.cpp and include/slg/engines/*.h
 
 
 namespace slg {

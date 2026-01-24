@@ -150,17 +150,17 @@ void VelvetMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef 
 		Thickness = newTex;
 }
 
-Properties VelvetMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
-	Properties props;
+PropertiesUPtr VelvetMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("velvet"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".p1")(P1->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".p2")(P2->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".p3")(P3->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".thickness")(Thickness->GetSDLValue()));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+	props->Set(Property("scene.materials." + name + ".type")("velvet"));
+	props->Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".p1")(P1->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".p2")(P2->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".p3")(P3->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".thickness")(Thickness->GetSDLValue()));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

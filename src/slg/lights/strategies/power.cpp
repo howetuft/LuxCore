@@ -32,7 +32,7 @@ void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scene, taskType);
 
-	const u_int lightCount = scene.lightDefs.GetSize();
+	const u_int lightCount = scene.GetLightSources().GetSize();
 	if (lightCount == 0)
 		return;
 
@@ -43,7 +43,7 @@ void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask
 	lightPower.reserve(lightCount);
 
 	for (u_int i = 0; i < lightCount; ++i) {
-		auto& l = scene.lightDefs.GetLightSource(i);
+		auto& l = scene.GetLightSources().GetLightSource(i);
 		float power = l.GetPower(scene) * l.GetImportance();
 		// In order to avoid over-sampling of distant lights
 		if (l.IsInfinite())
@@ -80,9 +80,13 @@ void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask
 
 // Static methods used by LightStrategyRegistry
 
-Properties LightStrategyPower::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+PropertiesUPtr LightStrategyPower::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+	
+	return props;
 }
 
 LightStrategyUPtr LightStrategyPower::FromProperties(const Properties &cfg) {

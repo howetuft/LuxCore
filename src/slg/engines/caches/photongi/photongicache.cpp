@@ -109,24 +109,29 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 		std::atomic<u_int> &globalIndirectPhotonsTraced, std::atomic<u_int> &globalCausticPhotonsTraced,
 		std::atomic<u_int> &globalIndirectSize, std::atomic<u_int> &globalCausticSize) {
 	const size_t renderThreadCount = GetHardwareThreadCount();
-	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
+	using TracePhotonsThreadUPtr = std::unique_ptr<TracePhotonsThread>;
+	std::vector<TracePhotonsThreadUPtr> renderThreads;
 
 	std::atomic<u_int> globalPhotonsCounter(0);
 
 	// Create the photon tracing threads
+	renderThreads.reserve(renderThreadCount);
 	for (size_t i = 0; i < renderThreadCount; ++i) {
-		renderThreads[i] = new TracePhotonsThread(*this, i,
-				seedBase, photonTracedCount,
+		renderThreads.emplace_back(
+			std::make_unique<TracePhotonsThread>(
+				*this, i, seedBase, photonTracedCount,
 				indirectCacheDone, causticCacheDone,
 				globalPhotonsCounter, globalIndirectPhotonsTraced,
 				globalCausticPhotonsTraced, globalIndirectSize,
-				globalCausticSize);
+				globalCausticSize
+			)
+		);
 	}
 
 	// Start photon tracing threads
 	for (size_t i = 0; i < renderThreadCount; ++i)
 		renderThreads[i]->Start();
-	
+
 	// Wait for the end of photon tracing threads
 	u_int indirectPhotonStored = 0;
 	u_int causticPhotonStored = 0;
@@ -145,7 +150,7 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 				renderThreads[i]->causticPhotons.end());
 		causticPhotonStored += renderThreads[i]->causticPhotons.size();
 
-		delete renderThreads[i];
+		renderThreads[i].reset();
 	}
 
 	// Update the count only if I have traced this kind of photons

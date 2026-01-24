@@ -86,22 +86,22 @@ float FresnelApproxKTexture::Filter() const {
 	return FresnelApproxK(GetTexture().Filter());
 }
 
-Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
 
 	return props;
 }
 
-Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
 
 	return props;
 }

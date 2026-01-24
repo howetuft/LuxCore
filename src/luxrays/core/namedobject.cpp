@@ -43,7 +43,7 @@ NamedObject::~NamedObject() {
 #endif
 }
 
-Properties NamedObject::ToProperties() const {
+PropertiesUPtr NamedObject::ToProperties() const {
 	throw runtime_error("Named object \"" + name + "\" doesn't implement ToProperties() method");
 }
 

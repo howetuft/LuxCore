@@ -39,7 +39,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
 }
 
-void OpenCLIntersectionDevice::SetDataSet(DataSetPtr newDataSet) {
+void OpenCLIntersectionDevice::SetDataSet(DataSetSPtr newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	if (dataSet) {

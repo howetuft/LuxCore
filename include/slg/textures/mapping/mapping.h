@@ -21,6 +21,7 @@
 
 #include <string>
 
+#include "luxrays/usings.h"
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
@@ -66,7 +67,7 @@ public:
 	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
 		luxrays::UV *ds, luxrays::UV *dt) const = 0;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 
 protected:
 	const u_int dataIndex;
@@ -87,7 +88,7 @@ public:
 	virtual luxrays::UV Map(const HitPoint &hitPoint) const;
 	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 
 	const float uvRotation, uScale, vScale, uDelta, vDelta;
 	const float sinTheta, cosTheta;
@@ -114,7 +115,7 @@ public:
 	virtual luxrays::UV Map(const HitPoint &hitPoint) const;
 	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
@@ -148,7 +149,7 @@ public:
 
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const = 0;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const = 0;
 
 	const luxrays::Transform worldToLocal;
 };
@@ -169,7 +170,7 @@ public:
 
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 
 private:
 	const u_int dataIndex;
@@ -188,7 +189,7 @@ public:
 
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 };
 
 //------------------------------------------------------------------------------
@@ -204,7 +205,7 @@ public:
 
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 };
 
 //------------------------------------------------------------------------------
@@ -231,7 +232,7 @@ public:
 
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const std::string &name) const;
 	
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;

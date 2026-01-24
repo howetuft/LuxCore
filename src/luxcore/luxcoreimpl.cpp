@@ -109,16 +109,15 @@ PropertiesUPtr FilmImpl::GetStats() const {
 	//);
 	auto& film = GetSLGFilm();
 
-	auto statsPtr = std::make_unique<Properties>();
-	Properties& stats = *statsPtr;
+	auto stats = std::make_unique<Properties>();
 
-	stats.Set(Property("stats.film.total.samplecount")(film.GetTotalSampleCount()));
-	stats.Set(Property("stats.film.spp")(film.GetTotalSampleCount() / static_cast<float>(film.GetWidth() * film.GetHeight())));
-	stats.Set(Property("stats.film.radiancegorup.count")(film.GetRadianceGroupCount()));
+	stats->Set(Property("stats.film.total.samplecount")(film.GetTotalSampleCount()));
+	stats->Set(Property("stats.film.spp")(film.GetTotalSampleCount() / static_cast<float>(film.GetWidth() * film.GetHeight())));
+	stats->Set(Property("stats.film.radiancegorup.count")(film.GetRadianceGroupCount()));
 
 	API_RETURN("{}", ToArgString(stats));
 
-	return std::move(statsPtr);
+	return stats;
 }
 
 float FilmImpl::GetFilmY(const u_int imagePipelineIndex) const {
@@ -708,7 +707,7 @@ void CameraImpl::Translate(const float x, const float y, const float z) {
 	API_BEGIN("{}, {}, {}", x, y, z);
 
 	scene.GetSlgScene().GetCamera().Translate(Vector(x, y, z));
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -717,7 +716,7 @@ void CameraImpl::TranslateLeft(const float t) {
 	API_BEGIN("{}", t);
 
 	scene.GetSlgScene().GetCamera().TranslateLeft(t);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -726,7 +725,7 @@ void CameraImpl::TranslateRight(const float t) {
 	API_BEGIN("{}", t);
 
 	scene.GetSlgScene().GetCamera().TranslateRight(t);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -735,7 +734,7 @@ void CameraImpl::TranslateForward(const float t) {
 	API_BEGIN("{}", t);
 
 	scene.GetSlgScene().GetCamera().TranslateForward(t);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -744,7 +743,7 @@ void CameraImpl::TranslateBackward(const float t) {
 	API_BEGIN("{}", t);
 
 	scene.GetSlgScene().GetCamera().TranslateBackward(t);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -753,7 +752,7 @@ void CameraImpl::Rotate(const float angle, const float x, const float y, const f
 	API_BEGIN("{}, {}, {}, {}", angle, x ,y ,z);
 
 	scene.GetSlgScene().GetCamera().Rotate(angle, Vector(x, y, z));
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -762,7 +761,7 @@ void CameraImpl::RotateLeft(const float angle) {
 	API_BEGIN("{}", angle);
 
 	scene.GetSlgScene().GetCamera().RotateLeft(angle);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -771,7 +770,7 @@ void CameraImpl::RotateRight(const float angle) {
 	API_BEGIN("{}", angle);
 
 	scene.GetSlgScene().GetCamera().RotateRight(angle);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -780,7 +779,7 @@ void CameraImpl::RotateUp(const float angle) {
 	API_BEGIN("{}", angle);
 
 	scene.GetSlgScene().GetCamera().RotateUp(angle);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -789,7 +788,7 @@ void CameraImpl::RotateDown(const float angle) {
 	API_BEGIN("{}", angle);
 
 	scene.GetSlgScene().GetCamera().RotateDown(angle);
-	scene.GetSlgScene().editActions.AddAction(slg::CAMERA_EDIT);
+	scene.GetSlgScene().GetEditActions().AddAction(slg::CAMERA_EDIT);
 
 	API_END();
 }
@@ -862,7 +861,7 @@ SceneImpl::SceneImpl(
 void SceneImpl::GetBBox(float min[3], float max[3]) const {
 	API_BEGIN("{}, {}", (void *)min, (void *)max);
 
-	const BBox &worldBBox = GetSlgScene().dataSet->GetBBox();
+	const BBox &worldBBox = GetSlgScene().GetDataSet().GetBBox();
 
 	min[0] = worldBBox.pMin.x;
 	min[1] = worldBBox.pMin.y;
@@ -902,7 +901,7 @@ bool SceneImpl::IsImageMapDefined(const std::string &imgMapName) const {
 void SceneImpl::SetDeleteMeshData(const bool v) {
 	API_BEGIN("{}", v);
 
-	GetSlgScene().extMeshCache.SetDeleteMeshData(v);
+	GetSlgScene().GetExtMeshes().SetDeleteMeshData(v);
 
 	API_END();
 }
@@ -911,7 +910,7 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 			const float appliedTransMat[16]) {
 	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(appliedTransMat, 16));
 
-	auto& mesh = GetSlgScene().extMeshCache.GetExtMesh(meshName);
+	auto& mesh = GetSlgScene().GetExtMeshes().GetExtMesh(meshName);
 
 	auto getExtTriMesh = [&]() -> ExtTriangleMesh& {
 		try {
@@ -1027,7 +1026,7 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(fileName));
 
-	auto& mesh = GetSlgScene().extMeshCache.GetExtMesh(meshName);
+	auto& mesh = GetSlgScene().GetExtMeshes().GetExtMesh(meshName);
 	mesh.Save(fileName);
 
 	API_END();
@@ -1088,7 +1087,7 @@ bool SceneImpl::IsMaterialDefined(const std::string &matName) const {
 const unsigned int SceneImpl::GetLightCount() const {
 	API_BEGIN_NOARGS();
 
-	const unsigned int result = GetSlgScene().lightDefs.GetSize();
+	const unsigned int result = GetSlgScene().GetLightSources().GetSize();
 
 	API_RETURN("{}", result);
 
@@ -1098,7 +1097,7 @@ const unsigned int SceneImpl::GetLightCount() const {
 const unsigned int  SceneImpl::GetObjectCount() const {
 	API_BEGIN_NOARGS();
 
-	const unsigned int result = GetSlgScene().objDefs.GetSize();
+	const unsigned int result = GetSlgScene().GetObjects().GetSize();
 
 	API_RETURN("{}", result);
 
@@ -1715,11 +1714,12 @@ RenderSessionImpl::RenderSessionImpl(
 	Private priv,
 	RenderConfigImplRef config
 ) :
-	renderConfig(config)
+	renderConfig(config),
+	stats(std::make_unique<Properties>())
 {
 	renderSession = std::make_unique<slg::RenderSession>(
 		*config.renderConfig,
-		slg::RenderStatePtr(nullptr),
+		slg::RenderStateSPtr(nullptr),
 		std::nullopt
 	);
 }
@@ -1730,7 +1730,8 @@ RenderSessionImpl::RenderSessionImpl(
 	std::shared_ptr<RenderStateImpl>& startState,
 	FilmImplStandalone& startFilm
 ) :
-	renderConfig(config)
+	renderConfig(config),
+	stats(std::make_unique<Properties>())
 {
 	// Create slg session
 	renderSession = std::make_unique<slg::RenderSession>(
@@ -1747,7 +1748,8 @@ RenderSessionImpl::RenderSessionImpl(
 	const std::string &startStateFileName,
 	const std::string &startFilmFileName
 ) :
-	renderConfig(config)
+	renderConfig(config),
+	stats(std::make_unique<Properties>())
 {
 
 	auto startFilm = slg::Film::LoadSerialized(startFilmFileName);
@@ -1916,7 +1918,8 @@ FilmImplPtr RenderSessionImpl::GetFilmPtr() {
 static void SetTileProperties(
 	Properties &props,
 	const string &prefix,
-	const std::deque<const slg::Tile *> &tiles) {
+	const std::deque<const slg::Tile *> &tiles
+) {
 	props.Set(Property(prefix + ".count")((unsigned int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
@@ -1955,16 +1958,16 @@ void RenderSessionImpl::UpdateStats() {
 	// update statistics, convergence test and more
 	renderSession->renderEngine->UpdateFilm();
 
-	stats.Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
-	stats.Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
-	stats.Set(Property("stats.renderengine.total.samplesec.eye")(renderSession->renderEngine->GetTotalEyeSamplesSec()));
-	stats.Set(Property("stats.renderengine.total.samplesec.light")(renderSession->renderEngine->GetTotalLightSamplesSec()));
-	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
-	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
-	stats.Set(Property("stats.renderengine.pass.eye")(renderSession->renderEngine->GetEyePass()));
-	stats.Set(Property("stats.renderengine.pass.light")(renderSession->renderEngine->GetLightPass()));
-	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
-	stats.Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
+	stats->Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
+	stats->Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
+	stats->Set(Property("stats.renderengine.total.samplesec.eye")(renderSession->renderEngine->GetTotalEyeSamplesSec()));
+	stats->Set(Property("stats.renderengine.total.samplesec.light")(renderSession->renderEngine->GetTotalLightSamplesSec()));
+	stats->Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
+	stats->Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
+	stats->Set(Property("stats.renderengine.pass.eye")(renderSession->renderEngine->GetEyePass()));
+	stats->Set(Property("stats.renderengine.pass.light")(renderSession->renderEngine->GetLightPass()));
+	stats->Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
+	stats->Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
 
 	// Intersection devices statistics
 	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
@@ -1983,28 +1986,28 @@ void RenderSessionImpl::UpdateStats() {
 
 		const string prefix = "stats.renderengine.devices." + uniqueName;
 
-		stats.Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev->GetDeviceDesc()->GetType())));
+		stats->Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev->GetDeviceDesc()->GetType())));
 
 		totalPerf += dev->GetTotalPerformance();
-		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
-		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
-		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
+		stats->Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
+		stats->Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
+		stats->Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
 
 		auto hardDev = dynamic_cast<const HardwareDevice *>(dev);
 		if (hardDev) {
-			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
-			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
+			stats->Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
+			stats->Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
 		} else {
-			stats.Set(Property(prefix + ".memory.total")(0ull));
-			stats.Set(Property(prefix + ".memory.used")(0ull));
+			stats->Set(Property(prefix + ".memory.total")(0ull));
+			stats->Set(Property(prefix + ".memory.used")(0ull));
 		}
 	}
-	stats.Set(devicesNames);
-	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
+	stats->Set(devicesNames);
+	stats->Set(Property("stats.renderengine.performance.total")(totalPerf));
 
 	// The explicit cast to size_t is required by VisualC++
-	stats.Set(Property("stats.dataset.trianglecount")(
-		renderSession->renderConfig.GetScene().dataSet->GetTotalTriangleCount())
+	stats->Set(Property("stats.dataset.trianglecount")(
+		renderSession->renderConfig.GetScene().GetDataSet().GetTotalTriangleCount())
 	);
 
 	// Some engine specific statistic
@@ -2012,34 +2015,34 @@ void RenderSessionImpl::UpdateStats() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
 		auto engine = static_cast<slg::RTPathOCLRenderEngine*>(renderSession->renderEngine.get());
-			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
+			stats->Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
 			break;
 		}
 		case slg::TILEPATHOCL: {
 		auto engine = static_cast<slg::TilePathOCLRenderEngine*>(renderSession->renderEngine.get());
 
-			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
+			stats->Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats->Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.converged", tiles);
 			}
 			break;
 		}
@@ -2047,28 +2050,28 @@ void RenderSessionImpl::UpdateStats() {
 		case slg::TILEPATHCPU: {
 			auto engine = static_cast<slg::CPUTileRenderEngine*>(renderSession->renderEngine.get());
 
-			stats.Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
-			stats.Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
+			stats->Set(Property("stats.tilepath.tiles.size.x")(engine->GetTileWidth()));
+			stats->Set(Property("stats.tilepath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.pending", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.notconverged", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
 				deque<const slg::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
-				SetTileProperties(stats, "stats.tilepath.tiles.converged", tiles);
+				SetTileProperties(*stats, "stats.tilepath.tiles.converged", tiles);
 			}
 			break;
 		}
@@ -2085,10 +2088,10 @@ void RenderSessionImpl::UpdateStats() {
 	API_END();
 }
 
-const Properties &RenderSessionImpl::GetStats() const {
+const PropertiesUPtr & RenderSessionImpl::GetStats() const {
 	API_BEGIN_NOARGS();
 
-	const Properties &result = stats;
+	const PropertiesUPtr &result = stats;
 
 	//API_RETURN("{}", ToArgString(result));
 	API_END();

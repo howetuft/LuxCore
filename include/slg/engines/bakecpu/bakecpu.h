@@ -86,7 +86,7 @@ public:
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
-	virtual RenderStatePtr GetRenderState();
+	virtual RenderStateSPtr GetRenderState();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
@@ -94,7 +94,7 @@ public:
 
 	static RenderEngineType GetObjectType() { return BAKECPU; }
 	static std::string GetObjectTag() { return "BAKECPU"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	friend class BakeCPURenderThread;

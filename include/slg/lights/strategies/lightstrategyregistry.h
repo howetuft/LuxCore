@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "luxrays/usings.h"
 #include "slg/core/objectstaticregistry.h"
 #include "slg/lights/strategies/uniform.h"
 #include "slg/lights/strategies/power.h"
@@ -46,7 +47,7 @@ protected:
 	// Used to register all sub-class LightStrategyType2String() static methods
 	typedef std::string (*GetObjectTag)();
 	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToProperties)(const luxrays::Properties &cfg);
+	typedef luxrays::PropertiesUPtr (*ToProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromProperties() static methods
 	typedef LightStrategyUPtr (*FromProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromPropertiesOCL() static methods

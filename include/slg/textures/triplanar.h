@@ -82,7 +82,7 @@ public:
 	const bool IsUVlessBumpMap() const { return enableUVlessBumpMap; }
 
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;

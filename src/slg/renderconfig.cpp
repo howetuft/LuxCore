@@ -162,7 +162,7 @@ void RenderConfig::InitDefaultProperties() {
 		if (!defaultProperties.get()) {
 			auto props = std::make_unique<Properties>();
 			*props << *RenderConfig::ToProperties(Properties());
-
+	
 			defaultProperties = std::move(props);
 		}
 	}
@@ -213,7 +213,7 @@ void RenderConfig::Parse(const Properties &props) {
 	GetConfig().Set(props);
 	// I can not use GetProperty() here because it triggers a ToProperties() and it can
 	// be a problem with OpenCL disabled (PATHOCL is not defined, etc.)
-	GetScene().enableParsePrint = GetConfig().Get(Property("debug.scene.parse.print")(false)).Get<bool>();
+	GetScene().SetEnableParsePrint(GetConfig().Get(Property("debug.scene.parse.print")(false)).Get<bool>());
 
 	UpdateFilmProperties(props);
 
@@ -224,7 +224,7 @@ void RenderConfig::Parse(const Properties &props) {
 	// the render engine
 
 	// Light strategy
-	GetScene().lightDefs.SetLightStrategy(*cfg);
+	GetScene().GetLightSources().SetLightStrategy(*cfg);
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
@@ -418,13 +418,13 @@ PropertiesUPtr RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("scene.images.resizepolicy.type")("NONE"));
 
 	// LightStrategy
-	props << LightStrategy::ToProperties(cfg);
+	props << *LightStrategy::ToProperties(cfg);
 
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
-	props << RenderEngine::ToProperties(cfg);
+	props << *RenderEngine::ToProperties(cfg);
 
 	// Film
-	props << Film::ToProperties(cfg);
+	props << *Film::ToProperties(cfg);
 
 	// Periodic saving
 	props << cfg.Get(Property("periodicsave.film.outputs.period")(0.f));

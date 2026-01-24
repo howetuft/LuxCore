@@ -35,6 +35,7 @@
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/archive/iterators/ostream_iterator.hpp>
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/proputils.h"
@@ -827,6 +828,14 @@ Properties &Properties::Set(const Properties &props) {
 	return *this;
 }
 
+Properties &Properties::Set(const PropertiesUPtr &props) {
+	for(const string name: props->GetAllNames()) {
+		this->Set(props->Get(name));
+	}
+
+	return *this;
+}
+
 Properties &Properties::Set(const Properties &props, const string &prefix) {
 	for(const string name: props.GetAllNames()) {
 		Set(props.Get(name).AddedNamePrefix(prefix));
@@ -834,6 +843,7 @@ Properties &Properties::Set(const Properties &props, const string &prefix) {
 
 	return *this;
 }
+
 
 Properties &Properties::SetFromStream(istream &stream) {
 	string line;
@@ -1120,11 +1130,19 @@ Properties &Properties::operator<<(const Properties &props) {
 	return Set(props);
 }
 
-Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
-	return Properties() << prop0 << prop1;
+Properties &Properties::operator<<(const std::unique_ptr<Properties> &props) {
+	return Set(*props);
 }
 
+Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props << prop0 << prop1;
+	return *props;
+	}
+
 Properties luxrays::operator<<(const Property &prop0, const Properties &props) {
-	return Properties() << prop0 << props;
-}
+	PropertiesUPtr res = std::make_unique<Properties>();
+	*res << prop0 << props;
+	return *res;
+	}
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

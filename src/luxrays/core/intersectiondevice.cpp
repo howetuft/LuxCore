@@ -32,7 +32,7 @@ IntersectionDevice::~IntersectionDevice() {
 		Stop();
 }
 
-void IntersectionDevice::SetDataSet(DataSetPtr newDataSet) {
+void IntersectionDevice::SetDataSet(DataSetSPtr newDataSet) {
 	assert (!started);
 
 	dataSet = newDataSet;

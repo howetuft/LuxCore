@@ -91,7 +91,7 @@ template<class Archive> void Scene::save(Archive &ar, const u_int version) const
 	ar & imgMapCache;
 
 	// Save camera, material, texture, etc. definitions
-	luxrays::Properties sceneProps = ToProperties(true);
+	luxrays::PropertiesUPtr sceneProps = ToProperties(true);
 	ar & sceneProps;
 
 	// Save flags

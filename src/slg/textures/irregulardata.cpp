@@ -48,15 +48,15 @@ IrregularDataTexture::IrregularDataTexture(const u_int n,
 	}
 }
 
-Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("irregulardata"));
-	props.Set(Property("scene.textures." + name + ".wavelengths")(waveLengths));
-	props.Set(Property("scene.textures." + name + ".data")(data));
-	props.Set(Property("scene.textures." + name + ".resolution")(resolution));
-	props.Set(Property("scene.textures." + name + ".emission")(emission));
+	props->Set(Property("scene.textures." + name + ".type")("irregulardata"));
+	props->Set(Property("scene.textures." + name + ".wavelengths")(waveLengths));
+	props->Set(Property("scene.textures." + name + ".data")(data));
+	props->Set(Property("scene.textures." + name + ".resolution")(resolution));
+	props->Set(Property("scene.textures." + name + ".emission")(emission));
 
 	return props;
 }

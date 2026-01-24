@@ -42,7 +42,7 @@ public:
 	
 	u_int GetDataIndex() const { return dataIndex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const u_int dataIndex;
@@ -67,7 +67,7 @@ public:
 	
 	u_int GetDataIndex() const { return dataIndex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const u_int dataIndex;
@@ -93,7 +93,7 @@ public:
 	u_int GetDataIndex() const { return dataIndex; }
 	u_int GetChannel() const { return channel; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	const u_int dataIndex;

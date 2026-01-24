@@ -630,43 +630,43 @@ void ClothMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef n
 		Warp_Ks = newTex;
 }
 
-Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
-	Properties props;
+PropertiesUPtr ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("cloth"));
+	props->Set(Property("scene.materials." + name + ".type")("cloth"));
 	
 	switch (Preset) {
 	  case slg::ocl::DENIM:
-		props.Set(Property("scene.materials." + name + ".preset")("denim"));
+		props->Set(Property("scene.materials." + name + ".preset")("denim"));
 		break;
 	  case slg::ocl::SILKCHARMEUSE:
-		props.Set(Property("scene.materials." + name + ".preset")("silk_charmeuse"));
+		props->Set(Property("scene.materials." + name + ".preset")("silk_charmeuse"));
 		break;
 	  case slg::ocl::SILKSHANTUNG:
-		props.Set(Property("scene.materials." + name + ".preset")("silk_shantung"));
+		props->Set(Property("scene.materials." + name + ".preset")("silk_shantung"));
 		break;
 	  case slg::ocl::COTTONTWILL:
-		props.Set(Property("scene.materials." + name + ".preset")("cotton_twill"));
+		props->Set(Property("scene.materials." + name + ".preset")("cotton_twill"));
 		break;
 	  case slg::ocl::WOOLGABARDINE:
-		props.Set(Property("scene.materials." + name + ".preset")("wool_gabardine"));
+		props->Set(Property("scene.materials." + name + ".preset")("wool_gabardine"));
 		break;
 	  case slg::ocl::POLYESTER:
-		props.Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));
+		props->Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));
 		break;
 	  default:
           throw runtime_error("Unknown preset in ClothMaterial::ToProperties(const ImageMapCache &imgMapCache): " + ToString(Preset));
 	    break;
 	}
 
-	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
-	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+	props->Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
+	props->Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

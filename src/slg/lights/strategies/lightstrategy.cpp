@@ -39,7 +39,7 @@ LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
 // Static methods used by LightStrategyRegistry
 //------------------------------------------------------------------------------
 
-Properties LightStrategy::ToProperties(const Properties &cfg) {
+PropertiesUPtr LightStrategy::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(
 		Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())
 	).Get<string>();

@@ -92,78 +92,78 @@ Scene::~Scene() {
 	dataSet.reset();
 }
 
-Properties Scene::ToProperties(const bool useRealFileName) const {
-		Properties props;
+PropertiesUPtr Scene::ToProperties(const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
-		// Write the camera information
-		if (camera)
-			props.Set(camera->ToProperties(imgMapCache, useRealFileName));
+	// Write the camera information
+	if (camera)
+		props->Set(camera->ToProperties(imgMapCache, useRealFileName));
 
-		// Save all not intersectable light sources
-		vector<string> lightNames = lightDefs.GetLightSourceNames();
-		for (u_int i = 0; i < lightNames.size(); ++i) {
-			auto& l = lightDefs.GetLightSource(lightNames[i]);
-			try {
-				dynamic_cast<const NotIntersectableLightSource &>(l);
-				props.Set((static_cast<const NotIntersectableLightSource &>(l))
-					.ToProperties(imgMapCache, useRealFileName));
-			}
-			catch(std::bad_cast&) {}
+	// Save all not intersectable light sources
+	vector<string> lightNames = lightDefs.GetLightSourceNames();
+	for (u_int i = 0; i < lightNames.size(); ++i) {
+		auto& l = lightDefs.GetLightSource(lightNames[i]);
+		try {
+			dynamic_cast<const NotIntersectableLightSource &>(l);
+			props->Set((static_cast<const NotIntersectableLightSource &>(l))
+				.ToProperties(imgMapCache, useRealFileName));
 		}
+		catch(std::bad_cast&) {}
+	}
 
-		// Get the sorted list of texture names according their dependencies
-		vector<string> texNames;
-		texDefs.GetTextureSortedNames(texNames);
+	// Get the sorted list of texture names according their dependencies
+	vector<string> texNames;
+	texDefs.GetTextureSortedNames(texNames);
 
-		// Write the textures information
-		for (auto const &texName : texNames) {
-			// I can skip all textures starting with Implicit-ConstFloatTexture(3)
-			// because they are expanded inline
-			if (texName.starts_with("Implicit-ConstFloatTexture"))
-				continue;
+	// Write the textures information
+	for (auto const &texName : texNames) {
+		// I can skip all textures starting with Implicit-ConstFloatTexture(3)
+		// because they are expanded inline
+		if (texName.starts_with("Implicit-ConstFloatTexture"))
+			continue;
 
-			TextureConstRef tex = texDefs.GetTexture(texName);
-			props.Set(tex.ToProperties(imgMapCache, useRealFileName));
+		TextureConstRef tex = texDefs.GetTexture(texName);
+		props->Set(tex.ToProperties(imgMapCache, useRealFileName));
+	}
+
+	// Get the sorted list of material names according their dependencies
+	vector<string> matNames;
+	matDefs.GetMaterialSortedNames(matNames);
+
+	// Write the volumes information
+	for (auto const &matName : matNames) {
+		MaterialConstRef mat = matDefs.GetMaterial(matName);
+		// Check if it is a volume
+		try {
+			VolumeConstRef vol = dynamic_cast<const Volume &>(mat);
+			props->Set(*vol.ToProperties());
 		}
+		catch (std::bad_cast&) {}
+	}
 
-		// Get the sorted list of material names according their dependencies
-		vector<string> matNames;
-		matDefs.GetMaterialSortedNames(matNames);
+	// Set the default world interior/exterior volume if required
+	if (defaultWorldVolume) {
+		const u_int index = matDefs.GetMaterialIndex(*defaultWorldVolume);
+		props->Set(Property("scene.world.volume.default")(matDefs.GetMaterial(index).GetName()));
+	}
 
-		// Write the volumes information
-		for (auto const &matName : matNames) {
-			MaterialConstRef mat = matDefs.GetMaterial(matName);
-			// Check if it is a volume
-			try {
-				VolumeConstRef vol = dynamic_cast<const Volume &>(mat);
-				props.Set(vol.ToProperties());
-			}
-			catch (std::bad_cast&) {}
-		}
+	// Write the materials information
+	for (auto const &matName : matNames) {
+		MaterialConstRef mat = matDefs.GetMaterial(matName);
+		// Check if it is not a volume
+		try {
+			VolumeConstRef vol = dynamic_cast<const Volume &>(mat);
+			props->Set(mat.ToProperties(imgMapCache, useRealFileName));
+		} catch (std::bad_cast&) {}
+	}
 
-		// Set the default world interior/exterior volume if required
-		if (defaultWorldVolume) {
-			const u_int index = matDefs.GetMaterialIndex(*defaultWorldVolume);
-			props.Set(Property("scene.world.volume.default")(matDefs.GetMaterial(index).GetName()));
-		}
+	// Write the object information
+	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
+		auto& obj = objDefs.GetSceneObject(i);
+		props->Set(obj.ToProperties(extMeshCache, useRealFileName));
+	}
 
-		// Write the materials information
-		for (auto const &matName : matNames) {
-			MaterialConstRef mat = matDefs.GetMaterial(matName);
-			// Check if it is not a volume
-			try {
-				VolumeConstRef vol = dynamic_cast<const Volume &>(mat);
-				props.Set(mat.ToProperties(imgMapCache, useRealFileName));
-			} catch (std::bad_cast&) {}
-		}
-
-		// Write the object information
-		for (u_int i = 0; i < objDefs.GetSize(); ++i) {
-			auto& obj = objDefs.GetSceneObject(i);
-			props.Set(obj.ToProperties(extMeshCache, useRealFileName));
-		}
-
-		return props;
+	return props;
 }
 
 //--------------------------------------------------------------------------
@@ -814,8 +814,8 @@ string Scene::EncodeTriangleLightNamePrefix(const string &objectName) {
 }
 
 namespace slg {
-// TODO This is a workaround to initialize references in default constructors.
-// Correct solution would be to used boost serialization support for references
+// TODO This is a workaround to initialize references to scenes in default constructors.
+// Correct solution would be to use boost serialization support for references
 Scene NullScene;
 }
 

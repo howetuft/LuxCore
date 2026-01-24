@@ -85,7 +85,7 @@ public:
 
 	PropertiesPtr ToProperties() const;
 
-	static PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static luxrays::PropertiesPtr GetDefaultProperties();
 
 	static RenderConfigUPtr LoadSerialized(const std::string &fileName);

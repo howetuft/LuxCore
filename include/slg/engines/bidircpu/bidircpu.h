@@ -129,7 +129,7 @@ public:
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
-	virtual RenderStatePtr GetRenderState();
+	virtual RenderStateSPtr GetRenderState();
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
@@ -137,7 +137,7 @@ public:
 
 	static RenderEngineType GetObjectType() { return BIDIRCPU; }
 	static std::string GetObjectTag() { return "BIDIRCPU"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 	// Signed because of the delta parameter
@@ -173,8 +173,8 @@ protected:
 	PhotonGICache *photonGICache;
 
 	u_int aovWarmupSPP;
-	// We'll use a shared_ptr for shared data, to ensure correct memory
-	// allocation/deallocation
+	// We'll use a shared_ptr for shared data since, by design, the
+	// ownership is shared among several objects...
 	std::shared_ptr<SobolSamplerSharedData> aovWarmupSamplerSharedData;
 
 private:

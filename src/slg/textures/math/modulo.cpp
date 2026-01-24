@@ -42,13 +42,13 @@ Spectrum ModuloTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties ModuloTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-    Properties props;
+PropertiesUPtr ModuloTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
     const string name = GetName();
-    props.Set(Property("scene.textures." + name + ".type")("modulo"));
-    props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-    props.Set(Property("scene.textures." + name + ".modulo")(GetModulo().GetSDLValue()));
+    props->Set(Property("scene.textures." + name + ".type")("modulo"));
+    props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+    props->Set(Property("scene.textures." + name + ".modulo")(GetModulo().GetSDLValue()));
 
     return props;
 }

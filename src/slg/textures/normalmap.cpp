@@ -50,13 +50,13 @@ Normal NormalMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistan
 	return shadeN;
 }
 
-Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 	
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".scale")(scale));
+	props->Set(Property("scene.textures." + name + ".type")("normalmap"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".scale")(scale));
 
 	return props;
 }

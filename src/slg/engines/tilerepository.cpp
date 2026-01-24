@@ -21,6 +21,7 @@
 #include <optional>
 
 #include "slg/engines/tilerepository.h"
+#include "luxrays/utils/properties.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
@@ -593,8 +594,8 @@ bool TileRepository::NextTile(FilmRef film, std::mutex *filmMutex,
 	return GetNewTileWork(tileWork);
 }
 
-Properties TileRepository::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr TileRepository::ToProperties(const Properties &cfg) {
+	auto props = std::make_unique<Properties>();
 
 	// tile.size
 	const u_int defaultSize = cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>();
@@ -602,19 +603,19 @@ Properties TileRepository::ToProperties(const Properties &cfg) {
 	const Property sizeY = cfg.Get(Property("tile.size.y")(defaultSize));
 
 	if (sizeX.Get<u_int>() == sizeY.Get<u_int>())
-		props << Property("tile.size")(sizeX.Get<u_int>());
+		*props << Property("tile.size")(sizeX.Get<u_int>());
 	else
-		props << sizeX << sizeY;
+		*props << sizeX << sizeY;
 
 	// tile.multipass.convergencetest.threshold
 	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))
-		props << cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold"));
+		*props << cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold"));
 	else {
 		const float defaultThreshold = GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<double>();
-		props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold * 256.f));
+		*props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold * 256.f));
 	}
 
-	props <<
+	*props <<
 			cfg.Get(GetDefaultProps().Get("tile.multipass.enable")) <<
 			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold.reduction")) <<
 			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.warmup.count"));
@@ -647,7 +648,7 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 }
 
 const Properties &TileRepository::GetDefaultProps() {
-	static Properties props =  Properties() <<
+	static Properties props = Properties() <<
 			Property("tile.size")(32) <<
 			Property("tile.multipass.enable")(true) <<
 			Property("tile.multipass.convergencetest.threshold")(6.f / 256.f) <<

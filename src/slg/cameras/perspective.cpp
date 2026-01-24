@@ -277,25 +277,25 @@ void PerspectiveCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 	}
 }
 
-Properties PerspectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
+PropertiesUPtr PerspectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	PropertiesUPtr props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property("scene.camera.type")("perspective"));
-	props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
-	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
-	props.Set(Property("scene.camera.bokeh.blades")(bokehBlades));
-	props.Set(Property("scene.camera.bokeh.power")(bokehPower));
-	props.Set(Property("scene.camera.bokeh.distribution.type")(BokehDistributionType2String(bokehDistribution)));
+	props->Set(Property("scene.camera.type")("perspective"));
+	props->Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
+	props->Set(Property("scene.camera.fieldofview")(fieldOfView));
+	props->Set(Property("scene.camera.bokeh.blades")(bokehBlades));
+	props->Set(Property("scene.camera.bokeh.power")(bokehPower));
+	props->Set(Property("scene.camera.bokeh.distribution.type")(BokehDistributionType2String(bokehDistribution)));
 
 	if (bokehDistributionImageMap) {
 		const string fileName = useRealFileName ?
 			bokehDistributionImageMap->GetName() :
 			imgMapCache.GetSequenceFileName(*bokehDistributionImageMap);
-		props.Set(Property("scene.camera.bokeh.distribution.image")(fileName));
+		props->Set(Property("scene.camera.bokeh.distribution.image")(fileName));
 	}
 
-	props.Set(Property("scene.camera.bokeh.scale.x")(bokehScaleX));
-	props.Set(Property("scene.camera.bokeh.scale.y")(bokehScaleY));
+	props->Set(Property("scene.camera.bokeh.scale.x")(bokehScaleX));
+	props->Set(Property("scene.camera.bokeh.scale.y")(bokehScaleY));
 
 	return props;
 }

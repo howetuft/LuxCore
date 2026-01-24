@@ -79,7 +79,7 @@ public:
 	TextureConstRef GetTargetMinTex() const { return targetMinTex; }
 	TextureConstRef GetTargetMaxTex() const { return targetMaxTex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache,
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache,
 	                                         const bool useRealFileName) const;
 
 private:

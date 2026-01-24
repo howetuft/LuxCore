@@ -163,19 +163,19 @@ bool SpotLight::IsAlwaysInShadow(SceneConstRef scene,
 	return (falloff == 0.f);
 }
 
-Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr SpotLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("spot"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".power")(power));
-	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficiency")(efficiency));
-	props.Set(Property(prefix + ".position")(localPos));
-	props.Set(Property(prefix + ".target")(localTarget));
-	props.Set(Property(prefix + ".coneangle")(coneAngle));
-	props.Set(Property(prefix + ".conedeltaangle")(coneDeltaAngle));
+	props->Set(Property(prefix + ".type")("spot"));
+	props->Set(Property(prefix + ".color")(color));
+	props->Set(Property(prefix + ".power")(power));
+	props->Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
+	props->Set(Property(prefix + ".efficiency")(efficiency));
+	props->Set(Property(prefix + ".position")(localPos));
+	props->Set(Property(prefix + ".target")(localTarget));
+	props->Set(Property(prefix + ".coneangle")(coneAngle));
+	props->Set(Property(prefix + ".conedeltaangle")(coneDeltaAngle));
 
 	return props;
 }

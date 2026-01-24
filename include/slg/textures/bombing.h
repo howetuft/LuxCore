@@ -57,7 +57,7 @@ public:
 	const bool GetUseRandomRotation() const { return useRandomRotation; }
 	const u_int GetMultiBulletCount() const { return multiBulletCount; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 

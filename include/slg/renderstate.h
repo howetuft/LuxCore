@@ -35,7 +35,7 @@ public:
 
 	void SaveSerialized(const std::string &fileName);
 
-	static RenderStatePtr LoadSerialized(const std::string &fileName);
+	static RenderStateSPtr LoadSerialized(const std::string &fileName);
 
 	friend class boost::serialization::access;
 

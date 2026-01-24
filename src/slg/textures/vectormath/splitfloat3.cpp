@@ -34,13 +34,13 @@ Spectrum SplitFloat3Texture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties SplitFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr SplitFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("splitfloat3"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".channel")((int)channel));
+	props->Set(Property("scene.textures." + name + ".type")("splitfloat3"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".channel")((int)channel));
 
 	return props;
 }

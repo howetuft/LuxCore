@@ -77,7 +77,7 @@ void SceneVisibility<T>::TraceVisibilityThread::Start() {
 
 template <class T>
 void SceneVisibility<T>::TraceVisibilityThread::Join() {
-	if (renderThread) {
+	if (renderThread && renderThread->joinable()) {
 		renderThread->join();
 	}
 }

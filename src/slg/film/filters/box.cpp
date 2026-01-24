@@ -28,9 +28,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BoxFilter)
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties BoxFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type"));
+PropertiesUPtr BoxFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type"));
+	
+	return props;
 }
 
 FilterUPtr BoxFilter::FromProperties(const Properties &cfg) {

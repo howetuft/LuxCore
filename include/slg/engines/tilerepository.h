@@ -140,7 +140,7 @@ public:
 	bool NextTile(FilmRef film, std::mutex *filmMutex,
 		TileWork &tileWork, FilmRef tileFilm);
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static TileRepository *FromProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
 

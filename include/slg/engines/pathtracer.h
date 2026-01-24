@@ -150,7 +150,7 @@ public:
 	static SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			FilmConstRef film);
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
 
 	// Used for Sampler indices

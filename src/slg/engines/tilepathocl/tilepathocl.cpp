@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/properties.h"
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/format.hpp>
@@ -123,7 +125,7 @@ void TilePathOCLRenderEngine::InitTileRepository() {
 	InitTaskCount();
 }
 
-RenderStatePtr TilePathOCLRenderEngine::GetRenderState() {
+RenderStateSPtr TilePathOCLRenderEngine::GetRenderState() {
 	return std::make_shared<TilePathOCLRenderState>(bootStrapSeed, tileRepository, photonGICache);
 }
 
@@ -227,8 +229,11 @@ void TilePathOCLRenderEngine::UpdateCounters() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
-	return OCLRenderEngine::ToProperties(cfg) <<
+PropertiesUPtr TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
+	props <<
+			OCLRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			// Force true
 			Property("pathocl.pixelatomics.enable")(true) <<
@@ -237,6 +242,7 @@ Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			PathTracer::ToProperties(cfg) <<
 			TileRepository::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
+	return props_ptr;
 }
 
 RenderEngine *TilePathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {
@@ -244,7 +250,8 @@ RenderEngine *TilePathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {
 }
 
 const Properties &TilePathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+	static Properties props;
+			props <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			// Force true

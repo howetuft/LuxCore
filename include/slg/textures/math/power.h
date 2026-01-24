@@ -63,7 +63,7 @@ public:
 	TextureConstRef GetBase() const { return base; }
 	TextureConstRef GetExponent() const { return exponent; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::reference_wrapper<Texture> base;

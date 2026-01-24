@@ -447,7 +447,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 		// Pick a light source to sample
 		const Normal landingNormal = eyeVertex.bsdf.hitPoint.intoObject ? eyeVertex.bsdf.hitPoint.geometryN : -eyeVertex.bsdf.hitPoint.geometryN;
 		float lightPickPdf;
-		auto light = scene.lightDefs.GetEmitLightStrategy().SampleLights(
+		auto light = scene.GetLightSources().GetEmitLightStrategy().SampleLights(
 			scene, u0,
 			eyeVertex.bsdf.hitPoint.p,
 			landingNormal,
@@ -538,7 +538,7 @@ void BiDirCPURenderThread::DirectHitLight(
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	auto& scene = engine->renderConfig.GetScene();
 
-	const float lightPickPdf = scene.lightDefs.GetEmitLightStrategy().SampleLightPdf(
+	const float lightPickPdf = scene.GetLightSources().GetEmitLightStrategy().SampleLightPdf(
 		light,
 		eyeVertex.bsdf.hitPoint.p,
 		eyeVertex.bsdf.hitPoint.geometryN,
@@ -577,7 +577,7 @@ void BiDirCPURenderThread::DirectHitLight(
 		BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 		auto& scene = engine->renderConfig.GetScene();
 
-		for(auto& el: scene.lightDefs.GetEnvLightSources()) {
+		for(auto& el: scene.GetLightSources().GetEnvLightSources()) {
 			const Spectrum lightRadiance = el.GetRadiance(scene,
 					(eyeVertex.depth == 1) ? nullptr : &eyeVertex.bsdf,
 					eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
@@ -598,7 +598,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	// Select one light source
 	// BiDir can use only a single strategy, emit in this case
 	float lightPickPdf;
-	auto light = scene.lightDefs.GetEmitLightStrategy().
+	auto light = scene.GetLightSources().GetEmitLightStrategy().
 			SampleLights(scene, sampler->GetSample(2), &lightPickPdf);
 	if (!light)
 		return false;

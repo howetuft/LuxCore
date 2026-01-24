@@ -34,7 +34,7 @@ class RenderSession {
 public:
 	RenderSession(
 		RenderConfigRef cfg,
-		RenderStatePtr startState = nullptr,
+		RenderStateSPtr startState = nullptr,
 		OptionalPtr<Film> startFilm = std::nullopt
 	);
 	~RenderSession();
@@ -57,7 +57,7 @@ public:
 
 	void CheckPeriodicSave(const bool force = false);
 
-	RenderStatePtr GetRenderState();
+	RenderStateSPtr GetRenderState();
 
 	void Parse(luxrays::PropertiesPtr props);
 

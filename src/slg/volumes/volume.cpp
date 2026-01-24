@@ -46,19 +46,19 @@ void Volume::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) 
 		volumeEmissionTex = newTex;
 }
 
-Properties Volume::ToProperties() const {
-	Properties props;
+PropertiesUPtr Volume::ToProperties() const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.volumes." + name + ".priority")(priority));
-	props.Set(Property("scene.volumes." + name + ".ior")(GetIORTexture().GetSDLValue()));
+	props->Set(Property("scene.volumes." + name + ".priority")(priority));
+	props->Set(Property("scene.volumes." + name + ".ior")(GetIORTexture().GetSDLValue()));
 	if (volumeEmissionTex) {
-		props.Set(Property("scene.volumes." + name + ".emission")(volumeEmissionTex->GetSDLValue()));
-		props.Set(Property("scene.volumes." + name + ".emission.id")(volumeLightID));
+		props->Set(Property("scene.volumes." + name + ".emission")(volumeEmissionTex->GetSDLValue()));
+		props->Set(Property("scene.volumes." + name + ".emission.id")(volumeLightID));
 	}
-	props.Set(Property("scene.volumes." + name + ".id")(matID));
+	props->Set(Property("scene.volumes." + name + ".id")(matID));
 
-	props.Set(Property("scene.volumes." + name + ".photongi.enable")(isPhotonGIEnabled));
+	props->Set(Property("scene.volumes." + name + ".photongi.enable")(isPhotonGIEnabled));
 
 	return props;
 }

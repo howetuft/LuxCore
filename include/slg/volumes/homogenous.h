@@ -60,7 +60,7 @@ public:
 	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	TextureConstRef GetSigmaA() const { return sigmaA; }
 	TextureConstRef GetSigmaS() const { return sigmaS; }

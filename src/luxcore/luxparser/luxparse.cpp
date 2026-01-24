@@ -703,7 +703,7 @@ static void InitProperties(Properties &props, const u_int count, const ParamList
 			}
 		}
 
-		props.Set(prop);
+		props->Set(prop);
 	}
 }
 

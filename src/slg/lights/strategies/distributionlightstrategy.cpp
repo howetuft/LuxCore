@@ -56,18 +56,22 @@ OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
 ) const {
 	if (lightsDistribution) {
 		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-		assert ((lightIndex >= 0) && (lightIndex < scene.lightDefs.GetSize()));
+		assert ((lightIndex >= 0) && (lightIndex < scene.GetLightSources().GetSize()));
 
 		if (*pdf > 0.f)
-			return scene.lightDefs.GetLightSource(lightIndex);
+			return scene.GetLightSources().GetLightSource(lightIndex);
 		else
 			return std::nullopt;
 	} else
 		return std::nullopt;
 }
 
-Properties DistributionLightStrategy::ToProperties() const {
-	return Properties() <<
-			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
+PropertiesUPtr DistributionLightStrategy::ToProperties() const {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				Property("lightstrategy.type")(LightStrategyType2String(GetType()));
+	
+	return props;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

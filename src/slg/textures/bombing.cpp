@@ -151,18 +151,18 @@ void BombingTexture::UpdateTextureReferences(TextureConstRef oldTex, TextureRef 
 		bulletMaskTex = newTex;
 }
 
-Properties BombingTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BombingTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("bombing"));
-	props.Set(Property("scene.textures." + name + ".background")(GetBackgroundTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bullet")(GetBulletTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bullet.mask")(GetBulletMaskTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bullet.randomscale.range")(randomScaleFactor));
-	props.Set(Property("scene.textures." + name + ".bullet.randomrotation.enable")(useRandomRotation));
-	props.Set(Property("scene.textures." + name + ".bullet.count")(multiBulletCount));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("bombing"));
+	props->Set(Property("scene.textures." + name + ".background")(GetBackgroundTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".bullet")(GetBulletTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".bullet.mask")(GetBulletMaskTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".bullet.randomscale.range")(randomScaleFactor));
+	props->Set(Property("scene.textures." + name + ".bullet.randomrotation.enable")(useRandomRotation));
+	props->Set(Property("scene.textures." + name + ".bullet.count")(multiBulletCount));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

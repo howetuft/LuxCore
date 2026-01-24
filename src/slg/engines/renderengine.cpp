@@ -65,13 +65,13 @@ RenderEngine::RenderEngine(RenderConfigRef cfg) :
 	GenerateNewSeedBase();
 
 	// Create LuxRays context
-	const auto& cfgProps = renderConfig.ToProperties();
+	const auto& cfgProps = *renderConfig.ToProperties();
 	ctx = std::make_unique<Context>(
 		LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
 		Properties() <<
-			cfgProps->Get("opencl.platform.index") <<
-			*cfgProps->GetAllProperties("accelerator.") <<
-			*cfgProps->GetAllProperties("context.")
+			cfgProps.Get("opencl.platform.index") <<
+			cfgProps.GetAllProperties("accelerator.") <<
+			cfgProps.GetAllProperties("context.")
 	);
 }
 
@@ -82,7 +82,7 @@ RenderEngine::~RenderEngine() {
 		Stop();
 }
 
-void RenderEngine::SetRenderState(RenderStatePtr state, OptionalPtr<Film> oldFilm) {
+void RenderEngine::SetRenderState(RenderStateSPtr state, OptionalPtr<Film> oldFilm) {
 	startRenderState = state;
 	startFilm = oldFilm;
 }
@@ -106,7 +106,7 @@ void RenderEngine::Start(FilmRef flm, std::mutex *flmMutex) {
 
 	// Force a complete preprocessing
 	SceneRef& scene = renderConfig.GetScene();
-	scene.editActions.AddAllAction();
+	scene.GetEditActions().AddAllAction();
 	scene.Preprocess(
 		*ctx,
 		film->GetWidth(),
@@ -240,7 +240,7 @@ void RenderEngine::CheckSamplersForTile(const string &engineName, const Properti
 		throw runtime_error(engineName + " render engine can use only " + TilePathSampler::GetObjectTag() + " sampler");
 }
 
-Properties RenderEngine::ToProperties() const {
+PropertiesUPtr RenderEngine::ToProperties() const {
 	throw runtime_error("Called RenderEngine::ToProperties()");
 }
 
@@ -248,15 +248,17 @@ Properties RenderEngine::ToProperties() const {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties RenderEngine::ToProperties(const Properties &cfg) {
+PropertiesUPtr RenderEngine::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
-
+	auto props = std::make_unique<Properties>();
 	RenderEngineRegistry::ToProperties func;
 
 	if (RenderEngineRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
-		return func(cfg) <<
+		*props <<
+				func(cfg) <<
 				Filter::ToProperties(cfg) <<
 				cfg.Get(GetDefaultProps().Get("opencl.platform.index"));
+		return props;
 	} else
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }

@@ -34,13 +34,13 @@ Spectrum RoundingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-    Properties props;
+PropertiesUPtr RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
     const string name = GetName();
-    props.Set(Property("scene.textures." + name + ".type")("rounding"));
-    props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-    props.Set(Property("scene.textures." + name + ".increment")(GetIncrement().GetSDLValue()));
+    props->Set(Property("scene.textures." + name + ".type")("rounding"));
+    props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+    props->Set(Property("scene.textures." + name + ".increment")(GetIncrement().GetSDLValue()));
 
     return props;
 }

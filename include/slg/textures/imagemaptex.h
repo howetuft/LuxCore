@@ -59,7 +59,7 @@ public:
 
 	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const;
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static std::unique_ptr<ImageMapTexture> AllocImageMapTexture(const std::string &texName,
 		ImageMapCache &imgMapCache, ImageMapConstRef img,

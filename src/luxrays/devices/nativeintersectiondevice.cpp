@@ -43,7 +43,7 @@ NativeIntersectionDevice::NativeIntersectionDevice(const Context & context,
 NativeIntersectionDevice::~NativeIntersectionDevice() {
 }
 
-void NativeIntersectionDevice::SetDataSet(DataSetPtr newDataSet) {
+void NativeIntersectionDevice::SetDataSet(DataSetSPtr newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	if (dataSet) {

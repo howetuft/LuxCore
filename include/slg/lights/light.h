@@ -109,7 +109,7 @@ public:
 		return false;
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 	virtual void UpdateVolumeReferences(VolumeConstRef oldVol, VolumeRef newVol);
@@ -173,7 +173,7 @@ public:
 
 	const luxrays::Spectrum &GetTemperatureScale() const { return temperatureScale; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
@@ -208,7 +208,7 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
 	virtual bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static float GetEnvRadius(SceneConstRef scene);
 

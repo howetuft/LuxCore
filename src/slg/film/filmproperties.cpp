@@ -24,10 +24,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-Properties Film::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr Film::ToProperties(const Properties &cfg) {
+	auto props = std::make_unique<Properties>();
 	
-	props <<
+	*props <<
 			cfg.Get(Property("film.width")(640u)) <<
 			cfg.Get(Property("film.height")(480u)) <<
 			cfg.Get(Property("film.safesave")(true)) <<
@@ -44,8 +44,8 @@ Properties Film::ToProperties(const Properties &cfg) {
 			FilmOutputs::ToProperties(cfg);
 
 	// Add also all image pipeline definitions
-	props << *cfg.GetAllProperties("film.imagepipeline.");
-	props << *cfg.GetAllProperties("film.imagepipelines.");
+	*props << *cfg.GetAllProperties("film.imagepipeline.");
+	*props << *cfg.GetAllProperties("film.imagepipelines.");
 
 	return props;
 }

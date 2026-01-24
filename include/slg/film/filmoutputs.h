@@ -76,7 +76,7 @@ public:
 	bool UseSafeSave() const { return safeSave; }
 	void SetSafeSave(const bool v) { safeSave = v; }
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static FilmOutputType String2FilmOutputType(const std::string &type);
 	static const std::string FilmOutputType2String(const FilmOutputType type);
 

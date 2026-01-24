@@ -47,14 +47,14 @@ float DistortTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
-Properties DistortTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr DistortTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("distort"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".offset")(GetOffset().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".strength")(strength));
+	props->Set(Property("scene.textures." + name + ".type")("distort"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".offset")(GetOffset().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".strength")(strength));
 
 	return props;
 }

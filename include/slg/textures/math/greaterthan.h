@@ -65,7 +65,7 @@ public:
 	TextureConstRef GetTexture1() const { return tex1; }
 	TextureConstRef GetTexture2() const { return tex2; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::reference_wrapper<Texture> tex1;

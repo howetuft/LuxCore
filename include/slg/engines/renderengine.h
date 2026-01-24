@@ -89,12 +89,12 @@ public:
 	void SetSeed(const unsigned long seed);
 	void GenerateNewSeedBase();
 
-	virtual RenderStatePtr GetRenderState() {
+	virtual RenderStateSPtr GetRenderState() {
 		throw std::runtime_error(
 			"RenderEngine::GetRenderState() not implemented for render engine: " + GetTag()
 		);
 	}
-	virtual void SetRenderState(RenderStatePtr state, OptionalPtr<Film> startFilm);
+	virtual void SetRenderState(RenderStateSPtr state, OptionalPtr<Film> startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -153,14 +153,14 @@ public:
 	}
 
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 	
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry
 	//--------------------------------------------------------------------------
 
 	// This method is not used at the moment
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
 	static RenderEngineUPtr FromProperties(RenderConfigRef rcfg);
 	// This method is not used at the moment
@@ -201,7 +201,7 @@ protected:
 
 	double raysCount;
 
-	RenderStatePtr startRenderState;
+	RenderStateSPtr startRenderState;
 	OptionalPtr<Film> startFilm;
 
 	bool started, editMode, pauseMode;

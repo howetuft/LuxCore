@@ -43,7 +43,7 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	fixedDir = dir;
 
 	// Get the scene object
-	auto& sceneObject = scene.objDefs.GetSceneObject(meshIndex);
+	auto& sceneObject = scene.GetObjects().GetSceneObject(meshIndex);
 	objectID = sceneObject.GetID();
 
 	// Mesh information

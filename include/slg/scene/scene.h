@@ -24,6 +24,7 @@
 #include <fstream>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/geometry/bsphere.h"
 #include "luxrays/usings.h"
 #include "slg/usings.h"
 #include "slg/utils/pathinfo.h"
@@ -112,7 +113,7 @@ public:
 		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
 		const bool useRTMode);
 
-	luxrays::Properties ToProperties(const bool useRealFileName) const;
+	luxrays::PropertiesUPtr ToProperties(const bool useRealFileName) const;
 
 	//--------------------------------------------------------------------------
 	// Methods to build and edit scene
@@ -192,6 +193,7 @@ public:
 	bool IsMeshDefined(const std::string &meshName) const;
 
 	void Parse(luxrays::PropertiesPtr props);
+
 	void DeleteObject(const std::string &objName);
 	void DeleteObjects(std::vector<std::string> &objNames);
 	void DeleteLight(const std::string &lightName);
@@ -209,6 +211,12 @@ public:
 	void RemoveUnusedMaterials();
 	void RemoveUnusedMeshes();
 
+	// Accessors
+	// (Accessor role is:
+	// - to allow to change underlying object types without modifying all code
+	//	 base
+	// - to clarify some constness aspects
+	// )
 	bool HasCamera() const { return bool(camera); }
 	CameraConstRef GetCamera() const {
 		if (not HasCamera()) throw std::runtime_error("No camera in scene");
@@ -219,11 +227,44 @@ public:
 		return *camera;
 	}
 
+	auto& GetTextures() { return texDefs; }
+	const auto& GetTextures() const { return texDefs; }
+
+	auto& GetMaterials() { return matDefs; }
+	const auto& GetMaterials() const { return matDefs; }
+
+	auto& GetObjects() { return objDefs; }
+	const auto& GetObjects() const { return objDefs; }
+
+	auto& GetLightSources() { return lightDefs; }
+	const auto& GetLightSources() const { return lightDefs; }
+
+	auto& GetDataSet() { return *dataSet; }
+	const auto& GetDataSet() const { return *dataSet; }
+
+	auto& GetDefaultWorldVolume() const { return *defaultWorldVolume; }
+	bool HasDefaultWorldVolume() const { return bool(defaultWorldVolume); }
+
+	auto& GetImageMaps() { return imgMapCache; }
+	const auto& GetImageMaps() const { return imgMapCache; }
+
+	auto& GetExtMeshes() { return extMeshCache; }
+	const auto& GetExtMeshes() const { return extMeshCache; }
+
+	auto& GetEditActions() { return editActions; }
+	const auto& GetEditActions() const { return editActions; }
+
+	const auto& GetSceneBSphere() const { return sceneBSphere; }
+
+	void SetEnableParsePrint(bool status) { enableParsePrint = status; }
+
+	// Serialization
 	static SceneUPtr LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, SceneUPtr&& scene);
 
 	static std::string EncodeTriangleLightNamePrefix(const std::string &objectName);
 
+protected:
 	//--------------------------------------------------------------------------
 
 	// This volume is (optionally) applied to rays hitting nothing
@@ -238,14 +279,15 @@ public:
 	SceneObjectDefinitions objDefs; // SceneObject definitions
 	LightSourceDefinitions lightDefs; // LightSource definitions
 
-	luxrays::DataSetPtr dataSet;
+	// DataSet ownership is not very clear, we keep a shared at
+	// the moment
+	luxrays::DataSetSPtr dataSet;
 	// The bounding sphere of the scene (including the camera)
 	luxrays::BSphere sceneBSphere;
 
 	EditActionList editActions;
 
 	bool enableParsePrint;
-
 	friend class boost::serialization::access;
 
 private:
@@ -272,6 +314,8 @@ private:
 		const std::string &prefixName,
 		const luxrays::Properties &props
 	);
+
+
 	TextureMapping3DUPtr CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureUPtr CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	VolumeUPtr CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);

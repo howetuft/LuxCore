@@ -102,16 +102,16 @@ Normal TriplanarTexture::Bump(const HitPoint &hitPoint, const float sampleDistan
 		return Texture::Bump(hitPoint, sampleDistance);
 }
 
-Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("triplanar"));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
-    props.Set(Property("scene.textures." + name + ".texture3")(GetTexture3().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".uvlessbumpmap.enable")(enableUVlessBumpMap));
-    props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("triplanar"));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+    props->Set(Property("scene.textures." + name + ".texture3")(GetTexture3().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".uvlessbumpmap.enable")(enableUVlessBumpMap));
+    props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

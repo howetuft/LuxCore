@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/properties.h"
 #include "slg/film/film.h"
 #include "slg/core/sdl.h"
 #include "slg/bsdf/bsdf.h"
@@ -86,7 +87,7 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
-		if (scene.dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit)) {
+		if (scene.GetDataSet().GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit)) {
 			/* I can not use BSDF::Init() here because Camera::UpdateAuto()
 			 * can be called before light preprocessing
 
@@ -97,7 +98,7 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
 
 			// Get the scene object
-			auto& sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
+			auto& sceneObject = scene.GetObjects().GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
 			auto& mesh = sceneObject.GetExtMesh();
@@ -115,24 +116,24 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 				material.GetExteriorVolume() :
 				material.GetInteriorVolume();
 			if (!volume)
-				volume = scene.defaultWorldVolume;
+				volume = scene.GetDefaultWorldVolume();
 		}
 	}
 }
 
-Properties Camera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr Camera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
-	props.Set(Property("scene.camera.cliphither")(clipHither));
-	props.Set(Property("scene.camera.clipyon")(clipYon));
-	props.Set(Property("scene.camera.shutteropen")(shutterOpen));
-	props.Set(Property("scene.camera.shutterclose")(shutterClose));
-	props.Set(Property("scene.camera.autovolume.enable")(autoVolume));
+	props->Set(Property("scene.camera.cliphither")(clipHither));
+	props->Set(Property("scene.camera.clipyon")(clipYon));
+	props->Set(Property("scene.camera.shutteropen")(shutterOpen));
+	props->Set(Property("scene.camera.shutterclose")(shutterClose));
+	props->Set(Property("scene.camera.autovolume.enable")(autoVolume));
 	if (volume)
-		props.Set(Property("scene.camera.volume")(volume->GetName()));
+		props->Set(Property("scene.camera.volume")(volume->GetName()));
 
 	if (motionSystem)
-		props.Set(motionSystem->ToProperties("scene.camera", false));
+		props->Set(*motionSystem->ToProperties("scene.camera", false));
 		
 	return props;
 }

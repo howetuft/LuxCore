@@ -69,13 +69,13 @@ Spectrum WireFrameTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		GetInsideTex().GetSpectrumValue(hitPoint);
 }
 
-Properties WireFrameTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr WireFrameTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("wireframe"));
-	props.Set(Property("scene.textures." + name + ".border")(GetBorderTex().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("wireframe"));
+	props->Set(Property("scene.textures." + name + ".border")(GetBorderTex().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".inside")(GetInsideTex().GetSDLValue()));
 
 	return props;
 }

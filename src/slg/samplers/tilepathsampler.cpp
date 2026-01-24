@@ -123,9 +123,11 @@ void TilePathSampler::Init(TileWork *tWork, OptionalPtr<Film> tFilm) {
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties TilePathSampler::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type"));
+PropertiesUPtr TilePathSampler::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("sampler.type"));
+	return props;
 }
 
 SamplerUPtr TilePathSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,

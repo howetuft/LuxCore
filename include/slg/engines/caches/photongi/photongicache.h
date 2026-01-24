@@ -305,7 +305,7 @@ public:
 	static PhotonGIDebugType String2DebugType(const std::string &type);
 	static std::string DebugType2String(const PhotonGIDebugType type);
 
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
 	static PhotonGICache *FromProperties(SceneConstRef scn, const luxrays::Properties &cfg);
 

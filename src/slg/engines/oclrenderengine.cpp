@@ -168,9 +168,10 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 #endif
 }
 
-Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("opencl.cpu.use")) <<
+PropertiesUPtr OCLRenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("opencl.cpu.use")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.use")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
@@ -178,6 +179,7 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable")) <<
 			cfg.Get(GetDefaultProps().Get("cuda.optix.devices.select"));
+	return props;
 }
 
 const Properties &OCLRenderEngine::GetDefaultProps() {

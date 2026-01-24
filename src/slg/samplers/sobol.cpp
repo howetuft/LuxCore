@@ -297,23 +297,27 @@ u_int SobolSampler::GetPassCount() const {
 	return sharedData->GetPassCount(bucketCount);
 }
 
-Properties SobolSampler::ToProperties() const {
-	return Sampler::ToProperties() <<
+PropertiesUPtr SobolSampler::ToProperties() const {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
+	props << Sampler::ToProperties() <<
 			Property("sampler.sobol.adaptive.strength")(adaptiveStrength) <<
 			Property("sampler.sobol.adaptive.userimportanceweight")(adaptiveUserImportanceWeight) <<
 			Property("sampler.sobol.bucketsize")(bucketSize) <<
 			Property("sampler.sobol.tilesize")(tileSize) <<
 			Property("sampler.sobol.supersampling")(superSampling) <<
 			Property("sampler.sobol.overlapping")(overlapping);
+	return props_ptr;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties SobolSampler::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+PropertiesUPtr SobolSampler::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")) <<
@@ -321,6 +325,7 @@ Properties SobolSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.tilesize")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.supersampling")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.overlapping"));
+	return props;
 }
 
 SamplerUPtr SobolSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,

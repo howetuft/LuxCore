@@ -69,7 +69,7 @@ public:
 	TextureConstRef GetBrightnessTex() const { return brightnessTex; }
 	TextureConstRef GetContrastTex() const { return contrastTex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::reference_wrapper<Texture> tex;

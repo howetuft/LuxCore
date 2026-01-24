@@ -223,7 +223,7 @@ public:
 	
 protected:
 	virtual IndexOctree<ELVCVisibilityParticle> *AllocOctree() const {
-		return new ELVCOctree(visibilityParticles, scene.dataSet->GetBBox(),
+		return new ELVCOctree(visibilityParticles, scene.GetDataSet().GetBBox(),
 				lookUpRadius, lookUpNormalAngle);
 	}
 

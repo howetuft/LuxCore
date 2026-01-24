@@ -70,7 +70,7 @@ public:
 	) const = 0;
 
 	// Transform the current object in Properties
-	virtual luxrays::Properties ToProperties() const = 0;
+	virtual luxrays::PropertiesUPtr ToProperties() const = 0;
 
 	static LightStrategyType GetType(const luxrays::Properties &cfg);
 
@@ -79,7 +79,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	// This method is not used at the moment
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	// Allocate a Object based on the cfg definition
 	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 	// This method is not used at the moment

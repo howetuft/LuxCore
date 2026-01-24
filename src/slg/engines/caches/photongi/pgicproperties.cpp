@@ -26,8 +26,9 @@ using namespace slg;
 // PhotonGICache properties related methods
 //------------------------------------------------------------------------------
 
-Properties PhotonGICache::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr PhotonGICache::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
 
 	props <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.sampler.type")) <<
@@ -58,7 +59,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.persistent.file")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.persistent.safesave"));
 
-	return props;
+	return props_ptr;
 }
 
 const Properties &PhotonGICache::GetDefaultProps() {

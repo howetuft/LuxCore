@@ -49,7 +49,7 @@ void Scene::Preprocess(Context& ctx, const u_int filmWidth, const u_int filmHeig
 		}
 
 		// Rebuild the data set
-		dataSet = std::make_shared<DataSet>(ctx);
+		dataSet = std::make_unique<DataSet>(ctx);
 
 		// Add all objects
 		for (u_int i = 0; i < objDefs.GetSize(); ++i)

@@ -19,6 +19,7 @@
 #ifndef _SLG_TWOSIDEDMAT_H
 #define	_SLG_TWOSIDEDMAT_H
 
+#include "luxrays/usings.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
 
@@ -76,7 +77,7 @@ public:
 	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex);
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	auto GetFrontMaterial() const { return frontMat; }
 	auto GetBackMaterial() const { return backMat; }
@@ -92,8 +93,8 @@ private:
 
 	void Preprocess();
 
-	MatRef frontMat;
-	MatRef backMat;
+	OptionalPtr<const Material> frontMat;
+	OptionalPtr<const Material> backMat;
 
 	// Cached values for performance with very large material node trees
 	BSDFEvent eventTypes;

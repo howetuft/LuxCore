@@ -35,14 +35,14 @@ Spectrum WrinkledTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("wrinkled"));
-	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
-	props.Set(Property("scene.textures." + name + ".roughness")(omega));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("wrinkled"));
+	props->Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props->Set(Property("scene.textures." + name + ".roughness")(omega));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

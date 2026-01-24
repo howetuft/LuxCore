@@ -40,7 +40,7 @@ void CompiledScene::CompileGeometry() {
 	SLG_LOG("Compile Geometry");
 	wasGeometryCompiled = true;
 
-	const u_int objCount = scene.objDefs.GetSize();
+	const u_int objCount = scene.GetObjects().GetSize();
 
 	const double tStart = WallClockTime();
 
@@ -127,7 +127,7 @@ void CompiledScene::CompileGeometry() {
 	ExtTriangleMesh initBaseMesh;
 	std::reference_wrapper<const ExtTriangleMesh> baseMesh = initBaseMesh;
 	for (u_int i = 0; i < objCount; ++i) {
-		ExtMeshConstRef mesh = scene.objDefs.GetSceneObject(i).GetExtMesh();
+		ExtMeshConstRef mesh = scene.GetObjects().GetSceneObject(i).GetExtMesh();
 
 		bool isExistingInstance;
 		switch (mesh.GetType()) {
@@ -310,7 +310,7 @@ void CompiledScene::CompileGeometry() {
 		meshDescs.push_back(currentMeshDesc);
 	}
 
-	worldBSphere = scene.dataSet->GetBSphere();
+	worldBSphere = scene.GetDataSet().GetBSphere();
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

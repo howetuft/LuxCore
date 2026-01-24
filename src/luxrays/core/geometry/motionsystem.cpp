@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <cstring>
+#include <memory>
 using std::memset;
 
 #include <vector>
@@ -375,24 +376,24 @@ void MotionSystem::ApplyTransform(const Transform &trans) {
 	Init(t, transforms);
 }
 
-Properties MotionSystem::ToProperties(const std::string &prefix, const bool storingGlobal2Local) const {
-	Properties props;
+PropertiesUPtr MotionSystem::ToProperties(const std::string &prefix, const bool storingGlobal2Local) const {
+	PropertiesUPtr props = std::make_unique<Properties>();
 
 	// First and last interpolatedTransforms have the same transformation start and end
 	for (u_int i = 1; i < interpolatedTransforms.size() - 1; ++i) {
 		const InterpolatedTransform &it = interpolatedTransforms[i];
 
-		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".time")(it.startTime));
-		props.Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(
+		props->Set(Property(prefix+".motion." + ToString(i - 1) + ".time")(it.startTime));
+		props->Set(Property(prefix+".motion." + ToString(i - 1) + ".transformation")(
 				storingGlobal2Local ? it.start.m.Inverse() : it.start.m));
 	}
 
 	const u_int lastIndex = interpolatedTransforms.size() - 2;
 	const InterpolatedTransform &it = interpolatedTransforms[lastIndex];
-	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
-	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(
+	props->Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
+	props->Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(
 			storingGlobal2Local ? it.end.m.Inverse() : it.end.m));
-		
+
 	return props;
 }
 

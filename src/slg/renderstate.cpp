@@ -43,10 +43,10 @@ void RenderState::CheckEngineTag(const std::string &tag) {
 		throw runtime_error("Wrong engine type in a render state: " + engineTag + " instead of " + tag);
 }
 
-RenderStatePtr RenderState::LoadSerialized(const std::string &fileName) {
+RenderStateSPtr RenderState::LoadSerialized(const std::string &fileName) {
 	SerializationInputFile sif(fileName);
 
-	RenderStatePtr renderState;
+	RenderStateSPtr renderState;
 	sif.GetArchive() >> renderState;
 
 	if (!sif.IsGood())

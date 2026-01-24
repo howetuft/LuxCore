@@ -239,9 +239,10 @@ void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties RTPathCPUSampler::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type"));
+PropertiesUPtr RTPathCPUSampler::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props << cfg.Get(GetDefaultProps().Get("sampler.type"));
+	return props;
 }
 
 SamplerUPtr RTPathCPUSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,

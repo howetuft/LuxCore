@@ -204,7 +204,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 		if (hasTriangleLight) {
 			auto props = std::make_unique<Properties>();
 			*props <<
-				Property("scene.materials.triangle_light.type")("matte") <<
+					Property("scene.materials.triangle_light.type")("matte") <<
 				Property("scene.materials.triangle_light.emission")(
 					1000000.f, 1000000.f, 1000000.f
 				);
@@ -227,7 +227,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 
 			auto props = std::make_unique<Properties>();
 			*props << Property("scene.materials." + materialType + "_mat.type")(materialType);
-			scene.Parse(props);
+				scene.Parse(props);
 
 			CreateBox(scene, "mbox_" + materialType, "mesh_mbox_" + materialType, materialType + "_mat", false, BBox(Point(-1.75f, 1.5f, .75f + i), Point(-1.5f, 1.75f, .5f + i)));
 		}
@@ -239,7 +239,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 
 			auto props = std::make_unique<Properties>();
 			*props <<
-					Property("scene.textures." + textureType + "_tex.type")(textureType) <<
+						Property("scene.textures." + textureType + "_tex.type")(textureType) <<
 					Property("scene.materials." + textureType + "_tmat.type")("matte") <<
 					Property("scene.materials." + textureType + "_tmat.kd")(textureType + "_tex");
 			scene.Parse(props);

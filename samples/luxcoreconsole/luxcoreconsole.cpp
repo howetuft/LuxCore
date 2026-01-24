@@ -56,7 +56,7 @@ static void BatchRendering(
 	// Start the rendering
 	session->Start();
 
-	const Properties &stats = session->GetStats();
+	const Properties &stats = *session->GetStats();
 	while (!session->HasDone()) {
 		std::this_thread::sleep_for(1000ms);
 		session->UpdateStats();

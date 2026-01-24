@@ -400,15 +400,15 @@ void MixMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef new
 	Preprocess();
 }
 
-Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
-	Properties props;
+PropertiesUPtr MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("mix"));
-	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
-	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
-	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetSDLValue()));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+	props->Set(Property("scene.materials." + name + ".type")("mix"));
+	props->Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
+	props->Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
+	props->Set(Property("scene.materials." + name + ".amount")(mixFactor->GetSDLValue()));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

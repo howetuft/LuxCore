@@ -51,24 +51,27 @@ void Sampler::RequestSamples(const SampleType smplType, const u_int size) {
 	requestedSamples = size;
 }
 
-Properties Sampler::ToProperties() const {
-	return Properties() <<
-			Property("sampler.type")(SamplerType2String(GetType())) <<
+PropertiesUPtr Sampler::ToProperties() const {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				Property("sampler.type")(SamplerType2String(GetType())) <<
 			Property("sampler.imagesamples.enable")(imageSamplesEnable);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties Sampler::ToProperties(const Properties &cfg) {
+PropertiesUPtr Sampler::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::ToProperties func;
 
 	if (SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
-		return func(cfg) <<
-				cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable"));
+		auto res = func(cfg);
+		*res << cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable"));
+		return res;
 	} else
 		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
 }

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "luxrays/core/geometry/bsphere.h"
 #include <memory>
 #include <optional>
 
@@ -34,6 +35,19 @@
 namespace std {
 	class jthread;
 }
+
+
+// Macro to define useful associated types
+#define DECLARE_SUBTYPES(T) \
+class T; \
+using T##Ref = T&; \
+using T##ConstRef = const T&; \
+using T##UPtr = std::unique_ptr<T>; \
+using T##ConstUPtr = std::unique_ptr<const T>; \
+using T##Ptr = const std::unique_ptr<T> &; \
+using T##ConstPtr = const std::unique_ptr<const T> &; \
+using T##SPtr = std::shared_ptr<T>; \
+using T##ConstSPtr = std::shared_ptr<const T>;
 
 
 
@@ -87,6 +101,11 @@ struct OptionalPtr : public std::optional<std::reference_wrapper<T>> {
 		return &this->value().get();
 	}
 
+	// Allow boolean context usage (e.g., if (optPtr) ...)
+	explicit operator bool() const {
+		return this->has_value();
+	}
+
 	// Boost serialization plumbing
 	template<class Archive>
     void save(Archive & ar, const unsigned int file_version) const {
@@ -136,17 +155,15 @@ using BBoxConstPtr = std::shared_ptr<const BBox>;
 using BBoxUPtr = std::unique_ptr<BBox>;
 using BBoxConstUPtr = std::unique_ptr<const BBox>;
 
+DECLARE_SUBTYPES(BSphere);
+
 class Context;
 using ContextPtr = std::shared_ptr<Context>;
 using ContextConstPtr = std::shared_ptr<const Context>;
 using ContextUPtr = std::unique_ptr<Context>;
 using ContextConstUPtr = std::unique_ptr<const Context>;
 
-class DataSet;
-using DataSetPtr = std::shared_ptr<DataSet>;
-using DataSetConstPtr = std::shared_ptr<const DataSet>;
-using DataSetUPtr = std::unique_ptr<DataSet>;
-using DataSetConstUPtr = std::unique_ptr<const DataSet>;
+DECLARE_SUBTYPES(DataSet);
 
 class Device;
 using DevicePtr = std::shared_ptr<Device>;
@@ -172,45 +189,45 @@ using IntersectionDeviceConstPtr = std::shared_ptr<const IntersectionDevice>;
 using IntersectionDeviceUPtr = std::unique_ptr<IntersectionDevice>;
 using IntersectionDeviceConstUPtr = std::unique_ptr<const IntersectionDevice>;
 
-class Mesh;
-//using MeshPtr = std::shared_ptr<Mesh>;
-//using MeshConstPtr = std::shared_ptr<const Mesh>;
-using MeshUPtr = std::unique_ptr<Mesh>;
-using MeshConstUPtr = std::unique_ptr<const Mesh>;
-using MeshRef = Mesh&;
-using MeshConstRef = const Mesh &;
+DECLARE_SUBTYPES(Mesh);
+//class Mesh;
+//using MeshUPtr = std::unique_ptr<Mesh>;
+//using MeshConstUPtr = std::unique_ptr<const Mesh>;
+//using MeshRef = Mesh&;
+//using MeshConstRef = const Mesh &;
 
-class ExtMesh;
-//using ExtMeshPtr = std::shared_ptr<ExtMesh>;
-//using ExtMeshConstPtr = std::shared_ptr<const ExtMesh>;
-using ExtMeshUPtr = std::unique_ptr<ExtMesh>;
-using ExtMeshConstUPtr = std::unique_ptr<const ExtMesh>;
-using ExtMeshRef = ExtMesh&;
-using ExtMeshConstRef = const ExtMesh&;
+DECLARE_SUBTYPES(ExtMesh);
+//class ExtMesh;
+//using ExtMeshUPtr = std::unique_ptr<ExtMesh>;
+//using ExtMeshConstUPtr = std::unique_ptr<const ExtMesh>;
+//using ExtMeshRef = ExtMesh&;
+//using ExtMeshConstRef = const ExtMesh&;
 
-class ExtMesh;
-//using ExtMeshConstPtr = std::shared_ptr<const ExtMesh>;
-//using ExtMeshPtr = std::shared_ptr<ExtMesh>;
-using ExtMeshConstRef = const ExtMesh&;
-using ExtMeshRef = ExtMesh&;
+DECLARE_SUBTYPES(ExtMesh);
+//class ExtMesh;
+//using ExtMeshConstRef = const ExtMesh&;
+//using ExtMeshRef = ExtMesh&;
 
-class ExtTriangleMesh;
-using ExtTriangleMeshUPtr = std::unique_ptr<ExtTriangleMesh>;
-using ExtTriangleMeshConstUPtr = std::unique_ptr<const ExtTriangleMesh>;
-using ExtTriangleMeshConstRef = const ExtTriangleMesh&;
-using ExtTriangleMeshRef = ExtTriangleMesh&;
+DECLARE_SUBTYPES(ExtTriangleMesh);
+//class ExtTriangleMesh;
+//using ExtTriangleMeshUPtr = std::unique_ptr<ExtTriangleMesh>;
+//using ExtTriangleMeshConstUPtr = std::unique_ptr<const ExtTriangleMesh>;
+//using ExtTriangleMeshConstRef = const ExtTriangleMesh&;
+//using ExtTriangleMeshRef = ExtTriangleMesh&;
 
-class ExtInstanceTriangleMesh;
-using ExtInstanceTriangleMeshUPtr = std::unique_ptr<ExtInstanceTriangleMesh>;
-using ExtInstanceTriangleMeshConstUPtr = std::unique_ptr<const ExtInstanceTriangleMesh>;
-using ExtInstanceTriangleMeshConstRef = const ExtInstanceTriangleMesh&;
-using ExtInstanceTriangleMeshRef = ExtInstanceTriangleMesh&;
+DECLARE_SUBTYPES(ExtInstanceTriangleMesh);
+//class ExtInstanceTriangleMesh;
+//using ExtInstanceTriangleMeshUPtr = std::unique_ptr<ExtInstanceTriangleMesh>;
+//using ExtInstanceTriangleMeshConstUPtr = std::unique_ptr<const ExtInstanceTriangleMesh>;
+//using ExtInstanceTriangleMeshConstRef = const ExtInstanceTriangleMesh&;
+//using ExtInstanceTriangleMeshRef = ExtInstanceTriangleMesh&;
 
-class ExtMotionTriangleMesh;
-using ExtMotionTriangleMeshUPtr = std::unique_ptr<ExtMotionTriangleMesh>;
-using ExtMotionTriangleMeshConstUPtr = std::unique_ptr<const ExtMotionTriangleMesh>;
-using ExtMotionTriangleMeshConstRef = const ExtMotionTriangleMesh&;
-using ExtMotionTriangleMeshRef = ExtMotionTriangleMesh&;
+DECLARE_SUBTYPES(ExtMotionTriangleMesh)
+//class ExtMotionTriangleMesh;
+//using ExtMotionTriangleMeshUPtr = std::unique_ptr<ExtMotionTriangleMesh>;
+//using ExtMotionTriangleMeshConstUPtr = std::unique_ptr<const ExtMotionTriangleMesh>;
+//using ExtMotionTriangleMeshConstRef = const ExtMotionTriangleMesh&;
+//using ExtMotionTriangleMeshRef = ExtMotionTriangleMesh&;
 
 class Matrix4x4;
 using Matrix4x4Ptr = std::shared_ptr<Matrix4x4>;

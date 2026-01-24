@@ -31,20 +31,20 @@ void CompiledScene::CompileSceneObjects() {
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
 
-	const u_int objCount = scene.objDefs.GetSize();
+	const u_int objCount = scene.GetObjects().GetSize();
 	sceneObjs.resize(objCount);
 	for (u_int i = 0; i < objCount; ++i) {
 		slg::ocl::SceneObject &oclScnObj = sceneObjs[i];
-		auto& scnObj = scene.objDefs.GetSceneObject(i);
+		auto& scnObj = scene.GetObjects().GetSceneObject(i);
 
 		oclScnObj.objectID = scnObj.GetID();
 
 		auto& m = scnObj.GetMaterial();
-		oclScnObj.materialIndex = scene.matDefs.GetMaterialIndex(m);
+		oclScnObj.materialIndex = scene.GetMaterials().GetMaterialIndex(m);
 
 		auto bakeMap = scnObj.GetBakeMap();
 		if (bakeMap) {
-			oclScnObj.bakeMapIndex = scene.imgMapCache.GetImageMapIndex(*bakeMap);
+			oclScnObj.bakeMapIndex = scene.GetImageMaps().GetImageMapIndex(*bakeMap);
 			switch (scnObj.GetBakeMapType()) {
 				case COMBINED:
 					oclScnObj.bakeMapType = slg::ocl::COMBINED;

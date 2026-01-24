@@ -65,7 +65,7 @@ public:
 	TextureConstRef GetInsideTex() const { return insideTex; }
 	TextureConstRef GetOutsideTex() const { return outsideTex; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	bool Evaluate(const HitPoint &hitPoint) const;

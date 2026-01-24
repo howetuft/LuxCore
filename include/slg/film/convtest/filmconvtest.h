@@ -19,11 +19,11 @@
 #ifndef _SLG_FILMCONVTEST_H
 #define	_SLG_FILMCONVTEST_H
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
-#include "luxrays/usings.h"
-#include "slg/slg.h"
 #include "slg/usings.h"
+#include "slg/film/film.h"
 #include "slg/film/framebuffer.h"
 
 namespace slg {

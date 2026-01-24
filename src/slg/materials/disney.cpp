@@ -532,29 +532,29 @@ void DisneyMaterial::ComputeRatio(const float metallic, const float clearcoat,
 	ratioClearcoat = clearcoatWeight * norm;
 }
 
-Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("disney"));
-	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".type")("disney"));
+	props->Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".roughness")(Roughness->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".metallic")(Metallic->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".specular")(Specular->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
+	props->Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
 	if (filmAmount)
-		props.Set(Property("scene.materials." + name + ".filmamount")(filmAmount->GetSDLValue()));
+		props->Set(Property("scene.materials." + name + ".filmamount")(filmAmount->GetSDLValue()));
 	if (filmThickness)
-		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetSDLValue()));
+		props->Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetSDLValue()));
 	if (filmIor)
-		props.Set(Property("scene.materials." + name + ".filmior")(filmIor->GetSDLValue()));
-	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
+		props->Set(Property("scene.materials." + name + ".filmior")(filmIor->GetSDLValue()));
+	props->Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
 }

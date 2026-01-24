@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/properties.h"
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/slg.h"
@@ -199,8 +201,12 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
-	return TilePathOCLRenderEngine::ToProperties(cfg) <<
+PropertiesUPtr RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	auto props_ptr = std::make_unique<Properties>();
+	auto& props = *props_ptr;
+
+	props <<
+			TilePathOCLRenderEngine::ToProperties(cfg) <<
 			//------------------------------------------------------------------
 			// Overwrite some TilePathOCLRenderEngine property
 			//------------------------------------------------------------------
@@ -215,6 +221,7 @@ Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
+	return props_ptr;
 }
 
 RenderEngine *RTPathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {

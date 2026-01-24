@@ -51,12 +51,12 @@ Spectrum FresnelColorTexture::Evaluate(const HitPoint &hitPoint, const float cos
 	return GeneralEvaluate(n, k, cosi);
 }
 
-Properties FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fresnelcolor"));
-	props.Set(Property("scene.textures." + name + ".kr")(GetKr().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("fresnelcolor"));
+	props->Set(Property("scene.textures." + name + ".kr")(GetKr().GetSDLValue()));
 
 	return props;
 }

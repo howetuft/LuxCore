@@ -191,10 +191,10 @@ void OrthographicCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 		*fluxToRadianceFactor = cameraPdf;
 }
 
-Properties OrthographicCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
+PropertiesUPtr OrthographicCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	PropertiesUPtr props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property("scene.camera.type")("orthographic"));
+	props->Set(Property("scene.camera.type")("orthographic"));
 
 	return props;
 }

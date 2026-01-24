@@ -94,8 +94,8 @@ Spectrum BlenderBlendTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string progressiontype;
 	switch(type) {
@@ -127,12 +127,12 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, c
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_blend"));
-	props.Set(Property("scene.textures." + name + ".progressiontype")(progressiontype));
-	props.Set(Property("scene.textures." + name + ".direction")(directiontype));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_blend"));
+	props->Set(Property("scene.textures." + name + ".progressiontype")(progressiontype));
+	props->Set(Property("scene.textures." + name + ".direction")(directiontype));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -184,8 +184,8 @@ Spectrum BlenderCloudsTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string noisetype = "soft_noise";
 	if(hard) noisetype = "hard_noise";
@@ -227,14 +227,14 @@ Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_clouds"));
-	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_clouds"));
+	props->Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -315,19 +315,19 @@ Spectrum BlenderDistortedNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_distortednoise"));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(noisebasis));
-	props.Set(Property("scene.textures." + name + ".noise_distortion")(noisedistortion));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".distortion")(distortion));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_distortednoise"));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(noisebasis));
+	props->Set(Property("scene.textures." + name + ".noise_distortion")(noisedistortion));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".distortion")(distortion));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -453,16 +453,16 @@ float BlenderMagicTexture::Filter() const {
 #undef NC
 }
 
-Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_magic"));
-	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
-	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_magic"));
+	props->Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props->Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -553,8 +553,8 @@ Spectrum BlenderMarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string nbas;
 	switch(noisebasis) {
@@ -610,15 +610,15 @@ Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_marble"));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
-	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
-	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_marble"));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props->Set(Property("scene.textures." + name + ".noisebasis2")(noise));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props->Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -709,8 +709,8 @@ Spectrum BlenderMusgraveTexture::GetSpectrumValue(const HitPoint &hitPoint) cons
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string nbas;
 	switch(noisebasis) {
@@ -749,19 +749,19 @@ Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_musgrave"));
-	props.Set(Property("scene.textures." + name + ".musgravetype")(type));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
-	props.Set(Property("scene.textures." + name + ".dimension")(dimension));
-	props.Set(Property("scene.textures." + name + ".intensity")(intensity));
-	props.Set(Property("scene.textures." + name + ".lacunarity")(lacunarity));
-	props.Set(Property("scene.textures." + name + ".offset")(offset));
-	props.Set(Property("scene.textures." + name + ".gain")(gain));
-	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_musgrave"));
+	props->Set(Property("scene.textures." + name + ".musgravetype")(type));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props->Set(Property("scene.textures." + name + ".dimension")(dimension));
+	props->Set(Property("scene.textures." + name + ".intensity")(intensity));
+	props->Set(Property("scene.textures." + name + ".lacunarity")(lacunarity));
+	props->Set(Property("scene.textures." + name + ".offset")(offset));
+	props->Set(Property("scene.textures." + name + ".gain")(gain));
+	props->Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -822,15 +822,15 @@ Spectrum BlenderNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_noise"));
-	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(Property("scene.textures." + name + ".type")("blender_noise"));
+	props->Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
 	return props;
 }
 
@@ -906,8 +906,8 @@ Spectrum BlenderStucciTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string nbas;
 	switch(noisebasis) {
@@ -963,15 +963,15 @@ Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_stucci"));
-	props.Set(Property("scene.textures." + name + ".stuccitype")(stuccitype));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
-	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_stucci"));
+	props->Set(Property("scene.textures." + name + ".stuccitype")(stuccitype));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props->Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1035,8 +1035,8 @@ Spectrum BlenderVoronoiTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const std::string name = GetName();
 
@@ -1066,18 +1066,18 @@ Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache,
 			break;
 	};
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
-	props.Set(Property("scene.textures." + name + ".distancemetric")(dm));
-	props.Set(Property("scene.textures." + name + ".intensity")(intensity));
-	props.Set(Property("scene.textures." + name + ".exponent")(exponent));
-	props.Set(Property("scene.textures." + name + ".w1")(feature_weight1));
-	props.Set(Property("scene.textures." + name + ".w2")(feature_weight2));
-	props.Set(Property("scene.textures." + name + ".w3")(feature_weight3));
-	props.Set(Property("scene.textures." + name + ".w4")(feature_weight4));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
+	props->Set(Property("scene.textures." + name + ".distancemetric")(dm));
+	props->Set(Property("scene.textures." + name + ".intensity")(intensity));
+	props->Set(Property("scene.textures." + name + ".exponent")(exponent));
+	props->Set(Property("scene.textures." + name + ".w1")(feature_weight1));
+	props->Set(Property("scene.textures." + name + ".w2")(feature_weight2));
+	props->Set(Property("scene.textures." + name + ".w3")(feature_weight3));
+	props->Set(Property("scene.textures." + name + ".w4")(feature_weight4));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1176,8 +1176,8 @@ Spectrum BlenderWoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	std::string noise;
 	switch(noisebasis2) {
@@ -1248,16 +1248,16 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache, co
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("blender_wood"));
-	props.Set(Property("scene.textures." + name + ".woodtype")(woodtype));
-	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
-	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
-	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("blender_wood"));
+	props->Set(Property("scene.textures." + name + ".woodtype")(woodtype));
+	props->Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props->Set(Property("scene.textures." + name + ".noisebasis2")(noise));
+	props->Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props->Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props->Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props->Set(Property("scene.textures." + name + ".bright")(bright));
+	props->Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

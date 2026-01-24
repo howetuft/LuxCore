@@ -27,6 +27,7 @@
 #include <thread>
 #include <mutex>
 
+#include "slg/usings.h"
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/utils/strutils.h"
@@ -36,8 +37,6 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/usings.h"
-#include "slg/usings.h"
 #include "slg/core/colorspace.h"
 #include "slg/utils/halfserialization.h"
 
@@ -591,13 +590,14 @@ template<> const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetBlack();
 // ImageMapStorage
 //------------------------------------------------------------------------------
 
+
 class ImageMapStorage {
 public:
 	typedef enum {
 		BYTE,
 		HALF,
 		FLOAT,
-		
+
 		// This one isn't a real storage type and is used only as argument
 		// of ImageMap constructor
 		AUTO
@@ -614,14 +614,14 @@ public:
 		RGB,
 		DIRECTX2OPENGL_NORMALMAP
 	} ChannelSelectionType;
-	
+
 	typedef enum {
 		REPEAT,
 		BLACK,
 		WHITE,
 		CLAMP
 	} WrapType;
-	
+
 	typedef enum {
 		NEAREST,
 		LINEAR
@@ -993,7 +993,7 @@ public:
 
 	ImageMapUPtr Copy() const;
 
-	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
+	luxrays::PropertiesUPtr ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMapUPtr Merge(ImageMapConstRef map0, ImageMapConstRef map1, const u_int channels);

@@ -109,15 +109,15 @@ Spectrum MapPointLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 			(4.f * M_PI * func->Average());
 }
 
-Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr MapPointLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("mappoint"));
+	props->Set(Property(prefix + ".type")("mappoint"));
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
-	props.Set(Property(prefix + ".mapfile")(fileName));
-	props.Set(imageMap->ToProperties(prefix, false));
+	props->Set(Property(prefix + ".mapfile")(fileName));
+	props->Set(imageMap->ToProperties(prefix, false));
 
 	return props;
 }

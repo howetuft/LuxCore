@@ -49,7 +49,7 @@ protected:
 	// Used to register all sub-class FilterType2String() static methods
 	typedef std::string (*GetObjectTag)();
 	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToProperties)(const luxrays::Properties &cfg);
+	typedef luxrays::PropertiesUPtr (*ToProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromProperties() static methods
 	typedef FilterUPtr (*FromProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromPropertiesOCL() static methods

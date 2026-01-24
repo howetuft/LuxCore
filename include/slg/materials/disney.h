@@ -86,7 +86,7 @@ public:
 		float *reversePdfW
 	) const;
 
-	luxrays::Properties ToProperties(
+	luxrays::PropertiesUPtr ToProperties(
 		const ImageMapCache &imgMapCache, 
 		const bool useRealFileName
 	) const;

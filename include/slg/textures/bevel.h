@@ -60,7 +60,7 @@ public:
 	TextureConstRef GetTexture() const { return *tex; }
 	const float GetRadius() const { return radius; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	OptionalPtr<const Texture> tex;

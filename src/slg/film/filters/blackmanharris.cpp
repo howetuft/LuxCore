@@ -29,9 +29,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BlackmanHarrisFilter)
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties BlackmanHarrisFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type"));
+PropertiesUPtr BlackmanHarrisFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type"));
+	
+	return props;
 }
 
 FilterUPtr BlackmanHarrisFilter::FromProperties(const Properties &cfg) {

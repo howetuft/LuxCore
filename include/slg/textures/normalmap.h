@@ -57,7 +57,7 @@ public:
 	TextureConstRef GetTexture() const { return tex; }
 	const float GetScale() const { return scale; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	std::reference_wrapper<Texture> tex;

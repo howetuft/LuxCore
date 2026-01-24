@@ -46,13 +46,13 @@ Spectrum FresnelConstTexture::Evaluate(const HitPoint &hitPoint, const float cos
 	return GeneralEvaluate(n, k, cosi);
 }
 
-Properties FresnelConstTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr FresnelConstTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fresnelconst"));
-	props.Set(Property("scene.textures." + name + ".n")(n));
-	props.Set(Property("scene.textures." + name + ".k")(k));
+	props->Set(Property("scene.textures." + name + ".type")("fresnelconst"));
+	props->Set(Property("scene.textures." + name + ".n")(n));
+	props->Set(Property("scene.textures." + name + ".k")(k));
 
 	return props;
 }

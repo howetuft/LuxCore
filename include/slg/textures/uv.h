@@ -43,7 +43,7 @@ public:
 
 	TextureMapping2DConstRef GetTextureMapping() const { return *mapping; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping2DUPtr mapping;

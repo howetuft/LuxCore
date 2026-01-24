@@ -73,7 +73,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 
 	// Build the list of object to bake and each mesh area
 	for (auto const &objName : mapInfo.objectNames) {
-		auto& sceneObj = scene.objDefs.GetSceneObject(objName);
+		auto& sceneObj = scene.GetObjects().GetSceneObject(objName);
 		engine->currentSceneObjsToBake.push_back(&sceneObj);
 		//if (sceneObj)
 			//engine->currentSceneObjsToBake.push_back(sceneObj);
@@ -162,7 +162,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	mesh.Sample(localToWorld, triangleIndex, state.eyeSampler->GetSample(2), state.eyeSampler->GetSample(3),
 			&samplePoint, &b0, &b1, &b2);
 
-	const u_int sceneObjIndex = state.scene.objDefs.GetSceneObjectIndex(sceneObj);
+	const u_int sceneObjIndex = state.scene.GetObjects().GetSceneObjectIndex(sceneObj);
 	const PathVolumeInfo volInfo;
 	BSDF bsdf(state.scene, sceneObjIndex, triangleIndex,
 			samplePoint, b1, b2,
@@ -544,7 +544,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			// Save the rendered map
 			auto props = std::make_unique<Properties>();
 			*props << Property("index")(mapInfo.imagePipelineIndex);
-			engine->GetMapFilm().Output(
+				engine->GetMapFilm().Output(
 				mapInfo.fileName,
 				engine->GetMapFilm().HasChannel(Film::ALPHA) ?
 					FilmOutputs::RGBA_IMAGEPIPELINE :

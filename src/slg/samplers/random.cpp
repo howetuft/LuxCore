@@ -215,23 +215,26 @@ void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	InitNewSample();
 }
 
-Properties RandomSampler::ToProperties() const {
-	return Sampler::ToProperties() <<
+PropertiesUPtr RandomSampler::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Sampler::ToProperties() <<
 			Property("sampler.random.adaptive.strength")(adaptiveStrength) <<
 			Property("sampler.random.adaptive.userimportanceweight")(adaptiveUserImportanceWeight) <<
 			Property("sampler.random.bucketsize")(bucketSize) <<
 			Property("sampler.random.tilesize")(tileSize) <<
 			Property("sampler.random.supersampling")(superSampling) <<
 			Property("sampler.random.overlapping")(overlapping);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties RandomSampler::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+PropertiesUPtr RandomSampler::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")) <<
@@ -239,6 +242,7 @@ Properties RandomSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.random.tilesize")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.supersampling")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.overlapping"));
+	return props;
 }
 
 SamplerUPtr RandomSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr &  rndGen,

@@ -34,12 +34,12 @@ Spectrum HitPointVertexAOVTexture::GetSpectrumValue(const HitPoint &hitPoint) co
 	return Spectrum(hitPoint.GetVertexAOV(dataIndex));
 }
 
-Properties HitPointVertexAOVTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HitPointVertexAOVTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hitpointvertexaov"));
-	props.Set(Property("scene.textures." + name + ".dataIndex")(dataIndex));
+	props->Set(Property("scene.textures." + name + ".type")("hitpointvertexaov"));
+	props->Set(Property("scene.textures." + name + ".dataIndex")(dataIndex));
 
 	return props;
 }
@@ -56,12 +56,12 @@ Spectrum HitPointTriangleAOVTexture::GetSpectrumValue(const HitPoint &hitPoint) 
 	return Spectrum(hitPoint.GetTriAOV(dataIndex));
 }
 
-Properties HitPointTriangleAOVTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr HitPointTriangleAOVTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("hitpointtriangleaov"));
-	props.Set(Property("scene.textures." + name + ".dataIndex")(dataIndex));
+	props->Set(Property("scene.textures." + name + ".type")("hitpointtriangleaov"));
+	props->Set(Property("scene.textures." + name + ".dataIndex")(dataIndex));
 
 	return props;
 }

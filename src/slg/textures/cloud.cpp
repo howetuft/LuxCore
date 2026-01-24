@@ -149,22 +149,22 @@ bool CloudTexture::SphereFunction(const Point &p) const {
 	return false;
 }
 
-Properties CloudTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr CloudTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("cloud"));
-	props.Set(Property("scene.textures." + name + ".radius")(radius));
-	props.Set(Property("scene.textures." + name + ".noisescale")(firstNoiseScale));
-	props.Set(Property("scene.textures." + name + ".turbulence")(turbulenceAmount));
-	props.Set(Property("scene.textures." + name + ".sharpness")(sharpness));
-	props.Set(Property("scene.textures." + name + ".noiseoffset")(noiseOffset));
-	props.Set(Property("scene.textures." + name + ".spheres")(numSpheres));
-	props.Set(Property("scene.textures." + name + ".octaves")(numOctaves));
-	props.Set(Property("scene.textures." + name + ".variability")(variability));
-	props.Set(Property("scene.textures." + name + ".baseflatness")(baseFlatness));
-	props.Set(Property("scene.textures." + name + ".spheresize")(sphereSize));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".type")("cloud"));
+	props->Set(Property("scene.textures." + name + ".radius")(radius));
+	props->Set(Property("scene.textures." + name + ".noisescale")(firstNoiseScale));
+	props->Set(Property("scene.textures." + name + ".turbulence")(turbulenceAmount));
+	props->Set(Property("scene.textures." + name + ".sharpness")(sharpness));
+	props->Set(Property("scene.textures." + name + ".noiseoffset")(noiseOffset));
+	props->Set(Property("scene.textures." + name + ".spheres")(numSpheres));
+	props->Set(Property("scene.textures." + name + ".octaves")(numOctaves));
+	props->Set(Property("scene.textures." + name + ".variability")(variability));
+	props->Set(Property("scene.textures." + name + ".baseflatness")(baseFlatness));
+	props->Set(Property("scene.textures." + name + ".spheresize")(sphereSize));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

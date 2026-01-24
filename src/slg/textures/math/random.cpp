@@ -39,13 +39,13 @@ Spectrum RandomTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties RandomTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr RandomTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("random"));
-	props.Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".seed")(seedOffset));
+	props->Set(Property("scene.textures." + name + ".type")("random"));
+	props->Set(Property("scene.textures." + name + ".texture")(GetTexture().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".seed")(seedOffset));
 
 	return props;
 }

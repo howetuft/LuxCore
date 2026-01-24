@@ -49,7 +49,7 @@ public:
 		referencedImgMaps.insert(&imageMap);
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	TextureMapping3DConstRef GetTextureMapping() const { return *mapping; }
 
 	static ImageMapUPtr ParseData(const luxrays::Property &Property,

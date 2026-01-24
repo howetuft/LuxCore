@@ -71,7 +71,7 @@ public:
 	TextureConstRef GetSaturation() const { return sat; }
 	TextureConstRef GetValue() const { return val; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	luxrays::Spectrum RgbToHsv(const luxrays::Spectrum &rgb) const;

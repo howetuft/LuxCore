@@ -51,7 +51,7 @@ public:
 
 	static RenderEngineType GetObjectType() { return FILESAVER; }
 	static std::string GetObjectTag() { return "FILESAVER"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(RenderConfigRef rcfg);
 
 protected:

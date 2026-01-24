@@ -31,13 +31,13 @@ BlackBodyTexture::BlackBodyTexture(const float temp, const bool norm) :
 	rgb = TemperatureToWhitePoint(temperature, norm);
 }
 
-Properties BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("blackbody"));
-	props.Set(Property("scene.textures." + name + ".temperature")(temperature));
-	props.Set(Property("scene.textures." + name + ".normalize")(normalize));
+	props->Set(Property("scene.textures." + name + ".type")("blackbody"));
+	props->Set(Property("scene.textures." + name + ".temperature")(temperature));
+	props->Set(Property("scene.textures." + name + ".normalize")(normalize));
 
 	return props;
 }

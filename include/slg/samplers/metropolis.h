@@ -94,7 +94,7 @@ public:
 	// Used, most of the times, when not having a film
 	MetropolisSampleType GetLastSampleAcceptance(float &weight) const;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::PropertiesUPtr ToProperties() const;
 
 	u_int GetLargeMutationCount() const { return largeMutationCount; }
 
@@ -104,7 +104,7 @@ public:
 
 	static SamplerType GetObjectType() { return METROPOLIS; }
 	static std::string GetObjectTag() { return "METROPOLIS"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,

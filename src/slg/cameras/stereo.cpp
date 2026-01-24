@@ -211,27 +211,27 @@ void StereoCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 	leftEye->GetPDF(eyeRay, eyeDistance, filmX, filmY, pdfW, fluxToRadianceFactor);
 }
 
-Properties StereoCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props = PerspectiveCamera::ToProperties(imgMapCache, useRealFileName);
+PropertiesUPtr StereoCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	PropertiesUPtr props = PerspectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property("scene.camera.type")("stereo"));
+	props->Set(Property("scene.camera.type")("stereo"));
 
 	switch(stereoType) {
 		case STEREO_PERSPECTIVE:
-			props.Set(Property("scene.camera.stereo.type")("perspective"));
+			props->Set(Property("scene.camera.stereo.type")("perspective"));
 			break;
 		case STEREO_ENVIRONMENT_180:
-			props.Set(Property("scene.camera.stereo.type")("environment_180"));
+			props->Set(Property("scene.camera.stereo.type")("environment_180"));
 			break;
 		case STEREO_ENVIRONMENT_360:
-			props.Set(Property("scene.camera.stereo.type")("environment_360"));
+			props->Set(Property("scene.camera.stereo.type")("environment_360"));
 			break;
 		default:
 			throw runtime_error("Unknown StereoCamera type in StereoCamera::ToProperties(): " + ToString(stereoType));
 	}
 	
-	props.Set(Property("scene.camera.eyesdistance")(horizStereoEyesDistance));
-	props.Set(Property("scene.camera.lensdistance")(horizStereoLensDistance));
+	props->Set(Property("scene.camera.eyesdistance")(horizStereoEyesDistance));
+	props->Set(Property("scene.camera.lensdistance")(horizStereoLensDistance));
 
 	return props;
 }

@@ -47,7 +47,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -81,7 +81,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -118,7 +118,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -149,7 +149,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -188,7 +188,7 @@ public:
 	float GetContrast() const { return contrast; }
 	bool GetNoiseType() const { return hard; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -233,7 +233,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping; // Mapping is owned by texture
@@ -270,7 +270,7 @@ public:
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	int noisedepth;
@@ -304,7 +304,7 @@ public:
 	float GetContrast() const { return contrast; }
 	bool GetNoiseType() const { return hard; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -345,7 +345,7 @@ public:
 	float GetIntensity() const { return intensity; }
 	float GetExponent() const { return exponent; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;
@@ -388,7 +388,7 @@ public:
 	float GetContrast() const { return contrast; }
 	bool GetNoiseType() const { return hard; }
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	TextureMapping3DUPtr mapping;

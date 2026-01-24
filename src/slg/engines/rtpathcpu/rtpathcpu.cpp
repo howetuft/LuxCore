@@ -137,9 +137,11 @@ void RTPathCPURenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
-	return PathCPURenderEngine::ToProperties(cfg) <<
-			//------------------------------------------------------------------
+PropertiesUPtr RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = PathCPURenderEngine::ToProperties(cfg);
+	
+	*props <<
+				//------------------------------------------------------------------
 			// Overwrite some PathCPURenderEngine property
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
@@ -150,6 +152,8 @@ Properties RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
 			//------------------------------------------------------------------
 			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")) <<
 			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight"));
+	
+	return props;
 }
 
 RenderEngine *RTPathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {

@@ -91,7 +91,7 @@ public:
 
 	static SamplerType GetObjectType() { return RTPATHCPUSAMPLER; }
 	static std::string GetObjectTag() { return "RTPATHCPUSAMPLER"; }
-	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,

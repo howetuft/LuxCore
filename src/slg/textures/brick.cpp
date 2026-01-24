@@ -226,20 +226,20 @@ float BrickTexture::BrickNoise(u_int n) const {
 }
 
 
-Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("brick"));
-	props.Set(Property("scene.textures." + name + ".bricktex")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".mortartex")(GetTexture2().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".brickmodtex")(GetTexture3().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".brickmodbias")(modulationBias));
-	props.Set(Property("scene.textures." + name + ".brickwidth")(initialbrickwidth));
-	props.Set(Property("scene.textures." + name + ".brickheight")(initialbrickheight));
-	props.Set(Property("scene.textures." + name + ".brickdepth")(initialbrickdepth));
-	props.Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
-	props.Set(Property("scene.textures." + name + ".brickrun")(run));
+	props->Set(Property("scene.textures." + name + ".type")("brick"));
+	props->Set(Property("scene.textures." + name + ".bricktex")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".mortartex")(GetTexture2().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".brickmodtex")(GetTexture3().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".brickmodbias")(modulationBias));
+	props->Set(Property("scene.textures." + name + ".brickwidth")(initialbrickwidth));
+	props->Set(Property("scene.textures." + name + ".brickheight")(initialbrickheight));
+	props->Set(Property("scene.textures." + name + ".brickdepth")(initialbrickdepth));
+	props->Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
+	props->Set(Property("scene.textures." + name + ".brickrun")(run));
 
 	string brickBondValue;
 	switch (bond) {
@@ -263,9 +263,9 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 			brickBondValue = "stacked";
 			break;
 	}
-	props.Set(Property("scene.textures." + name + ".brickbond")(brickBondValue));
+	props->Set(Property("scene.textures." + name + ".brickbond")(brickBondValue));
 
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

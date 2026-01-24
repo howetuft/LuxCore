@@ -62,13 +62,13 @@ float DivideTexture::Filter() const {
 	return filter1 / filter2;
 }
 
-Properties DivideTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr DivideTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("divide"));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("divide"));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
 
 	return props;
 }

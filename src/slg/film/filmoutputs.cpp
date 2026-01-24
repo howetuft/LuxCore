@@ -57,10 +57,10 @@ void FilmOutputs::Add(
 		outputProps.push_back(std::make_unique<Properties>());
 }
 
-Properties FilmOutputs::ToProperties(const Properties &cfg) {
-	Properties props;
+PropertiesUPtr FilmOutputs::ToProperties(const Properties &cfg) {
+	auto props = std::make_unique<Properties>();
 
-	props << cfg.Get(Property("film.outputs.safesave")(true));
+	*props << cfg.Get(Property("film.outputs.safesave")(true));
 
 	set<string> outputNames;
 	vector<string> outputKeys = cfg.GetAllNames("film.outputs.");
@@ -96,266 +96,266 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 		switch (String2FilmOutputType(type.Get<string>())) {
 			case RGB: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case RGBA: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case RGB_IMAGEPIPELINE: {
 				const Property imagePipelineIndex = cfg.Get(Property("film.outputs." + outputName + ".index")(0));
-				props << type << fileName << imagePipelineIndex;
+				*props << type << fileName << imagePipelineIndex;
 				break;
 			}
 			case RGBA_IMAGEPIPELINE: {
 				const Property imagePipelineIndex = cfg.Get(Property("film.outputs." + outputName + ".index")(0));
-				props << type << fileName << imagePipelineIndex;
+				*props << type << fileName << imagePipelineIndex;
 				break;
 			}
 			case ALPHA: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case DEPTH: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Depth image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case POSITION: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Position image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case GEOMETRY_NORMAL: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case SHADING_NORMAL: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case MATERIAL_ID: {
 				if (!hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Material ID image can be saved only in non HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_DIFFUSE: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_DIFFUSE_REFLECT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct diffuse reflect image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_DIFFUSE_TRANSMIT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct diffuse transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_GLOSSY: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_GLOSSY_REFLECT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_GLOSSY_TRANSMIT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case EMISSION: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Emission image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_DIFFUSE: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_DIFFUSE_REFLECT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect diffuse reflect image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_DIFFUSE_TRANSMIT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect diffuse transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_GLOSSY: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_GLOSSY_REFLECT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_GLOSSY_TRANSMIT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_SPECULAR: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_SPECULAR_REFLECT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_SPECULAR_TRANSMIT: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case MATERIAL_ID_MASK: {
 				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
-				props << type << fileName << materialID;
+				*props << type << fileName << materialID;
 				break;
 			}
 			case DIRECT_SHADOW_MASK: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case INDIRECT_SHADOW_MASK: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case RADIANCE_GROUP: {
 				const Property lightID = cfg.Get(Property("film.outputs." + outputName + ".id")(0));
-				props << type << fileName << lightID;
+				*props << type << fileName << lightID;
 				break;
 			}
 			case UV: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case RAYCOUNT: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case BY_MATERIAL_ID: {
 				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
-				props << type << fileName << materialID;
+				*props << type << fileName << materialID;
 				break;
 			}
 			case IRRADIANCE: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case OBJECT_ID: {
 				if (!hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Object ID image can be saved only in non HDR formats: " + outputName);
 				break;
 			}
 			case OBJECT_ID_MASK: {
 				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
-				props << type << fileName << materialID;
+				*props << type << fileName << materialID;
 				break;
 			}
 			case BY_OBJECT_ID: {
 				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
-				props << type << fileName << materialID;
+				*props << type << fileName << materialID;
 				break;
 			}
 			case SAMPLECOUNT: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case CONVERGENCE: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case SERIALIZED_FILM: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case MATERIAL_ID_COLOR: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case ALBEDO: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case AVG_SHADING_NORMAL: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case NOISE: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case USER_IMPORTANCE: {
-				props << type << fileName;
+				*props << type << fileName;
 				break;
 			}
 			case CAUSTIC: {
 				if (hdrImage)
-					props << type << fileName;
+					*props << type << fileName;
 				else
 					throw runtime_error("Caustic image can be saved only in HDR formats: " + outputName);
 				break;

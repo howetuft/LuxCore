@@ -101,17 +101,17 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	}
 }
 
-Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr BandTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("band"));
-	props.Set(Property("scene.textures." + name + ".interpolation")(InterpolationType2String(interpType)));
-	props.Set(Property("scene.textures." + name + ".amount")(GetAmount().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("band"));
+	props->Set(Property("scene.textures." + name + ".interpolation")(InterpolationType2String(interpType)));
+	props->Set(Property("scene.textures." + name + ".amount")(GetAmount().GetSDLValue()));
 
 	for (u_int i = 0; i < GetOffsets().size(); ++i) {
-		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
-		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
+		props->Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
+		props->Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
 	}
 
 	return props;

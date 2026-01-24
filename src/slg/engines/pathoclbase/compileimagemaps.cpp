@@ -148,7 +148,7 @@ void CompiledScene::CompileImageMaps() {
 	const double tStart = WallClockTime();
 
 	vector<std::reference_wrapper<const ImageMap> > ims;
-	scene.imgMapCache.GetImageMaps(ims);
+	scene.GetImageMaps().GetImageMaps(ims);
 
 	for (u_int i = 0; i < ims.size(); ++i)
 		CompileImageMap(ims[i]);

@@ -37,12 +37,12 @@ LightCPURenderEngine::~LightCPURenderEngine() {}
 
 void LightCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().SetThreadCount(renderThreads.size());
 	GetFilm().Init();
 }
 
-RenderStatePtr LightCPURenderEngine::GetRenderState() {
+RenderStateSPtr LightCPURenderEngine::GetRenderState() {
 	return std::make_shared<LightCPURenderState>(bootStrapSeed);
 }
 
@@ -103,11 +103,15 @@ void LightCPURenderEngine::StopLockLess() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			PathTracer::ToProperties(cfg) <<
-			Sampler::ToProperties(cfg);
+PropertiesUPtr LightCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = CPUNoTileRenderEngine::ToProperties(cfg);
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			*PathTracer::ToProperties(cfg) <<
+			*Sampler::ToProperties(cfg);
+	
+	return props;
 }
 
 RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigRef rcfg) {

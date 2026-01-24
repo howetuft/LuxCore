@@ -25,19 +25,25 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianFilter)
 
-Properties GaussianFilter::ToProperties() const {
-	return Filter::ToProperties() <<
+PropertiesUPtr GaussianFilter::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Filter::ToProperties() <<
 			Property("film.filter.gaussian.alpha")(alpha);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties GaussianFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
+PropertiesUPtr GaussianFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
 			cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha"));
+	
+	return props;
 }
 
 FilterUPtr GaussianFilter::FromProperties(const Properties &cfg) {

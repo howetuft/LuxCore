@@ -42,13 +42,13 @@ float ColorDepthTexture::Filter() const {
 	return logf(Clamp(GetKt().Filter(), 1e-9f, 1.f)) / d;
 }
 
-Properties ColorDepthTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ColorDepthTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("colordepth"));
-	props.Set(Property("scene.textures." + name + ".kt")(GetKt().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".depth")(-d));
+	props->Set(Property("scene.textures." + name + ".type")("colordepth"));
+	props->Set(Property("scene.textures." + name + ".kt")(GetKt().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".depth")(-d));
 
 	return props;
 }

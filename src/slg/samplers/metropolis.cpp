@@ -438,26 +438,30 @@ MetropolisSampleType MetropolisSampler::GetLastSampleAcceptance(float &weight) c
 	return lastSampleAcceptance;
 }
 
-Properties MetropolisSampler::ToProperties() const {
-	return Sampler::ToProperties() <<
+PropertiesUPtr MetropolisSampler::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Sampler::ToProperties() <<
 			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
 			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<
 			Property("sampler.metropolis.imagemutationrate")(imageMutationRange) <<
 			Property("sampler.metropolis.addonlycaustics")(addOnlyCuastics);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by SamplerRegistry
 //------------------------------------------------------------------------------
 
-Properties MetropolisSampler::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+PropertiesUPtr MetropolisSampler::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props <<
+				cfg.Get(GetDefaultProps().Get("sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics"));
+	return props;
 }
 
 SamplerUPtr MetropolisSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,

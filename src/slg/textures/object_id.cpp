@@ -34,11 +34,11 @@ Spectrum ObjectIDTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(hitPoint.objectID);
 }
 
-Properties ObjectIDTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ObjectIDTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("objectid"));
+	props->Set(Property("scene.textures." + name + ".type")("objectid"));
 
 	return props;
 }
@@ -58,11 +58,11 @@ Spectrum ObjectIDColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 	                ((objID & 0xff0000u) >> 16) * ( 1.f / 255.f));
 }
 
-Properties ObjectIDColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ObjectIDColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("objectidcolor"));
+	props->Set(Property("scene.textures." + name + ".type")("objectidcolor"));
 
 	return props;
 }
@@ -79,11 +79,11 @@ Spectrum ObjectIDNormalizedTexture::GetSpectrumValue(const HitPoint &hitPoint) c
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties ObjectIDNormalizedTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ObjectIDNormalizedTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("objectidnormalized"));
+	props->Set(Property("scene.textures." + name + ".type")("objectidnormalized"));
 
 	return props;
 }

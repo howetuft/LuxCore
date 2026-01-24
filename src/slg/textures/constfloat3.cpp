@@ -30,12 +30,12 @@ string ConstFloat3Texture::GetSDLValue() const {
 	return ToString(color.c[0]) + " " + ToString(color.c[1]) + " " + ToString(color.c[2]);
 }
 
-Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("constfloat3"));
-	props.Set(Property("scene.textures." + name + ".value")(color));
+	props->Set(Property("scene.textures." + name + ".type")("constfloat3"));
+	props->Set(Property("scene.textures." + name + ".value")(color));
 
 	return props;
 }

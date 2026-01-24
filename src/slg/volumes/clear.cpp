@@ -109,13 +109,13 @@ void ClearVolume::UpdateTextureReferences(TextureConstRef oldTex, TextureRef new
 		sigmaA = newTex;
 }
 
-Properties ClearVolume::ToProperties() const {
-	Properties props;
+PropertiesUPtr ClearVolume::ToProperties() const {
+	PropertiesUPtr props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.volumes." + name + ".type")("clear"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
-	props.Set(Volume::ToProperties());
+	props->Set(Property("scene.volumes." + name + ".type")("clear"));
+	props->Set(Property("scene.volumes." + name + ".absorption")(GetSigmaA().GetSDLValue()));
+	props->Set(Volume::ToProperties());
 
 	return props;
 }

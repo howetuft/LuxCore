@@ -89,15 +89,15 @@ Spectrum MapSphereLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	return result * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
 }
 
-Properties MapSphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+PropertiesUPtr MapSphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = SphereLight::ToProperties(imgMapCache, useRealFileName);
+	PropertiesUPtr props = SphereLight::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".type")("mapsphere"));
+	props->Set(Property(prefix + ".type")("mapsphere"));
 	const string fileName = useRealFileName ?
 		imageMap->GetName() : imgMapCache.GetSequenceFileName(*imageMap);
-	props.Set(Property(prefix + ".mapfile")(fileName));
-	props.Set(imageMap->ToProperties(prefix, false));
+	props->Set(Property(prefix + ".mapfile")(fileName));
+	props->Set(*imageMap->ToProperties(prefix, false));
 
 	return props;
 }

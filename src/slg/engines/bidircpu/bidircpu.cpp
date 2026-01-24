@@ -46,7 +46,7 @@ BiDirCPURenderEngine::~BiDirCPURenderEngine() {
 	delete photonGICache;
 }
 
-RenderStatePtr BiDirCPURenderEngine::GetRenderState() {
+RenderStateSPtr BiDirCPURenderEngine::GetRenderState() {
 	return std::make_shared<BiDirCPURenderState>(bootStrapSeed, photonGICache);
 }
 
@@ -140,7 +140,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 void BiDirCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
-	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().lightDefs.GetLightGroupCount());
+	GetFilm().SetRadianceGroupCount(renderConfig.GetScene().GetLightSources().GetLightGroupCount());
 	GetFilm().SetThreadCount(renderThreads.size());
 	GetFilm().Init();
 }
@@ -158,9 +158,11 @@ void BiDirCPURenderEngine::StopLockLess() {
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
 
-Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPUNoTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+PropertiesUPtr BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = CPUNoTileRenderEngine::ToProperties(cfg);
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")) <<
@@ -169,8 +171,10 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
-			Sampler::ToProperties(cfg) <<
-			PhotonGICache::ToProperties(cfg);
+			*Sampler::ToProperties(cfg) <<
+			*PhotonGICache::ToProperties(cfg);
+	
+	return props;
 }
 
 RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigRef rcfg) {

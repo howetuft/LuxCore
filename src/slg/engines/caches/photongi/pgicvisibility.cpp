@@ -51,7 +51,7 @@ public:
 	
 protected:
 	virtual IndexOctree<PGICVisibilityParticle> *AllocOctree() const {
-		auto bbox = scene.dataSet->GetBBox();
+		auto bbox = scene.GetDataSet().GetBBox();
 		return new PGICOctree(
 			visibilityParticles,
 			bbox,

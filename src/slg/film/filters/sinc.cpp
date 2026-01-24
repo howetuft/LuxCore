@@ -25,19 +25,25 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::SincFilter)
 
-Properties SincFilter::ToProperties() const {
-	return Filter::ToProperties() <<
+PropertiesUPtr SincFilter::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Filter::ToProperties() <<
 			Property("film.filter.sinc.tau")(tau);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties SincFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
+PropertiesUPtr SincFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
 			cfg.Get(GetDefaultProps().Get("film.filter.sinc.tau"));
+	
+	return props;
 }
 
 FilterUPtr SincFilter::FromProperties(const Properties &cfg) {

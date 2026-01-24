@@ -37,14 +37,14 @@ Spectrum MakeFloat3Texture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(v1, v2, v3);
 }
 
-Properties MakeFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr MakeFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("makefloat3"));
-	props.Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture3")(GetTexture3().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("makefloat3"));
+	props->Set(Property("scene.textures." + name + ".texture1")(GetTexture1().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture2")(GetTexture2().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".texture3")(GetTexture3().GetSDLValue()));
 
 	return props;
 }

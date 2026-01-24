@@ -412,20 +412,20 @@ Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistanc
 	return ((Dot(n, hitPoint.shadeN) < 0.f) ? -1.f : 1.f) * n;
 }
 
-Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
+PropertiesUPtr ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
 		const bool useRealFileName) const {
-	Properties props;
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
+	props->Set(Property("scene.textures." + name + ".type")("imagemap"));
 
 	const string fileName = useRealFileName ?
 		GetImageMap().GetName() : imgMapCache.GetSequenceFileName(imageMap);
-	props.Set(Property("scene.textures." + name + ".file")(fileName));
-	props.Set(Property("scene.textures." + name + ".gain")(gain));
-	props.Set(GetImageMap().ToProperties("scene.textures." + name, false));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
-	props.Set(Property("scene.textures." + name + ".randomizedtiling.enable")(randomizedTiling));
+	props->Set(Property("scene.textures." + name + ".file")(fileName));
+	props->Set(Property("scene.textures." + name + ".gain")(gain));
+	props->Set(GetImageMap().ToProperties("scene.textures." + name, false));
+	props->Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props->Set(Property("scene.textures." + name + ".randomizedtiling.enable")(randomizedTiling));
 
 	return props;
 }

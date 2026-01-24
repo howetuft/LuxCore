@@ -34,13 +34,13 @@ Spectrum PowerTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties PowerTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
+PropertiesUPtr PowerTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	auto props = std::make_unique<Properties>();
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("power"));
-	props.Set(Property("scene.textures." + name + ".base")(GetBase().GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".exponent")(GetExponent().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".type")("power"));
+	props->Set(Property("scene.textures." + name + ".base")(GetBase().GetSDLValue()));
+	props->Set(Property("scene.textures." + name + ".exponent")(GetExponent().GetSDLValue()));
 
 	return props;
 }

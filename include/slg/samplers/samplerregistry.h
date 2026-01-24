@@ -98,7 +98,7 @@ protected:
 	// Used to register all sub-class SamplerType2String() static methods
 	typedef std::string (*GetObjectTag)();
 	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToProperties)(const luxrays::Properties &cfg);
+	typedef luxrays::PropertiesUPtr (*ToProperties)(const luxrays::Properties &cfg);
 	// Used to register all sub-class FromProperties() static methods
 	typedef SamplerUPtr (*FromProperties)(const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
 		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, std::shared_ptr<SamplerSharedData> sharedData);

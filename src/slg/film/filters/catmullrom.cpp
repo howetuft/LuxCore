@@ -25,18 +25,24 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::CatmullRomFilter)
 
-Properties CatmullRomFilter::ToProperties() const {
-	return Filter::ToProperties() <<
+PropertiesUPtr CatmullRomFilter::ToProperties() const {
+	auto props = std::make_unique<Properties>();
+	*props << Filter::ToProperties() <<
 			Property("film.filter.sinc.tau")(alpha);
+	return props;
 }
 
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-Properties CatmullRomFilter::ToProperties(const Properties &cfg) {
-	return Properties() <<
-			cfg.Get(GetDefaultProps().Get("film.filter.type"));
+PropertiesUPtr CatmullRomFilter::ToProperties(const Properties &cfg) {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	
+	*props <<
+				cfg.Get(GetDefaultProps().Get("film.filter.type"));
+	
+	return props;
 }
 
 FilterUPtr CatmullRomFilter::FromProperties(const Properties &cfg) {
