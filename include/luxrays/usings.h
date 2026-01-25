@@ -190,44 +190,11 @@ using IntersectionDeviceUPtr = std::unique_ptr<IntersectionDevice>;
 using IntersectionDeviceConstUPtr = std::unique_ptr<const IntersectionDevice>;
 
 DECLARE_SUBTYPES(Mesh);
-//class Mesh;
-//using MeshUPtr = std::unique_ptr<Mesh>;
-//using MeshConstUPtr = std::unique_ptr<const Mesh>;
-//using MeshRef = Mesh&;
-//using MeshConstRef = const Mesh &;
-
 DECLARE_SUBTYPES(ExtMesh);
-//class ExtMesh;
-//using ExtMeshUPtr = std::unique_ptr<ExtMesh>;
-//using ExtMeshConstUPtr = std::unique_ptr<const ExtMesh>;
-//using ExtMeshRef = ExtMesh&;
-//using ExtMeshConstRef = const ExtMesh&;
-
 DECLARE_SUBTYPES(ExtMesh);
-//class ExtMesh;
-//using ExtMeshConstRef = const ExtMesh&;
-//using ExtMeshRef = ExtMesh&;
-
 DECLARE_SUBTYPES(ExtTriangleMesh);
-//class ExtTriangleMesh;
-//using ExtTriangleMeshUPtr = std::unique_ptr<ExtTriangleMesh>;
-//using ExtTriangleMeshConstUPtr = std::unique_ptr<const ExtTriangleMesh>;
-//using ExtTriangleMeshConstRef = const ExtTriangleMesh&;
-//using ExtTriangleMeshRef = ExtTriangleMesh&;
-
 DECLARE_SUBTYPES(ExtInstanceTriangleMesh);
-//class ExtInstanceTriangleMesh;
-//using ExtInstanceTriangleMeshUPtr = std::unique_ptr<ExtInstanceTriangleMesh>;
-//using ExtInstanceTriangleMeshConstUPtr = std::unique_ptr<const ExtInstanceTriangleMesh>;
-//using ExtInstanceTriangleMeshConstRef = const ExtInstanceTriangleMesh&;
-//using ExtInstanceTriangleMeshRef = ExtInstanceTriangleMesh&;
-
 DECLARE_SUBTYPES(ExtMotionTriangleMesh)
-//class ExtMotionTriangleMesh;
-//using ExtMotionTriangleMeshUPtr = std::unique_ptr<ExtMotionTriangleMesh>;
-//using ExtMotionTriangleMeshConstUPtr = std::unique_ptr<const ExtMotionTriangleMesh>;
-//using ExtMotionTriangleMeshConstRef = const ExtMotionTriangleMesh&;
-//using ExtMotionTriangleMeshRef = ExtMotionTriangleMesh&;
 
 class Matrix4x4;
 using Matrix4x4Ptr = std::shared_ptr<Matrix4x4>;

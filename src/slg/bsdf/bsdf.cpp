@@ -50,12 +50,15 @@ void BSDF::Init(
 	volInfo->SetHitPointVolumes(hitPoint,
 		material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 		material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
-		scene.GetDefaultWorldVolume()
+		scene.HasDefaultWorldVolume() ?
+		OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
+		OptionalPtr<const Volume>(std::nullopt)
 	);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.GetLightSources().GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
+		triangleLightSource =
+			scene.GetLightSources().GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
 	else
 		triangleLightSource = std::nullopt;
 
@@ -98,7 +101,10 @@ void BSDF::Init(
 	volInfo->SetHitPointVolumes(hitPoint,
 			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
-			scene.GetDefaultWorldVolume());
+			scene.HasDefaultWorldVolume() ?
+				OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
+				OptionalPtr<const Volume>()
+	);
 
 	// Check if it is a light source
 	if (material->IsLightSource())

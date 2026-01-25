@@ -93,7 +93,7 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 
 			BSDF bsdf;
 			bsdf.Init(false, *scene, ray, rayHit, 0.f, &volInfo);
-			
+
 			volume = bsdf.hitPoint.intoObject ?
 				bsdf.hitPoint.exteriorVolume : bsdf.hitPoint.interiorVolume;*/
 
@@ -115,8 +115,11 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 			volume = intoObject ?
 				material.GetExteriorVolume() :
 				material.GetInteriorVolume();
-			if (!volume)
-				volume = scene.GetDefaultWorldVolume();
+			if (!volume) {
+				volume = scene.HasDefaultWorldVolume() ?
+					OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
+					OptionalPtr<const Volume>(std::nullopt);
+			}
 		}
 	}
 }

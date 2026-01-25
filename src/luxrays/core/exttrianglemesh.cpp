@@ -393,7 +393,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
-	for (auto& meshref : meshes) {
+	for (auto meshref : meshes) {
 		const ExtTriangleMesh& mesh = meshref;
 		totalVertexCount += mesh.GetTotalVertexCount();
 		totalTriangleCount += mesh.GetTotalTriangleCount();
