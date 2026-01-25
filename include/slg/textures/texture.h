@@ -71,9 +71,7 @@ typedef enum {
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
 
-class Texture :
-	public luxrays::NamedObject,
-	public std::enable_shared_from_this<Texture>
+class Texture : public luxrays::NamedObject
 {
 public:
 	Texture() : NamedObject("texture") { }

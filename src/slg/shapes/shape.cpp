@@ -31,6 +31,6 @@ ExtTriangleMeshUPtr Shape::Refine(SceneConstRef scene) {
 	auto mesh = RefineImpl(scene);
 	refined = true;
 
-	return std::move(mesh);
+	return mesh;
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

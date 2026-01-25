@@ -27,8 +27,8 @@ using namespace luxrays;
 using namespace slg;
 
 GroupShape::GroupShape(
-	std::span<GroupShape::MeshRefWrapper> ms,
-	std::optional<std::span<Transform>> ts
+	std::vector<GroupShape::MeshRefWrapper> ms,
+	std::optional<std::vector<Transform>> ts
 ) :	meshes(ms), trans(ts) {
 }
 

@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/cyhair/cyHairFile.h"
 #include "slg/scene/scene.h"
@@ -302,8 +303,9 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 						"Unknown shape name in a group shape " + shapeName + ": " + name
 					);
 
-				meshes.push_back(
-					static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name))
+				//auto& mesh = static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(name));
+				meshes.emplace_back(
+					dynamic_cast<const ExtTriangleMesh&>(extMeshCache.GetExtMesh(name))
 				);
 
 				if (props.IsDefined(prefix + ".transformation")) {

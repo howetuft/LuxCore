@@ -387,14 +387,14 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTri
 }
 
 ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
-	std::span<std::reference_wrapper<const ExtTriangleMesh>> meshes,
-	std::optional<std::span<Transform>> trans
+	std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
+	std::optional<std::vector<Transform>> trans
 ) {
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
 	for (auto meshref : meshes) {
-		const ExtTriangleMesh& mesh = meshref;
+		ExtTriangleMeshConstRef mesh = meshref.get();
 		totalVertexCount += mesh.GetTotalVertexCount();
 		totalTriangleCount += mesh.GetTotalTriangleCount();
 	}

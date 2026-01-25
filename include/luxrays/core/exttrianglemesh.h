@@ -320,8 +320,8 @@ public:
 	static ExtTriangleMeshUPtr Load(const std::string &fileName);
 	
 	static ExtTriangleMeshUPtr Merge(
-		std::span<std::reference_wrapper<const ExtTriangleMesh>> meshes,
-		std::optional<std::span<luxrays::Transform>> trans = std::nullopt
+		std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
+		std::optional<std::vector<luxrays::Transform>> trans = std::nullopt
 	);
 
 	friend class ExtInstanceTriangleMesh;

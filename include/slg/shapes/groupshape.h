@@ -43,8 +43,8 @@ public:
 	using MeshRefWrapper = std::reference_wrapper<const ExtTriangleMesh>;
 
 	GroupShape(
-		std::span<MeshRefWrapper> meshes,
-		std::optional<std::span<Transform>> trans = std::nullopt
+		std::vector<MeshRefWrapper> meshes,
+		std::optional<std::vector<Transform>> trans = std::nullopt
 	);
 	virtual ~GroupShape();
 
@@ -53,8 +53,8 @@ public:
 protected:
 	virtual ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	std::span<MeshRefWrapper> meshes;
-	std::optional<std::span<Transform>> trans;
+	std::vector<MeshRefWrapper> meshes;
+	std::optional<std::vector<Transform>> trans;
 };
 
 }
