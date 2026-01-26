@@ -263,7 +263,7 @@ protected:
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
 
-	luxrays::JThreadPtr renderThread;
+	luxrays::JThreadUPtr renderThread;
 
 	std::vector<std::shared_ptr<ThreadFilm> > threadFilms;
 

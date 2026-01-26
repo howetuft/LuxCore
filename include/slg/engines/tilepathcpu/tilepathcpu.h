@@ -45,7 +45,7 @@ public:
 	friend class TilePathCPURenderEngine;
 
 private:
-	virtual luxrays::JThreadPtr AllocRenderThread() {
+	virtual luxrays::JThreadUPtr AllocRenderThread() {
 		auto t = std::make_unique<luxrays::JThread>(
 			std::bind_front(&TilePathCPURenderThread::RenderFunc, this)
 		);

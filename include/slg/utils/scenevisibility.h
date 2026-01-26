@@ -78,7 +78,7 @@ protected:
 		u_int &visibilityCacheHits;
 		bool &visibilityWarmUp;
 
-		luxrays::JThreadPtr renderThread;
+		luxrays::JThreadUPtr renderThread;
 	};
 
 	virtual IndexOctree<T> *AllocOctree() const = 0;

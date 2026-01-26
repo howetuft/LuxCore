@@ -69,7 +69,7 @@ protected:
 	void RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
 	void RenderFunc(std::stop_token stop_token);
 
-	virtual luxrays::JThreadPtr AllocRenderThread() {
+	virtual luxrays::JThreadUPtr AllocRenderThread() {
 		auto t = std::make_unique<luxrays::JThread>(
 			std::bind_front(std::bind_front(&BakeCPURenderThread::RenderFunc, this))
 		);

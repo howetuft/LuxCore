@@ -91,7 +91,7 @@ private:
 	std::atomic<u_int> &globalIndirectSize;
 	std::atomic<u_int> &globalCausticSize;
 
-	luxrays::JThreadPtr renderThread;
+	luxrays::JThreadUPtr renderThread;
 
 	u_int sampleBootSize, sampleStepSize, sampleSize;
 	bool indirectDone, causticDone;

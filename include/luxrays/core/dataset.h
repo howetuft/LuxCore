@@ -52,7 +52,7 @@ public:
 	void UpdateBBoxes();
 
 	bool HasAccelerator(const AcceleratorType accelType) const;
-	AcceleratorConstPtr GetAccelerator(const AcceleratorType accelType) const;
+	AcceleratorConstSPtr GetAccelerator(const AcceleratorType accelType) const;
 	bool DoesAllAcceleratorsSupportUpdate() const;
 	void UpdateAccelerators();
 
@@ -81,7 +81,7 @@ private:
 	BSphere bsphere;
 
 	mutable std::mutex accelsMutex;
-	mutable std::unordered_map<AcceleratorType, AcceleratorPtr> accels;  // Cache
+	mutable std::unordered_map<AcceleratorType, AcceleratorSPtr> accels;  // Cache
 
 	AcceleratorType accelType;
 	bool preprocessed;

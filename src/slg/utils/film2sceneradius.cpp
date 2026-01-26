@@ -284,7 +284,7 @@ float Film2SceneRadius(
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
 
 	std::vector<Film2SceneRadiusThreadParams> params(renderThreadCount, scene);
-	std::vector<luxrays::JThreadPtr> renderThreads(renderThreadCount);
+	std::vector<luxrays::JThreadUPtr> renderThreads(renderThreadCount);
 
 	for (size_t i = 0; i < renderThreadCount; ++i) {
 		params[i].threadIndex = i;

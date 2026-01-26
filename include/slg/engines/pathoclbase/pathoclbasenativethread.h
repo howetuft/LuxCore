@@ -63,7 +63,7 @@ protected:
 	PathOCLBaseRenderEngine *renderEngine;
 	luxrays::NativeIntersectionDevice *intersectionDevice;
 
-	luxrays::JThreadPtr renderThread;
+	luxrays::JThreadUPtr renderThread;
 
 	bool started, editMode, threadDone;
 };

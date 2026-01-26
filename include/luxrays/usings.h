@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "luxrays/core/geometry/bsphere.h"
 #include <memory>
 #include <optional>
+#include <thread>
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -31,10 +31,6 @@
 #include <boost/serialization/optional.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/split_free.hpp>
-
-namespace std {
-	class jthread;
-}
 
 
 // Macro to define useful associated types
@@ -143,141 +139,38 @@ struct std::hash<OptionalPtr<const T>> {
 
 namespace luxrays {
 
-class Accelerator;
-using AcceleratorPtr = std::shared_ptr<Accelerator>;
-using AcceleratorConstPtr = std::shared_ptr<const Accelerator>;
-using AcceleratorUPtr = std::unique_ptr<Accelerator>;
-using AcceleratorConstUPtr = std::unique_ptr<const Accelerator>;
-
-class BBox;
-using BBoxPtr = std::shared_ptr<BBox>;
-using BBoxConstPtr = std::shared_ptr<const BBox>;
-using BBoxUPtr = std::unique_ptr<BBox>;
-using BBoxConstUPtr = std::unique_ptr<const BBox>;
-
+DECLARE_SUBTYPES(Accelerator);
+DECLARE_SUBTYPES(BBox);
 DECLARE_SUBTYPES(BSphere);
-
-class Context;
-using ContextPtr = std::shared_ptr<Context>;
-using ContextConstPtr = std::shared_ptr<const Context>;
-using ContextUPtr = std::unique_ptr<Context>;
-using ContextConstUPtr = std::unique_ptr<const Context>;
-
+DECLARE_SUBTYPES(Context);
 DECLARE_SUBTYPES(DataSet);
-
-class Device;
-using DevicePtr = std::shared_ptr<Device>;
-using DeviceConstPtr = std::shared_ptr<const Device>;
-using DeviceUPtr = std::unique_ptr<Device>;
-using DeviceConstUPtr = std::unique_ptr<const Device>;
-
-class DeviceDescription;
-using DeviceDescriptionPtr = std::shared_ptr<DeviceDescription>;
-using DeviceDescriptionConstPtr = std::shared_ptr<const DeviceDescription>;
-using DeviceDescriptionUPtr = std::unique_ptr<DeviceDescription>;
-using DeviceDescriptionConstUPtr = std::unique_ptr<const DeviceDescription>;
-
-class HardwareDevice;
-using HardwareDevicePtr = std::shared_ptr<HardwareDevice>;
-using HardwareDeviceConstPtr = std::shared_ptr<const HardwareDevice>;
-using HardwareDeviceUPtr = std::unique_ptr<HardwareDevice>;
-using HardwareDeviceConstUPtr = std::unique_ptr<const HardwareDevice>;
-
-class IntersectionDevice;
-using IntersectionDevicePtr = std::shared_ptr<IntersectionDevice>;
-using IntersectionDeviceConstPtr = std::shared_ptr<const IntersectionDevice>;
-using IntersectionDeviceUPtr = std::unique_ptr<IntersectionDevice>;
-using IntersectionDeviceConstUPtr = std::unique_ptr<const IntersectionDevice>;
-
+DECLARE_SUBTYPES(Device);
+DECLARE_SUBTYPES(DeviceDescription);
+DECLARE_SUBTYPES(HardwareDevice);
+DECLARE_SUBTYPES(IntersectionDevice)
 DECLARE_SUBTYPES(Mesh);
 DECLARE_SUBTYPES(ExtMesh);
 DECLARE_SUBTYPES(ExtMesh);
 DECLARE_SUBTYPES(ExtTriangleMesh);
 DECLARE_SUBTYPES(ExtInstanceTriangleMesh);
-DECLARE_SUBTYPES(ExtMotionTriangleMesh)
-
-class Matrix4x4;
-using Matrix4x4Ptr = std::shared_ptr<Matrix4x4>;
-using Matrix4x4ConstPtr = std::shared_ptr<Matrix4x4>;
-using Matrix4x4UPtr = std::unique_ptr<Matrix4x4>;
-using Matrix4x4ConstUPtr = std::unique_ptr<Matrix4x4>;
-
-class NamedObject;
-using NamedObjectPtr = std::shared_ptr<NamedObject>;
-using NamedObjectConstPtr = std::shared_ptr<const NamedObject>;
-using NamedObjectUPtr = std::unique_ptr<NamedObject>;
-using NamedObjectConstUPtr = std::unique_ptr<const NamedObject>;
-using NamedObjectRef = NamedObject&;
-using NamedObjectConstRef = const NamedObject&;
-
-class Normal;
-using NormalPtr = std::shared_ptr<Normal>;
-using NormalConstPtr = std::shared_ptr<Normal>;
-using NormalUPtr = std::unique_ptr<Normal>;
-using NormalConstUPtr = std::unique_ptr<Normal>;
-
-class Point;
-using PointPtr = std::shared_ptr<Point>;
-using PointConstPtr = std::shared_ptr<const Point>;
-using PointUPtr = std::unique_ptr<Point>;
-using PointConstUPtr = std::unique_ptr<const Point>;
-
-class Ray;
-using RayPtr = std::shared_ptr<Ray>;
-using RayConstPtr = std::shared_ptr<const Ray>;
-using RayUPtr = std::unique_ptr<Ray>;
-using RayConstUPtr = std::unique_ptr<const Ray>;
-
-class RayHit;
-using RayHitPtr = std::shared_ptr<RayHit>;
-using RayHitConstPtr = std::shared_ptr<const RayHit>;
-using RayHitUPtr = std::unique_ptr<RayHit>;
-using RayHitConstUPtr = std::unique_ptr<const RayHit>;
-
-class RGBColor;
-using RGBColorPtr = std::shared_ptr<RGBColor>;
-using RGBColorConstPtr = std::shared_ptr<const RGBColor>;
-using RGBColorUPtr = std::unique_ptr<RGBColor>;
-using RGBColorConstUPtr = std::unique_ptr<const RGBColor>;
-
-class Triangle;
-//using TrianglePtr = std::shared_ptr<Triangle>;
-//using TriangleConstPtr = std::shared_ptr<const Triangle>;
-using TriangleUPtr = std::unique_ptr<Triangle>;
-using TriangleConstUPtr = std::unique_ptr<const Triangle>;
-
-class TriangleMesh;
-//using TriangleMeshPtr = std::shared_ptr<TriangleMesh>;
-//using TriangleMeshConstPtr = std::shared_ptr<const TriangleMesh>;
-using TriangleMeshUPtr = std::unique_ptr<TriangleMesh>;
-using TriangleMeshConstUPtr = std::unique_ptr<const TriangleMesh>;
-using TriangleMeshRef = TriangleMesh&;
-using TriangleMeshConstRef = const TriangleMesh&;
-
-class UV;
-using UVPtr = std::shared_ptr<UV>;
-using UVConstPtr = std::shared_ptr<const UV>;
-using UVUPtr = std::unique_ptr<UV>;
-using UVConstUPtr = std::unique_ptr<const UV>;
-
-class Vector;
-using VectorPtr = std::shared_ptr<Vector>;
-using VectorConstPtr = std::shared_ptr<const Vector>;
-using VectorUPtr = std::unique_ptr<Vector>;
-using VectorConstUPtr = std::unique_ptr<const Vector>;
-
-class Properties;
-using PropertiesPtr = const std::unique_ptr<Properties> &;
-using PropertiesConstPtr = const std::unique_ptr<const Properties> &;
-using PropertiesUPtr = std::unique_ptr<Properties>;
-using PropertiesRef = Properties &;
-using PropertiesConstRef = const Properties &;
+DECLARE_SUBTYPES(ExtMotionTriangleMesh);
+DECLARE_SUBTYPES(Matrix4x4);
+DECLARE_SUBTYPES(NamedObject);
+DECLARE_SUBTYPES(Normal);
+DECLARE_SUBTYPES(Point);
+DECLARE_SUBTYPES(Ray);
+DECLARE_SUBTYPES(RayHit);
+DECLARE_SUBTYPES(RGBColor);
+DECLARE_SUBTYPES(Triangle);
+DECLARE_SUBTYPES(TriangleMesh);
+DECLARE_SUBTYPES(UV);
+DECLARE_SUBTYPES(Vector);
+DECLARE_SUBTYPES(Properties);
+DECLARE_SUBTYPES(RandomGenerator);
 
 using JThread = std::jthread;
-using JThreadPtr = std::unique_ptr<std::jthread>;
+using JThreadUPtr = std::unique_ptr<std::jthread>;
 
-class RandomGenerator;
-using RandomGeneratorUPtr = std::unique_ptr<RandomGenerator>;
 
 }
 

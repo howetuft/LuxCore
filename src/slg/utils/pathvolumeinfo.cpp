@@ -94,8 +94,10 @@ OptionalPtr<const Volume> PathVolumeInfo::SimulateAddVolume(OptionalPtr<const Vo
 
 	if (HasCurrentVolume()) {
 		if (vol) {
+			auto curPriority = GetCurrentVolume().GetPriority();
+			auto volPriority = vol->GetPriority();
 			return
-				GetCurrentVolume().GetPriority() > vol->GetPriority() ?
+				curPriority > volPriority ?
 				OptionalPtr<const Volume>(GetCurrentVolume()) :
 				vol;
 		} else {

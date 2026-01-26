@@ -548,7 +548,7 @@ private:
 	FilmSamplesCounts samplesCounts;
 
 	std::vector<ImagePipeline *> imagePipelines;
-	luxrays::JThreadPtr imagePipelineThread;
+	luxrays::JThreadUPtr imagePipelineThread;
 	bool isAsyncImagePipelineRunning;
 
 	// Halt conditions

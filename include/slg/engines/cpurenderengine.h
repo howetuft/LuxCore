@@ -60,7 +60,7 @@ public:
 	friend class CPURenderEngine;
 
 protected:
-	virtual luxrays::JThreadPtr AllocRenderThread() = 0;
+	virtual luxrays::JThreadUPtr AllocRenderThread() = 0;
 
 	virtual void StartRenderThread();
 	virtual void StopRenderThread();
@@ -68,7 +68,7 @@ protected:
 	u_int threadIndex;
 	CPURenderEngine *renderEngine;  // Back link
 
-	luxrays::JThreadPtr renderThread;
+	luxrays::JThreadUPtr renderThread;
 	luxrays::IntersectionDevice *device;
 
 	std::atomic<bool> started, editMode, threadDone;
