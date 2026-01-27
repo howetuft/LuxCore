@@ -619,8 +619,8 @@ RenderSessionPtr RenderSession::Create(
 	FIS& startFilmImpl = dynamic_cast<FIS&>(startFilm);
 
 	//auto startFilmImpl = startFilm ?
-		//OptionalPtr<FIS>{static_cast<FIS&>(*startFilm)}:
-		//std::nullopt;
+		//std::experimental::observer_ptr<FIS>{static_cast<FIS&>(*startFilm)}:
+		//nullptr;
 
 	auto result = RenderSessionImpl::Create(
 		std::ref(configImpl),

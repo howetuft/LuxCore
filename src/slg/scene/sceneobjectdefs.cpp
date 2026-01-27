@@ -71,9 +71,9 @@ void SceneObjectDefinitions::DefineIntersectableLights
 		//tl->SetName(prefix + ToString(i));
 		tl->SetName(prefix + boost::lexical_cast<string>(i));
 
-		tl->lightMaterial = obj.GetMaterial();
+		tl->lightMaterial.reset(&obj.GetMaterial());
 		tl->volume = tl->lightMaterial->GetExteriorVolume();
-		tl->sceneObject = obj;
+		tl->sceneObject.reset(&obj);
 		// This is initialized in LightSourceDefinitions::Preprocess()
 		tl->meshIndex = NULL_INDEX;
 		tl->triangleIndex = i;

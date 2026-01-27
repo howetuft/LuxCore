@@ -44,21 +44,21 @@ FilmDenoiser::FilmDenoiser() {
 	Init();
 }
 
-FilmDenoiser::FilmDenoiser(OptionalPtr<Film> f) {
+FilmDenoiser::FilmDenoiser(std::experimental::observer_ptr<Film> f) {
 	Init();
 
 	film = f;
 }
 
 void FilmDenoiser::Init() {
-	film = std::nullopt;
+	film = nullptr;
 	samplesAccumulatorPixelNormalized = nullptr;
 	samplesAccumulatorScreenNormalized = nullptr;
 	sampleScale = 1.f;
 	warmUpSPP = -1.f;
 	warmUpDone = false;
 
-	referenceFilm = std::nullopt;
+	referenceFilm = nullptr;
 	referenceFilmWidth = 0;
 	referenceFilmHeight = 0;
 	referenceFilmOffsetX = 0;
@@ -131,7 +131,7 @@ void FilmDenoiser::CheckReferenceFilm() {
 	}
 }
 
-void FilmDenoiser::SetReferenceFilm(OptionalPtr<Film> refFilm,
+void FilmDenoiser::SetReferenceFilm(std::experimental::observer_ptr<Film> refFilm,
 		const u_int offsetX, const u_int offsetY) {
 	referenceFilm = refFilm;
 	
@@ -145,7 +145,7 @@ void FilmDenoiser::SetReferenceFilm(OptionalPtr<Film> refFilm,
 	}
 }
 
-void FilmDenoiser::CopyReferenceFilm(OptionalPtr<Film> refFilm) {
+void FilmDenoiser::CopyReferenceFilm(std::experimental::observer_ptr<Film> refFilm) {
 	if (!warmUpDone && refFilm->filmDenoiser->warmUpDone) {
 		std::unique_lock<std::mutex> lock(warmUpDoneMutex);
 

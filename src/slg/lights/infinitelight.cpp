@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(std::nullopt), imageMapDistribution(nullptr), visibilityMapCache(nullptr) {
+	imageMap(nullptr), imageMapDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
 InfiniteLight::~InfiniteLight() {

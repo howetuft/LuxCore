@@ -29,12 +29,12 @@ namespace slg {
 
 class GlossyTranslucentMaterial : public Material {
 public:
-	GlossyTranslucentMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> kd, OptionalPtr<const Texture> kt, OptionalPtr<const Texture> ks, OptionalPtr<const Texture> ks2,
-			OptionalPtr<const Texture> u, OptionalPtr<const Texture> u2, OptionalPtr<const Texture> v, OptionalPtr<const Texture> v2,
-			OptionalPtr<const Texture> ka, OptionalPtr<const Texture> ka2, OptionalPtr<const Texture> d, OptionalPtr<const Texture> d2,
-			OptionalPtr<const Texture> i, OptionalPtr<const Texture> i2, const bool mbounce, const bool mbounce2);
+	GlossyTranslucentMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr kd, TextureConstOPtr kt, TextureConstOPtr ks, TextureConstOPtr ks2,
+			TextureConstOPtr u, TextureConstOPtr u2, TextureConstOPtr v, TextureConstOPtr v2,
+			TextureConstOPtr ka, TextureConstOPtr ka2, TextureConstOPtr d, TextureConstOPtr d2,
+			TextureConstOPtr i, TextureConstOPtr i2, const bool mbounce, const bool mbounce2);
 
 	virtual MaterialType GetType() const { return GLOSSYTRANSLUCENT; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
@@ -57,38 +57,38 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const Texture> GetKd() const { return Kd; }
-	OptionalPtr<const Texture> GetKt() const { return Kt; }
-	OptionalPtr<const Texture> GetKs() const { return Ks; }
-	OptionalPtr<const Texture> GetKs_bf() const { return Ks_bf; }
-	OptionalPtr<const Texture> GetNu() const { return nu; }
-	OptionalPtr<const Texture> GetNu_bf() const { return nu_bf; }
-	OptionalPtr<const Texture> GetNv() const { return nv; }
-	OptionalPtr<const Texture> GetNv_bf() const { return nv_bf; }
-	OptionalPtr<const Texture> GetKa() const { return Ka; }
-	OptionalPtr<const Texture> GetKa_bf() const { return Ka_bf; }
-	OptionalPtr<const Texture> GetDepth() const { return depth; }
-	OptionalPtr<const Texture> GetDepth_bf() const { return depth_bf; }
-	OptionalPtr<const Texture> GetIndex() const { return index; }
-	OptionalPtr<const Texture> GetIndex_bf() const { return index_bf; }
+	TextureConstOPtr GetKd() const { return Kd; }
+	TextureConstOPtr GetKt() const { return Kt; }
+	TextureConstOPtr GetKs() const { return Ks; }
+	TextureConstOPtr GetKs_bf() const { return Ks_bf; }
+	TextureConstOPtr GetNu() const { return nu; }
+	TextureConstOPtr GetNu_bf() const { return nu_bf; }
+	TextureConstOPtr GetNv() const { return nv; }
+	TextureConstOPtr GetNv_bf() const { return nv_bf; }
+	TextureConstOPtr GetKa() const { return Ka; }
+	TextureConstOPtr GetKa_bf() const { return Ka_bf; }
+	TextureConstOPtr GetDepth() const { return depth; }
+	TextureConstOPtr GetDepth_bf() const { return depth_bf; }
+	TextureConstOPtr GetIndex() const { return index; }
+	TextureConstOPtr GetIndex_bf() const { return index_bf; }
 	const bool IsMultibounce() const { return multibounce; }
 	const bool IsMultibounce_bf() const { return multibounce_bf; }
 
 private:
-	OptionalPtr<const Texture> Kd;
-	OptionalPtr<const Texture> Kt;
-	OptionalPtr<const Texture> Ks;
-	OptionalPtr<const Texture> Ks_bf;
-	OptionalPtr<const Texture> nu;
-	OptionalPtr<const Texture> nu_bf;
-	OptionalPtr<const Texture> nv;
-	OptionalPtr<const Texture> nv_bf;
-	OptionalPtr<const Texture> Ka;
-	OptionalPtr<const Texture> Ka_bf;
-	OptionalPtr<const Texture> depth;
-	OptionalPtr<const Texture> depth_bf;
-	OptionalPtr<const Texture> index;
-	OptionalPtr<const Texture> index_bf;
+	TextureConstOPtr Kd;
+	TextureConstOPtr Kt;
+	TextureConstOPtr Ks;
+	TextureConstOPtr Ks_bf;
+	TextureConstOPtr nu;
+	TextureConstOPtr nu_bf;
+	TextureConstOPtr nv;
+	TextureConstOPtr nv_bf;
+	TextureConstOPtr Ka;
+	TextureConstOPtr Ka_bf;
+	TextureConstOPtr depth;
+	TextureConstOPtr depth_bf;
+	TextureConstOPtr index;
+	TextureConstOPtr index_bf;
 	const bool multibounce;
 	const bool multibounce_bf;
 };

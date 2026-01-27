@@ -128,7 +128,10 @@ void BiDirCPURenderEngine::StartLockLess() {
 	if (!GetFilm().HasChannel(Film::ALBEDO) && !GetFilm().HasChannel(Film::AVG_SHADING_NORMAL))
 		aovWarmupSPP = 0;
 	if (aovWarmupSPP > 0)
-		aovWarmupSamplerSharedData = std::make_shared<SobolSamplerSharedData>(seedBaseGenerator->uintValue(), GetFilm());
+		aovWarmupSamplerSharedData = std::make_shared<SobolSamplerSharedData>(
+			seedBaseGenerator->uintValue(),
+			FilmOPtr(&GetFilm())
+		);
 
 	//--------------------------------------------------------------------------
 

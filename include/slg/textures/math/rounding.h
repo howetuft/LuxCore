@@ -52,12 +52,8 @@ public:
     }
 
     virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-        if(texture == oldTex) {
-            texture = newTex;
-        }
-        if(increment == oldTex) {
-            increment = newTex;
-        }
+		updtex(texture, oldTex, newTex);
+		updtex(increment, oldTex, newTex);
     }
 
     TextureConstRef GetTexture() const { return texture; }

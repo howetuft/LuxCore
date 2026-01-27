@@ -48,7 +48,7 @@ FilmUPtr Film::Create(
 }
 
 void Film::InitFilmDenoiser() {
-	filmDenoiser = std::make_unique<FilmDenoiser>(*this);
+	filmDenoiser = std::make_unique<FilmDenoiser>(FilmOPtr(this));
 }
 
 Film::Film() {
@@ -267,7 +267,7 @@ void Film::CopyHaltSettings(const Film &film) {
 		convTest = nullptr;
 
 		convTest = new FilmConvTest(
-			*this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
+			FilmOPtr(this), haltNoiseThreshold, haltNoiseThresholdWarmUp,
 			haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
 			haltNoiseThresholdImagePipelineIndex
 		);
@@ -307,7 +307,7 @@ void Film::Init() {
 
 		// Using the default values
 		convTest = new FilmConvTest(
-			*this,
+			FilmOPtr(this),
 			haltNoiseThreshold,
 			haltNoiseThresholdWarmUp,
 			haltNoiseThresholdTestStep,

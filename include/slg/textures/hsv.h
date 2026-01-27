@@ -56,14 +56,8 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex == oldTex)
-			tex = newTex;
-		if (hue == oldTex)
-			hue = newTex;
-		if (sat == oldTex)
-			sat = newTex;
-		if (val == oldTex)
-			val = newTex;
+		for (auto& t : std::array{tex, hue, sat, val})
+			updtex(t, oldTex, newTex);
 	}
 
 	TextureConstRef GetTexture() const { return tex; }

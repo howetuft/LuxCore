@@ -47,7 +47,7 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	objectID = sceneObject.GetID();
 
 	// Mesh information
-	mesh = sceneObject.GetExtMesh();
+	mesh.reset(&sceneObject.GetExtMesh());
 	triangleIndex = triIndex;
 	triangleBariCoord1 = b1;
 	triangleBariCoord2 = b2;
@@ -68,17 +68,17 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 			&dpdu, &dpdv, &dndu, &dndv);
 
 	// Note: I'm not initializing volume related information here
-	interiorVolume = std::nullopt;
-	exteriorVolume = std::nullopt;
+	interiorVolume = nullptr;
+	exteriorVolume = nullptr;
 }
 
 // Initialize all fields (i.e. the one missing a default constructor)
 void HitPoint::Init() {
-	mesh = std::nullopt;
+	mesh = nullptr;
 
 	passThroughEvent = 0.f;
-	interiorVolume = std::nullopt;
-	exteriorVolume = std::nullopt;
+	interiorVolume = nullptr;
+	exteriorVolume = nullptr;
 	objectID = 0;
 	fromLight = false;
 	intoObject = true;

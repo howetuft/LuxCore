@@ -49,7 +49,7 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex == oldTex)
+		if (tex == &oldTex)
 			tex = newTex;
 	}
 

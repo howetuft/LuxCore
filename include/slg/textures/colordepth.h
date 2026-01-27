@@ -51,8 +51,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (GetKt() == oldTex)
+		if (&GetKt() == &oldTex)
 			kt = newTex;
+
 	}
 
 	float GetD() const { return d; }

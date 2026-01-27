@@ -29,7 +29,7 @@ namespace slg {
 
 class RoughMatteTranslucentMaterial : public Material {
 public:
-	using TexRef = OptionalPtr<const Texture>;
+	using TexRef = TextureConstOPtr;
 	RoughMatteTranslucentMaterial(TexRef frontTransp, TexRef backTransp,
 			TexRef emitted, TexRef bump,
 			TexRef refl, TexRef trans, TexRef s);

@@ -34,13 +34,29 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathVolumeInfo::PathVolumeInfo() {
-	currentVolume = std::nullopt;
+	currentVolume = nullptr;
 	volumeListSize = 0;
 
 	scatteredStart = false;
 }
 
-void PathVolumeInfo::AddVolume(OptionalPtr<const Volume> vol) {
+void PathVolumeInfo::AddVolume(VolumeConstRef vol) {
+	if (volumeListSize == PATHVOLUMEINFO_SIZE) {
+		// Out of space, I just ignore the volume
+		return;
+	}
+
+
+	// Update the current volume. ">=" because I want to catch the last added volume.
+	if (!HasCurrentVolume() || (vol.GetPriority() >= GetCurrentVolume().GetPriority())) {
+		currentVolume.reset(&vol);
+	}
+
+	// Add the volume to the list
+	volumeList[volumeListSize++] = VolumeConstOPtr(&vol);
+}
+
+void PathVolumeInfo::AddVolume(VolumeConstOPtr vol) {
 	if (!vol || volumeListSize == PATHVOLUMEINFO_SIZE) {
 		// Out of space, I just ignore the volume
 		return;
@@ -56,7 +72,7 @@ void PathVolumeInfo::AddVolume(OptionalPtr<const Volume> vol) {
 	volumeList[volumeListSize++] = vol;
 }
 
-void PathVolumeInfo::RemoveVolume(OptionalPtr<const Volume> vol) {
+void PathVolumeInfo::RemoveVolume(VolumeConstOPtr vol) {
 	if (!vol || volumeListSize == 0) {
 		// empty volume list
 		return;
@@ -64,11 +80,11 @@ void PathVolumeInfo::RemoveVolume(OptionalPtr<const Volume> vol) {
 
 	// Update the current volume and the list
 	bool found = false;
-	currentVolume = std::nullopt;
+	currentVolume = nullptr;
 	for (u_int i = 0; i < volumeListSize; ++i) {
 		if (found) {
 			// Re-compact the list
-			SetVolume(i - 1, GetVolume(i));
+			SetVolume(i - 1, VolumeConstOPtr(&GetVolume(i)));
 		} else if (volumeList[i] == vol) {
 			// Found the volume to remove
 			found = true;
@@ -88,7 +104,7 @@ void PathVolumeInfo::RemoveVolume(OptionalPtr<const Volume> vol) {
 	--volumeListSize;
 }
 
-OptionalPtr<const Volume> PathVolumeInfo::SimulateAddVolume(OptionalPtr<const Volume> vol) const {
+VolumeConstOPtr PathVolumeInfo::SimulateAddVolume(VolumeConstOPtr vol) const {
 	// A volume wins over current if and only if it is the same volume or has an
 	// higher priority
 
@@ -98,25 +114,25 @@ OptionalPtr<const Volume> PathVolumeInfo::SimulateAddVolume(OptionalPtr<const Vo
 			auto volPriority = vol->GetPriority();
 			return
 				curPriority > volPriority ?
-				OptionalPtr<const Volume>(GetCurrentVolume()) :
+				VolumeConstOPtr(&GetCurrentVolume()) :
 				vol;
 		} else {
-			return OptionalPtr<const Volume>(GetCurrentVolume());
+			return VolumeConstOPtr(&GetCurrentVolume());
 		}
 	} else return vol;
 }
 
-OptionalPtr<const Volume> PathVolumeInfo::SimulateRemoveVolume(OptionalPtr<const Volume> vol) const {
+VolumeConstOPtr PathVolumeInfo::SimulateRemoveVolume(VolumeConstOPtr vol) const {
 
 
 	if (not vol || volumeListSize == 0) {
 		// NULL volume or empty volume list
-		return HasCurrentVolume() ? OptionalPtr<const Volume>(GetCurrentVolume()) : std::nullopt;
+		return HasCurrentVolume() ? VolumeConstOPtr(&GetCurrentVolume()) : nullptr;
 	}
 
 	// Update the current volume
 	bool found = false;
-	OptionalPtr<const Volume> newCurrentVolume = std::nullopt;
+	VolumeConstOPtr newCurrentVolume = nullptr;
 	for (u_int i = 0; i < volumeListSize; ++i) {
 		if (!found && GetVolume(i) == vol) {
 			// Found the volume to remove
@@ -126,7 +142,7 @@ OptionalPtr<const Volume> PathVolumeInfo::SimulateRemoveVolume(OptionalPtr<const
 
 		// Update newCurrentVolume. ">=" because I want to catch the last added volume.
 		if (!newCurrentVolume || (GetVolume(i).GetPriority() >= VolumeConstRef(newCurrentVolume).GetPriority())) {
-			newCurrentVolume = GetVolume(i);
+			newCurrentVolume.reset(std::addressof(GetVolume(i)));
 		}
 	}
 
@@ -150,8 +166,8 @@ void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 }
 
 bool PathVolumeInfo::CompareVolumePriorities(
-	OptionalPtr<const Volume> vol1,
-	OptionalPtr<const Volume> vol2
+	VolumeConstOPtr vol1,
+	VolumeConstOPtr vol2
 ) {
 	// Special cases: one or both are empty
 	if (not vol2) return true;
@@ -180,7 +196,7 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 		// 2) I'm exiting an object, the material is NULL and I'm not leaving
 		// the current volume.
 
-		OptionalPtr<const Volume> bsdfInteriorVol = bsdf.GetMaterialInteriorVolume();
+		VolumeConstOPtr bsdfInteriorVol = bsdf.GetMaterialInteriorVolume();
 
 		// Condition #1
 		if (bsdf.hitPoint.intoObject && CompareVolumePriorities(currentVolume, bsdfInteriorVol))
@@ -200,9 +216,9 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 }
 
 void  PathVolumeInfo::SetHitPointVolumes(HitPoint &hitPoint,
-		OptionalPtr<const Volume> matInteriorVolume,
-		OptionalPtr<const Volume> matExteriorVolume,
-		OptionalPtr<const Volume> defaultWorldVolume) const {
+		VolumeConstOPtr matInteriorVolume,
+		VolumeConstOPtr matExteriorVolume,
+		VolumeConstOPtr defaultWorldVolume) const {
 	// Set interior and exterior volumes
 
 	if (hitPoint.intoObject) {
@@ -211,7 +227,7 @@ void  PathVolumeInfo::SetHitPointVolumes(HitPoint &hitPoint,
 		if (matInteriorVolume) {
 			hitPoint.interiorVolume = SimulateAddVolume(matInteriorVolume);
 		} else {
-			hitPoint.interiorVolume = std::nullopt;
+			hitPoint.interiorVolume = nullptr;
 		}
 
 		if (not HasCurrentVolume())
@@ -220,7 +236,7 @@ void  PathVolumeInfo::SetHitPointVolumes(HitPoint &hitPoint,
 			// if (!material->GetExteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
 			// The currentVolume value wins.
-			hitPoint.exteriorVolume = GetCurrentVolume();
+			hitPoint.exteriorVolume.reset(&GetCurrentVolume());
 		}
 
 		if (not hitPoint.exteriorVolume) {
@@ -236,7 +252,7 @@ void  PathVolumeInfo::SetHitPointVolumes(HitPoint &hitPoint,
 			// if (!material->GetInteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
 			// The currentVolume value wins.
-			hitPoint.interiorVolume = GetCurrentVolume();
+			hitPoint.interiorVolume.reset(&GetCurrentVolume());
 		}
 
 		if (!hitPoint.interiorVolume) {

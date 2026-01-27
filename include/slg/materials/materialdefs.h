@@ -63,7 +63,7 @@ public:
 	u_int GetMaterialIndex(MaterialConstRef m) const {
 		return mats.GetIndex(m);
 	}
-	u_int GetMaterialIndex(OptionalPtr<const Material> m) const {
+	u_int GetMaterialIndex(std::experimental::observer_ptr<const Material> m) const {
 		return mats.GetIndex(*m);  // Will throw if nullopt
 	}
 

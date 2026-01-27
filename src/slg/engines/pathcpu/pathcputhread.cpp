@@ -76,9 +76,13 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 			Property("sampler.imagesamples.enable")(false) <<
 			Property("sampler.metropolis.addonlycaustics")(true);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, engine->GetFilm(), engine->lightSampleSplatter,
-				engine->lightSamplerSharedData);
-		
+		lightSampler = Sampler::FromProperties(
+			props, rndGen,
+			FilmOPtr(&engine->GetFilm()),
+			engine->lightSampleSplatter,
+			engine->lightSamplerSharedData
+		);
+
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 	}

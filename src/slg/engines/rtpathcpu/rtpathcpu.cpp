@@ -18,6 +18,7 @@
 
 #include "slg/slg.h"
 #include "slg/samplers/rtpathcpusampler.h"
+#include <memory>
 #include "slg/engines/rtpathcpu/rtpathcpu.h"
 
 using namespace std;
@@ -122,11 +123,13 @@ void RTPathCPURenderEngine::BeginFilmEdit() {
 // A fast path for film resize
 void RTPathCPURenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
 	// Update the film pointer
-	film = flm;
+	film.reset(&flm);
 	filmMutex = flmMutex;
 	InitFilm();
 
-	((RTPathCPUSamplerSharedData *)samplerSharedData.get())->Reset(GetFilm());
+	static_cast<RTPathCPUSamplerSharedData *>(samplerSharedData.get())->Reset(
+		std::experimental::make_observer(&GetFilm())
+	);
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)

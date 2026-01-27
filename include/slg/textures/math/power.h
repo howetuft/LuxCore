@@ -54,10 +54,8 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (base == oldTex)
-			base = newTex;
-		if (exponent == oldTex)
-			exponent = newTex;
+		updtex(base, oldTex, newTex);
+		updtex(exponent, oldTex, newTex);
 	}
 
 	TextureConstRef GetBase() const { return base; }

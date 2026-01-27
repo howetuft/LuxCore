@@ -26,8 +26,8 @@ using namespace slg;
 // Null material
 //------------------------------------------------------------------------------
 
-NullMaterial::NullMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp) :
-		Material(frontTransp, backTransp, std::nullopt, std::nullopt) {
+NullMaterial::NullMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp) :
+		Material(frontTransp, backTransp, nullptr, nullptr) {
 }
 
 Spectrum NullMaterial::Albedo(const HitPoint &hitPoint) const {

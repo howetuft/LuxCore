@@ -29,7 +29,7 @@ using namespace slg;
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : sceneObject(std::nullopt), 
+TriangleLight::TriangleLight() : sceneObject(nullptr), 
 		meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f) {

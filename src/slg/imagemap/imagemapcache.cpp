@@ -195,7 +195,7 @@ u_int ImageMapCache::GetImageMapIndex(ImageMapConstRef im) const {
 
 	throw runtime_error("Unknown image map: " + ToString(&im));
 }
-u_int ImageMapCache::GetImageMapIndex(OptionalPtr<const ImageMap> p) const {
+u_int ImageMapCache::GetImageMapIndex(std::experimental::observer_ptr<const ImageMap> p) const {
 	return GetImageMapIndex(*p);
 }
 

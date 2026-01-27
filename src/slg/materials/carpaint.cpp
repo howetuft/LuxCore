@@ -30,10 +30,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 CarPaintMaterial::CarPaintMaterial(
-	OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-	OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks1, OptionalPtr<const Texture> ks2, OptionalPtr<const Texture> ks3, OptionalPtr<const Texture> m1, OptionalPtr<const Texture> m2, OptionalPtr<const Texture> m3,
-	OptionalPtr<const Texture> r1, OptionalPtr<const Texture> r2, OptionalPtr<const Texture> r3, OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d) :
+	TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+	TextureConstOPtr emitted, TextureConstOPtr bump,
+	TextureConstOPtr kd, TextureConstOPtr ks1, TextureConstOPtr ks2, TextureConstOPtr ks3, TextureConstOPtr m1, TextureConstOPtr m2, TextureConstOPtr m3,
+	TextureConstOPtr r1, TextureConstOPtr r2, TextureConstOPtr r3, TextureConstOPtr ka, TextureConstOPtr d) :
 	Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3),
 	R1(r1), R2(r2), R3(r3),	Ka(ka), depth(d) {
 	ComputeGlossiness(M1, M2, M3);
@@ -406,36 +406,36 @@ void CarPaintMaterial::UpdateTextureReferences(
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (Kd == oldTex)
-		Kd = newTex;
-	if (Ks1 == oldTex)
-		Ks1 = newTex;
-	if (Ks2 == oldTex)
-		Ks2 = newTex;
-	if (Ks3 == oldTex)
-		Ks3 = newTex;
-	if (M1 == oldTex) {
-		M1 = newTex;
+	if (Kd == &oldTex)
+		Kd.reset(&newTex);
+	if (Ks1 == &oldTex)
+		Ks1.reset(&newTex);
+	if (Ks2 == &oldTex)
+		Ks2.reset(&newTex);
+	if (Ks3 == &oldTex)
+		Ks3.reset(&newTex);
+	if (M1 == &oldTex) {
+		M1.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (M2 == oldTex) {
-		M2 = newTex;
+	if (M2 == &oldTex) {
+		M2.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (M3 == oldTex) {
-		M3 = newTex;
+	if (M3 == &oldTex) {
+		M3.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (R1 == oldTex)
-		R1 = newTex;
-	if (R2 == oldTex)
-		R2 = newTex;
-	if (R3 == oldTex)
-		R3 = newTex;
-	if (Ka == oldTex)
-		Ka = newTex;
-	if (depth == oldTex)
-		depth = newTex;
+	if (R1 == &oldTex)
+		R1.reset(&newTex);
+	if (R2 == &oldTex)
+		R2.reset(&newTex);
+	if (R3 == &oldTex)
+		R3.reset(&newTex);
+	if (Ka == &oldTex)
+		Ka.reset(&newTex);
+	if (depth == &oldTex)
+		depth.reset(&newTex);
 	
 	if (updateGlossiness)
 		ComputeGlossiness(M1, M2, M3);

@@ -29,7 +29,7 @@ using namespace slg;
 // RTPathCPU specific sampler shared data
 //------------------------------------------------------------------------------
 
-RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(OptionalPtr<Film> film) :
+RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(std::experimental::observer_ptr<Film> film) :
 	engineFilm(film),
 	SamplerSharedData()
 {
@@ -43,7 +43,7 @@ RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(OptionalPtr<Film> film) :
 	Reset(film);
 }
 
-void RTPathCPUSamplerSharedData::Reset(OptionalPtr<Film> film) {
+void RTPathCPUSamplerSharedData::Reset(std::experimental::observer_ptr<Film> film) {
 	engineFilm = film;
 	Reset();
 }
@@ -86,7 +86,7 @@ void RTPathCPUSamplerSharedData::Reset() {
 }
 
 std::unique_ptr<SamplerSharedData> RTPathCPUSamplerSharedData::FromProperties(
-	const Properties &cfg, const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
+	const Properties &cfg, const RandomGeneratorUPtr & rndGen, std::experimental::observer_ptr<Film> film
 ) {
 	return std::make_unique<RTPathCPUSamplerSharedData>(film);
 }
@@ -97,10 +97,13 @@ std::unique_ptr<SamplerSharedData> RTPathCPUSamplerSharedData::FromProperties(
 
 RTPathCPUSampler::RTPathCPUSampler(
 	const luxrays::RandomGeneratorUPtr & rnd,
-	OptionalPtr<Film> flm,
+	std::experimental::observer_ptr<Film> flm,
 	const FilmSampleSplatterUPtr& flmSplatter,
 	SamplerSharedDataSPtr samplerSharedData
-) :	Sampler(rnd, flm, flmSplatter, true), sharedData(dynamic_pointer_cast<RTPathCPUSamplerSharedData>(samplerSharedData)) {
+) :
+	Sampler(rnd, flm, flmSplatter, true),
+	sharedData(dynamic_pointer_cast<RTPathCPUSamplerSharedData>(samplerSharedData))
+{
 	film = flm;
 	// Disable denoiser statistics collection
 	film->GetDenoiser().SetEnabled(false);
@@ -117,7 +120,7 @@ void RTPathCPUSampler::SetRenderEngine(RTPathCPURenderEngine *re) {
 	Reset(film);
 }
 
-void RTPathCPUSampler::Reset(OptionalPtr<Film> flm) {
+void RTPathCPUSampler::Reset(std::experimental::observer_ptr<Film> flm) {
 	film = flm;
 	// Disable denoiser statistics collection
 	film->GetDenoiser().SetEnabled(false);
@@ -246,7 +249,7 @@ PropertiesUPtr RTPathCPUSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr RTPathCPUSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
+		std::experimental::observer_ptr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
 	return std::make_unique<RTPathCPUSampler>(rndGen, film, flmSplatter, sharedData);
 }
 

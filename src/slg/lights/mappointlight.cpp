@@ -29,7 +29,7 @@ using namespace slg;
 // MapPointLight
 //------------------------------------------------------------------------------
 
-MapPointLight::MapPointLight() : imageMap(std::nullopt), func(nullptr) {
+MapPointLight::MapPointLight() : imageMap(nullptr), func(nullptr) {
 }
 
 MapPointLight::~MapPointLight() {

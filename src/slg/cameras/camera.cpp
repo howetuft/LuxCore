@@ -117,8 +117,8 @@ void Camera::UpdateAuto(SceneConstRef scene) {
 				material.GetInteriorVolume();
 			if (!volume) {
 				volume = scene.HasDefaultWorldVolume() ?
-					OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
-					OptionalPtr<const Volume>(std::nullopt);
+					VolumeConstOPtr(&scene.GetDefaultWorldVolume()) :
+					VolumeConstOPtr(nullptr);
 			}
 		}
 	}
@@ -143,6 +143,6 @@ PropertiesUPtr Camera::ToProperties(const ImageMapCache &imgMapCache, const bool
 
 void Camera::UpdateVolumeReferences(VolumeConstRef oldVol, VolumeConstRef newVol) {
 	if (volume && *volume == oldVol)
-		volume = newVol;
+		volume.reset(&newVol);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

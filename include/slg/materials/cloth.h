@@ -29,10 +29,10 @@ namespace slg {
 
 class ClothMaterial : public Material {
 public:
-	ClothMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-            const slg::ocl::ClothPreset preset, OptionalPtr<const Texture> weft_kd, OptionalPtr<const Texture> weft_ks,
-            OptionalPtr<const Texture> warp_kd, OptionalPtr<const Texture> warp_ks, const float repeat_u, const float repeat_v);
+	ClothMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+            const slg::ocl::ClothPreset preset, TextureConstOPtr weft_kd, TextureConstOPtr weft_ks,
+            TextureConstOPtr warp_kd, TextureConstOPtr warp_ks, const float repeat_u, const float repeat_v);
 
 	virtual MaterialType GetType() const { return CLOTH; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -56,10 +56,10 @@ public:
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
     slg::ocl::ClothPreset GetPreset() const { return Preset; }
-	OptionalPtr<const Texture> GetWeftKd() const { return Weft_Kd; }
-	OptionalPtr<const Texture> GetWeftKs() const { return Weft_Ks; }
-	OptionalPtr<const Texture> GetWarpKd() const { return Warp_Kd; }
-	OptionalPtr<const Texture> GetWarpKs() const { return Warp_Ks; }
+	TextureConstOPtr GetWeftKd() const { return Weft_Kd; }
+	TextureConstOPtr GetWeftKs() const { return Weft_Ks; }
+	TextureConstOPtr GetWarpKd() const { return Warp_Kd; }
+	TextureConstOPtr GetWarpKs() const { return Warp_Ks; }
 	const float GetRepeatU() const { return Repeat_U; }
 	const float GetRepeatV() const { return Repeat_V; }
     const float GetSpecularNormalization() const { return specularNormalization; }
@@ -81,10 +81,10 @@ private:
         const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
 
 	const slg::ocl::ClothPreset Preset;
-	OptionalPtr<const Texture> Weft_Kd;
-	OptionalPtr<const Texture> Weft_Ks;
-	OptionalPtr<const Texture> Warp_Kd;
-	OptionalPtr<const Texture> Warp_Ks;
+	TextureConstOPtr Weft_Kd;
+	TextureConstOPtr Weft_Ks;
+	TextureConstOPtr Warp_Kd;
+	TextureConstOPtr Warp_Ks;
 	const float Repeat_U;
 	const float Repeat_V;
 	float specularNormalization;

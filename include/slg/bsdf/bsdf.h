@@ -107,7 +107,7 @@ public:
 
 	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);
 	
-	bool IsEmpty() const { return (not material.has_value()); }
+	bool IsEmpty() const { return (not material); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
@@ -129,10 +129,10 @@ public:
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
 
-	OptionalPtr<const Volume> GetMaterialInteriorVolume() const {
+	VolumeConstOPtr GetMaterialInteriorVolume() const {
 		return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
 	}
-	OptionalPtr<const Volume> GetMaterialExteriorVolume() const {
+	VolumeConstOPtr GetMaterialExteriorVolume() const {
 		return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
 	}
 
@@ -161,7 +161,7 @@ public:
 
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
-	OptionalPtr<const LightSource> GetLightSource() const { return triangleLightSource; }
+	std::experimental::observer_ptr<const LightSource> GetLightSource() const { return triangleLightSource; }
 
 	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
 		if (IsVolume())
@@ -184,9 +184,9 @@ private:
 	// design particulars, they are not initialized in constructor, but in
 	// Init(). Therefore they have to be modifiable somehow, thus the mutable
 	// attribute (not fully satisfying, however).
-	mutable OptionalPtr<const SceneObject> sceneObject;  // Optional reference, owned by scene
-	mutable OptionalPtr<const Material> material;  // Optional reference, owned by scene
-	mutable OptionalPtr<const TriangleLight> triangleLightSource; // != NULL only if it is an area light, optional, owned by scen
+	mutable std::experimental::observer_ptr<const SceneObject> sceneObject;  // Optional reference, owned by scene
+	mutable std::experimental::observer_ptr<const Material> material;  // Optional reference, owned by scene
+	mutable std::experimental::observer_ptr<const TriangleLight> triangleLightSource; // != NULL only if it is an area light, optional, owned by scen
 	luxrays::Frame frame;
 };
 

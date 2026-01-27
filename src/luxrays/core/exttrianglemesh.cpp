@@ -585,7 +585,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
 
 void ExtInstanceTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh, ExtTriangleMesh& newMesh) {
 	if (&static_cast<ExtTriangleMesh&>(*mesh) == &oldMesh) {
-		mesh = newMesh;
+		mesh.reset(&newMesh);
 		cachedArea = false;
 	}
 }
@@ -606,7 +606,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMotionTriangleMesh)
 
 void ExtMotionTriangleMesh::UpdateMeshReferences(const ExtTriangleMesh& oldMesh, ExtTriangleMesh& newMesh) {
 	if (&static_cast<ExtTriangleMesh&>(*mesh) == &oldMesh) {
-		mesh = newMesh;
+		mesh.reset(&newMesh);
 		cachedArea = false;
 	}
 }

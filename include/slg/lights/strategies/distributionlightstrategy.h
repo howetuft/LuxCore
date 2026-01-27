@@ -32,11 +32,11 @@ public:
 	virtual ~DistributionLightStrategy() { delete lightsDistribution; }
 
 	virtual void Preprocess(SceneConstRef scn, const LightStrategyTask taskType) {
-		scene = scn;
+		scene.reset(&scn);
 	}
 
 	// Used for direct light sampling
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
@@ -49,7 +49,7 @@ public:
 	) const override;
 
 	// Used for light emission
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 			SceneConstRef scene, const float u, float *pdf
 	) const override;
 	

@@ -235,7 +235,7 @@ InstanceTriangleMesh::InstanceTriangleMesh(TriangleMeshRef m, const Transform &t
 
 	trans = t;
 	transSwapsHandedness = t.SwapsHandedness();
-	mesh = m;
+	mesh.reset(&m);
 
 	// The mesh area is compute on demand and cached
 	cachedArea = -1.f;
@@ -261,7 +261,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::MotionTriangleMesh)
 MotionTriangleMesh::MotionTriangleMesh(TriangleMeshRef m, const MotionSystem &ms) {
 	
 	motionSystem = ms;
-	mesh = m;
+	mesh.reset(&m);
 
 	// The mesh area is compute on demand and cached
 	cachedArea = -1.f;

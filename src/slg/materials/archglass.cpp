@@ -29,16 +29,16 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ArchGlassMaterial::ArchGlassMaterial(
-	OptionalPtr<const Texture> frontTransp,
-	OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted,
-	OptionalPtr<const Texture> bump,
-	OptionalPtr<const Texture> refl,
-	OptionalPtr<const Texture> trans,
-	OptionalPtr<const Texture> exteriorIorFact,
-	OptionalPtr<const Texture> interiorIorFact,
-	OptionalPtr<const Texture> filmThickness,
-	OptionalPtr<const Texture> filmIor
+	TextureConstOPtr frontTransp,
+	TextureConstOPtr backTransp,
+	TextureConstOPtr emitted,
+	TextureConstOPtr bump,
+	TextureConstOPtr refl,
+	TextureConstOPtr trans,
+	TextureConstOPtr exteriorIorFact,
+	TextureConstOPtr interiorIorFact,
+	TextureConstOPtr filmThickness,
+	TextureConstOPtr filmIor
 ) :
 	Material(frontTransp, backTransp, emitted, bump),
 	Kr(refl),
@@ -242,22 +242,16 @@ void ArchGlassMaterial::AddReferencedTextures(
 }
 
 void ArchGlassMaterial::UpdateTextureReferences(
-	OptionalPtr<const Texture> oldTex, OptionalPtr<Texture> newTex
+	TextureConstRef oldTex, TextureRef newTex
 ) {
-	Material::UpdateTextureReferences(*oldTex, *newTex);
+	Material::UpdateTextureReferences(oldTex, newTex);
 
-	if (Kr == oldTex)
-		Kr = newTex;
-	if (Kt == oldTex)
-		Kt = newTex;
-	if (exteriorIor == oldTex)
-		exteriorIor = newTex;
-	if (interiorIor == oldTex)
-		interiorIor = newTex;
-	if (filmThickness == oldTex)
-		filmThickness = newTex;
-	if (filmIor == oldTex)
-		filmIor = newTex;
+	if (Kr == &oldTex) Kr.reset(&newTex);
+	if (Kt == &oldTex) Kt.reset(&newTex);
+	if (exteriorIor == &oldTex) exteriorIor.reset(&newTex);
+	if (interiorIor == &oldTex) interiorIor.reset(&newTex);
+	if (filmThickness == &oldTex) filmThickness.reset(&newTex);
+	if (filmIor == &oldTex) filmIor.reset(&newTex);
 }
 
 PropertiesUPtr ArchGlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

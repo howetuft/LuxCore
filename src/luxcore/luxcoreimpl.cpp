@@ -1720,7 +1720,7 @@ RenderSessionImpl::RenderSessionImpl(
 	renderSession = std::make_unique<slg::RenderSession>(
 		*config.renderConfig,
 		slg::RenderStateSPtr(nullptr),
-		std::nullopt
+		nullptr
 	);
 }
 
@@ -1737,7 +1737,7 @@ RenderSessionImpl::RenderSessionImpl(
 	renderSession = std::make_unique<slg::RenderSession>(
 		*config.renderConfig,
 		startState->renderState,
-		OptionalPtr<slg::Film>(startFilm.GetSLGFilm())
+		slg::FilmOPtr(std::addressof(startFilm.GetSLGFilm()))
 	);
 
 }
@@ -1760,7 +1760,7 @@ RenderSessionImpl::RenderSessionImpl(
 	renderSession = std::make_unique<slg::RenderSession>(
 		rcfg,
 		startState,
-		OptionalPtr<slg::Film>(*startFilm)
+		slg::FilmOPtr(startFilm.get())
 	);
 }
 

@@ -59,12 +59,12 @@ public:
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const;
 
 	virtual void AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		referencedImgMaps.insert(imageMap.ptr());
+		referencedImgMaps.insert(imageMap.get());
 	}
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const ImageMap> imageMap;
+	std::experimental::observer_ptr<const ImageMap> imageMap;
 	bool sampleUpperHemisphereOnly;
 
 	// Visibility map cache options

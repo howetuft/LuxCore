@@ -351,14 +351,19 @@ FilmUPtr RenderConfig::AllocFilm() const {
 }
 
 std::unique_ptr<SamplerSharedData> RenderConfig::AllocSamplerSharedData(
-	const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
+	const RandomGeneratorUPtr & rndGen, FilmRef film
+) const {
+	return SamplerSharedData::FromProperties(*cfg, rndGen, FilmOPtr(&film));
+}
+std::unique_ptr<SamplerSharedData> RenderConfig::AllocSamplerSharedData(
+	const RandomGeneratorUPtr & rndGen, std::experimental::observer_ptr<Film> film
 ) const {
 	return SamplerSharedData::FromProperties(*cfg, rndGen, film);
 }
 
 std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 	const std::unique_ptr<RandomGenerator> & rndGen,
-	OptionalPtr<Film> film,
+	std::experimental::observer_ptr<Film> film,
 	const FilmSampleSplatterUPtr& flmSplatter,
 	const std::shared_ptr<SamplerSharedData> sharedData,
 	const Properties &additionalProps
@@ -367,6 +372,19 @@ std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 	props << additionalProps;
 
 	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
+}
+
+std::unique_ptr<Sampler> RenderConfig::AllocSampler(
+	const std::unique_ptr<RandomGenerator> & rndGen,
+	FilmRef film,
+	const FilmSampleSplatterUPtr& flmSplatter,
+	const std::shared_ptr<SamplerSharedData> sharedData,
+	const Properties &additionalProps
+) const {
+	auto& props = *cfg;
+	props << additionalProps;
+
+	return Sampler::FromProperties(props, rndGen, FilmOPtr(&film), flmSplatter, sharedData);
 }
 
 RenderEngineUPtr RenderConfig::AllocRenderEngine() {

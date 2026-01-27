@@ -29,10 +29,10 @@ namespace slg {
 
 class Glossy2Material : public Material {
 public:
-	Glossy2Material(TexRef frontTransp, TexRef backTransp,
-			TexRef emitted, TexRef bump,
-			TexRef kd, TexRef ks, TexRef u, TexRef v,
-			TexRef ka, TexRef d, TexRef i, const bool mbounce, const bool doublesided);
+	Glossy2Material(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr kd, TextureConstOPtr ks, TextureConstOPtr u, TextureConstOPtr v,
+			TextureConstOPtr ka, TextureConstOPtr d, TextureConstOPtr i, const bool mbounce, const bool doublesided);
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; }
@@ -55,24 +55,24 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	TexRef GetKd() const { return Kd; }
-	TexRef GetKs() const { return Ks; }
-	TexRef GetNu() const { return nu; }
-	TexRef GetNv() const { return nv; }
-	TexRef GetKa() const { return Ka; }
-	TexRef GetDepth() const { return depth; }
-	TexRef GetIndex() const { return index; }
+	TextureConstOPtr GetKd() const { return Kd; }
+	TextureConstOPtr GetKs() const { return Ks; }
+	TextureConstOPtr GetNu() const { return nu; }
+	TextureConstOPtr GetNv() const { return nv; }
+	TextureConstOPtr GetKa() const { return Ka; }
+	TextureConstOPtr GetDepth() const { return depth; }
+	TextureConstOPtr GetIndex() const { return index; }
 	const bool IsMultibounce () const { return multibounce; }
 	const bool IsDoubleSided () const { return doublesided; }
 
 private:
-	TexRef Kd;
-	TexRef Ks;
-	TexRef nu;
-	TexRef nv;
-	TexRef Ka;
-	TexRef depth;
-	TexRef index;
+	TextureConstOPtr Kd;
+	TextureConstOPtr Ks;
+	TextureConstOPtr nu;
+	TextureConstOPtr nv;
+	TextureConstOPtr Ka;
+	TextureConstOPtr depth;
+	TextureConstOPtr index;
 	const bool multibounce;
 	const bool doublesided;
 };

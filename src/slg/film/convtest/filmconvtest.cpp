@@ -35,7 +35,7 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(
-	OptionalPtr<const Film> flm,
+	std::experimental::observer_ptr<const Film> flm,
 	const float thresholdVal,
 	const u_int warmupVal,
 	const u_int testStepVal,

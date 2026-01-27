@@ -31,7 +31,7 @@ using namespace slg;
 
 ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficiency(0.f),
 		emittedPowerNormalize(true), localPos(), localTarget(0.f, 0.f, 1.f),
-		fov(45.f), imageMap(std::nullopt) {
+		fov(45.f), imageMap(nullptr) {
 }
 
 ProjectionLight::~ProjectionLight() {

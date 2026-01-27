@@ -38,7 +38,7 @@ namespace slg {
 
 class RandomSamplerSharedData : public SamplerSharedData {
 public:
-	RandomSamplerSharedData(OptionalPtr<Film> engineFilm);
+	RandomSamplerSharedData(std::experimental::observer_ptr<Film> engineFilm);
 	virtual ~RandomSamplerSharedData() { }
 
 	virtual void Reset();
@@ -46,14 +46,14 @@ public:
 	void GetNewBucket(const u_int bucketCount, u_int *newBucketIndex);
 	
 	static std::unique_ptr<SamplerSharedData> FromProperties(
-		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
+		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen, std::experimental::observer_ptr<Film> film
 	);
 
 	FilmRef GetEngineFilm() { return *engineFilm; }
 	FilmConstRef GetEngineFilm() const { return *engineFilm; }
 
 private:
-	OptionalPtr<Film> engineFilm;
+	std::experimental::observer_ptr<Film> engineFilm;
 	u_int bucketIndex;
 };
 
@@ -63,7 +63,7 @@ private:
 
 class RandomSampler : public Sampler {
 public:
-	RandomSampler(const luxrays::RandomGeneratorUPtr & rnd, OptionalPtr<Film> flm,
+	RandomSampler(const luxrays::RandomGeneratorUPtr & rnd, std::experimental::observer_ptr<Film> flm,
 			const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
@@ -91,7 +91,7 @@ public:
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		const luxrays::RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film,
+		std::experimental::observer_ptr<Film> film,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);

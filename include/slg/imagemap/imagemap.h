@@ -1105,8 +1105,8 @@ extern ImageMap NullImageMap;
 }  // namespace slg
 
 template<>
-struct std::hash<OptionalPtr<const slg::ImageMap>> {
-	size_t operator()(const OptionalPtr<const slg::ImageMap>& opt) const {
+struct std::hash<std::experimental::observer_ptr<const slg::ImageMap>> {
+	size_t operator()(const std::experimental::observer_ptr<const slg::ImageMap>& opt) const {
 		if (!opt) return 0;
 		auto& ref = *opt;
 		const auto * ptr = &ref;

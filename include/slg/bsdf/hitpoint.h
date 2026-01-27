@@ -61,7 +61,7 @@ typedef struct HitPoint_t {
 	luxrays::Normal dndu, dndv;
 
 	// Mesh information
-	OptionalPtr<const luxrays::ExtMesh> mesh;
+	std::experimental::observer_ptr<const luxrays::ExtMesh> mesh;
 	u_int triangleIndex;
 	float triangleBariCoord1, triangleBariCoord2;
 	
@@ -70,7 +70,7 @@ typedef struct HitPoint_t {
 	luxrays::Transform localToWorld;
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
-	OptionalPtr<const Volume> interiorVolume, exteriorVolume;
+	VolumeConstOPtr interiorVolume, exteriorVolume;
 	u_int objectID;
 	bool fromLight, intoObject;
 	// If I got here going trough a shadow transparency. It can be used to disable MIS.

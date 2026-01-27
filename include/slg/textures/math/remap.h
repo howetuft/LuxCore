@@ -61,16 +61,11 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (valueTex == oldTex)
-			valueTex = newTex;
-		if (sourceMinTex == oldTex)
-			sourceMinTex = newTex;
-		if (sourceMaxTex == oldTex)
-			sourceMaxTex = newTex;
-		if (targetMinTex == oldTex)
-			targetMinTex = newTex;
-		if (targetMaxTex == oldTex)
-			targetMaxTex = newTex;
+		updtex(valueTex, oldTex, newTex);
+		updtex(sourceMinTex, oldTex, newTex);
+		updtex(sourceMaxTex, oldTex, newTex);
+		updtex(targetMinTex, oldTex, newTex);
+		updtex(targetMaxTex, oldTex, newTex);
 	}
 
 	TextureConstRef GetValueTex() const { return valueTex; }

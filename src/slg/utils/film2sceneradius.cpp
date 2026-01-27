@@ -135,8 +135,8 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 	// Initialize the sampler
 	auto rnd = std::make_unique<RandomGenerator>(1 + params.threadIndex);
-	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, std::nullopt);
-	SobolSampler sampler(rnd, std::nullopt, NULL, true, 0.f, 0.f,
+	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, nullptr);
+	SobolSampler sampler(rnd, nullptr, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			sobolSharedData);
 

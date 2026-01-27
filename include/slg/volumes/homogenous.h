@@ -32,7 +32,7 @@ class HomogeneousVolume : public Volume {
 public:
 	HomogeneousVolume(
 		TextureConstRef iorTex,
-		OptionalPtr<const Texture> emiTex,
+		TextureConstOPtr emiTex,
 		TextureConstRef a, TextureConstRef s,
 		TextureConstRef g, const bool multiScattering);
 

@@ -31,8 +31,8 @@ namespace slg {
 
 class TwoSidedMaterial : public Material {
 public:
-	TwoSidedMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+	TwoSidedMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
 			MaterialConstRef frontMat, MaterialConstRef backMat);
 
 	virtual MaterialType GetType() const { return TWOSIDED; }
@@ -45,9 +45,9 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
 
-	virtual OptionalPtr<const Volume> GetInteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
-	virtual OptionalPtr<const Volume> GetExteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
 
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
@@ -93,8 +93,8 @@ private:
 
 	void Preprocess();
 
-	OptionalPtr<const Material> frontMat;
-	OptionalPtr<const Material> backMat;
+	std::experimental::observer_ptr<const Material> frontMat;
+	std::experimental::observer_ptr<const Material> backMat;
 
 	// Cached values for performance with very large material node trees
 	BSDFEvent eventTypes;

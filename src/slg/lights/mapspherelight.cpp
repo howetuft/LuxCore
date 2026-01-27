@@ -29,7 +29,7 @@ using namespace slg;
 // MapSphereLight
 //------------------------------------------------------------------------------
 
-MapSphereLight::MapSphereLight() : imageMap(std::nullopt), func(NULL) {
+MapSphereLight::MapSphereLight() : imageMap(nullptr), func(NULL) {
 }
 
 MapSphereLight::~MapSphereLight() {

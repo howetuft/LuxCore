@@ -56,7 +56,7 @@ public:
 
 	std::string GetSequenceFileName(ImageMapConstRef im) const;
 	u_int GetImageMapIndex(ImageMapConstRef im) const;
-	u_int GetImageMapIndex(OptionalPtr<const ImageMap> p) const;
+	u_int GetImageMapIndex(std::experimental::observer_ptr<const ImageMap> p) const;
 
 	void GetImageMaps(std::vector<std::reference_wrapper<const ImageMap>> &ims) const;
 

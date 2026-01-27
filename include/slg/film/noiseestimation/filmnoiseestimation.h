@@ -68,7 +68,7 @@ private:
 	u_int filterScale;
 	u_int imagePipelineIndex;
 
-	OptionalPtr<const Film> film;  // It should be a const ref (but serialization...)
+	std::experimental::observer_ptr<const Film> film;  // It should be a const ref (but serialization...)
 
 	GenericFrameBuffer<3, 0, float> *referenceImage;
 	std::vector<float> errorVector;

@@ -156,11 +156,9 @@ void Scene::ParseMaterials(const Properties &props) {
 MaterialUPtr Scene::CreateMaterial(
 	const u_int defaultMatID, const string &matName, const Properties &props
 ) {
-	using OptTex = OptionalPtr<Texture>;
-
 	// A few helpful constants
 	const string propName = "scene.materials." + matName;
-	static constexpr auto nullTex = OptTex(std::nullopt);
+	static constexpr auto nullTex = TextureConstOPtr(nullptr);
 	const auto zeroSpectrum = Spectrum(0.f);
 	const auto oneSpectrum = Spectrum(1.f);
 
@@ -170,20 +168,26 @@ MaterialUPtr Scene::CreateMaterial(
 	auto parseTex = [&](
 		const std::string_view suffix,
 		Spectrum defaultVal
-	) -> Texture& {
+	) -> TextureOPtr {
 		assert(suffix[0] != '.');
-		return std::ref(GetTexture(props.Get(Property(propName + "." + std::string(suffix))(defaultVal))));
+		auto& tex = GetTexture(
+			props.Get(Property(propName + "." + std::string(suffix))(defaultVal))
+		);
+
+		return TextureOPtr(std::addressof(tex));
 	};
 
 	// Parse optional texture
-	auto parseOptTex = [&](  // Parse optional texture
+	auto parseTextureConstOPtr = [&](  // Parse optional texture
 		const std::string suffix,
 		Spectrum defaultVal,
-		OptTex fallbackTex=OptTex(std::nullopt)
-	) -> OptTex {
+		TextureConstOPtr fallbackTex=TextureConstOPtr(nullptr)
+	) -> TextureConstOPtr {
 		assert(suffix[0] != '.');
 		return props.IsDefined(propName + "." + suffix) ?
-		GetTexture(props.Get(Property(propName + "." + suffix)(defaultVal))) :
+		TextureOPtr(
+			&GetTexture(props.Get(Property(propName + "." + suffix)(defaultVal)))
+		) :
 		fallbackTex;
 	};
 
@@ -232,30 +236,30 @@ MaterialUPtr Scene::CreateMaterial(
 	// PARSING STARTS HERE
 	const string matType = parseString("type", "matte");
 	// For compatibility with the past
-	auto transparencyTex = parseOptTex("transparency", Spectrum(0.f));
+	auto transparencyTex = parseTextureConstOPtr("transparency", Spectrum(0.f));
 
-	auto frontTransparencyTex = parseOptTex(
+	auto frontTransparencyTex = parseTextureConstOPtr(
 		"transparency.front", Spectrum(0.f), transparencyTex
 	);
 
-	auto backTransparencyTex = parseOptTex(
+	auto backTransparencyTex = parseTextureConstOPtr(
 		"transparency.back", {Spectrum(0.f)}, transparencyTex
 	);
 
 	// Start non-legacy parsing
-	auto emissionTex = parseOptTex("emission", {Spectrum(0.f)});
+	auto emissionTex = parseTextureConstOPtr("emission", {Spectrum(0.f)});
 
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
-		((emissionTex->GetType() == CONST_FLOAT) && ((static_cast<const ConstFloatTexture*>(emissionTex.ptr()))->GetValue() == 0.f)) ||
-		((emissionTex->GetType() == CONST_FLOAT3) && ((static_cast<const ConstFloat3Texture*>(emissionTex.ptr()))->GetColor().Black()))))
+		((emissionTex->GetType() == CONST_FLOAT) && ((static_cast<const ConstFloatTexture*>(emissionTex.get()))->GetValue() == 0.f)) ||
+		((emissionTex->GetType() == CONST_FLOAT3) && ((static_cast<const ConstFloat3Texture*>(emissionTex.get()))->GetColor().Black()))))
 	{
 		emissionTex = nullTex;
 	}
 
-	auto bumpTex = parseOptTex("bumptex", {1.f});
+	auto bumpTex = parseTextureConstOPtr("bumptex", {1.f});
     if (!bumpTex) {
-		auto normalTex = parseOptTex("normaltex", {1.f});
+		auto normalTex = parseTextureConstOPtr("normaltex", {1.f});
 
         if (normalTex) {
 			const float scale = std::max(0.f, parseFloat("normaltex.scale", {1.0}));
@@ -264,7 +268,7 @@ MaterialUPtr Scene::CreateMaterial(
 			implBumpTex->SetName(NamedObject::GetUniqueName("Implicit-NormalMapTexture"));
 
 			auto [newTexRef, oldTexPtr] = texDefs.DefineTexture(std::move(implBumpTex));
-            bumpTex = OptTex(newTexRef);
+            bumpTex = TextureConstOPtr(&newTexRef);
         }
     }
 
@@ -272,30 +276,30 @@ MaterialUPtr Scene::CreateMaterial(
 
 	MaterialUPtr mat;
 	if (matType == "matte") {
-		auto& kd = parseTex("kd", {.75f, .75f, .75f});
+		auto kd = parseTex("kd", {.75f, .75f, .75f});
 
 		mat = std::make_unique<MatteMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kd
 		);
 	} else if (matType == "roughmatte") {
-		auto& kd = parseTex("kd", {.75f, .75f, .75f});
-		auto& sigma = parseTex("sigma", {.75f, .75f, .75f});
+		auto kd = parseTex("kd", {.75f, .75f, .75f});
+		auto sigma = parseTex("sigma", {.75f, .75f, .75f});
 
 		mat = std::make_unique<RoughMatteMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kd, sigma
 		);
 	} else if (matType == "mirror") {
-		auto& kr = parseTex("kr", {1.f, 1.f, 1.f});
+		auto kr = parseTex("kr", {1.f, 1.f, 1.f});
 
 		mat = std::make_unique<MirrorMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr
 		);
 	} else if (matType == "glass") {
-		auto& kr = parseTex("kr", {1.f, 1.f, 1.f});
-		auto& kt = parseTex("kt", {1.f, 1.f, 1.f});
+		auto kr = parseTex("kr", {1.f, 1.f, 1.f});
+		auto kt = parseTex("kt", {1.f, 1.f, 1.f});
 
-		OptTex exteriorIor = std::nullopt;
-		OptTex interiorIor = std::nullopt;
+		TextureConstOPtr exteriorIor = nullptr;
+		TextureConstOPtr interiorIor = nullptr;
 		// For compatibility with the past
 		if (isDefined("ioroutside")) {
 			warnDeprecated("ioroutside");
@@ -309,7 +313,7 @@ MaterialUPtr Scene::CreateMaterial(
 		} else if (isDefined("interiorior"))
 			interiorIor = parseTex("interiorior", 1.5f);
 
-		OptTex cauchyB = std::nullopt;
+		TextureConstOPtr cauchyB = nullptr;
 		if (isDefined("cauchyb"))
 			cauchyB = parseTex("cauchyb", {0.f, 0.f, 0.f});
 		// For compatibility with the past
@@ -318,11 +322,11 @@ MaterialUPtr Scene::CreateMaterial(
 			cauchyB = parseTex("cauchyc", {0.f, 0.f, 0.f});
 		}
 
-		OptTex filmThickness = std::nullopt;
+		TextureConstOPtr filmThickness = nullptr;
 		if (isDefined("filmthickness"))
 			filmThickness = parseTex("filmthickness", {0.f});
 
-		OptTex filmIor = std::nullopt;
+		TextureConstOPtr filmIor = nullptr;
 		if (isDefined("filmior"))
 			filmIor = parseTex("filmior", {1.5f});
 
@@ -331,11 +335,11 @@ MaterialUPtr Scene::CreateMaterial(
 			exteriorIor, interiorIor, cauchyB, filmThickness, filmIor
 		);
 	} else if (matType == "archglass") {
-		auto& kr = parseTex("kr", {1.f, 1.f, 1.f});
-		auto& kt = parseTex("kt", {1.f, 1.f, 1.f});
+		auto kr = parseTex("kr", {1.f, 1.f, 1.f});
+		auto kt = parseTex("kt", {1.f, 1.f, 1.f});
 
-		OptTex exteriorIor = std::nullopt;
-		OptTex interiorIor = std::nullopt;
+		TextureConstOPtr exteriorIor = nullptr;
+		TextureConstOPtr interiorIor = nullptr;
 		// For compatibility with the past
 		if (isDefined("ioroutside")) {
 			warnDeprecated("ioroutside");
@@ -349,11 +353,11 @@ MaterialUPtr Scene::CreateMaterial(
 		} else if (isDefined("interiorior"))
 			interiorIor = parseTex("interiorior", {1.f});
 
-		OptTex filmThickness = std::nullopt;
+		TextureConstOPtr filmThickness = nullptr;
 		if (isDefined("filmthickness"))
 			filmThickness = parseTex("filmthickness", {0.f});
 
-		OptTex filmIor = std::nullopt;
+		TextureConstOPtr filmIor = nullptr;
 		if (isDefined("filmior"))
 			filmIor = parseTex("filmior", {1.5f});
 
@@ -364,7 +368,7 @@ MaterialUPtr Scene::CreateMaterial(
 	} else if (matType == "mix") {
 		auto& matA = matDefs.GetMaterial(parseString("material1", "mat1"));
 		auto& matB = matDefs.GetMaterial(parseString("material2", "mat2"));
-		auto& mix = parseTex("amount", {.5f});
+		auto mix = parseTex("amount", {.5f});
 
 		auto mixMat = std::make_unique<MixMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
@@ -381,30 +385,30 @@ MaterialUPtr Scene::CreateMaterial(
 	} else if (matType == "null") {
 		mat = std::make_unique<NullMaterial>(frontTransparencyTex, backTransparencyTex);
 	} else if (matType == "mattetranslucent") {
-		auto& kr = parseTex("kr", {.5f, .5f, .5f});
-		auto& kt = parseTex("kt", {.5f, .5f, .5f});
+		auto kr = parseTex("kr", {.5f, .5f, .5f});
+		auto kt = parseTex("kt", {.5f, .5f, .5f});
 
 		mat = std::make_unique<MatteTranslucentMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
 			kr, kt
 		);
 	} else if (matType == "roughmattetranslucent") {
-		auto& kr = parseTex("kr", {.5f, .5f, .5f});
-		auto& kt = parseTex("kt", {.5f, .5f, .5f});
-		auto& sigma = parseTex("sigma", {0.f});
+		auto kr = parseTex("kr", {.5f, .5f, .5f});
+		auto kt = parseTex("kt", {.5f, .5f, .5f});
+		auto sigma = parseTex("sigma", {0.f});
 
 		mat = std::make_unique<RoughMatteTranslucentMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
 			kr, kt, sigma
 		);
 	} else if (matType == "glossy2") {
-		auto& kd = parseTex("kd", {.5f, .5f, .5f});
-		auto& ks = parseTex("ks", {.5f, .5f, .5f});
-		auto& nu = parseTex("uroughness", {.1f});
-		auto& nv = parseTex("vroughness", {.1f});
-		auto& ka = parseTex("ka", {0.f, 0.f, 0.f});
-		auto& d = parseTex("d", {0.f});
-		auto& index = parseTex("index", {0.f, 0.f, 0.f});
+		auto kd = parseTex("kd", {.5f, .5f, .5f});
+		auto ks = parseTex("ks", {.5f, .5f, .5f});
+		auto nu = parseTex("uroughness", {.1f});
+		auto nv = parseTex("vroughness", {.1f});
+		auto ka = parseTex("ka", {0.f, 0.f, 0.f});
+		auto d = parseTex("d", {0.f});
+		auto index = parseTex("index", {0.f, 0.f, 0.f});
 		const auto multibounce = parseBool("multibounce", false);
 		const auto doublesided = parseBool("doublesided", false);
 
@@ -413,17 +417,17 @@ MaterialUPtr Scene::CreateMaterial(
 			kd, ks, nu, nv, ka, d, index, multibounce, doublesided
 		);
 	} else if (matType == "metal2") {
-		auto& nu = parseTex("uroughness", {.1f});
-		auto& nv = parseTex("vroughness", {.1f});
+		auto nu = parseTex("uroughness", {.1f});
+		auto nv = parseTex("vroughness", {.1f});
 
-		OptTex n, k;
+		TextureConstOPtr n, k;
 		if (isDefined("preset") || isDefined("name")) {
 			FresnelTextureUPtr presetTex = AllocFresnelPresetTex(props, propName);
 			const auto texname = NamedObject::GetUniqueName(matName + "-Implicit-FresnelPreset");
 			presetTex->SetName(texname);
 			auto [newTexRef, oldTexPtr] = texDefs.DefineTexture(std::move(presetTex));
-			auto refpreset = OptionalPtr<const FresnelTexture>(
-				dynamic_cast<const FresnelTexture&>(newTexRef)
+			auto refpreset = std::experimental::observer_ptr<const FresnelTexture>(
+				dynamic_cast<const FresnelTexture *>(std::addressof(newTexRef))
 			);
 
 			mat = std::make_unique<Metal2Material>(
@@ -436,16 +440,16 @@ MaterialUPtr Scene::CreateMaterial(
 				nv
 			);
 		} else if (isDefined("fresnel")) {
-			auto& tex = parseTex("fresnel", {5.f});
-			if (!dynamic_cast<const FresnelTexture *>(&tex))
+			auto tex = parseTex("fresnel", {5.f});
+			if (!dynamic_cast<const FresnelTexture *>(tex.get()))
 				throw runtime_error(
 					"Metal2 fresnel property requires a fresnel texture: " + matName
 				);
 
-			auto& fresnelTex = static_cast<const FresnelTexture&>(tex);
+			auto fresnelTex = static_cast<const FresnelTexture *>(tex.get());
 			mat = std::make_unique<Metal2Material>(
 				frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
-				fresnelTex, nu, nv
+				FresnelTextureConstOPtr(fresnelTex), nu, nv
 			);
 		} else {
 			n = parseTex("n", {.5f, .5f, .5f});
@@ -456,11 +460,11 @@ MaterialUPtr Scene::CreateMaterial(
 			);
 		}
 	} else if (matType == "roughglass") {
-		auto& kr = parseTex("kr", {1.f, 1.f, 1.f});
-		auto& kt = parseTex("kt", {1.f, 1.f, 1.f});
+		auto kr = parseTex("kr", {1.f, 1.f, 1.f});
+		auto kt = parseTex("kt", {1.f, 1.f, 1.f});
 
-		OptTex exteriorIor = std::nullopt;
-		OptTex interiorIor = std::nullopt;
+		TextureConstOPtr exteriorIor = nullptr;
+		TextureConstOPtr interiorIor = nullptr;
 		// For compatibility with the past
 		if (isDefined("ioroutside")) {
 			warnDeprecated("ioroutside");
@@ -474,14 +478,14 @@ MaterialUPtr Scene::CreateMaterial(
 		} else if (isDefined("interiorior"))
 			interiorIor = parseTex("interiorior", {1.5f});
 
-		auto& nu = parseTex("uroughness", {.1f});
-		auto& nv = parseTex("vroughness", {.1f});
+		auto nu = parseTex("uroughness", {.1f});
+		auto nv = parseTex("vroughness", {.1f});
 
-		OptTex filmThickness = std::nullopt;
+		TextureConstOPtr filmThickness = nullptr;
 		if (isDefined("filmthickness"))
 			filmThickness = parseTex("filmthickness", {0.f});
 
-		OptTex filmIor = std::nullopt;
+		TextureConstOPtr filmIor = nullptr;
 		if (isDefined("filmior"))
 			filmIor = parseTex("filmior", {1.5f});
 
@@ -490,11 +494,11 @@ MaterialUPtr Scene::CreateMaterial(
 			kr, kt, exteriorIor, interiorIor, nu, nv, filmThickness, filmIor
 		);
 	} else if (matType == "velvet") {
-		auto& kd = parseTex("kd", {.5f, .5f, .5f});
-		auto& p1 = parseTex("p1", {-2.0f});
-		auto& p2 = parseTex("p2", {20.0f});
-		auto& p3 = parseTex("p3", {2.0f});
-		auto& thickness = parseTex("thickness", {0.1f});
+		auto kd = parseTex("kd", {.5f, .5f, .5f});
+		auto p1 = parseTex("p1", {-2.0f});
+		auto p2 = parseTex("p2", {20.0f});
+		auto p3 = parseTex("p3", {2.0f});
+		auto thickness = parseTex("thickness", {0.1f});
 
 		mat = std::make_unique<VelvetMaterial>(
 			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
@@ -520,10 +524,10 @@ MaterialUPtr Scene::CreateMaterial(
 			else if (type == "polyester_lining_cloth")
 				preset = slg::ocl::POLYESTER;
 		}
-		auto& weft_kd = parseTex("weft_kd", {.5f, .5f, .5f});
-		auto& weft_ks = parseTex("weft_ks", {.5f, .5f, .5f});
-		auto& warp_kd = parseTex("warp_kd", {.5f, .5f, .5f});
-		auto& warp_ks = parseTex("warp_ks", {.5f, .5f, .5f});
+		auto weft_kd = parseTex("weft_kd", {.5f, .5f, .5f});
+		auto weft_ks = parseTex("weft_ks", {.5f, .5f, .5f});
+		auto warp_kd = parseTex("warp_kd", {.5f, .5f, .5f});
+		auto warp_ks = parseTex("warp_ks", {.5f, .5f, .5f});
 		const float repeat_u = parseFloat("repeat_u", 100.0f);
 		const float repeat_v = parseFloat("repeat_v", 100.0f);
 
@@ -532,8 +536,8 @@ MaterialUPtr Scene::CreateMaterial(
 			preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v
 		);
 	} else if (matType == "carpaint") {
-		auto& ka = parseTex("ka", {0.f, 0.f, 0.f});
-		auto& d = parseTex("d", {0.f});
+		auto ka = parseTex("ka", {0.f, 0.f, 0.f});
+		auto d = parseTex("d", {0.f});
 
 		string preset = parseString("preset", "");
 		if (preset != "") {
@@ -570,7 +574,18 @@ MaterialUPtr Scene::CreateMaterial(
 					(cpData[i].m3));
 				mat = std::make_unique<CarPaintMaterial>(
 					frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
-					kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d
+					TextureConstOPtr(&kd),
+					TextureConstOPtr(&ks1),
+					TextureConstOPtr(&ks2),
+					TextureConstOPtr(&ks3),
+					TextureConstOPtr(&m1),
+					TextureConstOPtr(&m2),
+					TextureConstOPtr(&m3),
+					TextureConstOPtr(&r1),
+					TextureConstOPtr(&r2),
+					TextureConstOPtr(&r3),
+					ka,
+					d
 				);
 			}
 		}
@@ -578,36 +593,36 @@ MaterialUPtr Scene::CreateMaterial(
 		// preset can be reset above if the name is not found
 		if (preset == "") {
 			auto& cpData = CarPaintMaterial::data[0];
-			auto& kd = parseTex( "kd", {cpData.kd[0], cpData.kd[1], cpData.kd[2]});
-			auto& ks1 = parseTex("ks1", {cpData.ks1[0], cpData.ks1[1], cpData.ks1[2]});
-			auto& ks2 = parseTex("ks2", {cpData.ks2[0], cpData.ks2[1], cpData.ks2[2]});
-			auto& ks3 = parseTex("ks3", {cpData.ks3[0], cpData.ks3[1], cpData.ks3[2]});
-			auto& r1 = parseTex("r1", {cpData.r1});
-			auto& r2 = parseTex("r2", {cpData.r2});
-			auto& r3 = parseTex("r3", {cpData.r3});
-			auto& m1 = parseTex("m1", {cpData.m1});
-			auto& m2 = parseTex("m2", {cpData.m2});
-			auto& m3 = parseTex("m3", {cpData.m3});
+			auto kd = parseTex( "kd", {cpData.kd[0], cpData.kd[1], cpData.kd[2]});
+			auto ks1 = parseTex("ks1", {cpData.ks1[0], cpData.ks1[1], cpData.ks1[2]});
+			auto ks2 = parseTex("ks2", {cpData.ks2[0], cpData.ks2[1], cpData.ks2[2]});
+			auto ks3 = parseTex("ks3", {cpData.ks3[0], cpData.ks3[1], cpData.ks3[2]});
+			auto r1 = parseTex("r1", {cpData.r1});
+			auto r2 = parseTex("r2", {cpData.r2});
+			auto r3 = parseTex("r3", {cpData.r3});
+			auto m1 = parseTex("m1", {cpData.m1});
+			auto m2 = parseTex("m2", {cpData.m2});
+			auto m3 = parseTex("m3", {cpData.m3});
 			mat = std::make_unique<CarPaintMaterial>(
 				frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
 				kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d
 			);
 		}
 	} else if (matType == "glossytranslucent") {
-		auto& kd = parseTex("kd", {.5f, .5f, .5f});
-		auto& kt = parseTex("kt", {.5f, .5f, .5f});
-		auto& ks = parseTex("ks", {.5f, .5f, .5f});
-		auto& ks_bf = parseTex("ks_bf", {.5f, .5f, .5f});
-		auto& nu = parseTex("uroughness", {.1f});
-		auto& nu_bf = parseTex("uroughness_bf", {.1f});
-		auto& nv = parseTex("vroughness", {.1f});
-		auto& nv_bf = parseTex("vroughness_bf", {.1f});
-		auto& ka = parseTex("ka", {0.f, 0.f, 0.f});
-		auto& ka_bf = parseTex("ka_bf", {0.f, 0.f, 0.f});
-		auto& d = parseTex("d", {0.f});
-		auto& d_bf = parseTex("d_bf", {0.f});
-		auto& index = parseTex("index", {0.f, 0.f, 0.f});
-		auto& index_bf = parseTex("index_bf", {0.f, 0.f, 0.f});
+		auto kd = parseTex("kd", {.5f, .5f, .5f});
+		auto kt = parseTex("kt", {.5f, .5f, .5f});
+		auto ks = parseTex("ks", {.5f, .5f, .5f});
+		auto ks_bf = parseTex("ks_bf", {.5f, .5f, .5f});
+		auto nu = parseTex("uroughness", {.1f});
+		auto nu_bf = parseTex("uroughness_bf", {.1f});
+		auto nv = parseTex("vroughness", {.1f});
+		auto nv_bf = parseTex("vroughness_bf", {.1f});
+		auto ka = parseTex("ka", {0.f, 0.f, 0.f});
+		auto ka_bf = parseTex("ka_bf", {0.f, 0.f, 0.f});
+		auto d = parseTex("d", {0.f});
+		auto d_bf = parseTex("d_bf", {0.f});
+		auto index = parseTex("index", {0.f, 0.f, 0.f});
+		auto index_bf = parseTex("index_bf", {0.f, 0.f, 0.f});
 		const bool multibounce = parseBool("multibounce", false);
 		const bool multibounce_bf = parseBool("multibounce_bf", false);
 
@@ -618,40 +633,50 @@ MaterialUPtr Scene::CreateMaterial(
 		);
 	} else if (matType == "glossycoating") {
 		MaterialConstRef matBase = matDefs.GetMaterial(parseString("base", ""));
-		auto& ks = parseTex("ks", {.5f, .5f, .5f});
-		auto& nu = parseTex("uroughness", {.1f});
-		auto& nv = parseTex("vroughness", {.1f});
-		auto& ka = parseTex("ka", {0.f, 0.f, 0.f});
-		auto& d = parseTex("d", {0.f});
-		auto& index = parseTex("index", {0.f, 0.f, 0.f});
+		auto ks = parseTex("ks", {.5f, .5f, .5f});
+		auto nu = parseTex("uroughness", {.1f});
+		auto nv = parseTex("vroughness", {.1f});
+		auto ka = parseTex("ka", {0.f, 0.f, 0.f});
+		auto d = parseTex("d", {0.f});
+		auto index = parseTex("index", {0.f, 0.f, 0.f});
 		const bool multibounce = parseBool("multibounce", false);
 
 		mat = std::make_unique<GlossyCoatingMaterial>(
-			frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex,
-			matBase, ks, nu, nv, ka, d, index, multibounce
+			frontTransparencyTex,
+			backTransparencyTex,
+			emissionTex,
+			bumpTex,
+			MaterialConstOPtr(&matBase),
+			ks,
+			nu,
+			nv,
+			ka,
+			d,
+			index,
+			multibounce
 		);
 	} else if (matType == "disney") {
-		auto& baseColor = parseTex("basecolor", {.5f, .5f, .5f});
-		auto& subsurface = parseTex("subsurface", {0.f});
-		auto& roughness = parseTex("roughness", {0.f});
-		auto& metallic = parseTex("metallic", {0.f});
-		auto& specular = parseTex("specular", {0.f});
-		auto& specularTint = parseTex("speculartint", {0.f});
-		auto& clearcoat = parseTex("clearcoat", {0.f});
-		auto& clearcoatGloss = parseTex("clearcoatgloss", {0.f});
-		auto& anisotropic = parseTex("anisotropic", {0.f});
-		auto& sheen = parseTex("sheen", {0.f});
-		auto& sheenTint = parseTex("sheentint", {0.f});
+		auto baseColor = parseTex("basecolor", {.5f, .5f, .5f});
+		auto subsurface = parseTex("subsurface", {0.f});
+		auto roughness = parseTex("roughness", {0.f});
+		auto metallic = parseTex("metallic", {0.f});
+		auto specular = parseTex("specular", {0.f});
+		auto specularTint = parseTex("speculartint", {0.f});
+		auto clearcoat = parseTex("clearcoat", {0.f});
+		auto clearcoatGloss = parseTex("clearcoatgloss", {0.f});
+		auto anisotropic = parseTex("anisotropic", {0.f});
+		auto sheen = parseTex("sheen", {0.f});
+		auto sheenTint = parseTex("sheentint", {0.f});
 
-		OptTex filmAmount = std::nullopt;
+		TextureConstOPtr filmAmount = nullptr;
 		if (isDefined("filmamount"))
 			filmAmount = parseTex("filmamount", {1.f});
 
-		OptTex filmThickness = std::nullopt;
+		TextureConstOPtr filmThickness = nullptr;
 		if (isDefined("filmthickness"))
 			filmThickness = parseTex("filmthickness", {0.f});
 
-		OptTex filmIor = std::nullopt;
+		TextureConstOPtr filmIor = nullptr;
 		if (isDefined("filmior"))
 			filmIor = parseTex("filmior", {1.5f});
 

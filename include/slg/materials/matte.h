@@ -29,9 +29,9 @@ namespace slg {
 
 class MatteMaterial : public Material {
 public:
-	MatteMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> col);
+	MatteMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr col);
 
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
@@ -55,10 +55,10 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const Texture> GetKd() const { return Kd; }
+	TextureConstOPtr GetKd() const { return Kd; }
 
 private:
-	OptionalPtr<const Texture> Kd;
+	TextureConstOPtr Kd;
 };
 
 }

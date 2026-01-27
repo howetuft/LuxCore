@@ -31,17 +31,17 @@ namespace slg {
 class GlossyCoatingMaterial : public Material {
 public:
 	GlossyCoatingMaterial(
-		OptionalPtr<const Texture> frontTransp,
-		OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted,
-		OptionalPtr<const Texture> bump,
-		OptionalPtr<const Material> mB,
-		OptionalPtr<const Texture> ks,
-		OptionalPtr<const Texture> u,
-		OptionalPtr<const Texture> v,
-		OptionalPtr<const Texture> ka,
-		OptionalPtr<const Texture> d,
-		OptionalPtr<const Texture> i,
+		TextureConstOPtr frontTransp,
+		TextureConstOPtr backTransp,
+		TextureConstOPtr emitted,
+		TextureConstOPtr bump,
+		std::experimental::observer_ptr<const Material> mB,
+		TextureConstOPtr ks,
+		TextureConstOPtr u,
+		TextureConstOPtr v,
+		TextureConstOPtr ka,
+		TextureConstOPtr d,
+		TextureConstOPtr i,
 		const bool mbounce
 	);
 
@@ -59,9 +59,9 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
 
-	virtual OptionalPtr<const Volume> GetInteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
-	virtual OptionalPtr<const Volume> GetExteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
 
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
@@ -104,13 +104,13 @@ protected:
 	virtual void UpdateAvgPassThroughTransparency();
 
 private:
-	OptionalPtr<const Material> matBase;
-	OptionalPtr<const Texture> Ks;
-	OptionalPtr<const Texture> nu;
-	OptionalPtr<const Texture> nv;
-	OptionalPtr<const Texture> Ka;
-	OptionalPtr<const Texture> depth;
-	OptionalPtr<const Texture> index;
+	std::experimental::observer_ptr<const Material> matBase;
+	TextureConstOPtr Ks;
+	TextureConstOPtr nu;
+	TextureConstOPtr nv;
+	TextureConstOPtr Ka;
+	TextureConstOPtr depth;
+	TextureConstOPtr index;
 	const bool multibounce;
 };
 

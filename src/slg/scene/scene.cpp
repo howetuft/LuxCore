@@ -70,7 +70,7 @@ Scene::Scene(
 }
 
 void Scene::Init(luxrays::PropertiesPtr resizePolicyProps) {
-	defaultWorldVolume = std::nullopt;
+	defaultWorldVolume = nullptr;
 	// Just in case there is an unexpected exception during the scene loading
     camera = nullptr;
 
@@ -523,7 +523,7 @@ void Scene::RemoveUnusedMaterials() {
 
 	// Add the default world volume
 	if (defaultWorldVolume)
-		referencedMats.insert(defaultWorldVolume.ptr());
+		referencedMats.insert(defaultWorldVolume.get());
 
 	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
 		auto& obj = objDefs.GetSceneObject(i);
@@ -673,10 +673,10 @@ bool Scene::Intersect(IntersectionDevice *device,
 			dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
 		bool bevelContinueToTrace = !hit;
-		OptionalPtr<const Volume> rayVolume = 
+		VolumeConstOPtr rayVolume =
 			volInfo->HasCurrentVolume() ?
-			OptionalPtr<const Volume>(volInfo->GetCurrentVolume()) :
-			OptionalPtr<const Volume>();
+			VolumeConstOPtr(std::addressof(volInfo->GetCurrentVolume())) :
+			VolumeConstOPtr();
 		if (hit) {
 			bsdf->Init(
 				fromLight,

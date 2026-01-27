@@ -457,8 +457,12 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				Property("sampler.imagesamples.enable")(false) <<
 				Property("sampler.metropolis.addonlycaustics")(true);
 
-			lightSampler = Sampler::FromProperties(props, std::cref(rndGen), engine->GetMapFilm(), nullptr,
-					engine->lightSamplerSharedData);
+			lightSampler = Sampler::FromProperties(
+				props,
+				std::cref(rndGen),
+				FilmOPtr(&engine->GetMapFilm()),
+				nullptr,
+				engine->lightSamplerSharedData);
 			lightSampler->SetThreadIndex(threadIndex);
 
 			lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);

@@ -89,7 +89,7 @@ void ImageMapResizePolicy::RenderFunc(
 	// Initialize the sampler
 	auto rnd = std::make_unique<RandomGenerator>(1 + threadIndex);
 	SobolSampler sampler(
-		rnd, std::nullopt, NULL, true, 0.f, 0.f,
+		rnd, nullptr, NULL, true, 0.f, 0.f,
 		16, 16, 1, 1,
 		sobolSharedData
 	);
@@ -269,7 +269,7 @@ void ImageMapResizePolicy::CalcOptimalImageMapSizes(ImageMapCache &imc, SceneCon
 
 	std::barrier threadsSyncBarrier(renderThreadCount, completion_t());
 
-	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, std::nullopt);
+	auto sobolSharedData = std::make_shared<SobolSamplerSharedData>(131, nullptr);
 
 	// Start the preprocessing threads
 	u_int workCounter = 0;

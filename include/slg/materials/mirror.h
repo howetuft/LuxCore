@@ -29,7 +29,7 @@ namespace slg {
 
 class MirrorMaterial : public Material {
 public:
-	using TexRef = OptionalPtr<const Texture>;
+	using TexRef = TextureConstOPtr;
 	MirrorMaterial(TexRef frontTransp, TexRef backTransp,
 			TexRef emitted, TexRef bump,
 			TexRef refl);

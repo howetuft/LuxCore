@@ -57,11 +57,11 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex == oldTex)
+		if (&tex.get() == &oldTex)
 			tex = newTex;
-		if (brightnessTex == oldTex)
+		if (&brightnessTex.get() == &oldTex)
 			brightnessTex = newTex;
-		if (contrastTex == oldTex)
+		if (&contrastTex.get() == &oldTex)
 			contrastTex = newTex;
 	}
 

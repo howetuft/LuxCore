@@ -49,7 +49,7 @@ public:
 		MaterialRef mt,
 		const u_int id,
 		const bool invisib)
-	: NamedObject("obj"), mesh(m), mat(mt), objID(id), bakeMap(std::nullopt), cameraInvisible(invisib)
+	: NamedObject("obj"), mesh(m), mat(mt), objID(id), bakeMap(nullptr), cameraInvisible(invisib)
 	{ }
 	virtual ~SceneObject() { }
 
@@ -64,7 +64,7 @@ public:
 		mat = newMat;
 	}
 
-	bool HasBakeMap(const BakeMapType type) const { return (bakeMap.has_value()) && (bakeMapType == type); }
+	bool HasBakeMap(const BakeMapType type) const { return bool(bakeMap) && (bakeMapType == type); }
 	BakeMapType GetBakeMapType() const { return bakeMapType; }
 	void SetBakeMap(ImageMapConstRef map, const BakeMapType type, const u_int uvIndex);
 	auto GetBakeMap() const { return bakeMap; }
@@ -95,7 +95,7 @@ private:
 	std::reference_wrapper<Material> mat;  // Owned by the scene
 	const u_int objID;
 
-	OptionalPtr<const ImageMap> bakeMap;
+	std::experimental::observer_ptr<const ImageMap> bakeMap;
 	BakeMapType bakeMapType;
 	u_int bakeMapUVIndex;
 

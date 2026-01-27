@@ -94,7 +94,7 @@ public:
 			"RenderEngine::GetRenderState() not implemented for render engine: " + GetTag()
 		);
 	}
-	virtual void SetRenderState(RenderStateSPtr state, OptionalPtr<Film> startFilm);
+	virtual void SetRenderState(RenderStateSPtr state, std::experimental::observer_ptr<Film> startFilm);
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
@@ -190,7 +190,7 @@ protected:
 
 	RenderConfigRef renderConfig;
 	FilterUPtr pixelFilter;
-	OptionalPtr<Film> film;
+	std::experimental::observer_ptr<Film> film;
 	std::mutex *filmMutex;
 
 	// bootStrapSeed is the "father" of all other seeds. Using the same seed should leads
@@ -202,7 +202,7 @@ protected:
 	double raysCount;
 
 	RenderStateSPtr startRenderState;
-	OptionalPtr<Film> startFilm;
+	std::experimental::observer_ptr<Film> startFilm;
 
 	bool started, editMode, pauseMode;
 };

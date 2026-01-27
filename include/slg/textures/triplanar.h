@@ -67,12 +67,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (texX == oldTex)
-			texX = newTex;
-		if (texY == oldTex)
-			texY = newTex;
-		if (texZ == oldTex)
-			texZ = newTex;
+		updtex(texX, oldTex, newTex);
+		updtex(texY, oldTex, newTex);
+		updtex(texZ, oldTex, newTex);
 	}
 
 	TextureMapping3DConstRef GetTextureMapping() const { return *mapping; }

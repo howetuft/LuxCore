@@ -25,24 +25,24 @@ using namespace luxrays;
 using namespace slg;
 
 DisneyMaterial::DisneyMaterial(
-	OptionalPtr<const Texture> frontTransp,
-	OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted,
-	OptionalPtr<const Texture> bump,
-	OptionalPtr<const Texture> baseColor,
-	OptionalPtr<const Texture> subsurface,
-	OptionalPtr<const Texture> roughness,
-	OptionalPtr<const Texture> metallic,
-	OptionalPtr<const Texture> specular,
-	OptionalPtr<const Texture> specularTint,
-	OptionalPtr<const Texture> clearcoat,
-	OptionalPtr<const Texture> clearcoatGloss,
-	OptionalPtr<const Texture> anisotropic,
-	OptionalPtr<const Texture> sheen,
-	OptionalPtr<const Texture> sheenTint,
-	OptionalPtr<const Texture> filmAmount,
-	OptionalPtr<const Texture> filmThickness,
-	OptionalPtr<const Texture> filmIor
+	TextureConstOPtr frontTransp,
+	TextureConstOPtr backTransp,
+	TextureConstOPtr emitted,
+	TextureConstOPtr bump,
+	TextureConstOPtr baseColor,
+	TextureConstOPtr subsurface,
+	TextureConstOPtr roughness,
+	TextureConstOPtr metallic,
+	TextureConstOPtr specular,
+	TextureConstOPtr specularTint,
+	TextureConstOPtr clearcoat,
+	TextureConstOPtr clearcoatGloss,
+	TextureConstOPtr anisotropic,
+	TextureConstOPtr sheen,
+	TextureConstOPtr sheenTint,
+	TextureConstOPtr filmAmount,
+	TextureConstOPtr filmThickness,
+	TextureConstOPtr filmIor
 ) : Material(frontTransp, backTransp, emitted, bump), 
 	BaseColor(baseColor), 
 	Subsurface(subsurface),
@@ -563,23 +563,24 @@ void DisneyMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef 
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (BaseColor == oldTex) BaseColor = newTex;
-	if (Subsurface == oldTex) Subsurface = newTex;
-	if (Roughness == oldTex) {
-		Roughness = newTex;
+
+	if (BaseColor == &oldTex) BaseColor.reset(&newTex);
+	if (Subsurface == &oldTex) Subsurface.reset(&newTex);
+	if (Roughness == &oldTex) {
+		Roughness.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (Metallic == oldTex) Metallic = newTex;
-	if (Specular == oldTex) Specular = newTex;
-	if (SpecularTint == oldTex) SpecularTint = newTex;
-	if (Clearcoat == oldTex) Clearcoat = newTex;
-	if (ClearcoatGloss == oldTex) ClearcoatGloss = newTex;
-	if (Anisotropic == oldTex) Anisotropic = newTex;
-	if (Sheen == oldTex) Sheen = newTex;
-	if (SheenTint == oldTex) SheenTint = newTex;
-	if (filmAmount == oldTex) filmAmount = newTex;
-	if (filmThickness == oldTex) filmThickness = newTex;
-	if (filmIor == oldTex) filmIor = newTex;
+	if (Metallic == &oldTex) Metallic.reset(&newTex);
+	if (Specular == &oldTex) Specular.reset(&newTex);
+	if (SpecularTint == &oldTex) SpecularTint.reset(&newTex);
+	if (Clearcoat == &oldTex) Clearcoat.reset(&newTex);
+	if (ClearcoatGloss == &oldTex) ClearcoatGloss.reset(&newTex);
+	if (Anisotropic == &oldTex) Anisotropic.reset(&newTex);
+	if (Sheen == &oldTex) Sheen.reset(&newTex);
+	if (SheenTint == &oldTex) SheenTint.reset(&newTex);
+	if (filmAmount == &oldTex) filmAmount.reset(&newTex);
+	if (filmThickness == &oldTex) filmThickness.reset(&newTex);
+	if (filmIor == &oldTex) filmIor.reset(&newTex);
 
 	if (updateGlossiness)
 		UpdateGlossiness();

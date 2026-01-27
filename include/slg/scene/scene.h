@@ -268,7 +268,7 @@ protected:
 	//--------------------------------------------------------------------------
 
 	// This volume is (optionally) applied to rays hitting nothing
-	OptionalPtr<const Volume> defaultWorldVolume;
+	VolumeConstOPtr defaultWorldVolume;
 
 
 	ExtMeshCache extMeshCache; // Mesh objects cache
@@ -326,7 +326,7 @@ private:
 	LightSourceUPtr CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
 	// Create directly in cache, so result is just a reference
-	OptionalPtr<ImageMap> CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
+	std::experimental::observer_ptr<ImageMap> CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 
 	luxrays::ExtTriangleMeshUPtr CreateInlinedMesh(const std::string &shapeName,
 			const std::string &propName, const luxrays::Properties &props);

@@ -45,7 +45,7 @@ void LightStrategyDLSCache::Preprocess(SceneConstRef scn, const LightStrategyTas
 		DLSCache.Build(scn);
 }
 
-OptionalPtr<LightSource> LightStrategyDLSCache::SampleLights(
+std::experimental::observer_ptr<LightSource> LightStrategyDLSCache::SampleLights(
 	SceneConstRef scene,
 	const float u,
 	const Point &p, const Normal &n,
@@ -60,9 +60,11 @@ OptionalPtr<LightSource> LightStrategyDLSCache::SampleLights(
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 
 			if (*pdf > 0.f)
-				return scene.GetLightSources().GetLightSource(lightIndex);
+				return std::experimental::make_observer(
+					&scene.GetLightSources().GetLightSource(lightIndex)
+				);
 			else
-				return std::nullopt;
+				return nullptr;
 		} else
 			return distributionStrategy->SampleLights(scene, u, p, n, isVolume, pdf);
 	} else
@@ -83,7 +85,7 @@ float LightStrategyDLSCache::SampleLightPdf(LightSourceConstRef light,
 		return distributionStrategy->SampleLightPdf(light, p, n, isVolume);
 }
 
-OptionalPtr<LightSource> LightStrategyDLSCache::SampleLights(SceneConstRef scene, const float u,
+std::experimental::observer_ptr<LightSource> LightStrategyDLSCache::SampleLights(SceneConstRef scene, const float u,
 			float *pdf) const {
 	return distributionStrategy->SampleLights(scene, u, pdf);
 }

@@ -118,7 +118,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc(std::stop_token stop_
 
 	// Initialize the sampler
 	auto rnd = std::make_unique<RandomGenerator>(1 + threadIndex);
-	SobolSampler sampler(rnd, std::nullopt, NULL, true, 0.f, 0.f,
+	SobolSampler sampler(rnd, nullptr, NULL, true, 0.f, 0.f,
 			16, 16, 1, 1,
 			visibilitySobolSharedData);
 
@@ -359,7 +359,7 @@ void SceneVisibility<T>::Build() {
 	std::mutex particlesOctreeMutex;
 
 	auto visibilitySobolSharedData =
-		std::make_shared<SobolSamplerSharedData>(131, OptionalPtr<Film>());
+		std::make_shared<SobolSamplerSharedData>(131, std::experimental::observer_ptr<Film>());
 
 	std::atomic<u_int> globalVisibilityParticlesCount(0);
 	u_int visibilityCacheLookUp = 0;

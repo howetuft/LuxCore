@@ -33,7 +33,7 @@ using namespace slg;
 
 HomogeneousVolume::HomogeneousVolume(
 	TextureConstRef iorTex,
-	OptionalPtr<const Texture> emiTex,
+	TextureConstOPtr emiTex,
 	TextureConstRef a, TextureConstRef s, TextureConstRef g,
 	const bool multiScat
 ) :
@@ -175,11 +175,9 @@ void HomogeneousVolume::UpdateTextureReferences(
 ) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
-	if (sigmaA == oldTex)
-		sigmaA = newTex;
-	if (sigmaS == oldTex)
-		sigmaS = newTex;
-	if (schlickScatter.GetG() == oldTex)
+	updtex(sigmaA, oldTex, newTex);
+	updtex(sigmaS, oldTex, newTex);
+	if (&schlickScatter.GetG() == &oldTex)
 		schlickScatter.SetG(newTex);
 }
 

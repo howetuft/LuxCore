@@ -101,13 +101,13 @@ void BilerpTexture::UpdateTextureReferences(
 	TextureConstRef oldTex, TextureRef newTex
 )
 {
-	if (GetTexture00() == oldTex)
+	if (&GetTexture00() == &oldTex)
 		t00 = newTex;
-	if (GetTexture01() == oldTex)
+	if (&GetTexture01() == &oldTex)
 		t01 = newTex;
-	if (GetTexture10() == oldTex)
+	if (&GetTexture10() == &oldTex)
 		t10 = newTex;
-	if (GetTexture11() == oldTex)
+	if (&GetTexture11() == &oldTex)
 		t11 = newTex;
 }
 

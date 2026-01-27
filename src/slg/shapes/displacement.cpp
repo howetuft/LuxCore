@@ -99,7 +99,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
 		hitPoint.defaultUV = srcMesh.HasUVs(params.uvIndex) ? srcMesh.GetUV(i, params.uvIndex) : UV(0.f, 0.f);
-		hitPoint.mesh = srcMesh;
+		hitPoint.mesh.reset(&srcMesh);
 		hitPoint.triangleIndex = triangleIndex[i];
 		if (i == tris[hitPoint.triangleIndex].v[0]) {
 			// First vertex of the triangle
@@ -122,8 +122,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 		hitPoint.passThroughEvent = 0.f;
 		srcMesh.GetLocal2World(0.f, hitPoint.localToWorld);
-		hitPoint.interiorVolume = std::nullopt;
-		hitPoint.exteriorVolume = std::nullopt;
+		hitPoint.interiorVolume = nullptr;
+		hitPoint.exteriorVolume = nullptr;
 		hitPoint.objectID = 0;
 		hitPoint.fromLight = false;
 		hitPoint.intoObject = true;

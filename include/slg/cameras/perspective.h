@@ -69,7 +69,7 @@ public:
 
 	u_int bokehBlades, bokehPower;
 	BokehDistributionType bokehDistribution;
-	OptionalPtr<const ImageMap> bokehDistributionImageMap;
+	std::experimental::observer_ptr<const ImageMap> bokehDistributionImageMap;
 	luxrays::Distribution2D *bokehDistributionMap;
 	float bokehScaleX, bokehScaleY;
 

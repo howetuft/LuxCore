@@ -29,9 +29,9 @@ namespace slg {
 
 class RoughMatteMaterial : public Material {
 public:
-	RoughMatteMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> col, OptionalPtr<const Texture> s);
+	RoughMatteMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr col, TextureConstOPtr s);
 
 	virtual MaterialType GetType() const { return ROUGHMATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
@@ -54,12 +54,12 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const Texture> GetKd() const { return Kd; }
-	OptionalPtr<const Texture> GetSigma() const { return sigma; }
+	TextureConstOPtr GetKd() const { return Kd; }
+	TextureConstOPtr GetSigma() const { return sigma; }
 
 private:
-	OptionalPtr<const Texture> Kd;
-	OptionalPtr<const Texture> sigma;
+	TextureConstOPtr Kd;
+	TextureConstOPtr sigma;
 };
 
 }

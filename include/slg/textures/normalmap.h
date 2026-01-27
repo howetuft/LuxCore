@@ -29,7 +29,7 @@ namespace slg {
 
 class NormalMapTexture : public Texture {
 public:
-	NormalMapTexture(TextureRef t, const float scale);
+	NormalMapTexture(TextureConstRef t, const float scale);
 	virtual ~NormalMapTexture();
 
 	virtual TextureType GetType() const { return NORMALMAP_TEX; }
@@ -49,9 +49,8 @@ public:
 		GetTexture().AddReferencedImageMaps(referencedImgMaps);
 	}
 
-	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex == oldTex)
-			tex = newTex;
+	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
+		updtex(tex, oldTex, newTex);
 	}
 
 	TextureConstRef GetTexture() const { return tex; }
@@ -60,7 +59,7 @@ public:
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	std::reference_wrapper<Texture> tex;
+	std::reference_wrapper<const Texture> tex;
 	const float scale;
 };
 

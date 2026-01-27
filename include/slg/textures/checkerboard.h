@@ -54,9 +54,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex1 == oldTex)
+		if (&tex1.get() == &oldTex)
 			tex1 = newTex;
-		if (tex2 == oldTex)
+		if (&tex2.get() == &oldTex)
 			tex2 = newTex;
 	}
 
@@ -95,9 +95,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex1 == oldTex)
+		if (tex1 == &oldTex)
 			tex1 = newTex;
-		if (tex2 == oldTex)
+		if (tex2 == &oldTex)
 			tex2 = newTex;
 	}
 

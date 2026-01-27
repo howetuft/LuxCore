@@ -321,7 +321,7 @@ public:
 	
 	static ExtTriangleMeshUPtr Merge(
 		std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
-		std::optional<std::vector<luxrays::Transform>> trans = std::nullopt
+		std::optional<std::vector<luxrays::Transform>> trans
 	);
 
 	friend class ExtInstanceTriangleMesh;

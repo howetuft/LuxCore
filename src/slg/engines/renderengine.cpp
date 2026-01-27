@@ -82,7 +82,7 @@ RenderEngine::~RenderEngine() {
 		Stop();
 }
 
-void RenderEngine::SetRenderState(RenderStateSPtr state, OptionalPtr<Film> oldFilm) {
+void RenderEngine::SetRenderState(RenderStateSPtr state, std::experimental::observer_ptr<Film> oldFilm) {
 	startRenderState = state;
 	startFilm = oldFilm;
 }
@@ -94,7 +94,7 @@ void RenderEngine::Start(FilmRef flm, std::mutex *flmMutex) {
 	started = true;
 
 	// Update the film pointer
-	film = flm;
+	film.reset(&flm);
 	filmMutex = flmMutex;
 
 	pixelFilter = renderConfig.AllocPixelFilter();
@@ -193,7 +193,7 @@ void RenderEngine::BeginFilmEdit() {
 }
 
 void RenderEngine::EndFilmEdit(FilmRef flm, std::mutex *flmMutex) {
-	film = std::nullopt;
+	film = nullptr;
 	filmMutex = NULL;
 
 	Start(flm, flmMutex);

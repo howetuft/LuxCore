@@ -33,7 +33,7 @@ using namespace slg;
 // RandomSamplerSharedData
 //------------------------------------------------------------------------------
 
-RandomSamplerSharedData::RandomSamplerSharedData(OptionalPtr<Film> engineFlm) :
+RandomSamplerSharedData::RandomSamplerSharedData(std::experimental::observer_ptr<Film> engineFlm) :
 	engineFilm(engineFlm)
 {
 	Reset();
@@ -49,7 +49,7 @@ void RandomSamplerSharedData::GetNewBucket(const u_int bucketCount,
 }
 
 std::unique_ptr<SamplerSharedData> RandomSamplerSharedData::FromProperties(
-	const Properties &cfg, const RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
+	const Properties &cfg, const RandomGeneratorUPtr & rndGen, std::experimental::observer_ptr<Film> film
 ) {
 	return std::make_unique<RandomSamplerSharedData>(film);
 }
@@ -58,7 +58,7 @@ std::unique_ptr<SamplerSharedData> RandomSamplerSharedData::FromProperties(
 // Random sampler
 //------------------------------------------------------------------------------
 
-RandomSampler::RandomSampler(const RandomGeneratorUPtr & rnd, OptionalPtr<Film> flm,
+RandomSampler::RandomSampler(const RandomGeneratorUPtr & rnd, std::experimental::observer_ptr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter, const bool imgSamplesEnable,
 		const float adaptiveStr, const float adaptiveUserImpWeight,
 		const u_int bucketSz, const u_int tileSz, const u_int superSmpl,
@@ -246,7 +246,7 @@ PropertiesUPtr RandomSampler::ToProperties(const Properties &cfg) {
 }
 
 SamplerUPtr RandomSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr &  rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
+		std::experimental::observer_ptr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 

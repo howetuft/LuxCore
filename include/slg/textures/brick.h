@@ -65,11 +65,11 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
-		if (GetTexture1() == oldTex)
+		if (&GetTexture1() == &oldTex)
 			tex1 = newTex;
-		if (GetTexture2() == oldTex)
+		if (&GetTexture2() == &oldTex)
 			tex2 = newTex;
-		if (GetTexture3() == oldTex)
+		if (&GetTexture3() == &oldTex)
 			tex3 = newTex;
 	}
 

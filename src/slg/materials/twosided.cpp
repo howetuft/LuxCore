@@ -26,11 +26,11 @@ using namespace slg;
 // Two-sided material
 //------------------------------------------------------------------------------
 
-TwoSidedMaterial::TwoSidedMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
+TwoSidedMaterial::TwoSidedMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
 		MaterialConstRef frontMat, MaterialConstRef backMat) :
 			Material(frontTransp, backTransp, emitted, bump),
-			frontMat(frontMat), backMat(backMat) {
+			frontMat(&frontMat), backMat(&backMat) {
 	Preprocess();
 }
 
@@ -67,7 +67,7 @@ void TwoSidedMaterial::Preprocess() {
 	isDelta = IsDeltaImpl();
 }
 
-OptionalPtr<const Volume> TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
 		return interiorVolume;
@@ -79,7 +79,7 @@ OptionalPtr<const Volume> TwoSidedMaterial::GetInteriorVolume(const HitPoint &hi
 	}
 }
 
-OptionalPtr<const Volume> TwoSidedMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr TwoSidedMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (exteriorVolume)
 		return exteriorVolume;
@@ -193,10 +193,10 @@ void TwoSidedMaterial::Pdf(const HitPoint &hitPoint,
 
 void TwoSidedMaterial::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
 	if (frontMat == oldMat)
-		frontMat = newMat;
+		frontMat.reset(&newMat);
 
 	if (backMat == oldMat)
-		backMat = newMat;
+		backMat.reset(&newMat);
 
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
@@ -214,10 +214,10 @@ void TwoSidedMaterial::AddReferencedMaterials(
 ) const {
 	Material::AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(frontMat.ptr());
+	referencedMats.insert(frontMat.get());
 	frontMat->AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(backMat.ptr());
+	referencedMats.insert(backMat.get());
 	backMat->AddReferencedMaterials(referencedMats);
 }
 

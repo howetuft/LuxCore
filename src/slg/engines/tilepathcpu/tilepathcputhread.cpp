@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <cassert>
+#include <memory>
 #include "luxrays/utils/thread.h"
 
 #include "slg/samplers/tilepathsampler.h"
@@ -97,7 +98,8 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		// Render the tile
 		tileFilm->Reset();
 		if (tileFilm->GetDenoiser().IsEnabled())
-			tileFilm->GetDenoiser().SetReferenceFilm(engine->GetFilm(), tileWork.GetCoord().x, tileWork.GetCoord().y);
+			tileFilm->GetDenoiser().SetReferenceFilm(
+				FilmOPtr(&engine->GetFilm()), tileWork.GetCoord().x, tileWork.GetCoord().y);
 
 		//SLG_LOG("[TilePathCPURenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
@@ -105,7 +107,7 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		sampler.Init(&tileWork, *tileFilm);
+		sampler.Init(&tileWork, std::experimental::make_observer(tileFilm.get()));
 
 		for (u_int y = 0; y < tileWork.GetCoord().height && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {

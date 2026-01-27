@@ -29,7 +29,7 @@ namespace slg {
 
 class SimplifyShape : public Shape {
 public:
-	SimplifyShape(OptionalPtr<const Camera> camera, luxrays::ExtTriangleMeshRef srcMesh,
+	SimplifyShape(std::experimental::observer_ptr<const Camera> camera, luxrays::ExtTriangleMeshRef srcMesh,
 			const float target, const float edgeScreenSize, const bool preserveBorder);
 	virtual ~SimplifyShape();
 

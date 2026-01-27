@@ -279,7 +279,7 @@ protected:
 
 	Transform trans;
 	bool transSwapsHandedness;
-	OptionalPtr<TriangleMesh> mesh;
+	std::experimental::observer_ptr<TriangleMesh> mesh;
 
 	mutable float cachedArea;
 	mutable BBox cachedBBox;
@@ -367,7 +367,7 @@ protected:
 	}
 
 	MotionSystem motionSystem;
-	OptionalPtr<TriangleMesh> mesh;
+	std::experimental::observer_ptr<TriangleMesh> mesh;
 
 	mutable float cachedArea;
 	mutable BBox cachedBBox;

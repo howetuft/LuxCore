@@ -50,13 +50,15 @@ public:
 	VolumeConstRef GetVolume(const u_int i) const { return *volumeList[i]; }
 	const u_int GetListSize() const { return volumeListSize; }
 
-	void AddVolume(OptionalPtr<const Volume> vol);
-	void RemoveVolume(OptionalPtr<const Volume> vol);
-	void SetCurrentVolume(OptionalPtr<const Volume> vol) { currentVolume = vol; }
-	void SetVolume(const u_int i, OptionalPtr<const Volume> vol) { volumeList[i] = vol; }
+	void AddVolume(VolumeConstOPtr vol);
+	void AddVolume(VolumeConstRef vol);
+	void RemoveVolume(VolumeConstOPtr vol);
+	void SetCurrentVolume(VolumeConstOPtr vol) { currentVolume = vol; }
+	void SetCurrentVolume(VolumeConstRef vol) { currentVolume.reset(std::addressof(vol)); }
+	void SetVolume(const u_int i, VolumeConstOPtr vol) { volumeList[i] = vol; }
 
-	OptionalPtr<const Volume> SimulateRemoveVolume(OptionalPtr<const Volume> vol) const;
-	OptionalPtr<const Volume> SimulateAddVolume(OptionalPtr<const Volume>) const;
+	VolumeConstOPtr SimulateRemoveVolume(VolumeConstOPtr vol) const;
+	VolumeConstOPtr SimulateAddVolume(VolumeConstOPtr) const;
 
 	void SetScatteredStart(const bool v) { scatteredStart = v; }
 	bool IsScatteredStart() const { return scatteredStart; }
@@ -66,19 +68,20 @@ public:
 
 	void SetHitPointVolumes(
 		HitPoint &hitPoint,
-		OptionalPtr<const Volume> matInteriorVolume,
-		OptionalPtr<const Volume> matExteriorVolume,
-		OptionalPtr<const Volume> defaultWorldVolume
+		VolumeConstOPtr matInteriorVolume,
+		VolumeConstOPtr matExteriorVolume,
+		VolumeConstOPtr defaultWorldVolume
 	) const;
 
 private:
 	static bool CompareVolumePriorities(
-		OptionalPtr<const Volume> vol1,
-		OptionalPtr<const Volume> vol2);
+		VolumeConstOPtr vol1,
+		VolumeConstOPtr vol2
+	);
 
-	OptionalPtr<const Volume> currentVolume;
+	VolumeConstOPtr currentVolume;
 	// Using a fixed array here mostly to have the same code as the OpenCL implementation
-	std::array<OptionalPtr<const Volume>, PATHVOLUMEINFO_SIZE> volumeList;
+	std::array<VolumeConstOPtr, PATHVOLUMEINFO_SIZE> volumeList;
 	u_int volumeListSize;
 
 	bool scatteredStart;

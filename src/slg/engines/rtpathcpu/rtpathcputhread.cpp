@@ -94,7 +94,7 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 			// Wait for the main thread -> This waits for RTPathCPURenderEngine::ResumeThreads()
 			engine->threadsSyncBarrier->arrive_and_wait();
 
-			(static_cast<RTPathCPUSampler *>(sampler.get()))->Reset(engine->GetFilm());
+			(static_cast<RTPathCPUSampler *>(sampler.get()))->Reset(FilmOPtr(&engine->GetFilm()));
 		}
 
 		pathTracer.RenderEyeSample(device, engine->renderConfig.GetScene(),

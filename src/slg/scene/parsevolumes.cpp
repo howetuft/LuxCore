@@ -27,6 +27,7 @@
 #include "slg/textures/constfloat3.h"
 
 #include "slg/cameras/camera.h"
+#include "slg/usings.h"
 #include "slg/volumes/clear.h"
 #include "slg/volumes/heterogenous.h"
 #include "slg/volumes/homogenous.h"
@@ -87,8 +88,8 @@ void Scene::ParseVolumes(const Properties &props) {
 			);
 
 			// Check also the world default volume
-			if (defaultWorldVolume == oldMatRef)
-				defaultWorldVolume = static_cast<const Volume &>(newMatRef);
+			if (defaultWorldVolume.get() == &oldMatRef)
+				defaultWorldVolume.reset(static_cast<const Volume *>(&newMatRef));
 
 			// Check if the old material was or the new material is a light source
 			//if (wasLightSource || newMat->IsLightSource())
@@ -102,10 +103,10 @@ void Scene::ParseVolumes(const Properties &props) {
 	if (props.IsDefined("scene.world.volume.default")) {
 		const string volName = props.Get("scene.world.volume.default").Get<string>();
 		MaterialConstRef m = matDefs.GetMaterial(volName);
-		auto v = dynamic_cast<const Volume *>(&m);
+		auto* v = dynamic_cast<const Volume *>(&m);
 		if (!v)
 			throw runtime_error(volName + " is not a volume and can not be used for default world volume");
-		defaultWorldVolume = *v;
+		defaultWorldVolume = VolumeConstOPtr(v);
 
 		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 	}
@@ -120,10 +121,10 @@ VolumeUPtr Scene::CreateVolume(const u_int defaultVolID, const string &volName, 
 
 	auto& iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
 	auto emissionTex = props.IsDefined(propName + ".emission") ?
-		OptionalPtr<const Texture>(
-			GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f)))
+		TextureConstOPtr(
+			&GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f)))
 		) :
-		OptionalPtr<const Texture>(std::nullopt);
+		TextureConstOPtr(nullptr);
 	// Required to remove light source while editing the scene
 	if (
 		emissionTex &&
@@ -138,7 +139,7 @@ VolumeUPtr Scene::CreateVolume(const u_int defaultVolID, const string &volName, 
 			)
 		)
 	) {
-		emissionTex = std::nullopt;
+		emissionTex = nullptr;
 	}
 
 	VolumeUPtr vol;

@@ -29,12 +29,12 @@ using namespace slg;
 // LuxRender GlossyTranslucent material porting.
 //------------------------------------------------------------------------------
 
-GlossyTranslucentMaterial::GlossyTranslucentMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-		OptionalPtr<const Texture> kd, OptionalPtr<const Texture> kt, OptionalPtr<const Texture> ks, OptionalPtr<const Texture> ks2,
-		OptionalPtr<const Texture> u, OptionalPtr<const Texture> u2, OptionalPtr<const Texture> v, OptionalPtr<const Texture> v2,
-		OptionalPtr<const Texture> ka, OptionalPtr<const Texture> ka2, OptionalPtr<const Texture> d, OptionalPtr<const Texture> d2,
-		OptionalPtr<const Texture> i, OptionalPtr<const Texture> i2, const bool mbounce, const bool mbounce2) :
+GlossyTranslucentMaterial::GlossyTranslucentMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
+		TextureConstOPtr kd, TextureConstOPtr kt, TextureConstOPtr ks, TextureConstOPtr ks2,
+		TextureConstOPtr u, TextureConstOPtr u2, TextureConstOPtr v, TextureConstOPtr v2,
+		TextureConstOPtr ka, TextureConstOPtr ka2, TextureConstOPtr d, TextureConstOPtr d2,
+		TextureConstOPtr i, TextureConstOPtr i2, const bool mbounce, const bool mbounce2) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Kt(kt), Ks(ks), Ks_bf(ks2), nu(u), nu_bf(u2),
 			nv(v), nv_bf(v2), Ka(ka), Ka_bf(ka2), depth(d), depth_bf(d2), index(i),
 			index_bf(i2), multibounce(mbounce), multibounce_bf(mbounce2) {
@@ -375,43 +375,43 @@ void GlossyTranslucentMaterial::UpdateTextureReferences(TextureConstRef oldTex, 
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (Kd == oldTex)
-		Kd = newTex;
-	if (Kt == oldTex)
-		Kt = newTex;
-	if (Ks == oldTex)
-		Ks = newTex;
-	if (Ks_bf == oldTex)
-		Ks_bf = newTex;
-	if (nu == oldTex) {
-		nu = newTex;
+	if (Kd == &oldTex)
+		Kd.reset(&newTex);
+	if (Kt == &oldTex)
+		Kt.reset(&newTex);
+	if (Ks == &oldTex)
+		Ks.reset(&newTex);
+	if (Ks_bf == &oldTex)
+		Ks_bf.reset(&newTex);
+	if (nu == &oldTex) {
+		nu.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nu_bf == oldTex) {
-		nu_bf = newTex;
+	if (nu_bf == &oldTex) {
+		nu_bf.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nv == oldTex) {
-		nv = newTex;
+	if (nv == &oldTex) {
+		nv.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nv_bf == oldTex) {
-		nv_bf = newTex;
+	if (nv_bf == &oldTex) {
+		nv_bf.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (Ka == oldTex)
-		Ka = newTex;
-	if (Ka_bf == oldTex)
-		Ka_bf = newTex;
-	if (depth == oldTex)
-		depth = newTex;
-	if (depth_bf == oldTex)
-		depth_bf = newTex;
-	if (index == oldTex)
-		index = newTex;
-	if (index_bf == oldTex)
-		index_bf = newTex;
-	
+	if (Ka == &oldTex)
+		Ka.reset(&newTex);
+	if (Ka_bf == &oldTex)
+		Ka_bf.reset(&newTex);
+	if (depth == &oldTex)
+		depth.reset(&newTex);
+	if (depth_bf == &oldTex)
+		depth_bf.reset(&newTex);
+	if (index == &oldTex)
+		index.reset(&newTex);
+	if (index_bf == &oldTex)
+		index_bf.reset(&newTex);
+
 	if (updateGlossiness)
 		glossiness = Min(ComputeGlossiness(nu, nv), ComputeGlossiness(nu_bf, nv_bf));
 }

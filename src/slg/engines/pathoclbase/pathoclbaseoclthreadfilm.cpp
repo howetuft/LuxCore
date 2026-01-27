@@ -108,7 +108,7 @@ PathOCLBaseOCLRenderThread::ThreadFilm::~ThreadFilm() {
 void PathOCLBaseOCLRenderThread::ThreadFilm::Init(FilmRef engineFlm,
 		const u_int threadFilmWidth, const u_int threadFilmHeight,
 		const u_int *threadFilmSubRegion) {
-	engineFilm = engineFlm;
+	engineFilm.reset(&engineFlm);
 
 	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
 

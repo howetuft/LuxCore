@@ -87,7 +87,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 
 	threadFilms[filmIndex]->GetFilm().Reset();
 	if (threadFilms[filmIndex]->GetFilm().GetDenoiser().IsEnabled())
-		threadFilms[filmIndex]->GetFilm().GetDenoiser().CopyReferenceFilm(engine->GetFilm());
+		threadFilms[filmIndex]->GetFilm().GetDenoiser().CopyReferenceFilm(FilmOPtr(&engine->GetFilm()));
 
 	// Clear the frame buffer
 	threadFilms[filmIndex]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);

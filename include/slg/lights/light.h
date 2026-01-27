@@ -61,7 +61,7 @@ typedef enum {
 class LightSource : public luxrays::NamedObject {
 public:
 	LightSource() : NamedObject("light"), lightSceneIndex(0),
-			volume(std::nullopt) { }
+			volume(nullptr) { }
 	virtual ~LightSource() { }
 
 	virtual void Preprocess() = 0;
@@ -117,7 +117,7 @@ public:
 	static std::string LightSourceType2String(const LightSourceType type);
 
 	u_int lightSceneIndex;
-	OptionalPtr<const Volume> volume;
+	VolumeConstOPtr volume;
 };
 
 //------------------------------------------------------------------------------
@@ -126,7 +126,7 @@ public:
 
 class IntersectableLightSource : public LightSource {
 public:
-	IntersectableLightSource() : lightMaterial(std::nullopt) { }
+	IntersectableLightSource() : lightMaterial(nullptr) { }
 	virtual ~IntersectableLightSource() { SDL_LOG("Removing intersectable light"); }
 
 	virtual bool IsIntersectable() const { return true; }
@@ -144,7 +144,7 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const = 0;
 
-	OptionalPtr<const Material> lightMaterial;
+	std::experimental::observer_ptr<const Material> lightMaterial;
 };
 
 //------------------------------------------------------------------------------

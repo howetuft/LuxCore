@@ -42,8 +42,8 @@ class SobolSamplerSharedData : public SamplerSharedData {
 public:
 	// Constructors
 	// Note that film is optional for this object
-	SobolSamplerSharedData(const luxrays::RandomGeneratorUPtr & rndGen, OptionalPtr<Film> engineFlm);
-	SobolSamplerSharedData(const u_int seed, OptionalPtr<Film> engineFlm);
+	SobolSamplerSharedData(const luxrays::RandomGeneratorUPtr & rndGen, std::experimental::observer_ptr<Film> engineFlm);
+	SobolSamplerSharedData(const u_int seed, std::experimental::observer_ptr<Film> engineFlm);
 	virtual ~SobolSamplerSharedData() { }
 
 	virtual void Reset();
@@ -57,7 +57,7 @@ public:
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
 		const luxrays::RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film
+		std::experimental::observer_ptr<Film> film
 	);
 
 	FilmRef GetEngineFilm() { return *engineFilm; }
@@ -72,7 +72,7 @@ private:
 										 // multiple objects, so we share
 										 // ownership with all to avoid
 										 // heap-use-after-free
-	OptionalPtr<Film> engineFilm;
+	std::experimental::observer_ptr<Film> engineFilm;
 
 	// Holds the current pass for each pixel when using adaptive sampling
 	std::vector<u_int> passPerPixel;
@@ -91,7 +91,20 @@ public:
 
 	SobolSampler(
 		const luxrays::RandomGeneratorUPtr & rnd,
-		OptionalPtr<Film> flm,
+		std::experimental::observer_ptr<Film> flm,
+		const FilmSampleSplatterUPtr& flmSplatter,
+		const bool imgSamplesEnable,
+		const float adaptiveStr,
+		const float adaptiveUserImpWeight,
+		const u_int bucketSize,
+		const u_int tileSize,
+		const u_int superSampling,
+		const u_int overlapping,
+		SamplerSharedDataSPtr samplerSharedData
+	);
+	SobolSampler(
+		const luxrays::RandomGeneratorUPtr & rnd,
+		FilmRef flm,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		const bool imgSamplesEnable,
 		const float adaptiveStr,
@@ -125,7 +138,7 @@ public:
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg,
 		const luxrays::RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
+		std::experimental::observer_ptr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData
 	);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

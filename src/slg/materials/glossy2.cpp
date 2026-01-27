@@ -29,10 +29,10 @@ using namespace slg;
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-Glossy2Material::Glossy2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-		OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v,
-		OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d, OptionalPtr<const Texture> i, const bool mbounce, const bool doublesided) :
+Glossy2Material::Glossy2Material(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
+		TextureConstOPtr kd, TextureConstOPtr ks, TextureConstOPtr u, TextureConstOPtr v,
+		TextureConstOPtr ka, TextureConstOPtr d, TextureConstOPtr i, const bool mbounce, const bool doublesided) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce), doublesided (doublesided) {
 	glossiness = ComputeGlossiness(nu, nv);
@@ -296,24 +296,24 @@ void Glossy2Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (Kd == oldTex)
-		Kd = newTex;
-	if (Ks == oldTex)
-		Ks = newTex;
-	if (nu == oldTex) {
-		nu = newTex;
+	if (Kd == &oldTex)
+		Kd.reset(&newTex);
+	if (Ks == &oldTex)
+		Ks.reset(&newTex);
+	if (nu == &oldTex) {
+		nu.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nv == oldTex) {
-		nv = newTex;
+	if (nv == &oldTex) {
+		nv.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (Ka == oldTex)
-		Ka = newTex;
-	if (depth == oldTex)
-		depth = newTex;
-	if (index == oldTex)
-		index = newTex;
+	if (Ka == &oldTex)
+		Ka.reset(&newTex);
+	if (depth == &oldTex)
+		depth.reset(&newTex);
+	if (index == &oldTex)
+		index.reset(&newTex);
 
 	if (updateGlossiness)
 		glossiness = ComputeGlossiness(nu, nv);

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <cstddef>
+#include <memory>
 
 #include "luxrays/core/epsilon.h"
 #include "slg/cameras/projective.h"

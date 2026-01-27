@@ -41,7 +41,7 @@ FilmNoiseEstimation::FilmNoiseEstimation(
 	testStep(testStepVal),
 	filterScale(filtScale),
 	imagePipelineIndex(index),
-	film(flm),
+	film(&flm),
 	referenceImage(NULL)
 {
 	Reset();

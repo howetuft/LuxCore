@@ -33,7 +33,7 @@ class HeterogeneousVolume : public Volume {
 public:
 	HeterogeneousVolume(
 			TextureConstRef iorTex,
-			OptionalPtr<const Texture> emiTex,
+			TextureConstOPtr emiTex,
 			TextureConstRef a, TextureConstRef s,
 			TextureConstRef g, const float stepSize, const u_int maxStepsCount,
 			const bool multiScattering);

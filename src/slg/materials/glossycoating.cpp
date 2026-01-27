@@ -28,20 +28,20 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 GlossyCoatingMaterial::GlossyCoatingMaterial(
-	OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-	OptionalPtr<const Material> mB,
-	OptionalPtr<const Texture> ks, OptionalPtr<const Texture> u,
-	OptionalPtr<const Texture> v,
-	OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d,
-	OptionalPtr<const Texture> i,
+	TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+	TextureConstOPtr emitted, TextureConstOPtr bump,
+	std::experimental::observer_ptr<const Material> mB,
+	TextureConstOPtr ks, TextureConstOPtr u,
+	TextureConstOPtr v,
+	TextureConstOPtr ka, TextureConstOPtr d,
+	TextureConstOPtr i,
 const bool mbounce) :
 			Material(frontTransp, backTransp, emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) {
 	glossiness = Min(ComputeGlossiness(nu, nv), matBase->GetGlossiness());
 }
 
-OptionalPtr<const Volume> GlossyCoatingMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr GlossyCoatingMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
 		return interiorVolume;
@@ -49,7 +49,7 @@ OptionalPtr<const Volume> GlossyCoatingMaterial::GetInteriorVolume(const HitPoin
 		return matBase->GetInteriorVolume(hitPoint, passThroughEvent);
 }
 
-OptionalPtr<const Volume> GlossyCoatingMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr GlossyCoatingMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (exteriorVolume)
 		return exteriorVolume;
@@ -428,7 +428,7 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 
 void GlossyCoatingMaterial::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
 	if (matBase == oldMat)
-		matBase = newMat;
+		matBase.reset(&newMat);
 
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
@@ -464,18 +464,18 @@ void GlossyCoatingMaterial::AddReferencedTextures(std::unordered_set<const Textu
 void GlossyCoatingMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
-	if (Ks == oldTex)
-		Ks = newTex;
-	if (nu == oldTex)
-		nu = newTex;
-	if (nv == oldTex)
-		nv = newTex;
-	if (Ka == oldTex)
-		Ka = newTex;
-	if (depth == oldTex)
-		depth = newTex;
-	if (index == oldTex)
-		index = newTex;
+	if (Ks == &oldTex)
+		Ks.reset(&newTex);
+	if (nu == &oldTex)
+		nu.reset(&newTex);
+	if (nv == &oldTex)
+		nv.reset(&newTex);
+	if (Ka == &oldTex)
+		Ka.reset(&newTex);
+	if (depth == &oldTex)
+		depth.reset(&newTex);
+	if (index == &oldTex)
+		index.reset(&newTex);
 
 	// Always update glossiness just in case matBase->GetGlossiness() has changed
 	const float coatGlossiness = ComputeGlossiness(nu, nv);

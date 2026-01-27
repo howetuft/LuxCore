@@ -52,8 +52,8 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (tex == oldTex)
-			tex = newTex;
+		if (tex == &oldTex)
+			tex.reset(&newTex);
 	}
 
 	bool HasTexture() const { return bool(tex); }
@@ -63,7 +63,7 @@ public:
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	OptionalPtr<const Texture> tex;
+	TextureConstOPtr tex;
 	const float radius;
 };
 

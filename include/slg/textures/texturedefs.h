@@ -60,7 +60,7 @@ public:
 	u_int GetTextureIndex(TextureConstRef t) const {
 		return texs.GetIndex(t);
 	}
-	u_int GetTextureIndex(OptionalPtr<const Texture> t) const {
+	u_int GetTextureIndex(TextureConstOPtr t) const {
 		return texs.GetIndex(*t);  // Will throw if t is nullopt
 	}
 

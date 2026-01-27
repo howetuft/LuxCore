@@ -31,7 +31,7 @@ using namespace slg;
 
 ClearVolume::ClearVolume(
 	TextureConstRef iorTex,
-	OptionalPtr<const Texture> emiTex,
+	TextureConstOPtr emiTex,
 	TextureConstRef a
 ) : Volume(iorTex, emiTex), sigmaA(a) {}
 
@@ -105,8 +105,7 @@ void ClearVolume::AddReferencedTextures(std::unordered_set<const Texture *>  &re
 void ClearVolume::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Volume::UpdateTextureReferences(oldTex, newTex);
 
-	if (sigmaA == oldTex)
-		sigmaA = newTex;
+	updtex(sigmaA, oldTex, newTex);
 }
 
 PropertiesUPtr ClearVolume::ToProperties() const {

@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/film/film.h"
+#include "slg/usings.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/utils/thread.h"
@@ -114,14 +116,18 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		// Render the tile
 		tileFilm->Reset();
 		if (tileFilm->GetDenoiser().IsEnabled())
-			tileFilm->GetDenoiser().SetReferenceFilm(engine->GetFilm(), tileWork.GetCoord().x, tileWork.GetCoord().y);
+			tileFilm->GetDenoiser().SetReferenceFilm(
+				FilmOPtr(&engine->GetFilm()),
+				tileWork.GetCoord().x,
+				tileWork.GetCoord().y
+			);
 		//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		sampler.Init(&tileWork, GetTileFilm());
+		sampler.Init(&tileWork, FilmOPtr(&GetTileFilm()));
 
 		for (u_int y = 0; y < tileWork.GetCoord().height && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {

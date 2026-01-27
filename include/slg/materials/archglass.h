@@ -28,7 +28,7 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 class ArchGlassMaterial : public Material {
-	using TexRef = OptionalPtr<const Texture>;
+	using TexRef = TextureConstOPtr;
 public:
 	ArchGlassMaterial(TexRef frontTransp, TexRef backTransp,
 			TexRef emitted, TexRef bump,
@@ -62,7 +62,7 @@ public:
 
 	virtual void AddReferencedTextures(std::unordered_set<const Texture *>  &referencedTexsreferencedTexs) const;
 	virtual void UpdateTextureReferences(
-		OptionalPtr<const Texture> oldTex, OptionalPtr<Texture> newTex
+		TextureConstRef oldTex, TextureRef newTex
 	);
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

@@ -39,6 +39,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/lights/spherelight.h"
 #include "slg/lights/mapspherelight.h"
+#include "slg/usings.h"
 #include "slg/utils/filenameresolver.h"
 
 
@@ -102,7 +103,7 @@ void Scene::ParseLights(const Properties &props) {
 }
 
 
-OptionalPtr<ImageMap> Scene::CreateEmissionMap(
+std::experimental::observer_ptr<ImageMap> Scene::CreateEmissionMap(
 	const string &propName, const luxrays::Properties &props
 ) {
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
@@ -144,7 +145,7 @@ OptionalPtr<ImageMap> Scene::CreateEmissionMap(
 	// Read the image map if available
 	//--------------------------------------------------------------------------
 
-	OptionalPtr<ImageMap> imgMap;
+	std::experimental::observer_ptr<ImageMap> imgMap;
 	if (props.IsDefined(propName + ".mapfile")) {
 		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
 
@@ -152,7 +153,7 @@ OptionalPtr<ImageMap> Scene::CreateEmissionMap(
 		// Force float storage
 		imgCfg.storageType = ImageMapStorage::FLOAT;
 
-		imgMap = imgMapCache.GetImageMap(imgMapName, imgCfg, false);
+		imgMap.reset(&imgMapCache.GetImageMap(imgMapName, imgCfg, false));
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
@@ -167,7 +168,7 @@ OptionalPtr<ImageMap> Scene::CreateEmissionMap(
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
 			resampledImgMap->SetName(name);
-			imgMap = imgMapCache.DefineImageMap(std::move(resampledImgMap));
+			imgMap.reset(&imgMapCache.DefineImageMap(std::move(resampledImgMap)));
 		}
 	}
 
@@ -177,9 +178,9 @@ OptionalPtr<ImageMap> Scene::CreateEmissionMap(
 
 	// Nothing was defined
 	if (!iesMap && !imgMap)
-		return std::nullopt;
+		return nullptr;
 
-	OptionalPtr<ImageMap> map_ref;
+	std::experimental::observer_ptr<ImageMap> map_ref;
 	if (iesMap && imgMap) {
 		// Merge the 2 maps
 		auto map = ImageMap::Merge(*imgMap, *iesMap, imgMap->GetChannelCount());
@@ -189,11 +190,13 @@ OptionalPtr<ImageMap> Scene::CreateEmissionMap(
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
-		map_ref = imgMapCache.DefineImageMap(std::move(map));
+		map_ref = ImageMapOPtr(std::addressof(imgMapCache.DefineImageMap(std::move(map))));
 	} else if (imgMap)
-		map_ref = *imgMap;  // Already in cache...
+		map_ref = imgMap;  // Already in cache...
 	else if (iesMap) {
-		map_ref = imgMapCache.DefineImageMap(std::move(iesMap));
+		map_ref = ImageMapOPtr(
+			std::addressof(imgMapCache.DefineImageMap(std::move(iesMap)))
+		);
 	}
 
 	// At the end of the journey, the new image map is in the cache, and
@@ -267,7 +270,7 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 
 		auto il = std::make_unique<InfiniteLight>();
 		il->lightToWorld = light2World;
-		il->imageMap = imgMap;
+		il->imageMap = ImageMapOPtr(std::addressof(imgMap));
 		il->sampleUpperHemisphereOnly = props.Get(Property(propName + ".sampleupperhemisphereonly")(false)).Get<bool>();
 
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
@@ -381,9 +384,11 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 
-		OptionalPtr<const ImageMap> imgMap = (imageName == "") ?
-			std::nullopt :
-			OptionalPtr<const ImageMap>(imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false));
+		std::experimental::observer_ptr<const ImageMap> imgMap = (imageName == "") ?
+			nullptr :
+			ImageMapConstOPtr(
+				std::addressof(
+					imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false)));
 
 		auto pl = std::make_unique<ProjectionLight>();
 		pl->lightToWorld = light2World;
@@ -465,7 +470,7 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 	if (props.IsDefined(propName + ".volume")) {
 		auto& vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
 		try {
-			lightSource->volume = dynamic_cast<const Volume&>(vol);
+			lightSource->volume.reset(dynamic_cast<const Volume *>(std::addressof(vol)));
 		} catch (std::bad_cast&) {
 			throw runtime_error("\"" + lightName + "\" light volume is a material: " + vol.GetName());
 		}

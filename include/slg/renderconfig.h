@@ -70,16 +70,29 @@ public:
 	FilmUPtr AllocFilm() const;
 
 	SamplerSharedDataUPtr AllocSamplerSharedData(
-		const luxrays::RandomGeneratorUPtr & rndGen, OptionalPtr<Film> film
+		const luxrays::RandomGeneratorUPtr & rndGen,
+		FilmRef film
+	) const;
+	SamplerSharedDataUPtr AllocSamplerSharedData(
+		const luxrays::RandomGeneratorUPtr & rndGen,
+		FilmOPtr film
 	) const;
 
 	SamplerUPtr AllocSampler(
 		const luxrays::RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film,
+		FilmRef film,
 		const FilmSampleSplatterUPtr & flmSplatter,
 		const std::shared_ptr<SamplerSharedData> sharedData,
 		const luxrays::Properties &additionalProps
 	) const;
+	SamplerUPtr AllocSampler(
+		const luxrays::RandomGeneratorUPtr & rndGen,
+		std::experimental::observer_ptr<Film> film,
+		const FilmSampleSplatterUPtr & flmSplatter,
+		const std::shared_ptr<SamplerSharedData> sharedData,
+		const luxrays::Properties &additionalProps
+	) const;
+
 
 	RenderEngineUPtr AllocRenderEngine();
 

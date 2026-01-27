@@ -26,10 +26,10 @@ using namespace slg;
 // Velvet material
 //------------------------------------------------------------------------------
 
-VelvetMaterial::VelvetMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-		OptionalPtr<const Texture> kd, OptionalPtr<const Texture> p1, OptionalPtr<const Texture> p2, OptionalPtr<const Texture> p3,
-		OptionalPtr<const Texture> thickness) :
+VelvetMaterial::VelvetMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
+		TextureConstOPtr kd, TextureConstOPtr p1, TextureConstOPtr p2, TextureConstOPtr p3,
+		TextureConstOPtr thickness) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd),
 			P1(p1), P2(p2), P3(p3), Thickness(thickness) {
 	glossiness = 1.f;
@@ -138,16 +138,16 @@ void VelvetMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  
 void VelvetMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
-	if (Kd == oldTex)
-		Kd = newTex;
-	if (P1 == oldTex)
-		P1 = newTex;
-	if (P2 == oldTex)
-		P2 = newTex;
-	if (P3 == oldTex)
-		P3 = newTex;
-	if (Thickness == oldTex)
-		Thickness = newTex;
+	if (Kd == &oldTex)
+		Kd.reset(&newTex);
+	if (P1 == &oldTex)
+		P1.reset(&newTex);
+	if (P2 == &oldTex)
+		P2.reset(&newTex);
+	if (P3 == &oldTex)
+		P3.reset(&newTex);
+	if (Thickness == &oldTex)
+		Thickness.reset(&newTex);
 }
 
 PropertiesUPtr VelvetMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

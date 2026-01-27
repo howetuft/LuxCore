@@ -30,9 +30,9 @@ namespace slg {
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			MaterialConstRef mA, MaterialConstRef mB, OptionalPtr<const Texture> mix);
+	MixMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			MaterialConstRef mA, MaterialConstRef mB, TextureConstOPtr mix);
 
 	virtual MaterialType GetType() const { return MIX; }
 	virtual BSDFEvent GetEventTypes() const { return eventTypes; };
@@ -44,9 +44,9 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
 
-	virtual OptionalPtr<const Volume> GetInteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
-	virtual OptionalPtr<const Volume> GetExteriorVolume(const HitPoint &hitPoint,
+	virtual VolumeConstOPtr GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
 
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
@@ -91,9 +91,9 @@ private:
 
 	void Preprocess();
 
-	OptionalPtr<const Material> matA;
-	OptionalPtr<const Material> matB;
-	OptionalPtr<const Texture> mixFactor;
+	std::experimental::observer_ptr<const Material> matA;
+	std::experimental::observer_ptr<const Material> matB;
+	TextureConstOPtr mixFactor;
 
 	// Cached values for performance with very large material node trees
 	BSDFEvent eventTypes;

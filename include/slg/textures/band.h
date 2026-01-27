@@ -63,7 +63,7 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
-		if (GetAmount() == oldTex) amount = newTex;
+		if (&GetAmount() == &oldTex) amount = newTex;
 	}
 
 	InterpolationType GetInterpolationType() const { return interpType; }

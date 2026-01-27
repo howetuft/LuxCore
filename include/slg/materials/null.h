@@ -29,7 +29,7 @@ namespace slg {
 
 class NullMaterial : public Material {
 public:
-	NullMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp);
+	NullMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp);
 
 	virtual MaterialType GetType() const { return NULLMAT; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };

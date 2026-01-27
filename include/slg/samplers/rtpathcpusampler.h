@@ -43,18 +43,18 @@ public:
 		u_int x, y;
 	};
 
-	RTPathCPUSamplerSharedData(OptionalPtr<Film> flm);
+	RTPathCPUSamplerSharedData(std::experimental::observer_ptr<Film> flm);
 	virtual ~RTPathCPUSamplerSharedData() { }
 
 	virtual void Reset();
 
-	void Reset(OptionalPtr<Film> flm);
+	void Reset(std::experimental::observer_ptr<Film> flm);
 
 	static std::unique_ptr<SamplerSharedData> FromProperties(
 		const luxrays::Properties &cfg,
-		const luxrays::RandomGeneratorUPtr &  rndGen, OptionalPtr<Film> film);
+		const luxrays::RandomGeneratorUPtr &  rndGen, std::experimental::observer_ptr<Film> film);
 
-	OptionalPtr<Film> engineFilm;
+	std::experimental::observer_ptr<Film> engineFilm;
 	std::atomic<u_int> step;
 	u_int filmSubRegion[4], filmSubRegionWidth, filmSubRegionHeight;
 	std::vector<PixelCoord> pixelRenderSequence;
@@ -70,7 +70,7 @@ class RTPathCPUSampler : public Sampler {
 public:
 	RTPathCPUSampler(
 		const luxrays::RandomGeneratorUPtr & rnd,
-		OptionalPtr<Film> flm,
+		std::experimental::observer_ptr<Film> flm,
 		const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr samplerSharedData
 	);
@@ -83,7 +83,7 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	void SetRenderEngine(RTPathCPURenderEngine *engine);
-	void Reset(OptionalPtr<Film> flm);
+	void Reset(std::experimental::observer_ptr<Film> flm);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
@@ -94,7 +94,7 @@ public:
 	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static SamplerUPtr FromProperties(
 		const luxrays::Properties &cfg, const luxrays::RandomGeneratorUPtr & rndGen,
-		OptionalPtr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
+		std::experimental::observer_ptr<Film> film, const FilmSampleSplatterUPtr& flmSplatter,
 		SamplerSharedDataSPtr sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);

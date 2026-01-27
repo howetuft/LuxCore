@@ -29,11 +29,11 @@ namespace slg {
 
 class CarPaintMaterial : public Material {
 public:
-	CarPaintMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> kd, OptionalPtr<const Texture> ks1, OptionalPtr<const Texture> ks2, OptionalPtr<const Texture> ks3,
-			OptionalPtr<const Texture> m1, OptionalPtr<const Texture> m2, OptionalPtr<const Texture> m3,
-			OptionalPtr<const Texture> r1, OptionalPtr<const Texture> r2, OptionalPtr<const Texture> r3, OptionalPtr<const Texture> ka, OptionalPtr<const Texture> d);
+	CarPaintMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr kd, TextureConstOPtr ks1, TextureConstOPtr ks2, TextureConstOPtr ks3,
+			TextureConstOPtr m1, TextureConstOPtr m2, TextureConstOPtr m3,
+			TextureConstOPtr r1, TextureConstOPtr r2, TextureConstOPtr r3, TextureConstOPtr ka, TextureConstOPtr d);
 
 	virtual MaterialType GetType() const { return CARPAINT; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -68,18 +68,18 @@ public:
 	static const struct CarPaintData data[8];
 	static int NbPresets() { return 8; }
 
-	OptionalPtr<const Texture> Kd;
-	OptionalPtr<const Texture> Ks1;
-	OptionalPtr<const Texture> Ks2;
-	OptionalPtr<const Texture> Ks3;
-	OptionalPtr<const Texture> M1;
-	OptionalPtr<const Texture> M2;
-	OptionalPtr<const Texture> M3;
-	OptionalPtr<const Texture> R1;
-	OptionalPtr<const Texture> R2;
-	OptionalPtr<const Texture> R3;
-	OptionalPtr<const Texture> Ka;
-	OptionalPtr<const Texture> depth;
+	TextureConstOPtr Kd;
+	TextureConstOPtr Ks1;
+	TextureConstOPtr Ks2;
+	TextureConstOPtr Ks3;
+	TextureConstOPtr M1;
+	TextureConstOPtr M2;
+	TextureConstOPtr M3;
+	TextureConstOPtr R1;
+	TextureConstOPtr R2;
+	TextureConstOPtr R3;
+	TextureConstOPtr Ka;
+	TextureConstOPtr depth;
 };
 
 }

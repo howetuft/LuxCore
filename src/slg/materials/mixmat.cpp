@@ -27,15 +27,19 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 MixMaterial::MixMaterial(
-	OptionalPtr<const Texture> frontTransp,
-	OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted,
-	OptionalPtr<const Texture> bump,
+	TextureConstOPtr frontTransp,
+	TextureConstOPtr backTransp,
+	TextureConstOPtr emitted,
+	TextureConstOPtr bump,
 	MaterialConstRef mA,
 	MaterialConstRef mB,
-	OptionalPtr<const Texture> mix) :
+	TextureConstOPtr mix
+) :
 	Material(frontTransp, backTransp, emitted, bump),
-	matA(mA), matB(mB), mixFactor(mix) {
+	matA(&mA),
+	matB(&mB),
+	mixFactor(mix)
+{
 	Preprocess();
 }
 
@@ -72,7 +76,7 @@ void MixMaterial::Preprocess() {
 	isDelta = IsDeltaImpl();
 }
 
-OptionalPtr<const Volume> MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
 		return interiorVolume;
@@ -87,7 +91,7 @@ OptionalPtr<const Volume> MixMaterial::GetInteriorVolume(const HitPoint &hitPoin
 	}
 }
 
-OptionalPtr<const Volume> MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+VolumeConstOPtr MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (exteriorVolume)
 		return exteriorVolume;
@@ -355,10 +359,10 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 
 void MixMaterial::UpdateMaterialReferences(MaterialConstRef oldMat, MaterialRef newMat) {
 	if (matA == oldMat)
-		matA = newMat;
+		matA.reset(&newMat);
 
 	if (matB == oldMat)
-		matB = newMat;
+		matB.reset(&newMat);
 	
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
@@ -376,10 +380,10 @@ void MixMaterial::AddReferencedMaterials(
 ) const {
 	Material::AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(matA.ptr());
+	referencedMats.insert(matA.get());
 	matA->AddReferencedMaterials(referencedMats);
 
-	referencedMats.insert(matB.ptr());
+	referencedMats.insert(matB.get());
 	matB->AddReferencedMaterials(referencedMats);
 }
 
@@ -392,8 +396,8 @@ void MixMaterial::AddReferencedTextures(std::unordered_set<const Texture *>  &re
 }
 
 void MixMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
-	if (mixFactor == oldTex)
-		mixFactor = newTex;
+	if (mixFactor == &oldTex)
+		mixFactor.reset(&newTex);
 
 	Material::UpdateTextureReferences(oldTex, newTex);
 

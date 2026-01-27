@@ -19,6 +19,7 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/materials/glass.h"
+#include <memory>
 
 using namespace luxrays;
 using namespace slg;
@@ -30,7 +31,7 @@ void BSDF::Init(
 		SceneConstRef scene, const Ray &ray, const RayHit &rayHit,
 		const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	// Get the scene object
-	sceneObject = scene.GetObjects().GetSceneObject(rayHit.meshIndex);
+	sceneObject.reset(&scene.GetObjects().GetSceneObject(rayHit.meshIndex));
 
 	// Get the mesh
 	auto& mesh = sceneObject->GetExtMesh();
@@ -43,24 +44,26 @@ void BSDF::Init(
 			passThroughEvent);
 
 	// Get the material
-	//material = sceneObject->GetMaterial();
-	material = sceneObject->GetMaterial();
+	material.reset(&sceneObject->GetMaterial());
 
 	// Set interior and exterior volumes
 	volInfo->SetHitPointVolumes(hitPoint,
 		material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 		material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
 		scene.HasDefaultWorldVolume() ?
-		OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
-		OptionalPtr<const Volume>(std::nullopt)
+		VolumeConstOPtr(&scene.GetDefaultWorldVolume()) :
+		VolumeConstOPtr(nullptr)
 	);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource =
-			scene.GetLightSources().GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
+		triangleLightSource.reset(
+			&scene.GetLightSources().GetLightSourceByMeshAndTriIndex(
+				rayHit.meshIndex, rayHit.triangleIndex
+			)
+	);
 	else
-		triangleLightSource = std::nullopt;
+		triangleLightSource = nullptr;
 
 	// Apply bump or normal mapping
 	material->Bump(&hitPoint);
@@ -82,7 +85,7 @@ void BSDF::Init(
 		const PathVolumeInfo *volInfo
 ) {
 	// Get the scene object
-	sceneObject = scene.GetObjects().GetSceneObject(meshIndex);
+	sceneObject.reset(&scene.GetObjects().GetSceneObject(meshIndex));
 
 	// Get the mesh
 	auto& mesh = sceneObject->GetExtMesh();
@@ -95,22 +98,22 @@ void BSDF::Init(
 			surfacePointBary1, surfacePointBary2, passThroughEvent);
 
 	// Get the material
-	material = sceneObject->GetMaterial();
+	material.reset(&sceneObject->GetMaterial());
 
 	// Set interior and exterior volumes
 	volInfo->SetHitPointVolumes(hitPoint,
 			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			scene.HasDefaultWorldVolume() ?
-				OptionalPtr<const Volume>(scene.GetDefaultWorldVolume()) :
-				OptionalPtr<const Volume>()
+				VolumeConstOPtr(&scene.GetDefaultWorldVolume()) :
+				VolumeConstOPtr()
 	);
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.GetLightSources().GetLightSourceByMeshAndTriIndex(meshIndex, triangleIndex);
+		triangleLightSource.reset(&scene.GetLightSources().GetLightSourceByMeshAndTriIndex(meshIndex, triangleIndex));
 	else
-		triangleLightSource = std::nullopt;
+		triangleLightSource = nullptr;
 
 	// Apply bump or normal mapping
 	material->Bump(&hitPoint);
@@ -136,18 +139,18 @@ void BSDF::Init(
 	hitPoint.p = ray(t);
 	hitPoint.fixedDir = -ray.d;
 
-	sceneObject = std::nullopt;
-	material = volume;
+	sceneObject = nullptr;
+	material.reset(&volume);
 
 	hitPoint.geometryN = Normal(-ray.d);
 	hitPoint.interpolatedN = hitPoint.geometryN;
 	hitPoint.shadeN = hitPoint.geometryN;
 
 	hitPoint.intoObject = true;
-	hitPoint.interiorVolume = volume;
-	hitPoint.exteriorVolume = volume;
+	hitPoint.interiorVolume = std::experimental::make_observer(&volume);
+	hitPoint.exteriorVolume = std::experimental::make_observer(&volume);
 
-	triangleLightSource = std::nullopt;
+	triangleLightSource = nullptr;
 
 	hitPoint.defaultUV = UV(0.f, 0.f);
 
@@ -155,7 +158,7 @@ void BSDF::Init(
 	hitPoint.dndu = Normal();
 	hitPoint.dndv = Normal();
 
-	hitPoint.mesh = std::nullopt;
+	hitPoint.mesh = nullptr;
 	hitPoint.triangleIndex = NULL_INDEX;
 	hitPoint.triangleBariCoord1 = 0.f;
 	hitPoint.triangleBariCoord2 = 0.f;

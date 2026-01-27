@@ -55,9 +55,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (GetInsideTex() == oldTex)
+		if (&GetInsideTex() == &oldTex)
 			insideTex = newTex;
-		if (GetOutsideTex() == oldTex)
+		if (&GetOutsideTex() == &oldTex)
 			outsideTex = newTex;
 	}
 

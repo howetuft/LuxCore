@@ -27,9 +27,9 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RoughMatteTranslucentMaterial::RoughMatteTranslucentMaterial(
-		OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-		OptionalPtr<const Texture> refl, OptionalPtr<const Texture> trans, OptionalPtr<const Texture> s) :
+		TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
+		TextureConstOPtr refl, TextureConstOPtr trans, TextureConstOPtr s) :
 			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans), sigma(s) {
 }
 
@@ -225,12 +225,12 @@ void RoughMatteTranslucentMaterial::AddReferencedTextures(std::unordered_set<con
 void RoughMatteTranslucentMaterial::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
-	if (Kr == oldTex)
-		Kr = newTex;
-	if (Kt == oldTex)
-		Kt = newTex;
-	if (sigma == oldTex)
-		sigma = newTex;
+	if (Kr == &oldTex)
+		Kr.reset(&newTex);
+	if (Kt == &oldTex)
+		Kt.reset(&newTex);
+	if (sigma == &oldTex)
+		sigma.reset(&newTex);
 }
 
 PropertiesUPtr RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {

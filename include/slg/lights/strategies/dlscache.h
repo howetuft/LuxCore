@@ -44,7 +44,7 @@ public:
 			const bool useRTMode);
 	
 	// Used for direct light sampling
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
@@ -56,7 +56,7 @@ public:
 			const bool isVolume) const;
 
 	// Used for light emission
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 		SceneConstRef scene, const float u, float *pdf
 	) const;
 
@@ -85,7 +85,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategyTask taskType;
-	OptionalPtr<LightStrategyLogPower> distributionStrategy;
+	std::experimental::observer_ptr<LightStrategyLogPower> distributionStrategy;
 	DirectLightSamplingCache DLSCache;
 
 	bool useRTMode;

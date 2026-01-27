@@ -132,7 +132,7 @@ void LightSourceDefinitions::DeleteLightSourceByMaterial(MaterialConstRef mat) {
 
 		if (
 			l.GetType() == TYPE_TRIANGLE
-			&& (static_cast<const TriangleLight&>(l)).lightMaterial == mat
+			&& (static_cast<const TriangleLight&>(l)).lightMaterial == std::experimental::make_observer(&mat)
 		) {
 			nameList.push_back(name);
 		}

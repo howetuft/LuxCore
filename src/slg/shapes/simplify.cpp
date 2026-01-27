@@ -250,7 +250,7 @@ public:
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,
 			const float screenSize, const bool border) {
 		preserveBorder = border;
-		camera = scnCamera;
+		camera.reset(&scnCamera);
 		edgeScreenSize = screenSize;
 
 		// Work on 10% of all triangles for each iteration
@@ -328,7 +328,7 @@ private:
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
 
-	OptionalPtr<const Camera> camera;
+	std::experimental::observer_ptr<const Camera> camera;
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
@@ -882,7 +882,7 @@ private:
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(OptionalPtr<const Camera> camera, ExtTriangleMeshRef srcMesh,
+SimplifyShape::SimplifyShape(std::experimental::observer_ptr<const Camera> camera, ExtTriangleMeshRef srcMesh,
 		const float target, const float edgeScreenSize, const bool preserveBorder) {
 	SDL_LOG("Simplify shape " << srcMesh.GetName() << " with target " << target);
 

@@ -143,11 +143,11 @@ void BombingTexture::AddReferencedImageMaps(std::unordered_set<const ImageMap *>
 }
 
 void BombingTexture::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
-	if (GetBackgroundTex() == oldTex)
+	if (&GetBackgroundTex() == &oldTex)
 		backgroundTex = newTex;
-	if (GetBulletTex() == oldTex)
+	if (&GetBulletTex() == &oldTex)
 		bulletTex = newTex;
-	if (GetBulletMaskTex() == oldTex)
+	if (&GetBulletMaskTex() == &oldTex)
 		bulletMaskTex = newTex;
 }
 

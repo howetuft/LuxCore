@@ -37,8 +37,8 @@ class BSDF;
 
 class Volume : public Material {
 public:
-	Volume(TextureConstRef ior, OptionalPtr<const Texture> emission) :
-		Material(std::nullopt, std::nullopt, std::nullopt, std::nullopt),
+	Volume(TextureConstRef ior, TextureConstOPtr emission) :
+		Material(nullptr, nullptr, nullptr, nullptr),
 		iorTex(ior),
 		volumeEmissionTex(emission),
 		volumeLightID(0),
@@ -84,7 +84,7 @@ protected:
 	std::reference_wrapper<const Texture> iorTex;
 	// This is a different kind of emission texture from the one in
 	// Material class (i.e. is not sampled by direct light).
-	OptionalPtr<const Texture> volumeEmissionTex;
+	TextureConstOPtr volumeEmissionTex;
 	u_int volumeLightID;
 	int priority;
 };
@@ -117,6 +117,33 @@ private:
 	std::reference_wrapper<const Texture> g;
 };
 
+// Some utilities
+template <typename T>
+void updvol(T volume, const MaterialConstRef oldMat, MaterialRef newMat);
+
+template<>
+inline void updvol(VolumeConstOPtr volume, MaterialConstRef oldMat, MaterialRef newMat) {
+	auto& oldVol = dynamic_cast<const Volume &>(oldMat);
+	auto& newVol = dynamic_cast<const Volume &>(newMat);
+
+	if (volume.get() == std::addressof(oldVol)) {
+		volume.reset(std::addressof(newVol));
+	}
+}
+
+template<>
+inline void updvol(
+	std::reference_wrapper<const Volume> volume,
+	MaterialConstRef oldMat,
+	MaterialRef newMat
+) {
+	auto& oldVol = dynamic_cast<const Volume &>(oldMat);
+	auto& newVol = dynamic_cast<const Volume &>(newMat);
+
+	if (std::addressof(volume.get()) == std::addressof(oldVol)) {
+		volume = std::reference_wrapper(newVol);
+	}
+}
 
 }  // namespace slg
 

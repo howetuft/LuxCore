@@ -26,7 +26,7 @@ using namespace slg;
 // NormalMap texture
 //------------------------------------------------------------------------------
 
-NormalMapTexture::NormalMapTexture(TextureRef t, const float s) : tex(t), scale(s) {
+NormalMapTexture::NormalMapTexture(TextureConstRef t, const float s) : tex(t), scale(s) {
 }
 
 NormalMapTexture::~NormalMapTexture() {

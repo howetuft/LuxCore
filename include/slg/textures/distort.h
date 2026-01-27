@@ -57,9 +57,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
-		if (GetTex() == oldTex)
+		if (&GetTex() == &oldTex)
 			tex = newTex;
-		if (offset == oldTex)
+		if (&offset.get() == &oldTex)
 			offset = newTex;
 	}
 

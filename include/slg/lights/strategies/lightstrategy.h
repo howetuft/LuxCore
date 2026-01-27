@@ -51,7 +51,7 @@ public:
 			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,
@@ -65,7 +65,7 @@ public:
 			const bool isVolume) const = 0;
 
 	// Used for light emission
-	virtual OptionalPtr<LightSource> SampleLights(
+	virtual std::experimental::observer_ptr<LightSource> SampleLights(
 		SceneConstRef, const float u, float *pdf
 	) const = 0;
 
@@ -93,7 +93,7 @@ protected:
 
 	LightStrategy(const LightStrategyType t) : type(t) { }
 
-	OptionalPtr<const Scene> scene;  // I think this could be a (mandatory) reference but
+	std::experimental::observer_ptr<const Scene> scene;  // I think this could be a (mandatory) reference but
 									 // for now, I keep it as a (optional) pointer
 
 private:

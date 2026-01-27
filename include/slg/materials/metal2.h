@@ -30,12 +30,12 @@ namespace slg {
 
 class Metal2Material : public Material {
 public:
-	Metal2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> nn, OptionalPtr<const Texture> kk, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v);
-	Metal2Material(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const FresnelTexture> ft, OptionalPtr<const Texture> u, OptionalPtr<const Texture> v);
+	Metal2Material(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr nn, TextureConstOPtr kk, TextureConstOPtr u, TextureConstOPtr v);
+	Metal2Material(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			std::experimental::observer_ptr<const FresnelTexture> ft, TextureConstOPtr u, TextureConstOPtr v);
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -58,19 +58,19 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const FresnelTexture> GetFresnel() const { return fresnelTex; }
-	OptionalPtr<const Texture> GetN() const { return n; }
-	OptionalPtr<const Texture> GetK() const { return k; }
-	OptionalPtr<const Texture> GetNu() const { return nu; }
-	OptionalPtr<const Texture> GetNv() const { return nv; }
+	std::experimental::observer_ptr<const FresnelTexture> GetFresnel() const { return fresnelTex; }
+	TextureConstOPtr GetN() const { return n; }
+	TextureConstOPtr GetK() const { return k; }
+	TextureConstOPtr GetNu() const { return nu; }
+	TextureConstOPtr GetNv() const { return nv; }
 	
 private:
-	OptionalPtr<const FresnelTexture> fresnelTex;
+	std::experimental::observer_ptr<const FresnelTexture> fresnelTex;
 	// For compatibility with the past
-	OptionalPtr<const Texture> n, k;
+	TextureConstOPtr n, k;
 
-	OptionalPtr<const Texture> nu;
-	OptionalPtr<const Texture> nv;
+	TextureConstOPtr nu;
+	TextureConstOPtr nv;
 };
 
 }

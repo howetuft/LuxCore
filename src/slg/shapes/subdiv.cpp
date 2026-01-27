@@ -1341,7 +1341,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 
 SubdivShape::SubdivShape(
-	OptionalPtr<const Camera> camera,
+	std::experimental::observer_ptr<const Camera> camera,
 	ExtTriangleMeshRef srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,

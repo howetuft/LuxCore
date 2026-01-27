@@ -201,7 +201,7 @@ void CompiledScene::CompileLightStrategy() {
 	}
 }
 
-void CompiledScene::CompileELVC(OptionalPtr<const EnvLightVisibilityCache> visibilityMapCache) {
+void CompiledScene::CompileELVC(std::experimental::observer_ptr<const EnvLightVisibilityCache> visibilityMapCache) {
 	if (!visibilityMapCache ||  !visibilityMapCache->GetBVH()) {
 		elvcAllEntries.clear();
 		elvcAllEntries.shrink_to_fit();
@@ -321,7 +321,7 @@ void CompiledScene::CompileLights() {
 	envLightIndices.clear();
 	envLightDistributions.clear();
 
-	CompileELVC(OptionalPtr<const EnvLightVisibilityCache>(std::nullopt));
+	CompileELVC(std::experimental::observer_ptr<const EnvLightVisibilityCache>(nullptr));
 
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto& l = scene.GetLightSources().GetLightSource(i);
@@ -389,11 +389,11 @@ void CompiledScene::CompileLights() {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						using optmapcache_t = std::experimental::observer_ptr<const EnvLightVisibilityCache>;
 						CompileELVC(
 							visibilityMapCache ?
-							optmapcache_t(*visibilityMapCache) :
-							optmapcache_t(std::nullopt)
+							optmapcache_t(visibilityMapCache) :
+							optmapcache_t(nullptr)
 						);
 
 						oclLight->notIntersectable.infinite.useVisibilityMapCache = true;
@@ -453,11 +453,11 @@ void CompiledScene::CompileLights() {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						using optmapcache_t = std::experimental::observer_ptr<const EnvLightVisibilityCache>;
 						CompileELVC(
 							visibilityMapCache ?
-							optmapcache_t(*visibilityMapCache) :
-							optmapcache_t(std::nullopt)
+							optmapcache_t(visibilityMapCache) :
+							optmapcache_t(nullptr)
 						);
 
 						oclLight->notIntersectable.sky2.useVisibilityMapCache = true;
@@ -630,11 +630,11 @@ void CompiledScene::CompileLights() {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
-						using optmapcache_t = OptionalPtr<const EnvLightVisibilityCache>;
+						using optmapcache_t = std::experimental::observer_ptr<const EnvLightVisibilityCache>;
 						CompileELVC(
 							visibilityMapCache ?
-							optmapcache_t(*visibilityMapCache) :
-							optmapcache_t(std::nullopt)
+							optmapcache_t(visibilityMapCache) :
+							optmapcache_t(nullptr)
 						);
 
 						oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = true;

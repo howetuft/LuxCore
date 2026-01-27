@@ -56,10 +56,8 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (borderTex == oldTex)
-			borderTex = newTex;
-		if (insideTex == oldTex)
-			insideTex = newTex;
+		updtex(borderTex, oldTex, newTex);
+		updtex(insideTex, oldTex, newTex);
 	}
 
 	float GetWidth() const { return width; }

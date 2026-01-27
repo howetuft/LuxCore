@@ -19,6 +19,8 @@
 #ifndef _SLG_TEXTURE_H
 #define	_SLG_TEXTURE_H
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 #include <limits>
@@ -117,6 +119,35 @@ extern float FBm(const luxrays::Point &P, const float omega, const int maxOctave
 extern float Noise(float x, float y = .5f, float z = .5f);
 inline float Noise(const luxrays::Point &P) {
 	return Noise(P.x, P.y, P.z);
+}
+
+inline bool operator==(std::reference_wrapper<slg::Texture> lhs, const slg::Texture* rhs) {
+	return (&lhs.get() == rhs);
+}
+
+template <typename T>
+void updtex(T texture, TextureConstRef oldTex, TextureRef newTex) {}
+
+template<>
+inline void updtex<>(
+	TextureOPtr texture,
+	const TextureConstRef oldTex,
+	TextureRef newTex
+) {
+	if (texture.get() == std::addressof(oldTex)) {
+		texture.reset(std::addressof(newTex));
+	}
+}
+
+template<>
+inline void updtex<>(
+	std::reference_wrapper<Texture> texture,
+	const TextureConstRef oldTex,
+	TextureRef newTex
+) {
+	if (std::addressof(texture.get()) == std::addressof(oldTex)) {
+		texture = std::reference_wrapper(newTex);
+	}
 }
 
 }  // namespace slg

@@ -40,10 +40,8 @@ void Volume::AddReferencedTextures(std::unordered_set<const Texture *>  &referen
 void Volume::UpdateTextureReferences(TextureConstRef oldTex, TextureRef newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
-	if (iorTex == oldTex)
-		iorTex = newTex;
-	if (volumeEmissionTex == oldTex)
-		volumeEmissionTex = newTex;
+	updtex(iorTex, oldTex, newTex);
+	updtex(volumeEmissionTex, oldTex, newTex);
 }
 
 PropertiesUPtr Volume::ToProperties() const {

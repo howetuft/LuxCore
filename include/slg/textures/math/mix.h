@@ -55,12 +55,9 @@ public:
 	}
 
 	virtual void UpdateTextureReferences(TextureRef oldTex, TextureRef newTex) {
-		if (amount == oldTex)
-			amount = newTex;
-		if (tex1 == oldTex)
-			tex1 = newTex;
-		if (tex2 == oldTex)
-			tex2 = newTex;
+		updtex(amount, oldTex, newTex);
+		updtex(tex1, oldTex, newTex);
+		updtex(tex2, oldTex, newTex);
 	}
 
 	TextureConstRef GetAmountTexture() const { return amount; }

@@ -183,8 +183,12 @@ void BakeCPURenderEngine::StartLockLess() {
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
-	if (pathTracer.hybridBackForwardEnable)
-		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), seedBaseGenerator, GetFilm());
+	if (pathTracer.hybridBackForwardEnable) {
+		auto sharedData = MetropolisSamplerSharedData::FromProperties(
+			Properties(), seedBaseGenerator, GetFilm()
+		);
+		lightSamplerSharedData = std::move(sharedData);
+	}
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);

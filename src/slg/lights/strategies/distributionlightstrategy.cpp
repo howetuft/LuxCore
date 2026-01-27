@@ -18,6 +18,7 @@
 
 #include "slg/lights/strategies/distributionlightstrategy.h"
 #include "slg/scene/scene.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -27,7 +28,7 @@ using namespace slg;
 // DistributionLightStrategy
 //------------------------------------------------------------------------------
 
-OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
+std::experimental::observer_ptr<LightSource> DistributionLightStrategy::SampleLights(
 		SceneConstRef scene,
 		const float u,
 		const Point &p, const Normal &n,
@@ -49,7 +50,7 @@ float DistributionLightStrategy::SampleLightPdf(
 		return 0.f;
 }
 
-OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
+std::experimental::observer_ptr<LightSource> DistributionLightStrategy::SampleLights(
 	SceneConstRef scene,
 	const float u,
 	float *pdf
@@ -59,11 +60,13 @@ OptionalPtr<LightSource> DistributionLightStrategy::SampleLights(
 		assert ((lightIndex >= 0) && (lightIndex < scene.GetLightSources().GetSize()));
 
 		if (*pdf > 0.f)
-			return scene.GetLightSources().GetLightSource(lightIndex);
+			return std::experimental::make_observer(
+				&scene.GetLightSources().GetLightSource(lightIndex)
+			);
 		else
-			return std::nullopt;
+			return nullptr;
 	} else
-		return std::nullopt;
+		return nullptr;
 }
 
 PropertiesUPtr DistributionLightStrategy::ToProperties() const {

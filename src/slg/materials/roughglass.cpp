@@ -19,6 +19,7 @@
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/roughglass.h"
 #include "slg/materials/thinfilmcoating.h"
+#include "slg/usings.h"
 
 using namespace std;
 using namespace luxrays;
@@ -30,12 +31,12 @@ using namespace slg;
 // LuxRender RoughGlass material porting.
 //------------------------------------------------------------------------------
 
-RoughGlassMaterial::RoughGlassMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-		OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-		OptionalPtr<const Texture> refl, OptionalPtr<const Texture> trans,
-		OptionalPtr<const Texture> exteriorIorFact, OptionalPtr<const Texture> interiorIorFact,
-		OptionalPtr<const Texture> u, OptionalPtr<const Texture> v,
-		OptionalPtr<const Texture> filmThickness, OptionalPtr<const Texture> filmIor) :
+RoughGlassMaterial::RoughGlassMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+		TextureConstOPtr emitted, TextureConstOPtr bump,
+		TextureConstOPtr refl, TextureConstOPtr trans,
+		TextureConstOPtr exteriorIorFact, TextureConstOPtr interiorIorFact,
+		TextureConstOPtr u, TextureConstOPtr v,
+		TextureConstOPtr filmThickness, TextureConstOPtr filmIor) :
 			Material(frontTransp, backTransp, emitted, bump), Kr(refl), Kt(trans),
 			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v),
 			filmThickness(filmThickness), filmIor(filmIor) {
@@ -354,26 +355,26 @@ void RoughGlassMaterial::UpdateTextureReferences(TextureConstRef oldTex, Texture
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (Kr == oldTex)
-		Kr = newTex;
-	if (Kt == oldTex)
-		Kt = newTex;
-	if (exteriorIor == oldTex)
-		exteriorIor = newTex;
-	if (interiorIor == oldTex)
-		interiorIor = newTex;
-	if (nu == oldTex) {
-		nu = newTex;
+	if (Kr == &oldTex)
+		Kr.reset(&newTex);
+	if (Kt == &oldTex)
+		Kt.reset(&newTex);
+	if (exteriorIor == &oldTex)
+		exteriorIor.reset(&newTex);
+	if (interiorIor == &oldTex)
+		interiorIor.reset(&newTex);
+	if (nu == &oldTex) {
+		nu.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nv == oldTex) {
-		nv = newTex;
+	if (nv == &oldTex) {
+		nv.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (filmThickness == oldTex)
-		filmThickness = newTex;
-	if (filmIor == oldTex)
-		filmIor = newTex;
+	if (filmThickness == &oldTex)
+		filmThickness.reset(&newTex);
+	if (filmIor == &oldTex)
+		filmIor.reset(&newTex);
 
 	if (updateGlossiness)
 		glossiness = ComputeGlossiness(nu, nv);

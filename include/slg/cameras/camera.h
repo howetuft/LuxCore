@@ -50,7 +50,7 @@ public:
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
-		shutterOpen(0.f), shutterClose(1.f), autoVolume(true), volume(std::nullopt),
+		shutterOpen(0.f), shutterClose(1.f), autoVolume(true), volume(nullptr),
 		motionSystem(NULL), type(t) { }
 	virtual ~Camera() {
 		delete motionSystem;
@@ -115,7 +115,7 @@ public:
 
 	bool HasVolume() const { return bool(volume); }
 	VolumeConstRef GetVolume() const { return *volume; }
-	void SetVolume(VolumeConstRef vol) { volume = vol; }
+	void SetVolume(VolumeConstRef vol) { volume.reset(&vol); }
 
 	bool autoVolume;
 
@@ -131,7 +131,7 @@ protected:
 	luxrays::BBox ComputeBBox(const luxrays::Point &orig) const;
 
 	const CameraType type;
-	OptionalPtr<const Volume> volume;
+	VolumeConstOPtr volume;
 };
 
 

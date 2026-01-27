@@ -42,7 +42,7 @@ void LightSource::UpdateVolumeReferences(
 	VolumeConstRef oldVol, VolumeRef newVol
 ) {
 	if (volume && *volume == oldVol)
-		volume = newVol;
+		volume.reset(&newVol);
 }
 
 string LightSource::LightSourceType2String(const LightSourceType type) {

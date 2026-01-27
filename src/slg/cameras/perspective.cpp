@@ -36,7 +36,7 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
-		bokehDistributionImageMap(std::nullopt), bokehDistributionMap(nullptr),
+		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
@@ -47,7 +47,7 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		ProjectiveCamera(camType, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
-		bokehDistributionImageMap(std::nullopt), bokehDistributionMap(nullptr),
+		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }

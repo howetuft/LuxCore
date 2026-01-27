@@ -29,10 +29,10 @@ namespace slg {
 
 class VelvetMaterial : public Material {
 public:
-	VelvetMaterial(OptionalPtr<const Texture> frontTransp, OptionalPtr<const Texture> backTransp,
-			OptionalPtr<const Texture> emitted, OptionalPtr<const Texture> bump,
-			OptionalPtr<const Texture> kd, OptionalPtr<const Texture> p1, OptionalPtr<const Texture> p2, OptionalPtr<const Texture> p3,
-			OptionalPtr<const Texture> thickness);
+	VelvetMaterial(TextureConstOPtr frontTransp, TextureConstOPtr backTransp,
+			TextureConstOPtr emitted, TextureConstOPtr bump,
+			TextureConstOPtr kd, TextureConstOPtr p1, TextureConstOPtr p2, TextureConstOPtr p3,
+			TextureConstOPtr thickness);
 
 	virtual MaterialType GetType() const { return VELVET; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
@@ -55,18 +55,18 @@ public:
 
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	OptionalPtr<const Texture> GetKd() const { return Kd; }
-	OptionalPtr<const Texture> GetP1() const { return P1; }
-	OptionalPtr<const Texture> GetP2() const { return P2; }
-	OptionalPtr<const Texture> GetP3() const { return P3; }
-	OptionalPtr<const Texture> GetThickness() const { return Thickness; }
+	TextureConstOPtr GetKd() const { return Kd; }
+	TextureConstOPtr GetP1() const { return P1; }
+	TextureConstOPtr GetP2() const { return P2; }
+	TextureConstOPtr GetP3() const { return P3; }
+	TextureConstOPtr GetThickness() const { return Thickness; }
 
 private:
-	OptionalPtr<const Texture> Kd;
-	OptionalPtr<const Texture> P1;
-	OptionalPtr<const Texture> P2;
-	OptionalPtr<const Texture> P3;
-	OptionalPtr<const Texture> Thickness;
+	TextureConstOPtr Kd;
+	TextureConstOPtr P1;
+	TextureConstOPtr P2;
+	TextureConstOPtr P3;
+	TextureConstOPtr Thickness;
 };
 
 }

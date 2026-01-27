@@ -29,17 +29,17 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 Metal2Material::Metal2Material(
-	OptionalPtr<const Texture> frontTransp,
-	OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted,
-	OptionalPtr<const Texture> bump,
-	OptionalPtr<const Texture> nn,
-	OptionalPtr<const Texture> kk,
-	OptionalPtr<const Texture> u,
-	OptionalPtr<const Texture> v
+	TextureConstOPtr frontTransp,
+	TextureConstOPtr backTransp,
+	TextureConstOPtr emitted,
+	TextureConstOPtr bump,
+	TextureConstOPtr nn,
+	TextureConstOPtr kk,
+	TextureConstOPtr u,
+	TextureConstOPtr v
 ) :
 	Material(frontTransp, backTransp, emitted, bump),
-	fresnelTex(std::nullopt),
+	fresnelTex(nullptr),
 	n(nn),
 	k(kk),
 	nu(u),
@@ -49,18 +49,18 @@ Metal2Material::Metal2Material(
 }
 
 Metal2Material::Metal2Material(
-	OptionalPtr<const Texture> frontTransp,
-	OptionalPtr<const Texture> backTransp,
-	OptionalPtr<const Texture> emitted,
-	OptionalPtr<const Texture> bump,
-	OptionalPtr<const FresnelTexture> ft,
-	OptionalPtr<const Texture> u,
-	OptionalPtr<const Texture> v)
+	TextureConstOPtr frontTransp,
+	TextureConstOPtr backTransp,
+	TextureConstOPtr emitted,
+	TextureConstOPtr bump,
+	std::experimental::observer_ptr<const FresnelTexture> ft,
+	TextureConstOPtr u,
+	TextureConstOPtr v)
 	:
 	Material(frontTransp, backTransp, emitted, bump),
 	fresnelTex(ft),
-	n(std::nullopt),
-	k(std::nullopt),
+	n(nullptr),
+	k(nullptr),
 	nu(u),
 	nv(v)
 {
@@ -208,18 +208,18 @@ void Metal2Material::UpdateTextureReferences(TextureConstRef oldTex, TextureRef 
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	bool updateGlossiness = false;
-	if (fresnelTex.ptr() == &oldTex)
-		fresnelTex = static_cast<const FresnelTexture&>(newTex);
-	if (n == oldTex)
-		n = newTex;
-	if (k == oldTex)
-		k = newTex;
-	if (nu == oldTex) {
-		nu = newTex;
+	if (fresnelTex.get() == &oldTex)
+		fresnelTex.reset(static_cast<const FresnelTexture *>(&newTex));
+	if (n == &oldTex)
+		n.reset(&newTex);
+	if (k == &oldTex)
+		k.reset(&newTex);
+	if (nu == &oldTex) {
+		nu.reset(&newTex);
 		updateGlossiness = true;
 	}
-	if (nv == oldTex) {
-		nv = newTex;
+	if (nv == &oldTex) {
+		nv.reset(&newTex);
 		updateGlossiness = true;
 	}
 	

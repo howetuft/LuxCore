@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/lexical_cast.hpp>
@@ -129,7 +130,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			Property("sampler.imagesamples.enable")(false) <<
 			Property("sampler.metropolis.addonlycaustics")(true);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, film, engine->lightSampleSplatter,
+		lightSampler = Sampler::FromProperties(props, rndGen, std::experimental::make_observer(&film), engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);

@@ -112,7 +112,7 @@ PropertiesUPtr SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 }
 
 void SceneObject::SetBakeMap(ImageMapConstRef map, const BakeMapType type, const u_int uvIndex) {
-	bakeMap = map;
+	bakeMap.reset(&map);
 	bakeMapType = type;
 	bakeMapUVIndex = uvIndex;
 }
@@ -125,7 +125,7 @@ Spectrum SceneObject::GetBakeMapValue(const UV &uv) const {
 
 void SceneObject::AddReferencedImageMaps(std::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (bakeMap)
-		referencedImgMaps.insert(bakeMap.ptr());
+		referencedImgMaps.insert(bakeMap.get());
 }
 
 void SceneObject::AddReferencedMaterials(
