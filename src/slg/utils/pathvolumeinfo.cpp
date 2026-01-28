@@ -140,11 +140,17 @@ VolumeConstOPtr PathVolumeInfo::SimulateRemoveVolume(VolumeConstOPtr vol) const 
 			continue;
 		}
 
-		// Update newCurrentVolume. ">=" because I want to catch the last added volume.
-		if (!newCurrentVolume || (GetVolume(i).GetPriority() >= VolumeConstRef(newCurrentVolume).GetPriority())) {
+		if (!newCurrentVolume) {
 			newCurrentVolume.reset(std::addressof(GetVolume(i)));
+			continue;
 		}
-	}
+
+		if (GetVolume(i).GetPriority() >= newCurrentVolume->GetPriority()) {
+			newCurrentVolume.reset(std::addressof(GetVolume(i)));
+			continue;
+		}
+
+	}  // for i
 
 	return newCurrentVolume;
 }
