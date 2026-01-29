@@ -95,11 +95,14 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	const Triangle *tris = srcMesh.GetTriangles();
 
 	// Build the edge information
-	set<Edge> edges;
+	std::set<Edge> edges;
 	for (u_int i = 0; i < triCount; ++i) {
-		edges.insert(Edge(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
-		edges.insert(Edge(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
-		edges.insert(Edge(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]));
+		edges.emplace(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
+		edges.emplace(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
+		edges.emplace(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
+		//edges.insert(Edge(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
+		//edges.insert(Edge(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
+		//edges.insert(Edge(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]));
 	}
 
 	// Build the vertex information
