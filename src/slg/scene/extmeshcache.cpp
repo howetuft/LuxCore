@@ -146,10 +146,6 @@ u_int ExtMeshCache::GetSize() const {
 	return meshes.GetSize();
 }
 
-void ExtMeshCache::GetExtMeshNames(std::vector<std::string> &names) const {
-	meshes.GetNames(names);
-}
-
 ExtMeshRef ExtMeshCache::GetExtMesh(const string &meshName) {
 	return static_cast<ExtMesh&>(meshes.GetObj(meshName));
 }

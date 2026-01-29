@@ -71,8 +71,8 @@ public:
 		return mats.GetSize();
 	}
 
-	void GetMaterialNames(std::vector<std::string> &names) const {
-		mats.GetNames(names);
+	auto GetMaterialNames() const {
+		return mats.GetNames();
 	}
 
 	void DeleteMaterial(const std::string &name) {

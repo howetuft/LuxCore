@@ -66,8 +66,8 @@ public:
 	u_int GetSize() const {
 		return objs.GetSize();
 	}
-	void GetSceneObjectNames(std::vector<std::string> &names) const {
-		objs.GetNames(names);
+	auto GetSceneObjectNames() const {
+		return objs.GetNames();
 	}
 
 	// Update any reference to oldMat with newMat

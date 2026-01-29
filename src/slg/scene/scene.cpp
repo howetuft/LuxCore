@@ -112,8 +112,7 @@ PropertiesUPtr Scene::ToProperties(const bool useRealFileName) const {
 	}
 
 	// Get the sorted list of texture names according their dependencies
-	vector<string> texNames;
-	texDefs.GetTextureSortedNames(texNames);
+	auto texNames = texDefs.GetTextureSortedNames();
 
 	// Write the textures information
 	for (auto const &texName : texNames) {
@@ -494,10 +493,8 @@ void Scene::RemoveUnusedTextures() {
 	}
 
 	// Get the list of all defined textures
-	std::vector<string> definedTexs;
-	texDefs.GetTextureNames(definedTexs);
 	bool deleted = false;
-	for(const string &texName: definedTexs) {
+	for(const auto &texName: texDefs.GetTextureNames()) {
 		TextureConstRef t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(&t) == 0) {
@@ -535,10 +532,8 @@ void Scene::RemoveUnusedMaterials() {
 	}
 
 	// Get the list of all defined materials
-	std::vector<string> definedMats;
-	matDefs.GetMaterialNames(definedMats);
 	bool deleted = false;
-	for(const string& matName: definedMats) {
+	for(const auto& matName: matDefs.GetMaterialNames()) {
 		MaterialConstRef m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(&m) == 0) {
@@ -561,10 +556,8 @@ void Scene::RemoveUnusedMeshes() {
 		objDefs.GetSceneObject(i).AddReferencedMeshes(referencedMesh);
 
 	// Get the list of all defined meshes
-	std::vector<string> definedExtMeshes;
-	extMeshCache.GetExtMeshNames(definedExtMeshes);
 	bool deleted = false;
-	for(const string &extMeshName: definedExtMeshes) {
+	for(const auto &extMeshName: extMeshCache.GetExtMeshNames()) {
 		auto& mesh = extMeshCache.GetExtMesh(extMeshName);
 
 		if (referencedMesh.count(&mesh) == 0) {

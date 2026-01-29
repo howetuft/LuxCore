@@ -109,7 +109,13 @@ public:
 	const std::string &GetName(NamedObjectConstRef o) const;
 
 	u_int GetSize()const;
-	void GetNames(std::vector<std::string> &names) const;
+	auto GetNames() const {
+		// Returns a view of references to the object names
+		return objs | std::views::transform([](const auto& obj) -> const std::string & {
+			return obj->GetName();
+		});
+	}
+	//void GetNames(std::vector<std::string> &names) const;
 	auto GetObjs() {
 		// Returns a view of references to the objects
 		return objs | std::views::transform([](const auto& obj) -> NamedObjectRef {

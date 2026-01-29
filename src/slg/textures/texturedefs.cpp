@@ -44,18 +44,25 @@ TextureDefinitions::DefineTexture(TextureUPtr&& tex) {
 	return std::make_tuple(std::ref(newTexRef), std::move(oldTexPtr));
 }
 
-void TextureDefinitions::GetTextureSortedNames(vector<std::string> &names) const {
-	std::unordered_set<string> doneNames;
+const std::vector<std::string>
+TextureDefinitions::GetTextureSortedNames() const {
+
+	std::vector<std::string> names;
+	std::unordered_set<std::string> doneNames;
 
 	for (u_int i = 0; i < GetSize(); ++i) {
-		TextureConstRef tex = GetTexture(i);
-		
+		auto& tex = GetTexture(i);
+
 		GetTextureSortedNamesImpl(tex, names, doneNames);
 	}
+	return names;
 }
 
-void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstRef tex,
-		vector<std::string> &names, std::unordered_set<string> &doneNames) const {
+void TextureDefinitions::GetTextureSortedNamesImpl(
+	TextureConstRef tex,
+	std::vector<std::string> &names,  // in and out
+	std::unordered_set<std::string> &doneNames  // in and out
+) const {
 	// Check it has not been already added
 	const string &texName = tex.GetName();
 	if (doneNames.count(texName) != 0)
@@ -66,7 +73,7 @@ void TextureDefinitions::GetTextureSortedNamesImpl(TextureConstRef tex,
 	tex.AddReferencedTextures(referencedTexs);
 
 	// Add all referenced texture names
-	for (auto refTex : referencedTexs) {
+	for (const auto * refTex : referencedTexs) {
 		// AddReferencedTextures() adds also itself to the list of referenced textures
 		if (*refTex != tex)
 			GetTextureSortedNamesImpl(*refTex, names, doneNames);

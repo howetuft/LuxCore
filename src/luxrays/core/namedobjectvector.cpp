@@ -151,13 +151,13 @@ u_int NamedObjectVector::GetSize()const {
 	return static_cast<u_int>(objs.size());
 }
 
-void NamedObjectVector::GetNames(std::vector<string> &names) const {
-	const u_int size = GetSize();
-	names.resize(size);
+//void NamedObjectVector::GetNames(std::vector<string> &names) const {
+	//const u_int size = GetSize();
+	//names.resize(size);
 
-	for (u_int i = 0; i < size; ++i)
-		names[i] = GetName(i);
-}
+	//for (u_int i = 0; i < size; ++i)
+		//names[i] = GetName(i);
+//}
 
 void NamedObjectVector::DeleteObj(const string &name) {
 	// We swap remove target and last object, and pop back

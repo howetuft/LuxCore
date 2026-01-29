@@ -67,19 +67,22 @@ public:
 	u_int GetSize() const {
 		return texs.GetSize();
 	}
-	void GetTextureNames(std::vector<std::string> &names) const {
-		texs.GetNames(names);
+	auto GetTextureNames() const {
+		return texs.GetNames();
 	}
 
 	void DeleteTexture(const std::string &name) {
 		texs.DeleteObj(name);
 	}
 
-	void GetTextureSortedNames(std::vector<std::string> &names) const;
+	const std::vector<std::string> GetTextureSortedNames() const;
 
 private:
-	void GetTextureSortedNamesImpl(TextureConstRef tex, std::vector<std::string> &names,
-			std::unordered_set<std::string> &doneNames) const;
+	void GetTextureSortedNamesImpl(
+		TextureConstRef tex,
+		std::vector<std::string> &names,
+		std::unordered_set<std::string> &doneNames
+	) const;
 
 	luxrays::NamedObjectVector texs;
 };
