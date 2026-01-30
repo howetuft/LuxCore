@@ -85,7 +85,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategyTask taskType;
-	std::experimental::observer_ptr<LightStrategyLogPower> distributionStrategy;
+	LightStrategyLogPowerUPtr distributionStrategy = std::make_unique<LightStrategyLogPower>();
 	DirectLightSamplingCache DLSCache;
 
 	bool useRTMode;

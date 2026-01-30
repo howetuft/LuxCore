@@ -100,9 +100,6 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 		edges.emplace(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
 		edges.emplace(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
 		edges.emplace(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
-		//edges.insert(Edge(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
-		//edges.insert(Edge(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
-		//edges.insert(Edge(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]));
 	}
 
 	// Build the vertex information

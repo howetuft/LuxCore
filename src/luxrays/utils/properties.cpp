@@ -1122,6 +1122,10 @@ Properties &Properties::Set(const Property &prop) {
 	return *this;
 }
 
+Properties &Properties::Set(PropertyPtr prop) {
+	return Set(*prop);
+}
+
 Properties &Properties::operator<<(const Property &prop) {
 	return Set(prop);
 }

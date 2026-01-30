@@ -63,6 +63,7 @@ DECLARE_SUBTYPES(SamplerSharedData);
 DECLARE_SUBTYPES(Filter);
 DECLARE_SUBTYPES(FilmSampleSplatter);
 DECLARE_SUBTYPES(CPURenderThread);
+DECLARE_SUBTYPES(LightStrategyLogPower);
 
 }  // namespace slg
 

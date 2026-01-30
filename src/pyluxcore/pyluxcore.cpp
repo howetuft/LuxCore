@@ -16,6 +16,7 @@
  * limitations under the License.                      *
  ***************************************************************************/
 #include "luxrays/utils/properties.h"
+#include <pybind11/detail/common.h>
 #include <pybind11/detail/using_smart_holder.h>
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
@@ -412,7 +413,7 @@ static py::list Property_GetBlob(PropertyPtr prop) {
   return Property_GetBlobByIndex(prop, 0);
 }
 
-static luxrays::Property &Property_Add(PropertyPtr prop, const py::list &l) {
+static PropertyPtr Property_Add(PropertyPtr prop, const py::list &l) {
   const py::ssize_t size = len(l);
   for (py::ssize_t i = 0; i < size; ++i) {
     const std::string objType = py::cast<std::string>((l[i].attr("__class__")).attr("__name__"));
@@ -456,10 +457,10 @@ static luxrays::Property &Property_Add(PropertyPtr prop, const py::list &l) {
       throw std::runtime_error("Unsupported data type included in Property.Add() method list: " + objType);
   }
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllBool(PropertyPtr prop,
+static PropertyPtr Property_AddAllBool(PropertyPtr prop,
     const py::object &obj) {
   std::vector<bool> v;
   GetArray<bool>(obj, v);
@@ -467,10 +468,10 @@ static luxrays::Property &Property_AddAllBool(PropertyPtr prop,
   for (auto e : v)
     prop->Add<bool>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllInt(PropertyPtr prop,
+static PropertyPtr Property_AddAllInt(PropertyPtr prop,
     const py::object &obj) {
   std::vector<long long> v;
   GetArray<long long>(obj, v);
@@ -478,10 +479,10 @@ static luxrays::Property &Property_AddAllInt(PropertyPtr prop,
   for (auto e : v)
     prop->Add<long long>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllUnsignedLongLong(PropertyPtr prop,
+static PropertyPtr Property_AddAllUnsignedLongLong(PropertyPtr prop,
     const py::object &obj) {
   std::vector<unsigned long long> v;
   GetArray<unsigned long long>(obj, v);
@@ -489,10 +490,10 @@ static luxrays::Property &Property_AddAllUnsignedLongLong(PropertyPtr prop,
   for (auto e : v)
     prop->Add<unsigned long long>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllFloat(PropertyPtr prop,
+static PropertyPtr Property_AddAllFloat(PropertyPtr prop,
     const py::object &obj) {
   std::vector<float> v;
   GetArray<float>(obj, v);
@@ -500,10 +501,10 @@ static luxrays::Property &Property_AddAllFloat(PropertyPtr prop,
   for (auto e : v)
     prop->Add<float>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllBoolStride(PropertyPtr prop,
+static PropertyPtr Property_AddAllBoolStride(PropertyPtr prop,
     const py::object &obj, const size_t width, const size_t stride) {
   std::vector<bool> v;
   GetArray<bool>(obj, v, width, stride);
@@ -511,10 +512,10 @@ static luxrays::Property &Property_AddAllBoolStride(PropertyPtr prop,
   for (auto e : v)
     prop->Add<bool>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllIntStride(PropertyPtr prop,
+static PropertyPtr Property_AddAllIntStride(PropertyPtr prop,
     const py::object &obj, const size_t width, const size_t stride) {
   std::vector<long long> v;
   GetArray<long long>(obj, v, width, stride);
@@ -522,10 +523,10 @@ static luxrays::Property &Property_AddAllIntStride(PropertyPtr prop,
   for (auto e : v)
     prop->Add<long long>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllUnsignedLongLongStride(PropertyPtr prop,
+static PropertyPtr Property_AddAllUnsignedLongLongStride(PropertyPtr prop,
     const py::object &obj, const size_t width, const size_t stride) {
   std::vector<unsigned long long> v;
   GetArray<unsigned long long>(obj, v, width, stride);
@@ -533,10 +534,10 @@ static luxrays::Property &Property_AddAllUnsignedLongLongStride(PropertyPtr prop
   for (auto e : v)
     prop->Add<unsigned long long>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_AddAllFloatStride(PropertyPtr prop,
+static PropertyPtr Property_AddAllFloatStride(PropertyPtr prop,
     const py::object &obj, const size_t width, const size_t stride) {
   std::vector<float> v;
   GetArray<float>(obj, v, width, stride);
@@ -544,10 +545,10 @@ static luxrays::Property &Property_AddAllFloatStride(PropertyPtr prop,
   for (auto e : v)
     prop->Add<float>(e);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_Set(PropertyPtr prop, const size_t i,
+static PropertyPtr Property_Set(PropertyPtr prop, const size_t i,
     const py::object &obj) {
   const std::string objType = py::cast<std::string>((obj.attr("__class__")).attr("__name__"));
 
@@ -588,17 +589,17 @@ static luxrays::Property &Property_Set(PropertyPtr prop, const size_t i,
   } else
     throw std::runtime_error("Unsupported data type used for Property->Set() method: " + objType);
 
-  return *prop;
+  return prop;
 }
 
-static luxrays::Property &Property_Set(PropertyPtr prop, const py::list &l) {
+static PropertyPtr Property_Set(PropertyPtr prop, const py::list &l) {
   const py::ssize_t size = len(l);
   for (py::ssize_t i = 0; i < size; ++i) {
     const py::object obj = l[i];
     Property_Set(prop, i, obj);
   }
 
-  return *prop;
+  return prop;
 }
 
 static PropertyUPtr Property_InitWithList(const py::str &name, const py::list &l) {
@@ -2273,19 +2274,46 @@ PYBIND11_MODULE(pyluxcore, m) {
   //--------------------------------------------------------------------------
 
   py::class_<luxrays::Property, py::smart_holder>(m, "Property")
-    .def(py::init<std::string>())
-    .def(py::init<std::string, bool>())
-    .def(py::init<std::string, long long>())
-    .def(py::init<std::string, double>())
-    .def(py::init<std::string, std::string>())
-    //.def("__init__", make_constructor(Property_InitWithList))
+    .def(
+		py::init(
+			[](std::string name) -> std::unique_ptr<luxrays::Property>
+			{ return std::make_unique<luxrays::Property>(name); }
+		)
+	)
+    .def(
+		py::init(
+			[](std::string name, bool val) -> std::unique_ptr<luxrays::Property>
+			{ return std::make_unique<luxrays::Property>(name, val); }
+		)
+	)
+    .def(
+		py::init(
+			[](std::string name, long long val) -> std::unique_ptr<luxrays::Property>
+			{ return std::make_unique<luxrays::Property>(name, val); }
+		)
+	)
+    .def(
+		py::init(
+			[](std::string name, double val) -> std::unique_ptr<luxrays::Property>
+			{ return std::make_unique<luxrays::Property>(name, val); }
+		)
+	)
+    .def(
+		py::init(
+			[](std::string name, std::string val) -> std::unique_ptr<luxrays::Property>
+			{ return std::make_unique<luxrays::Property>(name, val); }
+		)
+	)
+
+    //.def(py::init<std::string, bool>())
+    //.def(py::init<std::string, long long>())
+    //.def(py::init<std::string, double>())
+    //.def(py::init<std::string, std::string>())
     .def(py::init(&Property_InitWithList))
 
-    //.def("GetName", &luxrays::Property::GetName, py::return_value_policy<copy_const_reference>())
-    .def("GetName", &luxrays::Property::GetName)
+    .def("GetName", &luxrays::Property::GetName, py::return_value_policy::copy)
     .def("GetSize", &luxrays::Property::GetSize)
-    //.def("Clear", &luxrays::Property::Clear, py::py::return_value_policy::move)
-    .def("Clear", &luxrays::Property::Clear)
+    .def("Clear", &luxrays::Property::Clear, py::return_value_policy::reference_internal)
 
     .def("Get", &Property_Get)
 
@@ -2315,21 +2343,20 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("GetValuesString", &luxrays::Property::GetValuesString)
     .def("ToString", &luxrays::Property::ToString)
 
-    .def("Add", &Property_Add)
-    .def("AddAllBool", &Property_AddAllBool)
-    .def("AddAllInt", &Property_AddAllInt)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong)
-    .def("AddAllFloat", &Property_AddAllFloat)
-    .def("AddAllBool", &Property_AddAllBoolStride)
-    .def("AddAllInt", &Property_AddAllIntStride)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride)
-    .def("AddAllFloat", &Property_AddAllFloatStride)
-    .def<luxrays::Property &(*)(PropertyPtr , const py::list &)>
-      ("Set", &Property_Set)
-    .def<luxrays::Property &(*)(PropertyPtr , const size_t, const py::object &)>
-      ("Set", &Property_Set)
+    .def("Add", &Property_Add, py::return_value_policy::reference_internal)
+    .def("AddAllBool", &Property_AddAllBool, py::return_value_policy::reference_internal)
+    .def("AddAllInt", &Property_AddAllInt, py::return_value_policy::reference_internal)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong, py::return_value_policy::reference_internal)
+    .def("AddAllFloat", &Property_AddAllFloat, py::return_value_policy::reference_internal)
+    .def("AddAllBool", &Property_AddAllBoolStride, py::return_value_policy::reference_internal)
+    .def("AddAllInt", &Property_AddAllIntStride, py::return_value_policy::reference_internal)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride, py::return_value_policy::reference_internal)
+    .def("AddAllFloat", &Property_AddAllFloatStride, py::return_value_policy::reference_internal)
+    .def<PropertyPtr (*)(PropertyPtr , const py::list &)>
+      ("Set", &Property_Set, py::return_value_policy::reference_internal)
+    .def<PropertyPtr (*)(PropertyPtr , const size_t, const py::object &)>
+      ("Set", &Property_Set, py::return_value_policy::reference_internal)
 
-    //.def(self_ns::str(self))  TODO
     .def("__str__", &luxrays::Property::ToString)
   ;
 
@@ -2359,7 +2386,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 	)
 
     // Required because Properties::Set is overloaded
-	.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Property &)>
+	.def<luxrays::Properties &(luxrays::Properties::*)(PropertyPtr)>
       ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
 
     .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
@@ -2380,9 +2407,9 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("HaveNamesRE", &luxrays::Properties::HaveNamesRE)
     .def("GetAllProperties", &luxrays::Properties::GetAllProperties, py::return_value_policy::reference_internal)
 
-    .def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
-      ("Get", &luxrays::Properties::Get, py::return_value_policy::copy)
-    .def("Get", &Properties_GetWithDefaultValues, py::return_value_policy::copy)
+    .def<const luxrays::Property & (luxrays::Properties::*)(const std::string &) const>
+      ("Get", &luxrays::Properties::Get, py::return_value_policy::reference_internal)
+    .def("Get", &Properties_GetWithDefaultValues, py::return_value_policy::reference_internal)
 
     .def("GetSize", &luxrays::Properties::GetSize)
 
@@ -2555,7 +2582,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::init(&SceneImpl::Create<std::string>),
 		py::keep_alive<1, 2>()
 	)
-    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties)
+    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, py::return_value_policy::reference_internal)
     .def("GetCamera", &Scene_GetCamera, py::return_value_policy::reference_internal)
     .def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
     .def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
@@ -2626,9 +2653,9 @@ PYBIND11_MODULE(pyluxcore, m) {
 			//, py::return_value_policy::move)
     //.def("__init__", make_constructor(RenderConfig_LoadFile))
     //.def(py::init(&RenderConfig_LoadFile)) TODO
-    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties)
+    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, py::return_value_policy::reference_internal)
     .def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
-    .def("GetScene", &RenderConfig_GetScene)
+    .def("GetScene", &RenderConfig_GetScene, py::return_value_policy::reference_internal)
     .def("HasCachedKernels", &luxcore::detail::RenderConfigImpl::HasCachedKernels)
     .def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
     .def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
@@ -2636,7 +2663,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Save", &luxcore::detail::RenderConfigImpl::Save)
     .def("Export", &luxcore::detail::RenderConfigImpl::Export)
     .def_static("LoadResumeFile", &RenderConfig_LoadResumeFile)
-    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties)
+    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, py::return_value_policy::reference_internal)
   ;
 
   //--------------------------------------------------------------------------
@@ -2680,14 +2707,14 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
     .def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
     .def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
-    .def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilmPtr)
+    .def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilmPtr, py::return_value_policy::reference_internal)
     .def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
     .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, py::return_value_policy::reference_internal)
     .def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)
     .def("WaitForDone", &luxcore::detail::RenderSessionImpl::WaitForDone)
     .def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)
     .def("Parse", &luxcore::detail::RenderSessionImpl::Parse)
-    .def("GetRenderState", &RenderSession_GetRenderState, py::return_value_policy::reference_internal)
+    .def("GetRenderState", &RenderSession_GetRenderState, py::return_value_policy::take_ownership)
     .def("SaveResumeFile", &luxcore::detail::RenderSessionImpl::SaveResumeFile)
   ;
 

@@ -51,7 +51,7 @@ public:
 			const bool useRTMode) = 0;
 
 	// Used for direct light sampling
-	virtual std::experimental::observer_ptr<LightSource> SampleLights(
+	virtual LightSourceOPtr SampleLights(
 			SceneConstRef scene,
 			const float u,
 			const luxrays::Point &p, const luxrays::Normal &n,

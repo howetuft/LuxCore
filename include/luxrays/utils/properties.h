@@ -30,7 +30,8 @@
 #include <stdexcept>
 #include <memory>
 
-#include <luxrays/utils/exportdefs.h>
+#include "luxrays/usings.h"
+#include "luxrays/utils/exportdefs.h"
 
 namespace luxrays {
 
@@ -533,6 +534,7 @@ public:
 	 * \return a reference to the modified properties.
 	 */
 	Properties &Set(const Property &prop);
+	Properties &Set(luxrays::PropertyPtr prop);
 	/*!
 	 * \brief Sets a single Property.
 	 * 
