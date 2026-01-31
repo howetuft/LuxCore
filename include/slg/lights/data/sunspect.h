@@ -24,7 +24,7 @@ namespace slg {
 /* Units are either [] or cm^-1. refer when in doubt MI */
 
 // k_o Spectrum table from pg 127, MI.
-static const float sun_k_oWavelengths[64] = {
+static constexpr float sun_k_oWavelengths[64] = {
 300, 305, 310, 315, 320,
 325, 330, 335, 340, 345,
 350, 355,
@@ -46,7 +46,7 @@ static const float sun_k_oWavelengths[64] = {
 750, 760, 770, 780, 790
 };
 
-static const float sun_k_oAmplitudes[65] = {
+static constexpr float sun_k_oAmplitudes[65] = {
   10.0f,
   4.8f,
   2.7f,
@@ -118,14 +118,14 @@ static const float sun_k_oAmplitudes[65] = {
 };
 
 // k_g Spectrum table from pg 130, MI.
-static const float sun_k_gWavelengths[4] = {
+static constexpr float sun_k_gWavelengths[4] = {
   759.f,
   760.f,
   770.f,
   771.f
 };
 
-static const float sun_k_gAmplitudes[4] = {
+static constexpr float sun_k_gAmplitudes[4] = {
   0.0f,
   3.0f,
   0.210f,
@@ -133,7 +133,7 @@ static const float sun_k_gAmplitudes[4] = {
 };
 
 // k_wa Spectrum table from pg 130f, MI.
-static const float sun_k_waWavelengths[13] = {
+static constexpr float sun_k_waWavelengths[13] = {
   689.f,
   690.f,
   700.f,
@@ -149,7 +149,7 @@ static const float sun_k_waWavelengths[13] = {
   800.f
 };
 
-static const float sun_k_waAmplitudes[13] = {
+static constexpr float sun_k_waAmplitudes[13] = {
   0.f,
   0.160e-1f,
   0.240e-1f,
@@ -166,7 +166,7 @@ static const float sun_k_waAmplitudes[13] = {
 };
 
 // Sun radiance in range 380-750 nm by 10nm in W.m-2.sr-1.nm-1
-static const float sun_solAmplitudes[38] = {
+static constexpr float sun_solAmplitudes[38] = {
     16559.0f, 16233.7f, 21127.5f, 25888.2f, 25829.1f,
     24232.3f, 26760.5f, 29658.3f, 30545.4f, 30057.5f,
     30663.7f, 28830.4f, 28712.1f, 27825.0f, 27100.6f,
@@ -179,7 +179,7 @@ static const float sun_solAmplitudes[38] = {
 
 // The suns irradiance as sampled outside the atmosphere from 380 - 770 nm at 5nm intervals
 // Dade - not used (commented out to avoid a gcc warning)
-/*static float sun_sun_irradiance[79] = {
+/*static constexpr float sun_sun_irradiance[79] = {
     1.1200E09,
     1.0980E09,
     1.0980E09,
