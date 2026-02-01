@@ -84,7 +84,7 @@ void LightCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 
-	sampleSplatter = std::make_unique<FilmSampleSplatter>(GetPixelFilter());
+	SetSampleSplatter(GetPixelFilter());
 
 	//--------------------------------------------------------------------------
 
@@ -96,7 +96,7 @@ void LightCPURenderEngine::StopLockLess() {
 	
 	pathTracer.DeletePixelFilterDistribution();
 
-	sampleSplatter.reset();
+	ResetSampleSplatter();
 }
 
 //------------------------------------------------------------------------------

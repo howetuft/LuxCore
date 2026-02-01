@@ -89,7 +89,6 @@ protected:
 		return std::make_unique<LightCPURenderThread>(this, index, device);
 	}
 
-	FilmSampleSplatterUPtr sampleSplatter;
 	PathTracer pathTracer;
 };
 

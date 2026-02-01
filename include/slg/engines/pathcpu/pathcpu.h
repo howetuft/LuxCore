@@ -90,12 +90,10 @@ protected:
 	virtual void StopLockLess();
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
-	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
 	FilmSampleSplatterUPtr lightSampleSplatter;
-	std::shared_ptr<SamplerSharedData> lightSamplerSharedData;  // Shared data
-																// are in
-																// shared_ptr
+	SamplerSharedDataSPtr lightSamplerSharedData;  // Shared data, shared ownership
+	PhotonGICache *photonGICache;
 };
 
 }

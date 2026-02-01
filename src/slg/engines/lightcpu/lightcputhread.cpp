@@ -54,7 +54,7 @@ void LightCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 	// Setup the sampler
 	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(),
-			engine->sampleSplatter, engine->samplerSharedData,
+			engine->GetSampleSplatter(), engine->samplerSharedData,
 			// Disable image plane meaning for samples 0 and 1
 			Properties() << Property("sampler.imagesamples.enable")(false));
 	sampler->SetThreadIndex(threadIndex);
