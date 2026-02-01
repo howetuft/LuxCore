@@ -64,13 +64,15 @@ public:
 	FilmConstRef GetFilm() const { return film; }
 	const VarianceClamping *varianceClamping;
 
-	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
+	std::vector<SampleResult> & GetEyeSampleResults() { return eyeSampleResults; }
+	std::vector<SampleResult> & GetLightSampleResults() { return lightSampleResults; }
 
 	// Used for hybrid rendering
 	double eyeSampleCount, lightSampleCount;
 
 private:
 	FilmRef film;
+	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
 };
 
 class PhotonGICache;
@@ -151,7 +153,7 @@ public:
 			FilmConstRef film);
 
 	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	// Used for Sampler indices
 	u_int eyeSampleBootSize, eyeSampleStepSize, eyeSampleSize;

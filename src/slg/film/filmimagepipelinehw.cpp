@@ -59,10 +59,12 @@ void Film::CreateHWContext() {
 	SLG_LOG("Film hardware image pipeline");
 
 	// Create LuxRays context
+	auto config = std::make_unique<Properties>();
+	*config << Property("context.verbose")(false);
+
 	ctx = std::make_unique<Context>(
 		LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
-		Properties() <<
-			Property("context.verbose")(false)
+		std::move(config)
 	);
 
 	// Select OpenCL device

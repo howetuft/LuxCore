@@ -329,12 +329,12 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 
 						if (ImGui::Button("Apply")) {
 							const auto &cfgProps = app->config->ToProperties();
-							auto newImagePipelineProps = std::make_unique<Properties>
-							(
-								*cfgProps->GetAllProperties(
+							auto newImagePipelineProps = std::make_unique<Properties>();
+							*newImagePipelineProps
+								<< cfgProps->GetAllProperties(
 									Property::PopPrefix(denoiserPrefix)
-								) << *props
-							);
+								)
+								<< props;
 							app->session->Parse(newImagePipelineProps);
 
 							// Check if I have to refresh the channel window

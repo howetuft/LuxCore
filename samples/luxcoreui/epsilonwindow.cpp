@@ -36,18 +36,19 @@ EpsilonWindow::EpsilonWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Epsilon") {
 std::unique_ptr<Properties> EpsilonWindow::GetEpsilonProperties(
     PropertiesPtr cfgProps
 ) const {
-	return std::make_unique<Properties>(*cfgProps->GetAllProperties("scene.epsilon"));
+	return cfgProps->GetAllProperties("scene.epsilon");
 }
 
 void EpsilonWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *GetEpsilonProperties(config->ToProperties());
+		//*props << GetEpsilonProperties(config->ToProperties());
+		props->Set(GetEpsilonProperties(config->ToProperties()));
 	} catch(exception &ex) {
 		LA_LOG("Epsilon parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *GetEpsilonProperties(config->GetProperties());
+		props->Set(GetEpsilonProperties(config->GetProperties()));
 	}
 }
 

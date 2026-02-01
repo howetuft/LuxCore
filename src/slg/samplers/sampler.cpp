@@ -70,7 +70,7 @@ PropertiesUPtr Sampler::ToProperties(const Properties &cfg) {
 
 	if (SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
 		auto res = func(cfg);
-		*res << cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable"));
+		*res << cfg.Get(GetDefaultProps()->Get("sampler.imagesamples.enable"));
 		return res;
 	} else
 		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
@@ -128,8 +128,9 @@ string Sampler::SamplerType2String(const SamplerType type) {
 		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + ToString(type));
 }
 
-const Properties &Sampler::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr Sampler::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Property("sampler.imagesamples.enable")(true);
 
 	return props;

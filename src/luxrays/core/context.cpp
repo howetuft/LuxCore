@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <iosfwd>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 
@@ -41,15 +42,17 @@ using namespace luxrays;
 // Context
 //------------------------------------------------------------------------------
 
-Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(config) {
+Context::Context(LuxRaysDebugHandler handler, PropertiesUPtr&& config)
+	: cfg(config ? std::move(config) : std::make_unique<Properties>())
+{
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
 	useOutOfCoreBuffers = false;
-	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
+	verbose = cfg->Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
-	
+
 	//--------------------------------------------------------------------------
 	// Add all native devices
 	//--------------------------------------------------------------------------
@@ -70,7 +73,10 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 		for (size_t i = 0; i < platforms.size(); ++i)
 			LR_LOG((*this), "OpenCL Platform " << i << ": " << OpenCLDeviceDescription::GetOCLPlatformName(platforms[i]));
 
-		const int openclPlatformIndex = cfg.Get(Property("context.opencl.platform.index")(-1)).Get<int>();
+		const int openclPlatformIndex = cfg->Get(
+			Property("context.opencl.platform.index")(-1)
+		).Get<int>();
+
 		if (openclPlatformIndex < 0) {
 			if (platforms.size() > 0) {
 				// Just use all the platforms available

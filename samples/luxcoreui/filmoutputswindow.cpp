@@ -263,12 +263,12 @@ std::unique_ptr<Properties> FilmOutputsWindow::GetFilmOutputsProperties(const st
 void FilmOutputsWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *GetFilmOutputsProperties(config->ToProperties());
+		props->Set(GetFilmOutputsProperties(config->ToProperties()));
 	} catch(exception &ex) {
 		LA_LOG("FilmOutputs parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *GetFilmOutputsProperties(config->GetProperties());
+		props->Set(GetFilmOutputsProperties(config->GetProperties()));
 	}
 }
 

@@ -40,17 +40,17 @@ SamplerWindow::SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") {
 void SamplerWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *config->ToProperties()->GetAllProperties("sampler");
+		props->Set(config->ToProperties()->GetAllProperties("sampler"));
 	} catch(exception &ex) {
 		LA_LOG("Sampler parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *config->GetProperties()->GetAllProperties("sampler");
+		props->Set(config->GetProperties()->GetAllProperties("sampler"));
 	}
 }
 
 void SamplerWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
-	app->RenderConfigParse(std::make_unique<Properties>(*props->GetAllProperties("sampler")));
+	app->RenderConfigParse(props->GetAllProperties("sampler"));
 }
 
 bool SamplerWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {

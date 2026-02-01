@@ -434,9 +434,13 @@ void LuxCoreApp::RunApp(
 
       targetFilmWidth = windowWidth / 2;
       targetFilmHeight = windowHeight / 2;
-      config->Parse(std::make_unique<Properties>(Properties() <<
-          Property("film.width")(targetFilmWidth) <<
-          Property("film.height")(targetFilmHeight)));
+
+		auto props = std::make_unique<Properties>();
+		*props
+			  << Property("film.width")(targetFilmWidth)
+			  << Property("film.height")(targetFilmHeight);
+		config->Parse(props);
+
     } else {
       config->GetFilmSize(&windowWidth, &windowHeight, NULL);
       targetFilmWidth = windowWidth;

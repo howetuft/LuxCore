@@ -32,7 +32,7 @@ PropertiesUPtr NoneFilter::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("film.filter.type"));
+				cfg.Get(GetDefaultProps()->Get("film.filter.type"));
 	
 	return props;
 }
@@ -52,8 +52,9 @@ slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties &NoneFilter::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr NoneFilter::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag());
 

@@ -64,11 +64,11 @@ void TilePathCPURenderEngine::StartLockLess() {
 	// Initialize rendering parameters
 	//--------------------------------------------------------------------------
 
-	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")).Get<int>());
+	aaSamples = Max(1, cfg.Get(GetDefaultProps()->Get("tilepath.sampling.aa.size")).Get<int>());
 
 	// pathTracer must be configured here because it is then used
 	// to set tileRepository->varianceClamping, etc.
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	pathTracer.ParseOptions(cfg, *GetDefaultProps());
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -119,7 +119,7 @@ void TilePathCPURenderEngine::StartLockLess() {
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 	pathTracer.SetPhotonGICache(photonGICache);
 
 	//--------------------------------------------------------------------------
@@ -145,8 +145,8 @@ PropertiesUPtr TilePathCPURenderEngine::ToProperties(const Properties &cfg) {
 	
 	*props <<
 				CPUTileRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("tilepath.sampling.aa.size")) <<
 			PathTracer::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 
@@ -157,8 +157,9 @@ RenderEngine *TilePathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new TilePathCPURenderEngine(rcfg);
 }
 
-const Properties &TilePathCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr TilePathCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			CPUTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("tilepath.sampling.aa.size")(3) <<

@@ -306,7 +306,7 @@ public:
 	static std::string DebugType2String(const PhotonGIDebugType type);
 
 	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 	static PhotonGICache *FromProperties(SceneConstRef scn, const luxrays::Properties &cfg);
 
 	friend class PGICSceneVisibility;

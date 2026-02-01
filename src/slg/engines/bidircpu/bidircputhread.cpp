@@ -67,7 +67,7 @@ void BiDirCPURenderThread::AOVWarmUp(
 	auto& scene = engine->renderConfig.GetScene();
 	auto& camera = scene.GetCamera();
 
-	SobolSampler sampler(rndGen, engine->GetFilm(), engine->sampleSplatter, true, 0.f, 0.f,
+	SobolSampler sampler(rndGen, engine->GetFilm(), engine->GetSampleSplatter(), true, 0.f, 0.f,
 		16, 16, 1, 1,
 		engine->aovWarmupSamplerSharedData
 	);
@@ -797,7 +797,7 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	auto sampler = engine->renderConfig.AllocSampler(
 		rndGen,
 		engine->GetFilm(),
-		engine->sampleSplatter,
+		engine->GetSampleSplatter(),
 		engine->samplerSharedData,
 		Properties()
 	);

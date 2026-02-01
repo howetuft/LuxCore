@@ -68,7 +68,7 @@ void TilePathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 
 	// Setup the sampler
 	auto genericSampler = engine->renderConfig.AllocSampler(rndGen,
-			engine->GetFilm(), NULL, NULL, Properties());
+			engine->GetFilm(), engine->GetSampleSplatter(), NULL, Properties());
 	genericSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	auto& sampler = dynamic_cast<TilePathSampler &>(*genericSampler);

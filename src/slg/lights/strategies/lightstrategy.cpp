@@ -96,8 +96,9 @@ string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
 		);
 }
 
-const Properties &LightStrategy::GetDefaultProps() {
-	static Properties props;
+PropertiesUPtr LightStrategy::GetDefaultProps() {
+
+	auto props = std::make_unique<Properties>();
 
 	return props;
 }

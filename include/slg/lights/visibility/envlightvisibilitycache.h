@@ -227,8 +227,8 @@ public:
 			float uv[2], float *pdf) const;
 	float Pdf(const BSDF &bsdf, const float u, const float v) const;
 
-	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
-	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);
+	static ELVCParams Properties2Params(const std::string &prefix, luxrays::PropertiesConstRef props);
+	static luxrays::PropertiesUPtr Params2Props(const std::string &prefix, const ELVCParams &params);
 
 	static const u_int defaultLuminanceMapWidth, defaultLuminanceMapHeight;
 	

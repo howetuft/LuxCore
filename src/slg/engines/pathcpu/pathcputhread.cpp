@@ -62,8 +62,12 @@ void PathCPURenderThread::RenderFunc(std::stop_token stop_token) {
 	
 	SamplerUPtr lightSampler;
 
-	auto eyeSampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(),
-			nullptr, engine->samplerSharedData, Properties());
+	auto eyeSampler = engine->renderConfig.AllocSampler(
+		rndGen, engine->GetFilm(),
+		engine->GetSampleSplatter(),
+		engine->samplerSharedData,
+		Properties()
+	);
 	eyeSampler->SetThreadIndex(threadIndex);
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 

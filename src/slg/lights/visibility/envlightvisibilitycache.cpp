@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/properties.h"
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 
@@ -832,7 +833,7 @@ float EnvLightVisibilityCache::Pdf(const BSDF &bsdf, const float u, const float 
 // Properties2Params
 //------------------------------------------------------------------------------
 
-ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
+ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, PropertiesConstRef props) {
 	ELVCParams params;
 
 	params.map.quality = Clamp(props.Get(Property(prefix + ".visibilitymapcache.map.quality")(.5)).Get<double>(), 0.0, 1.0);
@@ -857,10 +858,10 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 // Params2Props
 //------------------------------------------------------------------------------
 
-Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELVCParams &params) {
-	Properties props;
+PropertiesUPtr EnvLightVisibilityCache::Params2Props(const string &prefix, const ELVCParams &params) {
+	PropertiesUPtr props = std::make_unique<Properties>();
 
-	props <<
+	*props <<
 			Property(prefix + ".visibilitymapcache.map.quality")(params.map.quality) <<
 			Property(prefix + ".visibilitymapcache.map.tilewidth")(params.map.tileWidth) <<
 			Property(prefix + ".visibilitymapcache.map.tileheight")(params.map.tileHeight) <<

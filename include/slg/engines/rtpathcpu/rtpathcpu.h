@@ -85,7 +85,7 @@ public:
     };
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual bool IsRTMode() const { return true; }
 	

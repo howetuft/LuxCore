@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #include <string>
 #include <regex>
  
@@ -103,35 +104,35 @@ void LuxCoreApp::BakeAllSceneObjects() {
 			Property(prefix + ".autosize.enabled")(true) <<
 			Property(prefix + ".uvindex")(0) <<
 			Property(prefix + ".objectnames")(objectName);
-		
+
 		++objectIndex;
 	}
 
 	// Write the complete new render config to file
-	Properties completeBakeCfgProps;
-	completeBakeCfgProps << *cfgProps << bakeProps;
-	completeBakeCfgProps.Save("render-bakeallobjects.cfg");
+	PropertiesUPtr completeBakeCfgProps = std::make_unique<Properties>();
+	*completeBakeCfgProps << *cfgProps << bakeProps;
+	completeBakeCfgProps->Save("render-bakeallobjects.cfg");
 
 	// Write the complete new baked scene to file
-	Properties completeBakedSceneProps;
-	completeBakedSceneProps << *sceneProps;
+	PropertiesUPtr completeBakedSceneProps = std::make_unique<Properties>();
+	*completeBakedSceneProps << *sceneProps;
 	for (auto const &objectName : objectNames) {
 		const string prefix = "scene.objects." + objectName;
 
-		completeBakedSceneProps <<
+		*completeBakedSceneProps <<
 				Property(prefix + ".bake.combined.file")(SanitizeName(objectName) + ".exr") <<
 				Property(prefix + ".bake.combined.gamma")(1.f) <<
 				Property(prefix + ".bake.combined.wrap")("clamp");
 	}
-	completeBakedSceneProps.Save("scene-bakedallobjects.scn");
-	
+	completeBakedSceneProps->Save("scene-bakedallobjects.scn");
+
 	// Write the complete new baked config file to file
-	Properties completeBakedCfgProps;
-	completeBakedCfgProps <<
+	PropertiesUPtr completeBakedCfgProps = std::make_unique<Properties>();
+	*completeBakedCfgProps <<
 			*cfgProps <<
 			Property("scene.file")("scene-bakedallobjects.scn");
-	completeBakedCfgProps.Save("render-bakedallobjects.cfg");
-	
+	completeBakedCfgProps->Save("render-bakedallobjects.cfg");
+
 	// Start the backing rendering
-	RenderConfigParse(std::make_unique<Properties>(completeBakeCfgProps));
+	RenderConfigParse(completeBakeCfgProps);
 }

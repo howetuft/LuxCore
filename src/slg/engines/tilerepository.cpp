@@ -598,7 +598,7 @@ PropertiesUPtr TileRepository::ToProperties(const Properties &cfg) {
 	auto props = std::make_unique<Properties>();
 
 	// tile.size
-	const u_int defaultSize = cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>();
+	const u_int defaultSize = cfg.Get(GetDefaultProps()->Get("tile.size")).Get<u_int>();
 	const Property sizeX = cfg.Get(Property("tile.size.x")(defaultSize));
 	const Property sizeY = cfg.Get(Property("tile.size.y")(defaultSize));
 
@@ -609,16 +609,16 @@ PropertiesUPtr TileRepository::ToProperties(const Properties &cfg) {
 
 	// tile.multipass.convergencetest.threshold
 	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))
-		*props << cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold"));
+		*props << cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.threshold"));
 	else {
-		const float defaultThreshold = GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<double>();
+		const float defaultThreshold = GetDefaultProps()->Get("tile.multipass.convergencetest.threshold").Get<double>();
 		*props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold * 256.f));
 	}
 
 	*props <<
-			cfg.Get(GetDefaultProps().Get("tile.multipass.enable")) <<
-			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold.reduction")) <<
-			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.warmup.count"));
+			cfg.Get(GetDefaultProps()->Get("tile.multipass.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.threshold.reduction")) <<
+			cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.warmup.count"));
 
 	return props;
 }
@@ -627,28 +627,29 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 	u_int tileWidth = 32;
 	u_int tileHeight = 32;
 	if (cfg.IsDefined("tile.size"))
-		tileWidth = tileHeight = Max(8u, cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>());
+		tileWidth = tileHeight = Max(8u, cfg.Get(GetDefaultProps()->Get("tile.size")).Get<u_int>());
 	tileWidth = Max(8u, cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>());
 	tileHeight = Max(8u, cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>());
 	auto tileRepository = std::make_unique<TileRepository>(tileWidth, tileHeight);
 
-	tileRepository->enableMultipassRendering = cfg.Get(GetDefaultProps().Get("tile.multipass.enable")).Get<bool>();
+	tileRepository->enableMultipassRendering = cfg.Get(GetDefaultProps()->Get("tile.multipass.enable")).Get<bool>();
 
 	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))
-		tileRepository->convergenceTestThreshold = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold")).Get<double>();
+		tileRepository->convergenceTestThreshold = cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.threshold")).Get<double>();
 	else {
-		const float defaultThreshold256 = 256.f * GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<double>();
+		const float defaultThreshold256 = 256.f * GetDefaultProps()->Get("tile.multipass.convergencetest.threshold").Get<double>();
 		tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold256)).Get<double>() * (1.f / 256.f);
 	}
 
-	tileRepository->convergenceTestThresholdReduction = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold.reduction")).Get<double>();
-	tileRepository->convergenceTestWarmUpSamples = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.warmup.count")).Get<u_int>();
+	tileRepository->convergenceTestThresholdReduction = cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.threshold.reduction")).Get<double>();
+	tileRepository->convergenceTestWarmUpSamples = cfg.Get(GetDefaultProps()->Get("tile.multipass.convergencetest.warmup.count")).Get<u_int>();
 
 	return tileRepository.release();
 }
 
-const Properties &TileRepository::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr TileRepository::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Property("tile.size")(32) <<
 			Property("tile.multipass.enable")(true) <<
 			Property("tile.multipass.convergencetest.threshold")(6.f / 256.f) <<

@@ -39,17 +39,17 @@ std::unique_ptr<Properties> FilmRadianceGroupsWindow::GetFilmRadianceGroupsPrope
 void FilmRadianceGroupsWindow::RefreshObjectProperties(const std::unique_ptr<luxrays::Properties>&props) {
 	auto& config = app->config;
 	try {
-		*props = *GetFilmRadianceGroupsProperties(config->ToProperties());
+	    props->Set(GetFilmRadianceGroupsProperties(config->ToProperties()));
 	} catch(exception &ex) {
 		LA_LOG("FilmRadianceGroupsWindow parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *GetFilmRadianceGroupsProperties(config->GetProperties());
+		props->Set(GetFilmRadianceGroupsProperties(config->GetProperties()));
 	}
 }
 
 void FilmRadianceGroupsWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
-	app->RenderSessionParse(std::make_unique<Properties>(*GetFilmRadianceGroupsProperties(props)));
+	app->RenderSessionParse(GetFilmRadianceGroupsProperties(props));
 }
 
 bool FilmRadianceGroupsWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {

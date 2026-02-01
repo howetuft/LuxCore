@@ -85,8 +85,9 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + threadIndex);
 
 	// Setup the sampler
-	auto genericSampler = engine->renderConfig.AllocSampler(rndGen,
-			engine->GetFilm(), NULL, NULL, Properties());
+	auto genericSampler = engine->renderConfig.AllocSampler(
+		rndGen, engine->GetFilm(), engine->GetSampleSplatter(), nullptr, Properties()
+	);
 	genericSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	auto& sampler = dynamic_cast<TilePathSampler&>(*genericSampler);
@@ -101,8 +102,7 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	//--------------------------------------------------------------------------
 
 	TileWork tileWork;
-	bool interruptionRequested = stop_token.stop_requested();
-	while (engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, GetTileFilm()) && !interruptionRequested) {
+	while (engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, GetTileFilm()) && !stop_token.stop_requested()) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
 			// Check every 100ms if I have to continue the rendering
@@ -129,8 +129,8 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 		sampler.Init(&tileWork, FilmOPtr(&GetTileFilm()));
 
-		for (u_int y = 0; y < tileWork.GetCoord().height && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tileWork.GetCoord().height && !stop_token.stop_requested(); ++y) {
+			for (u_int x = 0; x < tileWork.GetCoord().width && !stop_token.stop_requested(); ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig.GetScene(),
@@ -140,7 +140,6 @@ void TilePathNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 					}
 				}
 
-				interruptionRequested = stop_token.stop_requested();
 #ifdef WIN32
 				// Work around Windows bad scheduling
                 std::this_thread::yield();

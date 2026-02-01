@@ -190,7 +190,7 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 					Property("sampler.type")("SOBOL");
 		}
 
-		auto pprops = std::make_unique<Properties>(props);
+		auto pprops = std::make_unique<Properties>(std::move(props));
 		RenderConfigParse(pprops);
 	}
 }
@@ -349,9 +349,9 @@ void LuxCoreApp::StartRendering(
 	if (currentTool != TOOL_IMAGE_VIEW) {
 		// Delete scene.camera.screenwindow so frame buffer resize will
 		// automatically adjust the ratio
-		Properties cameraProps = *config->GetScene().ToProperties()->GetAllProperties("scene.camera");
+		Properties cameraProps = std::move(Properties() << *config->GetScene().ToProperties()->GetAllProperties("scene.camera"));
 		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-		auto pprops = std::make_unique<Properties>(cameraProps);
+		auto pprops = std::make_unique<Properties>(std::move(cameraProps));
 		config->GetScene().Parse(pprops);
 
 		// Adjust the width and height to match the window width and height ratio
@@ -362,7 +362,7 @@ void LuxCoreApp::StartRendering(
 	cfgProps <<
 			Property("film.width")(filmWidth) <<
 			Property("film.height")(filmHeight);
-	auto pcfgProps = std::make_unique<Properties>(cfgProps);
+	auto pcfgProps = std::make_unique<Properties>(std::move(cfgProps));
 	config->Parse(pcfgProps);
 
 	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));

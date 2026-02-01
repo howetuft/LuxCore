@@ -39,13 +39,27 @@ public:
 	const FilterUPtr& GetFilterPtr() const { return filter; }
 
 	// This method must be thread-safe.
-	void AtomicSplatSample(FilmConstRef film, const SampleResult &sampleResult, const float weight) const;
+	void AtomicSplatSample(
+		FilmConstRef film,
+		const SampleResult &sampleResult,
+		const float weight
+	) const;
+
+	// Null singleton instance (do not use nullptr, use this instead)
+	inline const static FilmSampleSplatterUPtr Null;
+
+	// Make nullptr constructor deleted to control null instance creation
+	// (avoid implicit conversion from : resulting object lifetime can lead to
+	// memory issues)
+	FilmSampleSplatter(std::nullptr_t) = delete;
 
 private:
-	const FilterUPtr& filter;
+	const FilterUPtr& filter;  // Nota: pixelFilter is provided by RenderEngine
 	FilterLUTs *filterLUTs;
+
+	// Null singleton instance
 };
-		
+
 }
 
 #endif	/* _SLG_FILMSAMPLESPLATTER_H */

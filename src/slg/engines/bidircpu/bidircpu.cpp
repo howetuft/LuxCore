@@ -63,22 +63,22 @@ void BiDirCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
-	maxLightPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>());
+	maxEyePathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps()->Get("path.maxdepth")).Get<int>());
+	maxLightPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps()->Get("light.maxdepth")).Get<int>());
 	
-	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
+	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps()->Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps()->Get("path.russianroulette.cap")).Get<double>(), 0.0, 1.0);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
 	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.0)).Get<double>();
 	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<double>();
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps()->Get("path.clamping.variance.maxvalue")).Get<double>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 
 	// Albedo AOV settings
-	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(GetDefaultProps().Get("path.albedospecular.type")).Get<string>());
-	albedoSpecularGlossinessThreshold = Max(cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(GetDefaultProps()->Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(GetDefaultProps()->Get("path.albedospecular.glossinessthreshold")).Get<double>(), 0.0);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -124,7 +124,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 	// Albedo and Normal AOV warm up settings
 	//--------------------------------------------------------------------------
 
-	aovWarmupSPP = Max(0u, cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")).Get<u_int>());
+	aovWarmupSPP = Max(0u, cfg.Get(GetDefaultProps()->Get("path.aovs.warmup.spp")).Get<u_int>());
 	if (!GetFilm().HasChannel(Film::ALBEDO) && !GetFilm().HasChannel(Film::AVG_SHADING_NORMAL))
 		aovWarmupSPP = 0;
 	if (aovWarmupSPP > 0)
@@ -135,7 +135,7 @@ void BiDirCPURenderEngine::StartLockLess() {
 
 	//--------------------------------------------------------------------------
 
-	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
+	SetSampleSplatter(std::make_unique<FilmSampleSplatter>(GetPixelFilter()));
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
@@ -151,7 +151,7 @@ void BiDirCPURenderEngine::InitFilm() {
 void BiDirCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
-	sampleSplatter.reset();
+	ResetSampleSplatter();
 
 	delete photonGICache;
 	photonGICache = nullptr;
@@ -165,15 +165,15 @@ PropertiesUPtr BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = CPUNoTileRenderEngine::ToProperties(cfg);
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
-			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("path.maxdepth")) <<
+			cfg.Get(GetDefaultProps()->Get("light.maxdepth")) <<
+			cfg.Get(GetDefaultProps()->Get("path.aovs.warmup.spp")) <<
+			cfg.Get(GetDefaultProps()->Get("path.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps()->Get("path.russianroulette.cap")) <<
+			cfg.Get(GetDefaultProps()->Get("path.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps()->Get("path.albedospecular.type")) <<
+			cfg.Get(GetDefaultProps()->Get("path.albedospecular.glossinessthreshold")) <<
 			*Sampler::ToProperties(cfg) <<
 			*PhotonGICache::ToProperties(cfg);
 	
@@ -184,19 +184,20 @@ RenderEngine *BiDirCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new BiDirCPURenderEngine(rcfg);
 }
 
-const Properties &BiDirCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
-			CPUNoTileRenderEngine::GetDefaultProps() <<
-			Property("renderengine.type")(GetObjectTag()) <<
-			Property("path.maxdepth")(5) <<
-			Property("light.maxdepth")(5) <<
-			Property("path.aovs.warmup.spp")(0) <<
-			Property("path.russianroulette.depth")(3) <<
-			Property("path.russianroulette.cap")(.5f) <<
-			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
-			Property("path.albedospecular.glossinessthreshold")(.05f) <<
-			PhotonGICache::GetDefaultProps();
+PropertiesUPtr BiDirCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
+		CPUNoTileRenderEngine::GetDefaultProps() <<
+		Property("renderengine.type")(GetObjectTag()) <<
+		Property("path.maxdepth")(5) <<
+		Property("light.maxdepth")(5) <<
+		Property("path.aovs.warmup.spp")(0) <<
+		Property("path.russianroulette.depth")(3) <<
+		Property("path.russianroulette.cap")(.5f) <<
+		Property("path.clamping.variance.maxvalue")(0.f) <<
+		Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
+		Property("path.albedospecular.glossinessthreshold")(.05f) <<
+		PhotonGICache::GetDefaultProps();
 
 	return props;
 }

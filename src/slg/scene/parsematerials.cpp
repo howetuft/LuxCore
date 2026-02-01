@@ -723,9 +723,9 @@ MaterialUPtr Scene::CreateMaterial(
 		std::max(
 			0.0,
 			props.Get(
-				Property(propName + ".emission.efficiency")(0.0),
+				std::move(Property(propName + ".emission.efficiency")(0.0)),
 				propName + ".emission.efficency"
-			).Get<double>()
+			)->Get<double>()
 		)
 	);
 	mat->SetEmittedTheta(std::clamp(parseFloat("emission.theta", 90.0), 0.f, 90.f));

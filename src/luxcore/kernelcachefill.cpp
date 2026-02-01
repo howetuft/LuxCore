@@ -153,7 +153,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	auto sceneptr = Scene::Create();
 	auto& scene = *sceneptr;
 
-	auto scnProps = std::make_unique<Properties>(scnSetUpProps);
+	auto scnProps = scnSetUpProps.Clone();
 
 	*scnProps <<
 			Property("scene.camera.lookat.orig")(1.f , 6.f , 3.f) <<
@@ -257,7 +257,7 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 
 	// Do the render
 
-	auto cfgProps = std::make_unique<Properties>(cfgSetUpProps);
+	auto cfgProps = cfgSetUpProps.Clone();
 	*cfgProps <<
 			Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 			Property("film.outputs.1.filename")("image.png");

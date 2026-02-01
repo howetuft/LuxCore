@@ -34,6 +34,7 @@
 #include "slg/editaction.h"
 #include "slg/film/film.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/usings.h"
 #include "slg/utils/varianceclamping.h"
 
 namespace slg {
@@ -170,7 +171,7 @@ public:
 	static std::string RenderEngineType2String(const RenderEngineType type);
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual bool IsRTMode() const { return false; }
 	virtual void InitFilm() = 0;
@@ -189,7 +190,6 @@ protected:
 	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
 
 	RenderConfigRef renderConfig;
-	FilterUPtr pixelFilter;
 	std::experimental::observer_ptr<Film> film;
 	std::mutex *filmMutex;
 
@@ -205,6 +205,18 @@ protected:
 	std::experimental::observer_ptr<Film> startFilm;
 
 	bool started, editMode, pauseMode;
+
+	FilterPtr GetPixelFilter() const { return pixelFilter; }
+
+	FilmSampleSplatterPtr GetSampleSplatter() const;
+	void SetSampleSplatter(FilmSampleSplatterUPtr&&);
+	void SetSampleSplatter(FilterPtr);
+	void ResetSampleSplatter();
+
+private:
+	// Owned properties
+	FilterUPtr pixelFilter;
+	FilmSampleSplatterUPtr sampleSplatter;
 };
 
 }

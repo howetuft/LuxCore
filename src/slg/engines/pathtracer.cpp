@@ -977,7 +977,7 @@ void PathTracer::ApplyVarianceClamp(const PathTracerThreadState &state,
 void PathTracer::RenderSample(PathTracerThreadState &state) const {
 	// Check if I have to trace an eye or light path
 	auto& sampler = HasToRenderEyeSample(state) ? state.eyeSampler : state.lightSampler;
-	auto& sampleResults = HasToRenderEyeSample(state) ? state.eyeSampleResults : state.lightSampleResults;
+	auto& sampleResults = HasToRenderEyeSample(state) ? state.GetEyeSampleResults() : state.GetLightSampleResults();
 
 	if (sampler == state.eyeSampler)
 		RenderEyeSample(
@@ -985,7 +985,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 			state.scene,
 			state.GetFilm(),
 			*state.eyeSampler,
-			state.eyeSampleResults
+			state.GetEyeSampleResults()
 		);
 	else
 		RenderLightSample(
@@ -993,7 +993,7 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 			state.scene,
 			state.GetFilm(),
 			*state.lightSampler,
-			state.lightSampleResults
+			state.GetLightSampleResults()
 		);
 
 	// Variance clamping
@@ -1091,29 +1091,30 @@ PropertiesUPtr PathTracer::ToProperties(const Properties &cfg) {
 				Property("path.pathdepth.specular")(maxDepth);
 	} else {
 		props <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
-				cfg.Get(GetDefaultProps().Get("path.pathdepth.specular"));
+				cfg.Get(GetDefaultProps()->Get("path.pathdepth.total")) <<
+				cfg.Get(GetDefaultProps()->Get("path.pathdepth.diffuse")) <<
+				cfg.Get(GetDefaultProps()->Get("path.pathdepth.glossy")) <<
+				cfg.Get(GetDefaultProps()->Get("path.pathdepth.specular"));
 	}
 
 	props <<
-			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.enable")) <<
-			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.partition")) <<
-			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.glossinessthreshold")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
-			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
-			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
-			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
+			cfg.Get(GetDefaultProps()->Get("path.hybridbackforward.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("path.hybridbackforward.partition")) <<
+			cfg.Get(GetDefaultProps()->Get("path.hybridbackforward.glossinessthreshold")) <<
+			cfg.Get(GetDefaultProps()->Get("path.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps()->Get("path.russianroulette.cap")) <<
+			cfg.Get(GetDefaultProps()->Get("path.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps()->Get("path.forceblackbackground.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("path.albedospecular.type")) <<
+			cfg.Get(GetDefaultProps()->Get("path.albedospecular.glossinessthreshold")) <<
 			*Sampler::ToProperties(cfg);
 
 	return props_ptr;
 }
 
-const Properties &PathTracer::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr PathTracer::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Property("path.hybridbackforward.enable")(false) <<
 			Property("path.hybridbackforward.partition")(0.8) <<
 			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<

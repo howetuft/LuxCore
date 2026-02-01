@@ -78,13 +78,13 @@ void LightCPURenderEngine::StartLockLess() {
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	pathTracer.ParseOptions(cfg, *GetDefaultProps());
 	// To avoid to trace only caustic light paths
 	pathTracer.hybridBackForwardEnable = false;
 
-	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 
-	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
+	sampleSplatter = std::make_unique<FilmSampleSplatter>(GetPixelFilter());
 
 	//--------------------------------------------------------------------------
 
@@ -107,7 +107,7 @@ PropertiesUPtr LightCPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = CPUNoTileRenderEngine::ToProperties(cfg);
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
 			*PathTracer::ToProperties(cfg) <<
 			*Sampler::ToProperties(cfg);
 	
@@ -118,8 +118,9 @@ RenderEngine *LightCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new LightCPURenderEngine(rcfg);
 }
 
-const Properties &LightCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr LightCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps();

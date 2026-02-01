@@ -55,7 +55,7 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	// Used by serialization
 	BoxFilter() { }

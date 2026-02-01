@@ -364,7 +364,7 @@ std::unique_ptr<SamplerSharedData> RenderConfig::AllocSamplerSharedData(
 std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 	const std::unique_ptr<RandomGenerator> & rndGen,
 	std::experimental::observer_ptr<Film> film,
-	const FilmSampleSplatterUPtr& flmSplatter,
+	FilmSampleSplatterPtr flmSplatter,
 	const std::shared_ptr<SamplerSharedData> sharedData,
 	const Properties &additionalProps
 ) const {
@@ -377,7 +377,7 @@ std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 std::unique_ptr<Sampler> RenderConfig::AllocSampler(
 	const std::unique_ptr<RandomGenerator> & rndGen,
 	FilmRef film,
-	const FilmSampleSplatterUPtr& flmSplatter,
+	FilmSampleSplatterPtr flmSplatter,
 	const std::shared_ptr<SamplerSharedData> sharedData,
 	const Properties &additionalProps
 ) const {

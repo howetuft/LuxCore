@@ -134,7 +134,7 @@ public:
 	FilmConstRef GetFilm() const { return *film; }
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 
 	void AtomicAddSampleToFilm(

@@ -46,7 +46,7 @@ public:
 	virtual luxrays::PropertiesUPtr ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	TextureMapping3DUPtr&& mapping;
+	TextureMapping3DUPtr mapping;
 	const int octaves;
 	const float omega;
 };

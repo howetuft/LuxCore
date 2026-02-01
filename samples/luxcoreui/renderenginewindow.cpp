@@ -70,18 +70,18 @@ void RenderEngineWindow::Open() {
 std::unique_ptr<Properties> RenderEngineWindow::GetAllRenderEngineProperties(
     const std::unique_ptr<Properties> & cfgProps) const {
         auto props = std::make_unique<Properties>();
-	*props =
-            *cfgProps->GetAllProperties("renderengine") <<
-            *cfgProps->GetAllProperties("path") <<
-            *cfgProps->GetAllProperties("light") <<
-            *cfgProps->GetAllProperties("bidirvm") <<
-            *cfgProps->GetAllProperties("rtpath") <<
-            *cfgProps->GetAllProperties("tilepath") <<
-            *cfgProps->GetAllProperties("tile") <<
-            *cfgProps->GetAllProperties("native.threads.count") <<
-            *cfgProps->GetAllProperties("opencl.task.count") <<
-            *cfgProps->GetAllProperties("opencl.native.threads.count") <<
-            *cfgProps->GetAllProperties("batch");
+	*props <<
+            cfgProps->GetAllProperties("renderengine") <<
+            cfgProps->GetAllProperties("path") <<
+            cfgProps->GetAllProperties("light") <<
+            cfgProps->GetAllProperties("bidirvm") <<
+            cfgProps->GetAllProperties("rtpath") <<
+            cfgProps->GetAllProperties("tilepath") <<
+            cfgProps->GetAllProperties("tile") <<
+            cfgProps->GetAllProperties("native.threads.count") <<
+            cfgProps->GetAllProperties("opencl.task.count") <<
+            cfgProps->GetAllProperties("opencl.native.threads.count") <<
+            cfgProps->GetAllProperties("batch");
 
 	if (props->IsDefined("renderengine.type")) {
 		const string renderEngineType = props->Get("renderengine.type").Get<string>();
@@ -108,12 +108,12 @@ std::unique_ptr<Properties> RenderEngineWindow::GetAllRenderEngineProperties(
 void RenderEngineWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *GetAllRenderEngineProperties(config->ToProperties());
+		props->Set(GetAllRenderEngineProperties(config->ToProperties()));
 	} catch(exception &ex) {
 		LA_LOG("RenderEngine parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *GetAllRenderEngineProperties(config->GetProperties());
+		props->Set(GetAllRenderEngineProperties(config->GetProperties()));
 	}
 }
 

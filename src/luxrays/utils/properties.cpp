@@ -509,6 +509,15 @@ string Property::GetValuesString() const {
 	return ss.str();
 }
 
+
+PropertyUPtr Property::Renamed(const std::string &newName) const {
+	auto newProp = std::make_unique<Property>(newName);
+	newProp->values.insert(newProp->values.begin(), values.begin(), values.end());
+
+	return newProp;
+}
+
+
 //------------------------------------------------------------------------------
 // Get basic types
 //------------------------------------------------------------------------------
@@ -1054,34 +1063,37 @@ bool Properties::IsDefined(const string &propName) const {
 }
 
 const Property &Properties::Get(const string &propName) const {
-	std::map<string, Property>::const_iterator it = props.find(propName);
+	auto it = props.find(propName);
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
 
-	return it->second;
+	return *it->second;
 }
 
 const Property &Properties::Get(const Property &prop) const {
-	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
+	auto it = props.find(prop.GetName());
 	if (it == props.end())
 			return prop;
 
-	return it->second;
+	return *it->second;
 }
 
-const Property Properties::Get(const Property &prop, const std::string alternativeName) const {
-	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
-	if (it == props.end()) {
-		// Look for the alternative property name
-		std::map<string, Property>::const_iterator itAlt = props.find(alternativeName);
-	
-		if (itAlt == props.end())
-			return prop;
-		else
-			return itAlt->second.Renamed(prop.GetName());
-	}
+PropertyUPtr Properties::Get(
+	Property&& prop, const std::string alternativeName
+) const {
+	const auto& name = prop.GetName();
 
-	return it->second;
+	auto it = props.find(name);
+	if (it != props.end())
+		return std::make_unique<Property>(*it->second);  // Found
+
+	// Look for the alternative property name
+	auto itAlt = props.find(alternativeName);
+	if (itAlt != props.end())
+		return itAlt->second->Renamed(name);  // Found (alternate)
+
+	// Fall back to input
+	return std::make_unique<Property>(std::move(prop));
 }
 
 void Properties::Delete(const string &propName) {
@@ -1101,7 +1113,7 @@ string Properties::ToString() const {
 	stringstream ss;
 
 	for (vector<string>::const_iterator i = names.begin(); i != names.end(); ++i)
-		ss << props.at(*i).ToString() << "\n";
+		ss << props.at(*i)->ToString() << "\n";
 
 	return ss.str();
 }
@@ -1117,7 +1129,23 @@ Properties &Properties::Set(const Property &prop) {
 		props.erase(propName);
 	}
 
-	props.insert(pair<string, Property>(propName, prop));
+	props.emplace(propName, std::make_unique<Property>(prop));
+
+	return *this;
+}
+
+Properties &Properties::Set(Property&& prop) {
+	const string propName = prop.GetName();
+
+	if (!IsDefined(propName)) {
+		// It is a new name
+		names.push_back(propName);
+	} else {
+		// std::unordered_set::insert() doesn't overwrite an existing entry
+		props.erase(propName);
+	}
+
+	props.emplace(propName, std::make_unique<Property>(prop));
 
 	return *this;
 }
@@ -1130,6 +1158,10 @@ Properties &Properties::operator<<(const Property &prop) {
 	return Set(prop);
 }
 
+Properties &Properties::operator<<(Property&& prop) {
+	return Set(prop);
+}
+
 Properties &Properties::operator<<(const Properties &props) {
 	return Set(props);
 }
@@ -1138,15 +1170,35 @@ Properties &Properties::operator<<(const std::unique_ptr<Properties> &props) {
 	return Set(*props);
 }
 
-Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
+PropertiesUPtr Properties::Clone() const {
+	auto result = std::make_unique<Properties>();
+
+	// Property map
+	decltype(props) copiedMap;
+
+	for (const auto& [key, value] : props) {
+		copiedMap[key] = std::make_unique<Property>(*value);
+	}
+
+	result->props = std::move(copiedMap);
+
+	// Name vector
+	result->names = names;  // std::vector and std::string should make a deep
+						   // copy out of the box
+
+	return result;
+}
+
+
+Properties &luxrays::operator<<(const Property &prop0, const Property &prop1) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	*props << prop0 << prop1;
 	return *props;
-	}
+}
 
-Properties luxrays::operator<<(const Property &prop0, const Properties &props) {
+Properties &luxrays::operator<<(const Property &prop0, const Properties &props) {
 	PropertiesUPtr res = std::make_unique<Properties>();
 	*res << prop0 << props;
 	return *res;
-	}
+}
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

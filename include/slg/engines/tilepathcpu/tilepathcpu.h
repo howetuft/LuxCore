@@ -81,7 +81,7 @@ public:
 	friend class TilePathCPURenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual void InitFilm();
 	virtual void StartLockLess();

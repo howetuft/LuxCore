@@ -43,7 +43,7 @@ void PathCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
-	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
+	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps()->
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
@@ -128,16 +128,16 @@ void PathCPURenderEngine::StartLockLess() {
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	pathTracer.ParseOptions(cfg, *GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable)
 		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), seedBaseGenerator, GetFilm());
 
-	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 
 	lightSampleSplatter.reset();
 	if (pathTracer.hybridBackForwardEnable)
-		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
+		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(GetPixelFilter());
 
 	pathTracer.SetPhotonGICache(photonGICache);
 	
@@ -170,7 +170,7 @@ PropertiesUPtr PathCPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props << *CPUNoTileRenderEngine::ToProperties(cfg) <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
 			PathTracer::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 
@@ -181,8 +181,9 @@ RenderEngine *PathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new PathCPURenderEngine(rcfg);
 }
 
-const Properties &PathCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr PathCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<

@@ -87,7 +87,7 @@ public:
 	friend class CPURenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) = 0;
@@ -132,7 +132,7 @@ public:
 	friend class CPUNoTileRenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 	virtual void UpdateFilmLockLess();
@@ -177,7 +177,7 @@ public:
 	friend class CPUTileRenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	// I don't implement StartLockLess() here because the step of initializing
 	// the tile repository is left to the sub-class (so some TileRepository

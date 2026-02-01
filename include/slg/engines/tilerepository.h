@@ -142,7 +142,8 @@ public:
 
 	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 	static TileRepository *FromProperties(const luxrays::Properties &cfg);
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
+
 
 	friend class Tile;
 

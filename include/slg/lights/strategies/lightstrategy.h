@@ -89,7 +89,7 @@ public:
 	static std::string LightStrategyType2String(const LightStrategyType type);
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	LightStrategy(const LightStrategyType t) : type(t) { }
 

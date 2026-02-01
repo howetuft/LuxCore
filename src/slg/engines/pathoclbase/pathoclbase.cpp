@@ -199,7 +199,7 @@ void PathOCLBaseRenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
-	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
+	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps()->
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
@@ -216,9 +216,9 @@ string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderC
 	const float epsilonMax = renderConfig.GetProperty("scene.epsilon.max").Get<double>();
 		
 	auto& cfg = renderConfig.GetConfig();
-	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
-	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
-	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
+	const bool useCPUs = cfg.Get(GetDefaultProps()->Get("opencl.cpu.use")).Get<bool>();
+	const bool useGPUs = cfg.Get(GetDefaultProps()->Get("opencl.gpu.use")).Get<bool>();
+	const string oclDeviceConfig = cfg.Get(GetDefaultProps()->Get("opencl.devices.select")).Get<string>();
 
 	stringstream ssParams;
 	ssParams.precision(6);

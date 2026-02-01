@@ -58,6 +58,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfigRef rcfg) :
+
 		PathOCLBaseRenderEngine(rcfg, true) {
 	lightSampleSplatter = nullptr; 
 	eyeSamplerSharedData = nullptr;
@@ -101,8 +102,8 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize rendering parameters
 	//--------------------------------------------------------------------------	
 
-	const Properties &defaultProps = PathOCLRenderEngine::GetDefaultProps();
-	pathTracer.ParseOptions(cfg, defaultProps);
+	auto defaultProps = PathOCLRenderEngine::GetDefaultProps();
+	pathTracer.ParseOptions(cfg, *defaultProps);
 
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
@@ -146,11 +147,11 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	// Initialize the PathTracer class
-	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 
 	lightSampleSplatter.reset();
 	if (pathTracer.hybridBackForwardEnable)
-		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
+		lightSampleSplatter = std::make_unique<FilmSampleSplatter>(GetPixelFilter());
 
 	PathOCLBaseRenderEngine::StartLockLess();
 
@@ -276,10 +277,10 @@ PropertiesUPtr PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 
 	props <<
 			OCLRenderEngine::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
 			PathTracer::ToProperties(cfg) <<
-			cfg.Get(GetDefaultProps().Get("pathocl.pixelatomics.enable")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.task.count")) <<
+			cfg.Get(GetDefaultProps()->Get("pathocl.pixelatomics.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.task.count")) <<
 			Sampler::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 
@@ -290,8 +291,9 @@ RenderEngine *PathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new PathOCLRenderEngine(rcfg);
 }
 
-const Properties &PathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr PathOCLRenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<

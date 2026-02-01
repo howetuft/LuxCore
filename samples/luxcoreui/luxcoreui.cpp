@@ -183,17 +183,17 @@ int main(int argc, char *argv[]) {
       config->DeleteSceneOnExit();
     } else if (configFileNameExt == ".cfg") {
       // It is a LuxCore SDL file
-      auto props = std::make_unique<Properties>(configFileName);
+      auto props = std::make_unique<Properties>(std::move(configFileName));
       props->Set(cmdLineProp);
       config = RenderConfig::Create(std::move(props));
     } else if (configFileNameExt == ".bcf") {
       // It is a LuxCore RenderConfig binary archive
-      auto props = std::make_unique<Properties>(cmdLineProp);
+      auto props = std::make_unique<Properties>(std::move(cmdLineProp));
       config = RenderConfig::Create(configFileName);
       config->Parse(props);
     } else if (configFileNameExt == ".rsm") {
       // It is a rendering resume file
-      auto props = std::make_unique<Properties>(cmdLineProp);
+      auto props = std::make_unique<Properties>(std::move(cmdLineProp));
       startRenderState.reset();
       startFilm.reset();
       config = RenderConfig::Create(configFileName, startRenderState, startFilm);

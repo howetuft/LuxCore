@@ -101,7 +101,7 @@ public:
 private:
 	void InitNewSample();
 
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 	
 	std::shared_ptr<RandomSamplerSharedData> sharedData;
 	float adaptiveStrength, adaptiveUserImportanceWeight;

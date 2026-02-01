@@ -33,11 +33,12 @@ OCLDeviceWindow::OCLDeviceWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "OpenCL 
 }
 
 Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const std::unique_ptr<Properties> & cfgProps) const {
-	Properties props =
-			*cfgProps->GetAllProperties("opencl.platform") <<
-			*cfgProps->GetAllProperties("opencl.cpu") <<
-			*cfgProps->GetAllProperties("opencl.gpu") <<
-			*cfgProps->GetAllProperties("opencl.devices.select");
+	Properties props;
+        props <<
+			cfgProps->GetAllProperties("opencl.platform") <<
+			cfgProps->GetAllProperties("opencl.cpu") <<
+			cfgProps->GetAllProperties("opencl.gpu") <<
+			cfgProps->GetAllProperties("opencl.devices.select");
 
 	return props;
 }

@@ -2313,7 +2313,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 
     .def("GetName", &luxrays::Property::GetName, py::return_value_policy::copy)
     .def("GetSize", &luxrays::Property::GetSize)
-    .def("Clear", &luxrays::Property::Clear, py::return_value_policy::reference_internal)
+    .def("Clear", &luxrays::Property::Clear)
 
     .def("Get", &Property_Get)
 
@@ -2343,19 +2343,19 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("GetValuesString", &luxrays::Property::GetValuesString)
     .def("ToString", &luxrays::Property::ToString)
 
-    .def("Add", &Property_Add, py::return_value_policy::reference_internal)
-    .def("AddAllBool", &Property_AddAllBool, py::return_value_policy::reference_internal)
-    .def("AddAllInt", &Property_AddAllInt, py::return_value_policy::reference_internal)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong, py::return_value_policy::reference_internal)
-    .def("AddAllFloat", &Property_AddAllFloat, py::return_value_policy::reference_internal)
-    .def("AddAllBool", &Property_AddAllBoolStride, py::return_value_policy::reference_internal)
-    .def("AddAllInt", &Property_AddAllIntStride, py::return_value_policy::reference_internal)
-    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride, py::return_value_policy::reference_internal)
-    .def("AddAllFloat", &Property_AddAllFloatStride, py::return_value_policy::reference_internal)
+    .def("Add", &Property_Add)
+    .def("AddAllBool", &Property_AddAllBool)
+    .def("AddAllInt", &Property_AddAllInt)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLong)
+    .def("AddAllFloat", &Property_AddAllFloat)
+    .def("AddAllBool", &Property_AddAllBoolStride)
+    .def("AddAllInt", &Property_AddAllIntStride)
+    .def("AddUnsignedLongLong", &Property_AddAllUnsignedLongLongStride)
+    .def("AddAllFloat", &Property_AddAllFloatStride)
     .def<PropertyPtr (*)(PropertyPtr , const py::list &)>
-      ("Set", &Property_Set, py::return_value_policy::reference_internal)
+      ("Set", &Property_Set)
     .def<PropertyPtr (*)(PropertyPtr , const size_t, const py::object &)>
-      ("Set", &Property_Set, py::return_value_policy::reference_internal)
+      ("Set", &Property_Set)
 
     .def("__str__", &luxrays::Property::ToString)
   ;
@@ -2379,37 +2379,37 @@ PYBIND11_MODULE(pyluxcore, m) {
 	)
     .def(
 		py::init(
-			[](luxrays::Properties p) -> std::unique_ptr<luxrays::Properties>
-			{ return std::make_unique<luxrays::Properties>(p); }
+			[](const luxrays::Properties& p) -> std::unique_ptr<luxrays::Properties>
+			{ return p.Clone(); }
 		),
 		py::keep_alive<1,2>()
 	)
 
     // Required because Properties::Set is overloaded
 	.def<luxrays::Properties &(luxrays::Properties::*)(PropertyPtr)>
-      ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+      ("Set", &luxrays::Properties::Set)
 
     .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
-      ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+      ("Set", &luxrays::Properties::Set)
 
     .def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &, const std::string &)>
-      ("Set", &luxrays::Properties::Set, py::return_value_policy::reference_internal)
+      ("Set", &luxrays::Properties::Set)
 
-    .def("SetFromFile", &luxrays::Properties::SetFromFile, py::return_value_policy::reference_internal)
-    .def("SetFromString", &luxrays::Properties::SetFromString, py::return_value_policy::reference_internal)
+    .def("SetFromFile", &luxrays::Properties::SetFromFile)
+    .def("SetFromString", &luxrays::Properties::SetFromString)
 
-    .def("Clear", &luxrays::Properties::Clear, py::return_value_policy::reference_internal)
+    .def("Clear", &luxrays::Properties::Clear)
     .def("GetAllNamesRE", &Properties_GetAllNamesRE)
     .def("GetAllNames", &Properties_GetAllNames1)
     .def("GetAllNames", &Properties_GetAllNames2)
     .def("GetAllUniqueSubNames", &Properties_GetAllUniqueSubNames)
     .def("HaveNames", &luxrays::Properties::HaveNames)
     .def("HaveNamesRE", &luxrays::Properties::HaveNamesRE)
-    .def("GetAllProperties", &luxrays::Properties::GetAllProperties, py::return_value_policy::reference_internal)
+    .def("GetAllProperties", &luxrays::Properties::GetAllProperties)
 
     .def<const luxrays::Property & (luxrays::Properties::*)(const std::string &) const>
-      ("Get", &luxrays::Properties::Get, py::return_value_policy::reference_internal)
-    .def("Get", &Properties_GetWithDefaultValues, py::return_value_policy::reference_internal)
+      ("Get", &luxrays::Properties::Get)
+    .def("Get", &Properties_GetWithDefaultValues)
 
     .def("GetSize", &luxrays::Properties::GetSize)
 
@@ -2582,8 +2582,8 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::init(&SceneImpl::Create<std::string>),
 		py::keep_alive<1, 2>()
 	)
-    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, py::return_value_policy::reference_internal)
-    .def("GetCamera", &Scene_GetCamera, py::return_value_policy::reference_internal)
+    .def("ToProperties", &luxcore::detail::SceneImpl::ToProperties)
+    .def("GetCamera", &Scene_GetCamera)
     .def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
     .def("GetObjectCount", &luxcore::detail::SceneImpl::GetObjectCount)
     .def("DefineImageMap", &Scene_DefineImageMap)
@@ -2653,9 +2653,9 @@ PYBIND11_MODULE(pyluxcore, m) {
 			//, py::return_value_policy::move)
     //.def("__init__", make_constructor(RenderConfig_LoadFile))
     //.def(py::init(&RenderConfig_LoadFile)) TODO
-    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, py::return_value_policy::reference_internal)
+    .def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties)
     .def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
-    .def("GetScene", &RenderConfig_GetScene, py::return_value_policy::reference_internal)
+    .def("GetScene", &RenderConfig_GetScene)
     .def("HasCachedKernels", &luxcore::detail::RenderConfigImpl::HasCachedKernels)
     .def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
     .def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
@@ -2663,7 +2663,7 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Save", &luxcore::detail::RenderConfigImpl::Save)
     .def("Export", &luxcore::detail::RenderConfigImpl::Export)
     .def_static("LoadResumeFile", &RenderConfig_LoadResumeFile)
-    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties, py::return_value_policy::reference_internal)
+    .def_static("GetDefaultProperties", &luxcore::detail::RenderConfigImpl::GetDefaultProperties)
   ;
 
   //--------------------------------------------------------------------------
@@ -2697,7 +2697,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 		),
 		py::keep_alive<1, 2>()
 	)
-    .def("GetRenderConfig", &RenderSession_GetRenderConfig, py::return_value_policy::reference_internal)
+    .def("GetRenderConfig", &RenderSession_GetRenderConfig)
     .def("Start", &luxcore::detail::RenderSessionImpl::Start)
     .def("Stop", &luxcore::detail::RenderSessionImpl::Stop)
     .def("IsStarted", &luxcore::detail::RenderSessionImpl::IsStarted)
@@ -2707,9 +2707,9 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("Pause", &luxcore::detail::RenderSessionImpl::Pause)
     .def("Resume", &luxcore::detail::RenderSessionImpl::Resume)
     .def("IsInPause", &luxcore::detail::RenderSessionImpl::IsInPause)
-    .def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilmPtr, py::return_value_policy::reference_internal)
+    .def("GetFilm", &luxcore::detail::RenderSessionImpl::GetFilmPtr)
     .def("UpdateStats", &luxcore::detail::RenderSessionImpl::UpdateStats)
-    .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats, py::return_value_policy::reference_internal)
+    .def("GetStats", &luxcore::detail::RenderSessionImpl::GetStats)
     .def("WaitNewFrame", &luxcore::detail::RenderSessionImpl::WaitNewFrame)
     .def("WaitForDone", &luxcore::detail::RenderSessionImpl::WaitForDone)
     .def("HasDone", &luxcore::detail::RenderSessionImpl::HasDone)

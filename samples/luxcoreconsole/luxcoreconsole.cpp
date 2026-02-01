@@ -226,18 +226,18 @@ int main(int argc, char *argv[]) {
 			config = RenderConfig::Create(std::move(renderConfigProps), std::move(scene));
 		} else if (configFileNameExt == ".cfg") {
 			// It is a LuxCore SDL file
-			auto props = std::make_unique<Properties>(configFileName);
+			auto props = std::make_unique<Properties>(std::move(configFileName));
 			props->Set(cmdLineProp);
 			config = RenderConfig::Create(std::move(props));
 		} else if (configFileNameExt == ".bcf") {
 			// It is a LuxCore RenderConfig binary archive
 			config = RenderConfig::Create(configFileName);
-			auto props = std::make_unique<Properties>(cmdLineProp);
+			auto props = std::make_unique<Properties>(std::move(cmdLineProp));
 			config->Parse(props);
 		} else if (configFileNameExt == ".rsm") {
 			// It is a rendering resume file
 			config = RenderConfig::Create(configFileName, startRenderState, startFilm);
-			auto props = std::make_unique<Properties>(cmdLineProp);
+			auto props = std::make_unique<Properties>(std::move(cmdLineProp));
 			config->Parse(props);
 		} else
 			throw runtime_error("Unknown file extension: " + configFileName);

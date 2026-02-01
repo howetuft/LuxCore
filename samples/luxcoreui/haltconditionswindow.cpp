@@ -35,17 +35,17 @@ HaltConditionsWindow::HaltConditionsWindow(LuxCoreApp *a) : ObjectEditorWindow(a
 void HaltConditionsWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *config->ToProperties()->GetAllProperties("batch.halt");
+		props->Set(config->ToProperties()->GetAllProperties("batch.halt"));
 	} catch(exception &ex) {
 		LA_LOG("Halt conditions parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *config->GetProperties()->GetAllProperties("batch.halt");
+		props->Set(config->GetProperties()->GetAllProperties("batch.halt"));
 	}
 }
 
 void HaltConditionsWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
-	app->RenderConfigParse(std::make_unique<luxrays::Properties>(*props->GetAllProperties("batch.halt")));
+	app->RenderConfigParse(props->GetAllProperties("batch.halt"));
 }
 
 bool HaltConditionsWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {

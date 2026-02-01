@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
+#include <memory>
 
 using namespace luxrays;
 using namespace slg;
@@ -36,9 +37,9 @@ void BiDirVMCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	lightPathsCount = Max(1024u, cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")).Get<u_int>());
-	baseRadius = cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.GetScene().GetDataSet().GetBSphere().rad;
-	radiusAlpha = cfg.Get(GetDefaultProps().Get("bidirvm.alpha")).Get<double>();
+	lightPathsCount = Max(1024u, cfg.Get(GetDefaultProps()->Get("bidirvm.lightpath.count")).Get<u_int>());
+	baseRadius = cfg.Get(GetDefaultProps()->Get("bidirvm.startradius.scale")).Get<double>() * renderConfig.GetScene().GetDataSet().GetBSphere().rad;
+	radiusAlpha = cfg.Get(GetDefaultProps()->Get("bidirvm.alpha")).Get<double>();
 
 	BiDirCPURenderEngine::StartLockLess();
 }
@@ -51,10 +52,10 @@ PropertiesUPtr BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = BiDirCPURenderEngine::ToProperties(cfg);
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")) <<
-			cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")) <<
-			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("bidirvm.lightpath.count")) <<
+			cfg.Get(GetDefaultProps()->Get("bidirvm.startradius.scale")) <<
+			cfg.Get(GetDefaultProps()->Get("bidirvm.alpha"));
 	
 	return props;
 }
@@ -63,8 +64,9 @@ RenderEngine *BiDirVMCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new BiDirVMCPURenderEngine(rcfg);
 }
 
-const Properties &BiDirVMCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr BiDirVMCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			BiDirCPURenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("bidirvm.lightpath.count")(16 * 1024) <<

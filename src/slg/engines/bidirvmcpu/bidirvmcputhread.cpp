@@ -70,9 +70,11 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		auto sampler = engine->renderConfig.AllocSampler(
-			rndGen, engine->GetFilm(),
-			engine->sampleSplatter,
-			engine->samplerSharedData, Properties()
+			rndGen,
+			engine->GetFilm(),
+			engine->GetSampleSplatter(),
+			engine->samplerSharedData,
+			Properties()
 		);
 		sampler->SetThreadIndex(threadIndex);
 		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);

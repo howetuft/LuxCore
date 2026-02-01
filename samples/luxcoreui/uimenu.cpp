@@ -24,6 +24,7 @@
 #include <memory>
 
 #include "luxcoreapp.h"
+#include "luxrays/utils/properties.h"
 
 using namespace std;
 using namespace luxrays;
@@ -452,8 +453,8 @@ void LuxCoreApp::MenuTool() {
 
   if (ImGui::MenuItem("Camera edit", NULL, (currentTool == TOOL_CAMERA_EDIT))) {
     currentTool = TOOL_CAMERA_EDIT;
-    auto props = Properties() << Property("screen.tool.type")("CAMERA_EDIT");
-    auto pprops = std::make_unique<Properties>(props);
+    auto&& props = Properties() << Property("screen.tool.type")("CAMERA_EDIT");
+    auto pprops = std::make_unique<Properties>(std::move(props));
     RenderConfigParse(pprops);
   }
   if (ImGui::MenuItem("Object selection", NULL, (currentTool == TOOL_OBJECT_SELECTION))) {
@@ -470,14 +471,14 @@ void LuxCoreApp::MenuTool() {
           Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png");
     }
 
-    auto pprops = std::make_unique<Properties>(props);
+    auto pprops = std::make_unique<Properties>(std::move(props));
     RenderConfigParse(pprops);
   }
   if (ImGui::MenuItem("Image view", NULL, (currentTool == TOOL_IMAGE_VIEW))) {
     currentTool = TOOL_IMAGE_VIEW;
-    auto props = Properties() << Property("screen.tool.type")("IMAGE_VIEW");
-    auto pprops = std::make_unique<Properties>(props);
-    RenderConfigParse(pprops);
+    auto props = std::make_unique<Properties>();
+    *props << Property("screen.tool.type")("IMAGE_VIEW");
+    RenderConfigParse(props);
   }
   if (ImGui::MenuItem("User importance painting", NULL, (currentTool == TOOL_USER_IMPORTANCE_PAINT))) {
     currentTool = TOOL_USER_IMPORTANCE_PAINT;
@@ -493,7 +494,7 @@ void LuxCoreApp::MenuTool() {
           Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.filename")("dummy.png");
     }
 
-    auto pprops = std::make_unique<Properties>(props);
+    auto pprops = std::make_unique<Properties>(std::move(props));
     RenderConfigParse(pprops);
   }
 }
@@ -604,18 +605,18 @@ void LuxCoreApp::MainMenuBar() {
         const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
 
         // Set the render engine to FILESAVER
-        auto props1 = Properties() <<
+        auto props1 = std::make_unique<Properties>();
+         *props1 <<
           Property("renderengine.type")("FILESAVER") <<
           Property("filesaver.format")("TXT") <<
           Property("filesaver.directory")(fileToExport) <<
           Property("filesaver.renderengine.type")(renderEngine);
-        auto pprops1 = std::make_unique<Properties>(props1);
-        RenderConfigParse(pprops1);
+        RenderConfigParse(props1);
 
         // Restore the render engine setting
-        auto props2 = Properties() << Property("renderengine.type")(renderEngine);
-        auto pprops2 = std::make_unique<Properties>(props2);
-        RenderConfigParse(pprops2);
+        auto props2 = std::make_unique<Properties>();
+        *props2 << Property("renderengine.type")(renderEngine);
+        RenderConfigParse(props2);
       }
     }
 

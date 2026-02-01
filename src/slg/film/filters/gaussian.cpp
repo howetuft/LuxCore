@@ -40,28 +40,28 @@ PropertiesUPtr GaussianFilter::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
-			cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha"));
+				cfg.Get(GetDefaultProps()->Get("film.filter.type")) <<
+			cfg.Get(GetDefaultProps()->Get("film.filter.gaussian.alpha"));
 	
 	return props;
 }
 
 FilterUPtr GaussianFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<double>();
+	const float alpha = cfg.Get(GetDefaultProps()->Get("film.filter.gaussian.alpha")).Get<double>();
 
 	return std::make_unique<GaussianFilter>(filterXWidth, filterYWidth, alpha);
 }
 
 slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-//	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<double>();
+//	const float alpha = cfg.Get(GetDefaultProps()->Get("film.filter.gaussian.alpha")).Get<double>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
@@ -76,8 +76,9 @@ slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties &GaussianFilter::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr GaussianFilter::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.gaussian.alpha")(2.f);

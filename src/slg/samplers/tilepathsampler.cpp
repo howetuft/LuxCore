@@ -125,8 +125,7 @@ void TilePathSampler::Init(TileWork *tWork, std::experimental::observer_ptr<Film
 
 PropertiesUPtr TilePathSampler::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
-	*props <<
-				cfg.Get(GetDefaultProps().Get("sampler.type"));
+	*props << cfg.Get(GetDefaultProps()->Get("sampler.type"));
 	return props;
 }
 
@@ -147,8 +146,9 @@ void TilePathSampler::AddRequiredChannels(Film::FilmChannels &channels, const lu
 	// No additional channels required
 }
 
-const Properties &TilePathSampler::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr TilePathSampler::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag());
 

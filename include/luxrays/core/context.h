@@ -75,7 +75,7 @@ public:
 	 * \param handler is an optional pointer to a debug message handler. I can be NULL.
 	 * \param config is an optional set of properties used to configure the context.
 	 */
-	Context(LuxRaysDebugHandler handler = NULL, const Properties &config = Properties());
+	Context(LuxRaysDebugHandler handler = NULL, PropertiesUPtr&& config = nullptr);
 
 	/*!	\brief Free all Context associated resources.
 	 */
@@ -86,7 +86,7 @@ public:
 	 *
 	 * \return a reference to the context configuration properties.
 	 */
-	const Properties &GetConfig() const { return cfg; }
+	const Properties &GetConfig() const { return *cfg; }
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to device listing and creation
@@ -186,7 +186,7 @@ private:
 	std::vector<HardwareDevice *> CreateHardwareDevices(
 		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
 
-	const Properties cfg;
+	PropertiesUPtr cfg;  // Context owns its own properties
 
 	LuxRaysDebugHandler debugHandler;
 

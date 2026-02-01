@@ -66,12 +66,15 @@ RenderEngine::RenderEngine(RenderConfigRef cfg) :
 
 	// Create LuxRays context
 	const auto& cfgProps = *renderConfig.ToProperties();
+	auto config = std::make_unique<Properties>();
+	*config <<
+		cfgProps.Get("opencl.platform.index") <<
+		cfgProps.GetAllProperties("accelerator.") <<
+		cfgProps.GetAllProperties("context.");
+
 	ctx = std::make_unique<Context>(
 		LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
-		Properties() <<
-			cfgProps.Get("opencl.platform.index") <<
-			cfgProps.GetAllProperties("accelerator.") <<
-			cfgProps.GetAllProperties("context.")
+		std::move(config)
 	);
 }
 
@@ -257,7 +260,7 @@ PropertiesUPtr RenderEngine::ToProperties(const Properties &cfg) {
 		*props <<
 				func(cfg) <<
 				Filter::ToProperties(cfg) <<
-				cfg.Get(GetDefaultProps().Get("opencl.platform.index"));
+				cfg.Get(GetDefaultProps()->Get("opencl.platform.index"));
 		return props;
 	} else
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
@@ -292,11 +295,29 @@ string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 		throw runtime_error("Unknown render engine type in RenderEngine::RenderEngineType2String(): " + ToString(type));
 }
 
-const Properties &RenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr RenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 		Property("opencl.platform.index")(-1);
 
 	return props;
+}
+
+// Splattering
+FilmSampleSplatterPtr RenderEngine::GetSampleSplatter() const {
+	return sampleSplatter;
+}
+
+void RenderEngine::SetSampleSplatter(FilmSampleSplatterUPtr&& s) {
+	sampleSplatter = std::move(s);
+}
+
+void RenderEngine::SetSampleSplatter(FilterPtr filter) {
+	SetSampleSplatter(std::make_unique<FilmSampleSplatter>(filter));
+}
+
+void RenderEngine::ResetSampleSplatter() {
+	sampleSplatter.reset();
 }
 
 //------------------------------------------------------------------------------

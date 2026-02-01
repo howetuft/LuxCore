@@ -106,7 +106,7 @@ public:
 	FilmConstRef GetMapFilm() const { return *mapFilm; }
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	CPURenderThreadUPtr NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
@@ -126,7 +126,6 @@ protected:
 	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;
-	FilmSampleSplatterUPtr sampleSplatter;
 	PathTracer pathTracer;
 	std::shared_ptr<SamplerSharedData> lightSamplerSharedData;
 

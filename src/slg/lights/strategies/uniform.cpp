@@ -75,7 +75,7 @@ PropertiesUPtr LightStrategyUniform::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+				cfg.Get(GetDefaultProps()->Get("lightstrategy.type"));
 	
 	return props;
 }
@@ -84,8 +84,9 @@ LightStrategyUPtr LightStrategyUniform::FromProperties(const Properties &cfg) {
 	return std::make_unique<LightStrategyUniform>();
 }
 
-const Properties &LightStrategyUniform::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr LightStrategyUniform::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag());
 

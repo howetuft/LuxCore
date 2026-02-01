@@ -244,7 +244,7 @@ void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 PropertiesUPtr RTPathCPUSampler::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
-	*props << cfg.Get(GetDefaultProps().Get("sampler.type"));
+	*props << cfg.Get(GetDefaultProps()->Get("sampler.type"));
 	return props;
 }
 
@@ -262,8 +262,9 @@ void RTPathCPUSampler::AddRequiredChannels(Film::FilmChannels &channels, const l
 	// No additional channels required
 }
 
-const Properties &RTPathCPUSampler::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr RTPathCPUSampler::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag());
 

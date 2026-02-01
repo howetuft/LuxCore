@@ -119,7 +119,7 @@ public:
 	u_int maxTilePerDevice;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::HardwareIntersectionDevice *device);

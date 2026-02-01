@@ -139,7 +139,7 @@ void BakeCPURenderThread::SetSampleResultXY(const BakeMapInfo &mapInfo,
 void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
-	vector<SampleResult> &sampleResults = state.eyeSampleResults;
+	vector<SampleResult> &sampleResults = state.GetEyeSampleResults();
 	SampleResult &sampleResult = sampleResults[0];
 
 	// Pick a scene object to sample
@@ -233,9 +233,14 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 				// Render the received light from the path
 				//--------------------------------------------------------------
 
-				pathTracer.RenderEyePath(state.device, state.scene,
-						*state.eyeSampler, pathInfo, eyeRay, bsdfSample,
-						state.eyeSampleResults);
+				pathTracer.RenderEyePath(
+					state.device, state.scene,
+					*state.eyeSampler,
+					pathInfo,
+					eyeRay,
+					bsdfSample,
+					state.GetEyeSampleResults()
+				);
 			}
 			break;
 		}
@@ -297,7 +302,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 				const float NdotL = Dot(bsdf.hitPoint.shadeN, sampledDir);
 				pathTracer.RenderEyePath(state.device, state.scene,
 						*state.eyeSampler, pathInfo, eyeRay, Spectrum(NdotL * INV_PI / samplePdf),
-						state.eyeSampleResults);
+						state.GetEyeSampleResults());
 			}
 			break;
 		}
@@ -361,7 +366,7 @@ void BakeCPURenderThread::RenderLightSample(const BakeMapInfo &mapInfo, PathTrac
 			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
 
 	pathTracer.RenderLightSample(state.device, state.scene, state.GetFilm(), *state.lightSampler,
-			state.lightSampleResults, connectToEyeCallBack);
+			state.GetLightSampleResults(), connectToEyeCallBack);
 }
 
 void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const {
@@ -373,7 +378,7 @@ void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThr
 		pathTracer.HasToRenderEyeSample(state) ? state.eyeSampler : state.lightSampler;
 
 	std::vector<SampleResult>& sampleResults = pathTracer.HasToRenderEyeSample(state) ?
-		state.eyeSampleResults : state.lightSampleResults;
+		state.GetEyeSampleResults() : state.GetLightSampleResults();
 
 	if (sampler == state.eyeSampler)
 		RenderEyeSample(mapInfo, state);
@@ -440,7 +445,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 		auto eyeSampler = engine->renderConfig.AllocSampler(
 			rndGen,
 			engine->GetMapFilm(),
-			engine->sampleSplatter,
+			engine->GetSampleSplatter(),
 			engine->samplerSharedData,
 			samplerAdditionalProps
 		);
@@ -461,7 +466,7 @@ void BakeCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				props,
 				std::cref(rndGen),
 				FilmOPtr(&engine->GetMapFilm()),
-				nullptr,
+				FilmSampleSplatter::Null,
 				engine->lightSamplerSharedData);
 			lightSampler->SetThreadIndex(threadIndex);
 

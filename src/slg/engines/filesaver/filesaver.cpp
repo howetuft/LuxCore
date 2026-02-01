@@ -58,10 +58,10 @@ void FileSaverRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	renderEngineType = cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type")).Get<string>();
-	exportFormat = cfg.Get(GetDefaultProps().Get("filesaver.format")).Get<string>();
-	directoryName = cfg.Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
-	fileName = cfg.Get(GetDefaultProps().Get("filesaver.filename")).Get<string>();
+	renderEngineType = cfg.Get(GetDefaultProps()->Get("filesaver.renderengine.type")).Get<string>();
+	exportFormat = cfg.Get(GetDefaultProps()->Get("filesaver.format")).Get<string>();
+	directoryName = cfg.Get(GetDefaultProps()->Get("filesaver.directory")).Get<string>();
+	fileName = cfg.Get(GetDefaultProps()->Get("filesaver.filename")).Get<string>();
 	
 	SaveScene();
 }
@@ -508,10 +508,10 @@ void FileSaverRenderEngine::ExportScene(RenderConfigRef renderConfig,
 PropertiesUPtr FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	*props <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("filesaver.format")) <<
-			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
-			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("filesaver.format")) <<
+			cfg.Get(GetDefaultProps()->Get("filesaver.directory")) <<
+			cfg.Get(GetDefaultProps()->Get("filesaver.renderengine.type"));
 	return props;
 }
 
@@ -519,8 +519,9 @@ RenderEngine *FileSaverRenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new FileSaverRenderEngine(rcfg);
 }
 
-const Properties &FileSaverRenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr FileSaverRenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("filesaver.format")("TXT") <<
 			Property("filesaver.directory")("luxcore-exported-scene") <<

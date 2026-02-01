@@ -62,8 +62,10 @@ void RTPathCPURenderThread::RTRenderFunc(std::stop_token stop_token) {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	auto rndGen = std::make_unique<RandomGenerator>(engine->seedBase + 1 + threadIndex);
 	// Setup the sampler
-	auto sampler = engine->renderConfig.AllocSampler(rndGen, engine->GetFilm(), NULL,
-			engine->samplerSharedData, Properties());
+	auto sampler = engine->renderConfig.AllocSampler(
+		rndGen, engine->GetFilm(), engine->GetSampleSplatter(),
+		engine->samplerSharedData, Properties()
+	);
 	(static_cast<RTPathCPUSampler *>(sampler.get()))->SetRenderEngine(engine);
 	sampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 

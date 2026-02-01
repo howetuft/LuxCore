@@ -135,7 +135,7 @@ public:
 	friend class BiDirVMCPURenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual void StartLockLess();
 

@@ -43,17 +43,17 @@ PixelFilterWindow::PixelFilterWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Pix
 void PixelFilterWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *config->ToProperties()->GetAllProperties("film.filter");
+		props->Set(config->ToProperties()->GetAllProperties("film.filter"));
 	} catch(exception &ex) {
 		LA_LOG("PixelFilter parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *config->GetProperties()->GetAllProperties("film.filter");
+		props->Set(config->GetProperties()->GetAllProperties("film.filter"));
 	}
 }
 
 void PixelFilterWindow::ParseObjectProperties(const std::unique_ptr<Properties> & props) {
-	app->RenderConfigParse(std::make_unique<Properties>(*props->GetAllProperties("film.filter")));
+	app->RenderConfigParse(props->GetAllProperties("film.filter"));
 }
 
 bool PixelFilterWindow::DrawObjectGUI(const std::unique_ptr<Properties> & props, bool &modifiedProps) {

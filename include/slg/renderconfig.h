@@ -81,14 +81,14 @@ public:
 	SamplerUPtr AllocSampler(
 		const luxrays::RandomGeneratorUPtr & rndGen,
 		FilmRef film,
-		const FilmSampleSplatterUPtr & flmSplatter,
+		FilmSampleSplatterPtr flmSplatter,
 		const std::shared_ptr<SamplerSharedData> sharedData,
 		const luxrays::Properties &additionalProps
 	) const;
 	SamplerUPtr AllocSampler(
 		const luxrays::RandomGeneratorUPtr & rndGen,
 		std::experimental::observer_ptr<Film> film,
-		const FilmSampleSplatterUPtr & flmSplatter,
+		FilmSampleSplatterPtr flmSplatter,
 		const std::shared_ptr<SamplerSharedData> sharedData,
 		const luxrays::Properties &additionalProps
 	) const;

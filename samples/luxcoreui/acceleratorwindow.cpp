@@ -43,12 +43,12 @@ AcceleratorWindow::AcceleratorWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Acc
 void AcceleratorWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *config->ToProperties()->GetAllProperties("accelerator");
+		props->Set(config->ToProperties()->GetAllProperties("accelerator"));
 	} catch(exception &ex) {
 		LA_LOG("Accelerator parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *config->GetProperties()->GetAllProperties("accelerator");
+		props->Set(config->GetProperties()->GetAllProperties("accelerator"));
 	}
 }
 

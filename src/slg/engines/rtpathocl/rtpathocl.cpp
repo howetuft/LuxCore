@@ -73,10 +73,10 @@ void RTPathOCLRenderEngine::StartLockLess() {
 
 	auto& cfg = renderConfig.GetConfig();
 
-	previewResolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")).Get<int>()), 64));
-	previewResolutionReductionStep = Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")).Get<int>()), 64);
+	previewResolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction.preview")).Get<int>()), 64));
+	previewResolutionReductionStep = Min(Max(1, cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction.preview.step")).Get<int>()), 64);
 
-	resolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>()), 64));
+	resolutionReduction = RoundUpPow2(Min(Max(1, cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction")).Get<int>()), 64));
 
 	TilePathOCLRenderEngine::StartLockLess();
 
@@ -210,17 +210,17 @@ PropertiesUPtr RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			//------------------------------------------------------------------
 			// Overwrite some TilePathOCLRenderEngine property
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")) <<
-			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
-			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
+			cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps()->Get("tilepath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps()->Get("tilepathocl.devices.maxtiles")) <<
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction.preview.step")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
+			cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction.preview")) <<
+			cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction.preview.step")) <<
+			cfg.Get(GetDefaultProps()->Get("rtpath.resolutionreduction"));
 	return props_ptr;
 }
 
@@ -228,8 +228,9 @@ RenderEngine *RTPathOCLRenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new RTPathOCLRenderEngine(rcfg);
 }
 
-const Properties &RTPathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr RTPathOCLRenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			TilePathOCLRenderEngine::GetDefaultProps() <<
 			//------------------------------------------------------------------
 			// Overwrite some TilePathOCLRenderEngine property

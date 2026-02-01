@@ -34,9 +34,13 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BakeCPURenderEngine::BakeCPURenderEngine(RenderConfigRef rcfg) :
-		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
-		lightSamplerSharedData(nullptr), mapFilm(nullptr), currentSceneObjsDist(nullptr),
-		threadsSyncBarrier(nullptr) {
+	CPUNoTileRenderEngine(rcfg),
+	photonGICache(nullptr),
+	lightSamplerSharedData(nullptr),
+	mapFilm(nullptr),
+	currentSceneObjsDist(nullptr),
+	threadsSyncBarrier(nullptr)
+{
 	auto& cfg = rcfg.GetConfig();
 
 	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
@@ -106,7 +110,7 @@ void BakeCPURenderEngine::InitFilm() {
 	GetFilm().AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
-	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps().
+	const bool hybridBackForwardEnable = renderConfig.GetConfig().Get(PathTracer::GetDefaultProps()->
 			Get("path.hybridbackforward.enable")).Get<bool>();
 	if (hybridBackForwardEnable)
 		GetFilm().AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
@@ -181,7 +185,7 @@ void BakeCPURenderEngine::StartLockLess() {
 	// Initialize the PathTracer class with rendering parameters
 	//--------------------------------------------------------------------------
 
-	pathTracer.ParseOptions(cfg, GetDefaultProps());
+	pathTracer.ParseOptions(cfg, *GetDefaultProps());
 
 	if (pathTracer.hybridBackForwardEnable) {
 		auto sharedData = MetropolisSamplerSharedData::FromProperties(
@@ -190,10 +194,10 @@ void BakeCPURenderEngine::StartLockLess() {
 		lightSamplerSharedData = std::move(sharedData);
 	}
 
-	pathTracer.InitPixelFilterDistribution(pixelFilter);
+	pathTracer.InitPixelFilterDistribution(GetPixelFilter());
 	pathTracer.SetPhotonGICache(photonGICache);
 
-	sampleSplatter = std::make_unique<FilmSampleSplatter>(pixelFilter);
+	SetSampleSplatter(std::make_unique<FilmSampleSplatter>(GetPixelFilter()));
 
 	//--------------------------------------------------------------------------
 	
@@ -316,7 +320,7 @@ PropertiesUPtr BakeCPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props << *CPUNoTileRenderEngine::ToProperties(cfg) <<
-				cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+				cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
 			*PathTracer::ToProperties(cfg) <<
 			*PhotonGICache::ToProperties(cfg);
 
@@ -329,8 +333,9 @@ RenderEngine *BakeCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new BakeCPURenderEngine(rcfg);
 }
 
-const Properties &BakeCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr BakeCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<

@@ -263,7 +263,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
 			for (u_int i = 0; i < sr->radiance.Size(); ++i) {
 				const float luminance = sr->radiance[i].Y();
-				assert (!isnan(luminance) && !isinf(luminance) && (luminance >= 0.f));
+				verify (!isnan(luminance) && !isinf(luminance) && (luminance >= 0.f));
 
 				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
 					newLuminance += luminance;
@@ -463,23 +463,23 @@ PropertiesUPtr MetropolisSampler::ToProperties() const {
 PropertiesUPtr MetropolisSampler::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	*props <<
-				cfg.Get(GetDefaultProps().Get("sampler.type")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics"));
+				cfg.Get(GetDefaultProps()->Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps()->Get("sampler.imagesamples.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("sampler.metropolis.largesteprate")) <<
+			cfg.Get(GetDefaultProps()->Get("sampler.metropolis.maxconsecutivereject")) <<
+			cfg.Get(GetDefaultProps()->Get("sampler.metropolis.imagemutationrate")) <<
+			cfg.Get(GetDefaultProps()->Get("sampler.metropolis.addonlycaustics"));
 	return props;
 }
 
 SamplerUPtr MetropolisSampler::FromProperties(const Properties &cfg, const RandomGeneratorUPtr & rndGen,
-		std::experimental::observer_ptr<Film> film, const FilmSampleSplatterUPtr& flmSplatter, SamplerSharedDataSPtr sharedData) {
-	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+		std::experimental::observer_ptr<Film> film, FilmSampleSplatterPtr flmSplatter, SamplerSharedDataSPtr sharedData) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps()->Get("sampler.imagesamples.enable")).Get<bool>();
 
-	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<double>(), 0.0, 1.0);
-	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
-	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<double>(), 0.0, 1.0);
-	const bool addOnlyCaustics = cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics")).Get<bool>();
+	const float rate = Clamp(cfg.Get(GetDefaultProps()->Get("sampler.metropolis.largesteprate")).Get<double>(), 0.0, 1.0);
+	const u_int reject = cfg.Get(GetDefaultProps()->Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	const float mutationRate = Clamp(cfg.Get(GetDefaultProps()->Get("sampler.metropolis.imagemutationrate")).Get<double>(), 0.0, 1.0);
+	const bool addOnlyCaustics = cfg.Get(GetDefaultProps()->Get("sampler.metropolis.addonlycaustics")).Get<bool>();
 
 	return std::make_unique<MetropolisSampler>(rndGen, film, flmSplatter, imageSamplesEnable,
 			reject, rate, mutationRate, addOnlyCaustics,
@@ -491,9 +491,9 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
 
 	oclSampler->type = slg::ocl::METROPOLIS;
-	oclSampler->metropolis.largeMutationProbability = cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<double>();
-	oclSampler->metropolis.imageMutationRange = cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<double>();
-	oclSampler->metropolis.maxRejects = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	oclSampler->metropolis.largeMutationProbability = cfg.Get(GetDefaultProps()->Get("sampler.metropolis.largesteprate")).Get<double>();
+	oclSampler->metropolis.imageMutationRange = cfg.Get(GetDefaultProps()->Get("sampler.metropolis.imagemutationrate")).Get<double>();
+	oclSampler->metropolis.maxRejects = cfg.Get(GetDefaultProps()->Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
 
 	return oclSampler;
 }
@@ -502,8 +502,9 @@ void MetropolisSampler::AddRequiredChannels(Film::FilmChannels &channels, const 
 	// No additional channels required
 }
 
-const Properties &MetropolisSampler::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr MetropolisSampler::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<

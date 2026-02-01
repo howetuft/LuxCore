@@ -38,7 +38,7 @@ public:
 	static luxrays::PropertiesUPtr ToProperties(const luxrays::Properties &cfg);
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	u_int oclRenderThreadCount, nativeRenderThreadCount;
 	bool useFilmOutOfCoreMemory;

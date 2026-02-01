@@ -40,8 +40,8 @@ RTPathCPURenderEngine::~RTPathCPURenderEngine() {
 
 void RTPathCPURenderEngine::StartLockLess() {
 	auto& cfg = renderConfig.GetConfig();
-	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")).Get<int>());
-	zoomWeight = Max(0.0001, cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight")).Get<double>());
+	zoomFactor = (u_int)Max(1, cfg.Get(GetDefaultProps()->Get("rtpathcpu.zoomphase.size")).Get<int>());
+	zoomWeight = Max(0.0001, cfg.Get(GetDefaultProps()->Get("rtpathcpu.zoomphase.weight")).Get<double>());
 
 	threadsPauseMode = false;
 	firstFrameDone = false;
@@ -147,14 +147,14 @@ PropertiesUPtr RTPathCPURenderEngine::ToProperties(const Properties &cfg) {
 				//------------------------------------------------------------------
 			// Overwrite some PathCPURenderEngine property
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.total")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.diffuse")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.glossy")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps()->Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps()->Get("path.pathdepth.specular")) <<
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.size")) <<
-			cfg.Get(GetDefaultProps().Get("rtpathcpu.zoomphase.weight"));
+			cfg.Get(GetDefaultProps()->Get("rtpathcpu.zoomphase.size")) <<
+			cfg.Get(GetDefaultProps()->Get("rtpathcpu.zoomphase.weight"));
 	
 	return props;
 }
@@ -163,8 +163,9 @@ RenderEngine *RTPathCPURenderEngine::FromProperties(RenderConfigRef rcfg) {
 	return new RTPathCPURenderEngine(rcfg);
 }
 
-const Properties &RTPathCPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr RTPathCPURenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			PathCPURenderEngine::GetDefaultProps() <<
 			//------------------------------------------------------------------
 			// Overwrite some PathCPURenderEngine property

@@ -20,6 +20,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/thread.h"
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/cudadevice.h"
@@ -39,18 +40,18 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	auto& cfg = renderConfig.GetConfig();
 
-	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
-	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
+	const bool useCPUs = cfg.Get(GetDefaultProps()->Get("opencl.cpu.use")).Get<bool>();
+	const bool useGPUs = cfg.Get(GetDefaultProps()->Get("opencl.gpu.use")).Get<bool>();
 
 	// 0 means use the value suggested by the OpenCL driver
-	const u_int forceCPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")).Get<u_int>();
+	const u_int forceCPUWorkSize = cfg.Get(GetDefaultProps()->Get("opencl.cpu.workgroup.size")).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
 	// Note: I'm using 32 because some driver (i.e. NVIDIA) suggests a value and than
 	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
-	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")).Get<u_int>();
+	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps()->Get("opencl.gpu.workgroup.size")).Get<u_int>();
 
-	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
-	const string cudaOptixDeviceConfig = cfg.Get(GetDefaultProps().Get("cuda.optix.devices.select")).Get<string>();
+	const string oclDeviceConfig = cfg.Get(GetDefaultProps()->Get("opencl.devices.select")).Get<string>();
+	const string cudaOptixDeviceConfig = cfg.Get(GetDefaultProps()->Get("cuda.optix.devices.select")).Get<string>();
 
 	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
 	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
@@ -160,7 +161,7 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE, nativeDescs);
 		nativeDescs.resize(1);
 
-		nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
+		nativeRenderThreadCount = cfg.Get(GetDefaultProps()->Get("opencl.native.threads.count")).Get<u_int>();
 		if (nativeRenderThreadCount > 0)
 			selectedDeviceDescs.resize(selectedDeviceDescs.size() + nativeRenderThreadCount, nativeDescs[0]);
 	} else
@@ -171,19 +172,20 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 PropertiesUPtr OCLRenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	*props <<
-				cfg.Get(GetDefaultProps().Get("opencl.cpu.use")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.gpu.use")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.devices.select")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable")) <<
-			cfg.Get(GetDefaultProps().Get("cuda.optix.devices.select"));
+				cfg.Get(GetDefaultProps()->Get("opencl.cpu.use")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.gpu.use")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.cpu.workgroup.size")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.gpu.workgroup.size")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.devices.select")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.native.threads.count")) <<
+			cfg.Get(GetDefaultProps()->Get("opencl.outofcore.enable")) <<
+			cfg.Get(GetDefaultProps()->Get("cuda.optix.devices.select"));
 	return props;
 }
 
-const Properties &OCLRenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr OCLRenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			RenderEngine::GetDefaultProps() <<
 			Property("opencl.cpu.use")(false) <<
 			Property("opencl.gpu.use")(true) <<

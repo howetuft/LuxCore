@@ -40,24 +40,24 @@ PropertiesUPtr SincFilter::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
-			cfg.Get(GetDefaultProps().Get("film.filter.sinc.tau"));
+				cfg.Get(GetDefaultProps()->Get("film.filter.type")) <<
+			cfg.Get(GetDefaultProps()->Get("film.filter.sinc.tau"));
 	
 	return props;
 }
 
 FilterUPtr SincFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-	const float tau = cfg.Get(GetDefaultProps().Get("film.filter.sinc.tau")).Get<double>();
+	const float tau = cfg.Get(GetDefaultProps()->Get("film.filter.sinc.tau")).Get<double>();
 
 	return std::make_unique<SincFilter>(filterXWidth, filterYWidth, tau);
 }
 
 slg::ocl::Filter *SincFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
@@ -69,8 +69,9 @@ slg::ocl::Filter *SincFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties &SincFilter::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr SincFilter::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.sinc.tau")(3.f);

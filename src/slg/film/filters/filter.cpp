@@ -56,7 +56,7 @@ PropertiesUPtr Filter::ToProperties(const Properties &cfg) {
 	if (FilterRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
 		auto props = std::make_unique<Properties>();
 
-		const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+		const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 		const Property filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth));
 		const Property filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
 
@@ -108,8 +108,9 @@ const string Filter::FilterType2String(const FilterType type) {
 		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + ToString(type));
 }
 
-const Properties &Filter::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr Filter::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Property("film.filter.width")(2.f);
 
 	return props;

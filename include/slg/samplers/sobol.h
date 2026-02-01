@@ -148,7 +148,7 @@ private:
 	void InitNewSample();
 	float GetSobolSample(const u_int index);
 
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	std::shared_ptr<SobolSamplerSharedData> sharedData;
 	SobolSequence sobolSequence;

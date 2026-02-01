@@ -163,19 +163,18 @@ public:
 	friend class BiDirCPURenderThread;
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	FilmSampleSplatterUPtr sampleSplatter;
 	PhotonGICache *photonGICache;
 
 	u_int aovWarmupSPP;
 	// We'll use a shared_ptr for shared data since, by design, the
 	// ownership is shared among several objects...
-	std::shared_ptr<SobolSamplerSharedData> aovWarmupSamplerSharedData;
+	SobolSamplerSharedDataSPtr aovWarmupSamplerSharedData;
 
 private:
 	CPURenderThreadUPtr NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {

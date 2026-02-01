@@ -105,7 +105,7 @@ void CPURenderThread::WaitForDone() const {
 
 CPURenderEngine::CPURenderEngine(RenderConfigRef cfg) : RenderEngine(cfg) {
 	// I have to use u_int because Property::Get<size_t>() is not defined
-	const size_t renderThreadCount =  Max<u_int>(1u, cfg.GetConfig().Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
+	const size_t renderThreadCount =  Max<u_int>(1u, cfg.GetConfig().Get(GetDefaultProps()->Get("native.threads.count")).Get<u_int>());
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -183,14 +183,14 @@ void CPURenderEngine::WaitForDone() const {
 
 PropertiesUPtr CPURenderEngine::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
-	*props << cfg.Get(GetDefaultProps().Get("native.threads.count"));
+	*props << cfg.Get(GetDefaultProps()->Get("native.threads.count"));
 	return props;
 }
 
-const Properties &CPURenderEngine::GetDefaultProps() {
-	static Properties props = Properties() <<
-			RenderEngine::GetDefaultProps() <<
-			Property("native.threads.count")((u_int)GetHardwareThreadCount());
+PropertiesUPtr CPURenderEngine::GetDefaultProps() {
+	PropertiesUPtr props = std::make_unique<Properties>();
+	*props << RenderEngine::GetDefaultProps()
+		<< Property("native.threads.count")((u_int)GetHardwareThreadCount());
 
 	return props;
 }
@@ -253,8 +253,8 @@ PropertiesUPtr CPUNoTileRenderEngine::ToProperties(const Properties &cfg) {
 	return CPURenderEngine::ToProperties(cfg);
 }
 
-const Properties &CPUNoTileRenderEngine::GetDefaultProps() {
-	static Properties props;
+luxrays::PropertiesUPtr CPUNoTileRenderEngine::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
 	return props;
 }
 
@@ -330,7 +330,7 @@ PropertiesUPtr CPUTileRenderEngine::ToProperties(const Properties &cfg) {
 	return props_ptr;
 }
 
-const Properties &CPUTileRenderEngine::GetDefaultProps() {
+PropertiesUPtr CPUTileRenderEngine::GetDefaultProps() {
 	return TileRepository::GetDefaultProps();
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

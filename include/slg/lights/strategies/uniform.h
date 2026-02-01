@@ -48,7 +48,7 @@ public:
 	static LightStrategyUPtr FromProperties(const luxrays::Properties &cfg);
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 };
 
 }

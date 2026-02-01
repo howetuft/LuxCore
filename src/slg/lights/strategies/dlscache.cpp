@@ -116,17 +116,17 @@ PropertiesUPtr LightStrategyDLSCache::ToProperties() const {
 PropertiesUPtr LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	*props <<
-				cfg.Get(GetDefaultProps().Get("lightstrategy.type")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.radius")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.entry.warmupsamples")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")) <<
-			cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave"));
+				cfg.Get(GetDefaultProps()->Get("lightstrategy.type")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.radius")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.normalangle")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.maxpasses")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.convergencethreshold")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.warmupsamples")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.targetcachehitratio")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.maxdepth")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.maxsamplescount")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.persistent.file")) <<
+			cfg.Get(GetDefaultProps()->Get("lightstrategy.persistent.safesave"));
 	return props;
 }
 
@@ -134,24 +134,25 @@ PropertiesUPtr LightStrategyDLSCache::ToProperties(const Properties &cfg) {
 LightStrategyUPtr LightStrategyDLSCache::FromProperties(const Properties &cfg) {
 	DLSCParams params;
 
-	params.entry.maxPasses = cfg.Get(GetDefaultProps().Get("lightstrategy.entry.maxpasses")).Get<u_int>();
-	params.entry.convergenceThreshold = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.entry.convergencethreshold")).Get<double>(), 0.0, 1.0);
-	params.entry.warmUpSamples = Max<u_int>(1, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.warmupsamples")).Get<u_int>());
+	params.entry.maxPasses = cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.maxpasses")).Get<u_int>();
+	params.entry.convergenceThreshold = Clamp(cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.convergencethreshold")).Get<double>(), 0.0, 1.0);
+	params.entry.warmUpSamples = Max<u_int>(1, cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.warmupsamples")).Get<u_int>());
 
-	params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("lightstrategy.maxsamplescount")).Get<u_int>();
-	params.visibility.maxPathDepth = cfg.Get(GetDefaultProps().Get("lightstrategy.maxdepth")).Get<u_int>();
-	params.visibility.lookUpRadius = Max(0.0, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.radius")).Get<double>());
-	params.visibility.lookUpNormalAngle = Max(0.0, cfg.Get(GetDefaultProps().Get("lightstrategy.entry.normalangle")).Get<double>());
-	params.visibility.targetHitRate = Clamp(cfg.Get(GetDefaultProps().Get("lightstrategy.targetcachehitratio")).Get<double>(), 0.0, 1.0);
+	params.visibility.maxSampleCount = cfg.Get(GetDefaultProps()->Get("lightstrategy.maxsamplescount")).Get<u_int>();
+	params.visibility.maxPathDepth = cfg.Get(GetDefaultProps()->Get("lightstrategy.maxdepth")).Get<u_int>();
+	params.visibility.lookUpRadius = Max(0.0, cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.radius")).Get<double>());
+	params.visibility.lookUpNormalAngle = Max(0.0, cfg.Get(GetDefaultProps()->Get("lightstrategy.entry.normalangle")).Get<double>());
+	params.visibility.targetHitRate = Clamp(cfg.Get(GetDefaultProps()->Get("lightstrategy.targetcachehitratio")).Get<double>(), 0.0, 1.0);
 
-	params.persistent.fileName = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.file")).Get<string>();
-	params.persistent.safeSave = cfg.Get(GetDefaultProps().Get("lightstrategy.persistent.safesave")).Get<bool>();
+	params.persistent.fileName = cfg.Get(GetDefaultProps()->Get("lightstrategy.persistent.file")).Get<string>();
+	params.persistent.safeSave = cfg.Get(GetDefaultProps()->Get("lightstrategy.persistent.safesave")).Get<bool>();
 
 	return std::make_unique<LightStrategyDLSCache>(params);
 }
 
-const Properties &LightStrategyDLSCache::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr LightStrategyDLSCache::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag()) <<
 			Property("lightstrategy.entry.radius")(0.f) <<

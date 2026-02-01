@@ -106,7 +106,7 @@ public:
     };
 
 protected:
-	static const luxrays::Properties &GetDefaultProps();
+	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual void InitGPUTaskConfiguration();
 	virtual bool IsRTMode() const { return true; }

@@ -40,12 +40,12 @@ LightStrategyWindow::LightStrategyWindow(LuxCoreApp *a) : ObjectEditorWindow(a, 
 void LightStrategyWindow::RefreshObjectProperties(const std::unique_ptr<Properties> & props) {
 	auto& config = app->config;
 	try {
-		*props = *config->ToProperties()->GetAllProperties("lightstrategy");
+		props->Set(config->ToProperties()->GetAllProperties("lightstrategy"));
 	} catch(exception &ex) {
 		LA_LOG("LightStrategy parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		*props = *config->GetProperties()->GetAllProperties("lightstrategy");
+		props->Set(config->GetProperties()->GetAllProperties("lightstrategy"));
 	}
 }
 
@@ -63,9 +63,8 @@ bool LightStrategyWindow::DrawObjectGUI(const std::unique_ptr<Properties> & prop
 	int typeIndex = typeTable.GetVal(currentSamplerType);
 
 	if (ImGui::Combo("Light Strategy type", &typeIndex, typeTable.GetTagList())) {
-		props->Clear();
 
-		*props << Property("lightstrategy.type")(typeTable.GetTag(typeIndex));
+		props->Set(Property("lightstrategy.type")(typeTable.GetTag(typeIndex)));
 
 		return true;
 	}

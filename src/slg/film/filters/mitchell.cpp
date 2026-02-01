@@ -40,31 +40,31 @@ PropertiesUPtr MitchellFilter::ToProperties(const Properties &cfg) {
 	PropertiesUPtr props = std::make_unique<Properties>();
 	
 	*props <<
-				cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
-			cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")) <<
-			cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c"));
+				cfg.Get(GetDefaultProps()->Get("film.filter.type")) <<
+			cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.b")) <<
+			cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.c"));
 	
 	return props;
 }
 
 FilterUPtr MitchellFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")).Get<double>();
-	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c")).Get<double>();
+	const float b = cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.b")).Get<double>();
+	const float c = cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.c")).Get<double>();
 
 	return std::make_unique<MitchellFilter>(filterXWidth, filterYWidth, b, c);
 }
 
 slg::ocl::Filter *MitchellFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<double>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps()->Get("film.filter.width")).Get<double>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<double>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<double>();
 
-//	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")).Get<double>();
-//	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c")).Get<double>();
+//	const float b = cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.b")).Get<double>();
+//	const float c = cfg.Get(GetDefaultProps()->Get("film.filter.mitchell.c")).Get<double>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
@@ -80,8 +80,9 @@ slg::ocl::Filter *MitchellFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties &MitchellFilter::GetDefaultProps() {
-	static Properties props = Properties() <<
+PropertiesUPtr MitchellFilter::GetDefaultProps() {
+	auto props = std::make_unique<Properties>();
+	*props <<
 			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.mitchell.b")(1.f / 3.f) <<
