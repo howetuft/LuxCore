@@ -705,8 +705,8 @@ public:
 	static std::string FilterType2String(const FilterType type);
 
 	// Accessors (to guarantee there is no unallowed access)
-	u_int GetWidth() const { return ToSpan().width(); }
-	u_int GetHeight() const { return ToSpan().height(); }
+	u_int GetWidth() const { return width; }
+	u_int GetHeight() const { return height; }
 	WrapType GetWrapType() const { return wrapType; }
 	FilterType GetFilterType() const { return filterType; }
 
@@ -760,8 +760,8 @@ public:
 	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
 	constexpr virtual size_t GetMemoryPixelSize() const { return CHANNELS * sizeof(T); };
 	constexpr virtual size_t GetMemoryChannelSize() const { return sizeof(T); };
-	virtual void *GetPixelsData() { return &pixels[0][0]; }
-	virtual const void *GetPixelsData() const { return &pixels[0][0]; }
+	virtual void *GetPixelsData() { return &pixels[0]; }
+	virtual const void *GetPixelsData() const { return &pixels[0]; }
 
 	OIIO::image_span<T> GetPixelsSpan();
 
@@ -783,7 +783,6 @@ public:
 	virtual ImageMapStorageUPtr Copy() const;
 
 	virtual OIIO::image_span<std::byte> ToSpan();
-	virtual OIIO::image_span<const std::byte> ToSpan() const;
 
 	friend class boost::serialization::access;
 

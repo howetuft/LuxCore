@@ -606,17 +606,6 @@ OIIO::image_span<std::byte> ImageMapStorageImpl<T, CHANNELS>::ToSpan() {
 }
 
 template <class T, u_int CHANNELS>
-OIIO::image_span<const std::byte> ImageMapStorageImpl<T, CHANNELS>::ToSpan() const {
-	auto span = OIIO::image_span<const T>(
-		static_cast<const T*>(GetPixelsData()),
-		CHANNELS,
-		width,
-		height
-	);
-	return span.as_bytes_image_span();
-}
-
-template <class T, u_int CHANNELS>
 ImageMapStorageUPtr ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 	const u_int pixelCount = width * height;
 	std::vector<ImageMapPixel<T, CHANNELS>> newPixels(pixelCount);
