@@ -710,7 +710,6 @@ ImageMapStorageUPtr ImageMapStorageImpl<T, CHANNELS>::SelectChannel(
 			}
 
 			std::vector<ImageMapPixel<T, 3>> newPixels;
-			newPixels.reserve(pixelCount);
 			for (auto& p: pixels) {
 				newPixels.emplace_back(p[0]);
 			}
