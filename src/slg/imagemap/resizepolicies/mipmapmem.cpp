@@ -95,11 +95,10 @@ void ImageMapResizeMipMapMemPolicy::Preprocess(
 
 	SDL_LOG("Applying resize policy " << ImageMapResizePolicyType2String(GetType()) << "...");
 
-	// TODO Debug
 	const double startTime = WallClockTime();
 
 	// Build the list of image maps to check
-	std::vector<u_int> imgMapsIndices;
+	vector<u_int> imgMapsIndices;
 	for (u_int i = 0; i < imc.resizePolicyToApply.size(); ++i) {
 		if (imc.resizePolicyToApply[i]) {
 			//SDL_LOG("Image map to process:  " << imc.maps[i]->GetName());
@@ -168,7 +167,7 @@ void ImageMapResizeMipMapMemPolicy::Preprocess(
 		imc.maps[i]->Reload(dstFileName, newWidth, newHeight);
 
 		currentMemUsed += imc.maps[i]->GetStorage().GetMemorySize();
-
+		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
 				originalWidth << "x" << originalHeigth << " => " <<
 				imc.maps[i]->GetWidth() << "x" << imc.maps[i]->GetHeight());
@@ -176,16 +175,13 @@ void ImageMapResizeMipMapMemPolicy::Preprocess(
 
 	SDL_LOG("Memory required for original Image maps: " + ToMemString(originalMemUsed));
 	SDL_LOG("Memory required for MIPMAPMEM Image maps: " + ToMemString(currentMemUsed));
-
+	
 	//TODO
 	//// Delete instrumentation for image maps checked
 	//for (auto i : imgMapsIndices)
 		//imc.maps[i]->DeleteInstrumentation();
 
-	SDL_LOG(
-		"Applying resize policy "
-		<< ImageMapResizePolicyType2String(GetType())
-		<< " time: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs"
-	);
+	SDL_LOG("Applying resize policy " << ImageMapResizePolicyType2String(GetType()) << " time: " <<
+			(boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

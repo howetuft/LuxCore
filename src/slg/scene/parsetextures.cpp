@@ -153,7 +153,7 @@ TextureUPtr Scene::CreateTexture(const string &texName, const Properties &props)
 		auto& im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
-		if (randomizedTiling && (im.GetStorage().GetWrapType() != ImageMapStorage::REPEAT))
+		if (randomizedTiling && (im.GetStorage().wrapType != ImageMapStorage::REPEAT))
 			throw runtime_error("Randomized tiling requires REPEAT wrap type in imagemap texture: " + propName);
 
 		const float gain = props.Get(Property(propName + ".gain")(1.0)).Get<double>();

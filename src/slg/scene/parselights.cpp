@@ -151,7 +151,7 @@ ImageMapPtr Scene::CreateEmissionMap(
 
 		ImageMapConfig imgCfg(props, propName);
 		// Force float storage
-		imgCfg.SetStorageType(ImageMapStorage::FLOAT);
+		imgCfg.storageType = ImageMapStorage::FLOAT;
 
 		imgMap = &imgMapCache.GetImageMap(imgMapName, imgCfg, false);
 

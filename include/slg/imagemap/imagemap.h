@@ -29,7 +29,6 @@
 #include <span>
 #include <OpenImageIO/image_span.h>
 
-#include "slg/film/filters/filter.h"
 #include "slg/usings.h"
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
@@ -701,24 +700,17 @@ public:
 	static FilterType String2FilterType(const std::string &type);
 	static std::string FilterType2String(const FilterType type);
 
-	// Accessors (to guarantee there is no unallowed access)
-	u_int GetWidth() const { return width; }
-	u_int GetHeight() const { return height; }
-	WrapType GetWrapType() const { return wrapType; }
-	FilterType GetFilterType() const { return filterType; }
-
 	friend class boost::serialization::access;
 
 	template<typename T> OIIO::image_span<T> GetPixelsSpan(u_int Channels);
 
+	u_int width, height;
+	WrapType wrapType;
+	FilterType filterType;
 
 protected:
 	// Used by serialization
 	ImageMapStorage() { }
-
-	u_int width, height;
-	WrapType wrapType;
-	FilterType filterType;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version);
 };
@@ -753,10 +745,10 @@ public:
 	virtual ImageMapStorageUPtr SelectChannel(const ChannelSelectionType selectionType) const;
 
 	virtual StorageType GetStorageType() const;
-	constexpr virtual u_int GetChannelCount() const { return CHANNELS; }
+	virtual u_int GetChannelCount() const { return CHANNELS; }
 	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
-	constexpr virtual size_t GetMemoryPixelSize() const { return CHANNELS * sizeof(T); };
-	constexpr virtual size_t GetMemoryChannelSize() const { return sizeof(T); };
+	virtual size_t GetMemoryPixelSize() const { return CHANNELS * sizeof(T); };
+	virtual size_t GetMemoryChannelSize() const { return sizeof(T); };
 	virtual void *GetPixelsData() { return &pixels[0]; }
 	virtual const void *GetPixelsData() const { return &pixels[0]; }
 
@@ -789,8 +781,8 @@ private:
 
 	const ImageMapPixel<T, CHANNELS> *GetTexel(const int s, const int t) const;
 
-	// save()/load() are placed here instead of imageserialize.cpp because
-	// ImageMapStorageImpl is a template class
+	// save()/load() are placed here instead of imageserialize.cpp because ImageMapStorageImpl
+	// is a template class
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapStorage);
 
@@ -952,17 +944,6 @@ public:
 
 	ColorSpaceConfig colorSpaceCfg;
 
-	
-	ImageMapStorage::StorageType GetStorageType() const { return storageType; }
-	ImageMapStorage::WrapType GetWrapType() const { return wrapType; }
-	ImageMapStorage::FilterType GetFilterType() const {return filterType; }
-	ImageMapStorage::ChannelSelectionType GetSelectionType() const {return selectionType; }
-	void SetStorageType(ImageMapStorage::StorageType v) { storageType = v; }
-	void SetWrapType(ImageMapStorage::WrapType v) { wrapType = v; }
-	void SetFilterType(ImageMapStorage::FilterType v) { filterType = v; }
-	void SetSelectionType(ImageMapStorage::ChannelSelectionType v) { selectionType = v; }
-
-private:
 	ImageMapStorage::StorageType storageType;
 	ImageMapStorage::WrapType wrapType;
 	ImageMapStorage::FilterType filterType;
@@ -1003,8 +984,8 @@ public:
 	void DisableInstrumentation();
 
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
-	u_int GetWidth() const { return pixelStorage->GetWidth(); }
-	u_int GetHeight() const { return pixelStorage->GetHeight(); }
+	u_int GetWidth() const { return pixelStorage->width; }
+	u_int GetHeight() const { return pixelStorage->height; }
 	ImageMapStorageConstRef GetStorage() const { return *pixelStorage; }
 	ImageMapStorageRef GetStorage() { return *pixelStorage; }
 

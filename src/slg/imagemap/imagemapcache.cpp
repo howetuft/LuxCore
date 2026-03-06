@@ -71,9 +71,9 @@ string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &
 					ToString(imgCfg.colorSpaceCfg.colorSpaceType));
 	}
 	
-	key += ToString(imgCfg.GetStorageType()) + "_#_" +
-			ToString(imgCfg.GetWrapType()) + "_#_" +
-			ToString(imgCfg.GetSelectionType());
+	key += ToString(imgCfg.storageType) + "_#_" +
+			ToString(imgCfg.wrapType) + "_#_" +
+			ToString(imgCfg.selectionType);
 
 	return key;
 }
