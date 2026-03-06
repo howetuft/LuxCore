@@ -970,28 +970,24 @@ void ImageMap::Init(
 
 	// Allocate storage
 	TypeDesc td;
-	std::string tdstr;
 	switch (selectedStorageType) {
 		case ImageMapStorage::BYTE:
 			pixelStorage = AllocImageMapStorage<u_char>(
 				channelCount, width, height, cfg.GetWrapType(), cfg.GetFilterType()
 			);
 			td = TypeDesc::UCHAR;
-			tdstr = "UCHAR";
 			break;
 		case ImageMapStorage::HALF:
 			pixelStorage = AllocImageMapStorage<half>(
 				channelCount, width, height, cfg.GetWrapType(), cfg.GetFilterType()
 			);
 			td = TypeDesc::HALF;
-			tdstr = "HALF";
 			break;
 		case ImageMapStorage::FLOAT:
 			pixelStorage = AllocImageMapStorage<float>(
 				channelCount, width, height, cfg.GetWrapType(), cfg.GetFilterType()
 			);
 			td = TypeDesc::FLOAT;
-			tdstr = "FLOAT";
 			break;
 		default: throw runtime_error(
 			"Unsupported selected storage type in an ImageMap: "
@@ -1029,10 +1025,7 @@ void ImageMap::Init(
 	SDL_LOG("Image dimensions: "
 		<< span.width() << "x" << span.height()
 		<< "@" << span.nchannels()
-		<< " (type=" << tdstr << ", "
-		<< "contiguous="
-		<< std::string(span.is_contiguous() ? std::string("yes") : std::string("no"))
-		<< ")"
+		<< " (contiguous=" << span.is_contiguous() << ")"
 	);
 
 	SelectChannel(cfg.GetSelectionType());
