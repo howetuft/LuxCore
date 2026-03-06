@@ -638,8 +638,6 @@ public:
 
 	virtual ImageMapStorageUPtr SelectChannel(const ChannelSelectionType selectionType) const = 0;
 
-	u_int GetIndex(u_int x, u_int y) const;
-
 	virtual StorageType GetStorageType() const = 0;
 	virtual u_int GetChannelCount() const = 0;
 	virtual size_t GetMemorySize() const = 0;
@@ -650,17 +648,17 @@ public:
 
 	virtual void SetFloat(const u_int index, const float v) = 0;
 	void SetFloat(const u_int x, const u_int y, const float v) {
-		SetFloat(GetIndex(x, y), v);
+		SetFloat(x + y * width, v);
 	}
 
 	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v) = 0;
 	void SetSpectrum(const u_int x, const u_int y, const luxrays::Spectrum &v) {
-		SetSpectrum(GetIndex(x, y), v);
+		SetSpectrum(x + y * width, v);
 	}
 
 	virtual void SetAlpha(const u_int index, const float v) = 0;
 	void SetAlpha(const u_int x, const u_int y, const float v) {
-		SetAlpha(GetIndex(x, y), v);
+		SetAlpha(x + y * width, v);
 	}
 	
 	// Methods accepting UV parameters return an interpolated value while
@@ -669,32 +667,31 @@ public:
 	virtual float GetFloat(const luxrays::UV &uv) const = 0;
 	virtual float GetFloat(const u_int index) const = 0;
 	float GetFloat(const u_int x, const u_int y) const {
-		return GetFloat(GetIndex(x, y));
+		return GetFloat(x + y * width);
 	}
 
 	virtual luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const = 0;
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const = 0;
 	luxrays::Spectrum GetSpectrum(const u_int x, const u_int y) const {
-		return GetSpectrum(GetIndex(x, y));
+		return GetSpectrum(x + y * width);
 	}
 
 	virtual float GetAlpha(const luxrays::UV &uv) const = 0;
 	virtual float GetAlpha(const u_int index) const = 0;
 	float GetAlpha(const u_int x, const u_int y) const {
-		return GetAlpha(GetIndex(x, y));
+		return GetAlpha(x + y * width);
 	}
 
 	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const = 0;
 	virtual luxrays::UV GetDuv(const u_int index) const = 0;
 	luxrays::UV GetDuv(const u_int x, const u_int y) const {
-		return GetDuv(GetIndex(x, y));
+		return GetDuv(x + y * width);
 	}
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
 	virtual ImageMapStorageUPtr Copy() const = 0;
 	virtual OIIO::image_span<std::byte> ToSpan() = 0;
-	virtual OIIO::image_span<const std::byte> ToSpan() const = 0;
 
 	static StorageType String2StorageType(const std::string &type);
 	static std::string StorageType2String(const StorageType type);
