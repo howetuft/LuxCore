@@ -119,12 +119,12 @@ typedef ImageMapPixel<float, 4> ImageMapPixelFloat4;
 //------------------------------------------------------------------------------
 
 template<> inline float ImageMapPixel<u_char, 1>::GetFloat() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return c(0) * norm;
 }
 
 template<> inline luxrays::Spectrum ImageMapPixel<u_char, 1>::GetSpectrum() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm);
 }
 
@@ -133,18 +133,18 @@ template<> inline float ImageMapPixel<u_char, 1>::GetAlpha() const {
 }
 
 template<> inline void ImageMapPixel<u_char, 1>::ReverseGammaCorrection(const float gamma) {
-	constexpr u_char maxv = std::numeric_limits<u_char>::max();
-	constexpr float norm = 1.f / maxv;
+	const u_char maxv = std::numeric_limits<u_char>::max();
+	const float norm = 1.f / maxv;
 	c(0) = (u_char)floorf(powf(c(0) * norm, gamma) * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 1>::SetFloat(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 1>::SetSpectrum(const luxrays::Spectrum &v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v.Y() * maxv + .5f);
 }
 
@@ -159,38 +159,38 @@ template<> const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetBlack();
 //------------------------------------------------------------------------------
 
 template<> inline float ImageMapPixel<u_char, 2>::GetFloat() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return c(0) * norm;
 }
 
 template<> inline luxrays::Spectrum ImageMapPixel<u_char, 2>::GetSpectrum() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm);
 }
 
 template<> inline float ImageMapPixel<u_char, 2>::GetAlpha() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return c(1) * norm;
 }
 
 template<> inline void ImageMapPixel<u_char, 2>::ReverseGammaCorrection(const float gamma) {
-	constexpr u_char maxv = std::numeric_limits<u_char>::max();
-	constexpr float norm = 1.f / maxv;
+	const u_char maxv = std::numeric_limits<u_char>::max();
+	const float norm = 1.f / maxv;
 	c(0) = (u_char)floorf(powf(c(0) * norm, gamma) * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 2>::SetFloat(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 2>::SetSpectrum(const luxrays::Spectrum &v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v.Y() * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 2>::SetAlpha(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(1) = (u_char)floorf(v * maxv + .5f);
 }
 
@@ -202,12 +202,12 @@ template<> const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetBlack();
 //------------------------------------------------------------------------------
 
 template<> inline float ImageMapPixel<u_char, 3>::GetFloat() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm, c(1) * norm, c(2) * norm).Y();
 }
 
 template<> inline luxrays::Spectrum ImageMapPixel<u_char, 3>::GetSpectrum() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm, c(1) * norm, c(2) * norm);
 }
 
@@ -216,22 +216,22 @@ template<> inline float ImageMapPixel<u_char, 3>::GetAlpha() const {
 }
 
 template<> inline void ImageMapPixel<u_char, 3>::ReverseGammaCorrection(const float gamma) {
-	constexpr u_char maxv = std::numeric_limits<u_char>::max();
-	constexpr float norm = 1.f / maxv;
+	const u_char maxv = std::numeric_limits<u_char>::max();
+	const float norm = 1.f / maxv;
 	c(0) = (u_char)floorf(powf(c(0) * norm, gamma) * maxv + .5f);
 	c(1) = (u_char)floorf(powf(c(1) * norm, gamma) * maxv + .5f);
 	c(2) = (u_char)floorf(powf(c(2) * norm, gamma) * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 3>::SetFloat(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v * maxv + .5f);
 	c(1) = c(0);
 	c(2) = c(0);
 }
 
 template<> inline void ImageMapPixel<u_char, 3>::SetSpectrum(const luxrays::Spectrum &v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v.c[0] * maxv + .5f);
 	c(1) = (u_char)floorf(v.c[1] * maxv + .5f);
 	c(2) = (u_char)floorf(v.c[2] * maxv + .5f);
@@ -248,44 +248,44 @@ template<> const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetBlack();
 //------------------------------------------------------------------------------
 
 template<> inline float ImageMapPixel<u_char, 4>::GetFloat() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm, c(1) * norm, c(2) * norm).Y();
 }
 
 template<> inline luxrays::Spectrum ImageMapPixel<u_char, 4>::GetSpectrum() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return luxrays::Spectrum(c(0) * norm, c(1) * norm, c(2) * norm);
 }
 
 template<> inline float ImageMapPixel<u_char, 4>::GetAlpha() const {
-	constexpr float norm = 1.f / std::numeric_limits<u_char>::max();
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
 	return c(3) * norm;
 }
 
 template<> inline void ImageMapPixel<u_char, 4>::ReverseGammaCorrection(const float gamma) {
-	constexpr u_char maxv = std::numeric_limits<u_char>::max();
-	constexpr float norm = 1.f / maxv;
+	const u_char maxv = std::numeric_limits<u_char>::max();
+	const float norm = 1.f / maxv;
 	c(0) = (u_char)floorf(powf(c(0) * norm, gamma) * maxv + .5f);
 	c(1) = (u_char)floorf(powf(c(1) * norm, gamma) * maxv + .5f);
 	c(2) = (u_char)floorf(powf(c(2) * norm, gamma) * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 4>::SetFloat(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v * maxv + .5f);
 	c(1) = c(0);
 	c(2) = c(0);
 }
 
 template<> inline void ImageMapPixel<u_char, 4>::SetSpectrum(const luxrays::Spectrum &v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(0) = (u_char)floorf(v.c[0] * maxv + .5f);
 	c(1) = (u_char)floorf(v.c[1] * maxv + .5f);
 	c(2) = (u_char)floorf(v.c[2] * maxv + .5f);
 }
 
 template<> inline void ImageMapPixel<u_char, 4>::SetAlpha(const float v) {
-	constexpr float maxv = std::numeric_limits<u_char>::max();
+	const float maxv = std::numeric_limits<u_char>::max();
 	c(3) = (u_char)floorf(v * maxv + .5f);
 }
 
