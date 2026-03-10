@@ -976,40 +976,47 @@ void PathTracer::ApplyVarianceClamp(const PathTracerThreadState &state,
 }
 
 void PathTracer::RenderSample(PathTracerThreadState &state) const {
-	// Check if I have to trace an eye or light path
-	Sampler *sampler;
-	vector<SampleResult> *sampleResults;
-	if (HasToRenderEyeSample(state)) {
-		// Trace an eye path
-		sampler = state.eyeSampler.get();
-		sampleResults = &state.GetEyeSampleResults();
-	} else {
-		// Trace a light path
-		sampler = state.lightSampler.get();
-		sampleResults = &state.GetLightSampleResults();
-	}
 
-	if (sampler == state.eyeSampler.get())
-		RenderEyeSample(
-			state.device,
-			state.scene,
-			state.GetFilm(),
-			*state.eyeSampler,
-			state.GetEyeSampleResults()
-		);
-	else
-		RenderLightSample(
-			state.device,
-			state.scene,
-			state.GetFilm(),
-			*state.lightSampler,
-			state.GetLightSampleResults()
-		);
+	auto RenderSample = [&]() {
 
-	// Variance clamping
-	ApplyVarianceClamp(state, *sampleResults);
+		// Check if I have to trace an eye or light path
+		if (HasToRenderEyeSample(state)) {
+			// Trace an eye path
+			RenderEyeSample(
+				state.device,
+				state.scene,
+				state.GetFilm(),
+				state.GetEyeSampler(),
+				state.GetEyeSampleResults()
+			);
+			return std::make_tuple(
+				std::ref(state.GetEyeSampler()),
+				std::ref(state.GetEyeSampleResults())
+			);
+		} else {
 
-	sampler->NextSample(*sampleResults);
+			// Otherwise trace a light path
+			RenderLightSample(
+				state.device,
+				state.scene,
+				state.GetFilm(),
+				state.GetLightSampler(),
+				state.GetLightSampleResults()
+			);
+			return std::make_tuple(
+				std::ref(state.GetLightSampler()),
+				std::ref(state.GetLightSampleResults())
+			);
+		}
+	};  // lambda
+
+	// Render sample
+	auto [sampler, sampleResults] = RenderSample();
+
+	// Apply variance clamping
+	ApplyVarianceClamp(state, sampleResults);
+
+	sampler.NextSample(sampleResults);
 }
 
 //------------------------------------------------------------------------------
