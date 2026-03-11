@@ -55,11 +55,10 @@ public:
 			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
 
-	SamplerRef GetEyeSampler() { return *eyeSampler; }
-	SamplerRef GetLightSampler() { return *lightSampler; }
-
 	luxrays::IntersectionDevice *device;
 
+	const SamplerUPtr& eyeSampler;
+	const SamplerUPtr& lightSampler;
 	SceneConstRef scene;
 	FilmRef GetFilm() { return film; }
 	FilmConstRef GetFilm() const { return film; }
@@ -72,8 +71,6 @@ public:
 	double eyeSampleCount, lightSampleCount;
 
 private:
-	const SamplerUPtr& eyeSampler;
-	const SamplerUPtr& lightSampler;
 	FilmRef film;
 	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
 };
