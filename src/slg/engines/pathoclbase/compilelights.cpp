@@ -351,7 +351,7 @@ void CompiledScene::CompileLights() {
 				oclLight->triangle.meshIndex = tl.meshIndex;
 				oclLight->triangle.triangleIndex = tl.triangleIndex;
 
-				auto emissionFunc = tl.lightMaterial->GetEmissionFunc();
+				auto& emissionFunc = tl.lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
 					oclLight->triangle.average = emissionFunc->Average();
 					oclLight->triangle.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(
