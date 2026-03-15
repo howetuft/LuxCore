@@ -53,9 +53,7 @@ Material::Material(TextureConstPtr frontTransp, TextureConstPtr backTransp,
 	UpdateAvgPassThroughTransparency();
 }
 
-Material::~Material() {
-	delete emissionFunc;
-}
+Material::~Material() = default;
 
 void Material::SetEmittedTheta(const float theta) {
 	if (theta <= 0.f) {
@@ -74,9 +72,9 @@ void Material::SetEmittedTheta(const float theta) {
 
 void Material::SetEmissionMap(ImageMapConstRef map) {
 	emissionMap = &map;
-	delete emissionFunc;
+	emissionFunc.reset();
 	if (emissionMap)
-		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
+		emissionFunc = std::make_unique<SampleableSphericalFunction>(new ImageMapSphericalFunction(emissionMap));
 	else
 		emissionFunc = nullptr;
 }

@@ -89,10 +89,10 @@ Spectrum TriangleLight::Emit(SceneConstRef scene,
 
 	Spectrum emissionColor(1.f);
 	Vector localDirOut;
-	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	auto const& emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
 		emissionFunc->Sample(u2, u3, &localDirOut, &emissionPdfW);
-		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
+		emissionColor = static_cast<const SphericalFunction&>(*emissionFunc).Evaluate(localDirOut) / emissionFunc->Average();
 	} else {
 		if (lightMaterial->GetEmittedTheta() == 0.f) {
 			localDirOut = Vector(0.f, 0.f, 1.f);
@@ -190,7 +190,7 @@ Spectrum TriangleLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 	// lightMaterial->Bump(&hitPoint, 1.f);
 
 	const float cosAtLight = Dot(tmpHitPoint.geometryN, -sampleDir);
-	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	const auto& emissionFunc = lightMaterial->GetEmissionFunc();
 
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
 	if (!emissionFunc && (cosAtLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC))
@@ -231,7 +231,7 @@ Spectrum TriangleLight::Illuminate(SceneConstRef scene, const BSDF &bsdf,
 				return Spectrum();
 			*emissionPdfW = emissionFuncPdf * invTriangleArea;
 		}
-		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+		emissionColor = static_cast<const SphericalFunction&>(*emissionFunc).Evaluate(localFromLight) / emissionFunc->Average();
 		
 		directPdfW = invTriangleArea * distanceSquared;
 	} else {
@@ -291,7 +291,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		return Spectrum();
 
 	const float cosOutLight = Dot(hitPoint.shadeN, hitPoint.fixedDir);
-	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	const auto& emissionFunc = lightMaterial->GetEmissionFunc();
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
 	if (!emissionFunc && (cosOutLight < lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
@@ -302,14 +302,14 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 	Spectrum emissionColor(1.f);
 	if (emissionFunc) {
 		const Vector localFromLight = Normalize(hitPoint.GetFrame().ToLocal(hitPoint.fixedDir));
-		
+
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
 			if (emissionFuncPdf == 0.f)
 				return Spectrum();
 			*emissionPdfW = emissionFuncPdf * invTriangleArea;
 		}
-		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+		emissionColor = static_cast<SphericalFunctionConstRef>(*emissionFunc).Evaluate(localFromLight) / emissionFunc->Average();
 	} else {
 		if (emissionPdfW) {
 			if (lightMaterial->GetEmittedTheta() == 0.f)
