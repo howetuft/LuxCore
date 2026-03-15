@@ -49,9 +49,7 @@ bool Camera::GetSamplePosition(const luxrays::Point &p,
 	eyeDir /= eyeDistance;
 
 	Ray eyeRay(lensPoint, eyeDir, 0.f, eyeDistance);
-	ClampRay(&eyeRay);
-	eyeRay.UpdateMinMaxWithEpsilon();
-
+	// Do not clamp the ray here because of the check inside GetSamplePosition
 	return GetSamplePosition(&eyeRay, filmX, filmY);
 }
 
