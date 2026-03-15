@@ -31,41 +31,41 @@
 namespace slg {
 
 DECLARE_SUBTYPES(Camera);
-DECLARE_SUBTYPES(Scene);
-DECLARE_SUBTYPES(SceneObject);
-DECLARE_SUBTYPES(TextureDefinitions);
-DECLARE_SUBTYPES(MaterialDefinitions);
-DECLARE_SUBTYPES(SceneObjectDefinitions);
-DECLARE_SUBTYPES(LightSourceDefinitions);
-DECLARE_SUBTYPES(Shape);
-DECLARE_SUBTYPES(Film);
+DECLARE_SUBTYPES(CPURenderThread);
 DECLARE_SUBTYPES(EditActionList);
-DECLARE_SUBTYPES(ImageMap);
-DECLARE_SUBTYPES(ImageMapStorage);
-DECLARE_SUBTYPES(ImageMapCache);
-DECLARE_SUBTYPES(LightSource);
-DECLARE_SUBTYPES(TriangleLight);
 DECLARE_SUBTYPES(EnvLightSource);
+DECLARE_SUBTYPES(EnvLightVisibilityCache);
+DECLARE_SUBTYPES(Film);
+DECLARE_SUBTYPES(FilmSampleSplatter);
+DECLARE_SUBTYPES(Filter);
+DECLARE_SUBTYPES(FresnelTexture);
+DECLARE_SUBTYPES(ImageMap);
+DECLARE_SUBTYPES(ImageMapCache);
+DECLARE_SUBTYPES(ImageMapStorage);
+DECLARE_SUBTYPES(ImageMapTexture);
+DECLARE_SUBTYPES(LightSource);
+DECLARE_SUBTYPES(LightSourceDefinitions);
 DECLARE_SUBTYPES(LightStrategy);
+DECLARE_SUBTYPES(LightStrategyLogPower);
 DECLARE_SUBTYPES(Material);
+DECLARE_SUBTYPES(MaterialDefinitions);
 DECLARE_SUBTYPES(RenderConfig);
+DECLARE_SUBTYPES(RenderEngine);
 DECLARE_SUBTYPES(RenderSession);
 DECLARE_SUBTYPES(RenderState);
-DECLARE_SUBTYPES(RenderEngine);
+DECLARE_SUBTYPES(Sampler);
+DECLARE_SUBTYPES(SceneObject);
+DECLARE_SUBTYPES(SamplerSharedData);
+DECLARE_SUBTYPES(Scene);
+DECLARE_SUBTYPES(SceneObjectDefinitions);
+DECLARE_SUBTYPES(Shape);
+DECLARE_SUBTYPES(SobolSamplerSharedData);
 DECLARE_SUBTYPES(Texture);
-DECLARE_SUBTYPES(FresnelTexture);
-DECLARE_SUBTYPES(ImageMapTexture);
+DECLARE_SUBTYPES(TextureDefinitions);
 DECLARE_SUBTYPES(TextureMapping2D);
 DECLARE_SUBTYPES(TextureMapping3D);
+DECLARE_SUBTYPES(TriangleLight);
 DECLARE_SUBTYPES(Volume);
-DECLARE_SUBTYPES(Sampler);
-DECLARE_SUBTYPES(SamplerSharedData);
-DECLARE_SUBTYPES(SobolSamplerSharedData);
-DECLARE_SUBTYPES(Filter);
-DECLARE_SUBTYPES(FilmSampleSplatter);
-DECLARE_SUBTYPES(CPURenderThread);
-DECLARE_SUBTYPES(LightStrategyLogPower);
-DECLARE_SUBTYPES(EnvLightVisibilityCache);
 
 }  // namespace slg
 

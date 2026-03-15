@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This file is intended to gather all usings (pointers, refs etc.) for
-// luxrays classes
+// This file is intended to gather all usings (pointers, refs etc.) for luxrays
+// classes. It essentially provides forward declarations, so it can be included
+// with low compilation overcost.
+
 
 #pragma once
 
