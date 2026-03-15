@@ -155,7 +155,7 @@ public:
 
 	void SetEmissionMap(ImageMapConstRef map);
 	ImageMapConstRef GetEmissionMap() const { return *emissionMap; }
-	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
+	SampleableSphericalFunctionRPtr GetEmissionFunc() const { return emissionFunc; }
 
 	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
 	// information to be able to return the correct volume
@@ -277,7 +277,7 @@ protected:
     float bumpSampleDistance;
 
 	ImageMapConstPtr emissionMap;
-	SampleableSphericalFunction *emissionFunc;
+	SampleableSphericalFunctionUPtr emissionFunc;
 
 	VolumeConstPtr interiorVolume, exteriorVolume;
 
