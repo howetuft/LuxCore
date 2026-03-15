@@ -378,12 +378,14 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				0.f,
 				eyeDistance,
 				time);
+			// Do not clamp the ray here because of the check inside ProjectToImage
 			sampleSuccess = scene.GetCamera().ProjectToImage(&eyeRay, &filmX, &filmY);
 		} else {
 			eyeRay = Ray(lensPoint, eyeDir,
 				0.f,
 				eyeDistance,
 				time);
+			// Do not clamp the ray here because of the check inside GetSamplePosition
 			sampleSuccess = scene.GetCamera().GetSamplePosition(&eyeRay, &filmX, &filmY);
 		}
 		if (sampleSuccess) {
@@ -391,6 +393,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
+			scene.GetCamera().ClampRay(&eyeRay); // Clamp the ray here (see comment above)
 			Ray traceRay(lightVertex.bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
 					eyeDistance - eyeRay.maxt,
 					eyeDistance - eyeRay.mint,
