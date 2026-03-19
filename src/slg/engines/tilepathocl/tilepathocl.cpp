@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -50,12 +51,12 @@ TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 }
 
 PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
-	HardwareIntersectionDevice *device) {
+	HardwareIntersectionDeviceRef device) {
 	return new TilePathOCLRenderThread(index, device, this);
 }
 
 PathOCLBaseNativeRenderThread *TilePathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeIntersectionDevice *device) {
+			luxrays::NativeIntersectionDeviceRef device) {
 	return new TilePathNativeRenderThread(index, device, this);
 }
 
@@ -220,8 +221,9 @@ void TilePathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 void TilePathOCLRenderEngine::UpdateCounters() {
 	// Update the ray count statistic
 	double totalCount = 0.0;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+	for (IntersectionDeviceRef dev : intersectionDevices) {
+		totalCount += dev.GetTotalRaysCount();
+	}
 	raysCount = totalCount;
 }
 

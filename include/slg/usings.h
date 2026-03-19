@@ -23,7 +23,6 @@
 
 #include <memory>
 #include "luxrays/usings.h"
-#include "slg/editaction.h"
 
 // Tip:You'll find DECLARE_SUBTYPES definition in luxrays/usings.h
 

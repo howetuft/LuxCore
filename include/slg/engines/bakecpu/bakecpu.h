@@ -20,6 +20,7 @@
 #define	_SLG_BAKECPU_H
 
 #include "slg/slg.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 #include "slg/engines/cpurenderengine.h"
 #include "slg/engines/pathtracer.h"
@@ -52,8 +53,11 @@ class BakeCPURenderEngine;
 
 class BakeCPURenderThread : public CPUNoTileRenderThread {
 public:
-	BakeCPURenderThread(BakeCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+	BakeCPURenderThread(
+		BakeCPURenderEngine *engine,
+		const u_int index,
+		luxrays::IntersectionDeviceRef device
+	);
 
 	friend class BakeCPURenderEngine;
 
@@ -108,8 +112,11 @@ public:
 protected:
 	static luxrays::PropertiesUPtr GetDefaultProps();
 
-	CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
+	CPURenderThreadUPtr NewRenderThread(
+		const u_int index,
+		luxrays::IntersectionDeviceRef device
+	) override
+	{
 		return std::make_unique<BakeCPURenderThread>(this, index, device);
 	}
 

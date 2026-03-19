@@ -53,7 +53,7 @@ public:
 		u_int pageNodeCount = 0;
 		if (mbvh.nRootNodes) {
 			// Check the max. number of vertices I can store in a single page
-			const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+			const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 
 			//------------------------------------------------------------------
 			// Allocate vertex buffers
@@ -254,8 +254,8 @@ public:
 		// Setup the kernel
 		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
 
-		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 		else {
 			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
@@ -309,7 +309,7 @@ void MBVHKernel::UpdateBVHNodes() {
 		device.FreeBuffer(&nodeBuffs[i]);
 	nodeBuffs.resize(0);
 	
-	const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+	const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 	const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 
 	// Check how many pages I have to allocate

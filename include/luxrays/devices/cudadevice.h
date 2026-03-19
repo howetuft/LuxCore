@@ -47,7 +47,7 @@ public:
 	virtual size_t GetMaxMemoryAllocSize() const;
 	virtual bool HasOutOfCoreMemorySupport() const;
 
-	CUdevice GetCUDADevice() { return cudaDevice; }
+	CUdevice GetCUDADevice() const { return cudaDevice; }
 	int GetCUDAComputeCapabilityMajor() const;
 	int GetCUDAComputeCapabilityMinor() const;
 	void SetCUDAUseOptix(const bool v) { useOptix = v; }
@@ -57,7 +57,7 @@ public:
 	friend class CUDADevice;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	static void AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions);
 
 	size_t cudaDeviceIndex;
 	CUdevice cudaDevice;
@@ -164,10 +164,10 @@ protected:
 class CUDADevice : virtual public HardwareDevice {
 public:
 	CUDADevice(const Context & context,
-		CUDADeviceDescription *desc, const size_t devIndex);
+		CUDADeviceDescriptionConstRef desc, const size_t devIndex);
 	virtual ~CUDADevice();
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual const DeviceDescription& GetDeviceDesc() const { return deviceDesc; }
 
 	virtual void PushThreadCurrentDevice();
 	virtual void PopThreadCurrentDevice();
@@ -225,12 +225,12 @@ protected:
 	void AllocBuffer(CUdeviceptr *buff,
 			void *src, const size_t size, const std::string &desc = "");
 
-	CUDADeviceDescription *deviceDesc;
+	CUDADeviceDescriptionConstRef deviceDesc;
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
-	
+
 	luxrays::cudaKernelPersistentCache *kernelCache;
-	
+
 	OptixDeviceContext optixContext;
 };
 

@@ -122,24 +122,24 @@ static const char *LuxCoreVersion() {
 
 static py::list GetOpenCLDeviceList() {
   luxrays::Context ctx;
-  std::vector<luxrays::DeviceDescription *> deviceDescriptions
-	  = ctx.GetAvailableDeviceDescriptions();
+  auto deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
   // Select only OpenCL devices
-  luxrays::DeviceDescription::Filter((luxrays::DeviceType)(luxrays::DEVICE_TYPE_OPENCL_ALL | luxrays::DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
+  luxrays::DeviceDescription::Filter(
+		(luxrays::DeviceType)(luxrays::DEVICE_TYPE_OPENCL_ALL | luxrays::DEVICE_TYPE_CUDA_ALL),
+		deviceDescriptions
+	);
 
   // Add all device information to the list
   py::list l;
-  for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-    luxrays::DeviceDescription *desc = deviceDescriptions[i];
-
+  for (luxrays::DeviceDescriptionRef desc : deviceDescriptions) {
     l.append(py::make_tuple(
-        desc->GetName(),
-        luxrays::DeviceDescription::GetDeviceType(desc->GetType()),
-        desc->GetComputeUnits(),
-        desc->GetNativeVectorWidthFloat(),
-        desc->GetMaxMemory(),
-        desc->GetMaxMemoryAllocSize()));
+        desc.GetName(),
+        luxrays::DeviceDescription::GetDeviceType(desc.GetType()),
+        desc.GetComputeUnits(),
+        desc.GetNativeVectorWidthFloat(),
+        desc.GetMaxMemory(),
+        desc.GetMaxMemoryAllocSize()));
   }
 
   return l;

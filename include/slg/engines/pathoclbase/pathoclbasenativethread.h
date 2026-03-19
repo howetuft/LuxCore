@@ -36,7 +36,7 @@ class PathOCLBaseRenderEngine;
 
 class PathOCLBaseNativeRenderThread {
 public:
-	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeIntersectionDevice *device,
+	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeIntersectionDeviceRef device,
 			PathOCLBaseRenderEngine *re);
 	virtual ~PathOCLBaseNativeRenderThread();
 
@@ -61,7 +61,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLBaseRenderEngine *renderEngine;
-	luxrays::NativeIntersectionDevice *intersectionDevice;
+	luxrays::NativeIntersectionDeviceRef intersectionDevice;
 
 	luxrays::JThreadUPtr renderThread;
 

@@ -43,9 +43,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
-		HardwareIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+		HardwareIntersectionDeviceRef device, PathOCLBaseRenderEngine *re) :
+	intersectionDevice(device)
+{
 	threadIndex = index;
-	intersectionDevice = device;
 	renderEngine = re;
 
 	renderThread = nullptr;
@@ -178,65 +179,65 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeThreadFilmsOCLBuffers();
 
 	// Scene buffers
-	intersectionDevice->FreeBuffer(&materialsBuff);
-	intersectionDevice->FreeBuffer(&materialEvalOpsBuff);
-	intersectionDevice->FreeBuffer(&materialEvalStackBuff);
-	intersectionDevice->FreeBuffer(&texturesBuff);
-	intersectionDevice->FreeBuffer(&textureEvalOpsBuff);
-	intersectionDevice->FreeBuffer(&textureEvalStackBuff);
-	intersectionDevice->FreeBuffer(&meshDescsBuff);
-	intersectionDevice->FreeBuffer(&scnObjsBuff);
-	intersectionDevice->FreeBuffer(&normalsBuff);
-	intersectionDevice->FreeBuffer(&triNormalsBuff);
-	intersectionDevice->FreeBuffer(&uvsBuff);
-	intersectionDevice->FreeBuffer(&colsBuff);
-	intersectionDevice->FreeBuffer(&alphasBuff);
-	intersectionDevice->FreeBuffer(&triAOVBuff);
-	intersectionDevice->FreeBuffer(&trianglesBuff);
-	intersectionDevice->FreeBuffer(&interpolatedTransformsBuff);
-	intersectionDevice->FreeBuffer(&vertsBuff);
-	intersectionDevice->FreeBuffer(&lightsBuff);
-	intersectionDevice->FreeBuffer(&envLightIndicesBuff);
-	intersectionDevice->FreeBuffer(&lightsDistributionBuff);
-	intersectionDevice->FreeBuffer(&infiniteLightSourcesDistributionBuff);
-	intersectionDevice->FreeBuffer(&dlscAllEntriesBuff);
-	intersectionDevice->FreeBuffer(&dlscDistributionsBuff);
-	intersectionDevice->FreeBuffer(&dlscBVHNodesBuff);
-	intersectionDevice->FreeBuffer(&elvcAllEntriesBuff);
-	intersectionDevice->FreeBuffer(&elvcDistributionsBuff);
-	intersectionDevice->FreeBuffer(&elvcTileDistributionOffsetsBuff);
-	intersectionDevice->FreeBuffer(&elvcBVHNodesBuff);
-	intersectionDevice->FreeBuffer(&envLightDistributionsBuff);
-	intersectionDevice->FreeBuffer(&cameraBuff);
-	intersectionDevice->FreeBuffer(&cameraBokehDistributionBuff);
-	intersectionDevice->FreeBuffer(&lightIndexOffsetByMeshIndexBuff);
-	intersectionDevice->FreeBuffer(&lightIndexByTriIndexBuff);
-	intersectionDevice->FreeBuffer(&imageMapDescsBuff);
+	intersectionDevice.FreeBuffer(&materialsBuff);
+	intersectionDevice.FreeBuffer(&materialEvalOpsBuff);
+	intersectionDevice.FreeBuffer(&materialEvalStackBuff);
+	intersectionDevice.FreeBuffer(&texturesBuff);
+	intersectionDevice.FreeBuffer(&textureEvalOpsBuff);
+	intersectionDevice.FreeBuffer(&textureEvalStackBuff);
+	intersectionDevice.FreeBuffer(&meshDescsBuff);
+	intersectionDevice.FreeBuffer(&scnObjsBuff);
+	intersectionDevice.FreeBuffer(&normalsBuff);
+	intersectionDevice.FreeBuffer(&triNormalsBuff);
+	intersectionDevice.FreeBuffer(&uvsBuff);
+	intersectionDevice.FreeBuffer(&colsBuff);
+	intersectionDevice.FreeBuffer(&alphasBuff);
+	intersectionDevice.FreeBuffer(&triAOVBuff);
+	intersectionDevice.FreeBuffer(&trianglesBuff);
+	intersectionDevice.FreeBuffer(&interpolatedTransformsBuff);
+	intersectionDevice.FreeBuffer(&vertsBuff);
+	intersectionDevice.FreeBuffer(&lightsBuff);
+	intersectionDevice.FreeBuffer(&envLightIndicesBuff);
+	intersectionDevice.FreeBuffer(&lightsDistributionBuff);
+	intersectionDevice.FreeBuffer(&infiniteLightSourcesDistributionBuff);
+	intersectionDevice.FreeBuffer(&dlscAllEntriesBuff);
+	intersectionDevice.FreeBuffer(&dlscDistributionsBuff);
+	intersectionDevice.FreeBuffer(&dlscBVHNodesBuff);
+	intersectionDevice.FreeBuffer(&elvcAllEntriesBuff);
+	intersectionDevice.FreeBuffer(&elvcDistributionsBuff);
+	intersectionDevice.FreeBuffer(&elvcTileDistributionOffsetsBuff);
+	intersectionDevice.FreeBuffer(&elvcBVHNodesBuff);
+	intersectionDevice.FreeBuffer(&envLightDistributionsBuff);
+	intersectionDevice.FreeBuffer(&cameraBuff);
+	intersectionDevice.FreeBuffer(&cameraBokehDistributionBuff);
+	intersectionDevice.FreeBuffer(&lightIndexOffsetByMeshIndexBuff);
+	intersectionDevice.FreeBuffer(&lightIndexByTriIndexBuff);
+	intersectionDevice.FreeBuffer(&imageMapDescsBuff);
 
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-		intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
+		intersectionDevice.FreeBuffer(&imageMapsBuff[i]);
 	imageMapsBuff.resize(0);
-	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
-	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsValuesBuff);
-	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
-	intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
-	intersectionDevice->FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);
+	intersectionDevice.FreeBuffer(&pgicRadiancePhotonsBuff);
+	intersectionDevice.FreeBuffer(&pgicRadiancePhotonsValuesBuff);
+	intersectionDevice.FreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
+	intersectionDevice.FreeBuffer(&pgicCausticPhotonsBuff);
+	intersectionDevice.FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);
 
 	// OpenCL task related buffers
-	intersectionDevice->FreeBuffer(&raysBuff);
-	intersectionDevice->FreeBuffer(&hitsBuff);
-	intersectionDevice->FreeBuffer(&taskConfigBuff);
-	intersectionDevice->FreeBuffer(&tasksBuff);
-	intersectionDevice->FreeBuffer(&tasksDirectLightBuff);
-	intersectionDevice->FreeBuffer(&tasksStateBuff);
-	intersectionDevice->FreeBuffer(&samplerSharedDataBuff);
-	intersectionDevice->FreeBuffer(&samplesBuff);
-	intersectionDevice->FreeBuffer(&sampleDataBuff);
-	intersectionDevice->FreeBuffer(&sampleResultsBuff);
-	intersectionDevice->FreeBuffer(&taskStatsBuff);
-	intersectionDevice->FreeBuffer(&eyePathInfosBuff);
-	intersectionDevice->FreeBuffer(&directLightVolInfosBuff);
-	intersectionDevice->FreeBuffer(&pixelFilterBuff);
+	intersectionDevice.FreeBuffer(&raysBuff);
+	intersectionDevice.FreeBuffer(&hitsBuff);
+	intersectionDevice.FreeBuffer(&taskConfigBuff);
+	intersectionDevice.FreeBuffer(&tasksBuff);
+	intersectionDevice.FreeBuffer(&tasksDirectLightBuff);
+	intersectionDevice.FreeBuffer(&tasksStateBuff);
+	intersectionDevice.FreeBuffer(&samplerSharedDataBuff);
+	intersectionDevice.FreeBuffer(&samplesBuff);
+	intersectionDevice.FreeBuffer(&sampleDataBuff);
+	intersectionDevice.FreeBuffer(&sampleResultsBuff);
+	intersectionDevice.FreeBuffer(&taskStatsBuff);
+	intersectionDevice.FreeBuffer(&eyePathInfosBuff);
+	intersectionDevice.FreeBuffer(&directLightVolInfosBuff);
+	intersectionDevice.FreeBuffer(&pixelFilterBuff);
 
 	started = false;
 
@@ -337,7 +338,7 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 	}
 
 	// Reset statistics in order to be more accurate
-	intersectionDevice->ResetPerformaceStats();
+	intersectionDevice.ResetPerformaceStats();
 
 	StartRenderThread();
 }
@@ -368,7 +369,7 @@ void PathOCLBaseOCLRenderThread::ClearThreadFilms() {
 		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 }
 
-void PathOCLBaseOCLRenderThread::TransferThreadFilms(HardwareIntersectionDevice *intersectionDevice) {
+void PathOCLBaseOCLRenderThread::TransferThreadFilms(HardwareIntersectionDeviceRef intersectionDevice) {
 	// Clear all thread films
 	for(ThreadFilmRPtr threadFilm: threadFilms)
 		threadFilm->RecvFilm(intersectionDevice);

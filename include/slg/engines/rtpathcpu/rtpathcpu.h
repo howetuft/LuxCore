@@ -35,7 +35,7 @@ class RTPathCPURenderEngine;
 class RTPathCPURenderThread : public PathCPURenderThread {
 public:
 	RTPathCPURenderThread(RTPathCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 	~RTPathCPURenderThread();
 
 	friend class RTPathCPURenderEngine;
@@ -90,7 +90,7 @@ protected:
 	virtual bool IsRTMode() const { return true; }
 	
 	CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
+			luxrays::IntersectionDeviceRef device) {
 		return std::make_unique<RTPathCPURenderThread>(this, index, device);
 	}
 

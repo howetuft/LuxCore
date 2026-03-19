@@ -50,7 +50,7 @@ class PathOCLBaseRenderEngine;
 
 class PathOCLBaseOCLRenderThread {
 public:
-	PathOCLBaseOCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
+	PathOCLBaseOCLRenderThread(const u_int index, luxrays::HardwareIntersectionDeviceRef device,
 			PathOCLBaseRenderEngine *re);
 	virtual ~PathOCLBaseOCLRenderThread();
 
@@ -75,12 +75,12 @@ public:
 			const u_int threadFilmWidth, const u_int threadFilmHeight,
 			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
-		u_int SetFilmKernelArgs(luxrays::HardwareIntersectionDevice *intersectionDevice,
+		u_int SetFilmKernelArgs(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
 			luxrays::HardwareDeviceKernel *filmClearKernel, u_int argIndex) const;
-		void ClearFilm(luxrays::HardwareIntersectionDevice *intersectionDevice,
+		void ClearFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
 			luxrays::HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize);
-		void RecvFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
-		void SendFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
+		void RecvFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
+		void SendFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 
 		FilmRef GetFilm() { return *film; }
 		FilmConstRef GetFilm() const { return *film; }
@@ -150,7 +150,7 @@ protected:
 
 	void IncThreadFilms();
 	void ClearThreadFilms();
-	void TransferThreadFilms(luxrays::HardwareIntersectionDevice *intersectionDevice);
+	void TransferThreadFilms(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 	void FreeThreadFilmsOCLBuffers();
 	void FreeThreadFilms();
 
@@ -177,7 +177,7 @@ protected:
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
 
-	void CompileKernel(luxrays::HardwareIntersectionDevice *device,
+	void CompileKernel(luxrays::HardwareIntersectionDeviceRef device,
 			luxrays::HardwareDeviceProgram *program,
 			luxrays::HardwareDeviceKernel **kernel,
 			size_t *workGroupSize, const std::string &name);
@@ -186,13 +186,13 @@ protected:
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
 	static void GetKernelParamters(std::vector<std::string> &params,
-			luxrays::HardwareIntersectionDevice *intersectionDevice,
+			luxrays::HardwareIntersectionDeviceRef intersectionDevice,
 			const std::string renderEngineType,
 			const float epsilonMin, const float epsilonMax);
 	static std::string GetKernelSources();
 
 	u_int threadIndex;
-	luxrays::HardwareIntersectionDevice *intersectionDevice;
+	luxrays::HardwareIntersectionDeviceRef intersectionDevice;
 	PathOCLBaseRenderEngine *renderEngine;
 
 	// OpenCL variables

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
 #include "slg/usings.h"
@@ -34,7 +35,7 @@ using namespace slg;
 // PathTracer
 //------------------------------------------------------------------------------
 
-PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
+PathTracerThreadState::PathTracerThreadState(IntersectionDeviceRef dev,
 		const SamplerUPtr& eSampler,
 		const SamplerUPtr& lSampler,
 		SceneConstRef scn, FilmRef flm,
@@ -134,7 +135,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 //------------------------------------------------------------------------------
 
 PathTracer::DirectLightResult PathTracer::DirectLightSampling(
-		luxrays::IntersectionDevice *device, SceneConstRef scene,
+		luxrays::IntersectionDeviceRef device, SceneConstRef scene,
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
@@ -200,7 +201,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					// Create a new PathVolumeInfo for the path to the light source
 					PathVolumeInfo volInfo = pathInfo.volume;
 					// Check if the light source is visible
-					if (!scene.Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+					if (!scene.Intersect(IntersectionDevicePtr(&device), EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
@@ -383,12 +384,12 @@ void PathTracer::GenerateEyeRay(CameraConstRef camera, FilmConstRef film, Ray &e
 // RenderEyePath methods
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderEyePath(IntersectionDevice *device,
+void PathTracer::RenderEyePath(IntersectionDeviceRef device,
 		SceneConstRef scene, Sampler& sampler, EyePathInfo &pathInfo,
 		Ray &eyeRay,  const luxrays::Spectrum &eyeTroughput,
 		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
-	const double deviceRayCount = device->GetTotalRaysCount();
+	const double deviceRayCount = device.GetTotalRaysCount();
 
 	// This is used by light strategy
 	pathInfo.lastShadeN = Normal(eyeRay.d);
@@ -409,7 +410,8 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
 		const float passThrough = sampler.GetSample(sampleOffset);
-		const bool hit = scene.Intersect(device,
+		const bool hit = scene.Intersect(
+				IntersectionDevicePtr(&device),
 				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 				&pathInfo.volume, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -656,7 +658,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 	}
 
-	sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+	sampleResult.rayCount += static_cast<float>(device.GetTotalRaysCount() - deviceRayCount);
 
 	if (sampleResult.isHoldout) {
 		sampleResult.radiance.Clear();
@@ -673,7 +675,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyeSample(
-	IntersectionDevice *device,
+	IntersectionDeviceRef device,
 	SceneConstRef scene, FilmConstRef film,
 	Sampler& sampler,
 	vector<SampleResult> &sampleResults
@@ -702,7 +704,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 	return sampleResult;
 }
 
-void PathTracer::ConnectToEye(IntersectionDevice *device,
+void PathTracer::ConnectToEye(IntersectionDeviceRef device,
 		SceneConstRef scene,
 		FilmConstRef film, const float time,
 		const float u0, const float u1, const float u2,
@@ -713,101 +715,99 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 	if (bsdf.IsCameraInvisible() || bsdf.IsDelta())
 		return;
 
-	// Test if the point-camera connection is valid
 	float filmX, filmY;
 	bool sampleSuccess;
 	Ray eyeRay;
+
 	Vector eyeDir;
 	float eyeDistance = 0;
 	Point lensPoint = pathInfo.lensPoint;
     if (scene.GetCamera().GetType() == Camera::ORTHOGRAPHIC){
-		// Orthographic camera needs to be handled separately,
-		// lensPoint can not be used as a target here
+		// Orthographic camera need to be handled separately,
+		// lensPoint can not be pre-calculated in this case
 		Point p = bsdf.hitPoint.p;
 		eyeDir = scene.GetCamera().GetDir();
 		// calculate distance from vertex to camera plane
 		const float D = -eyeDir.x*lensPoint.x - eyeDir.y*lensPoint.y - eyeDir.z*lensPoint.z;
 		eyeDistance = eyeDir.x*p.x + eyeDir.y*p.y + eyeDir.z*p.z + D;
 		eyeDistance = fabsf(eyeDistance);
+
 		eyeRay = Ray(bsdf.hitPoint.p, eyeDir,
 			0.f,
 			eyeDistance,
 			time);
-		// Do not clamp the ray here because of the check inside ProjectToImage
 		sampleSuccess = scene.GetCamera().ProjectToImage(&eyeRay, &filmX, &filmY);
 	} else {
 		eyeDir = Vector(bsdf.hitPoint.p - lensPoint);
 		eyeDistance = eyeDir.Length();
 		eyeDir /= eyeDistance;
+
 		eyeRay = Ray(lensPoint, eyeDir,
 			0.f,
 			eyeDistance,
 			time);
-		// Do not clamp the ray here because of the check inside GetSamplePosition
 		sampleSuccess = scene.GetCamera().GetSamplePosition(&eyeRay, &filmX, &filmY);
 	}
 
-	if (!sampleSuccess)
-		return;
+	if (sampleSuccess) {
+		BSDFEvent event;
+		const Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
-	// Test if the bsdf evaluates to black
-	BSDFEvent event;
-	const Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+		if (!bsdfEval.Black()) {
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
+					eyeDistance - eyeRay.maxt,
+					eyeDistance - eyeRay.mint,
+					time);
+			traceRay.UpdateMinMaxWithEpsilon();
+			RayHit traceRayHit;
 
-	if (bsdfEval.Black())
-		return;
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			// Create a new PathVolumeInfo for the path to the light source
+			PathVolumeInfo volInfo = pathInfo.volume;
+			if (!scene.Intersect(
+					luxrays::make_observer<IntersectionDevice>(device),
+					LIGHT_RAY | CAMERA_RAY,
+					&volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
 
-	// Trace a shadow ray
-	scene.GetCamera().ClampRay(&eyeRay); // Clamp the ray here (see comment above)
-	// I have to flip the direction of the traced ray because
-	// the information inside PathVolumeInfo are about the path from
-	// the light toward the camera (i.e. ray.o would be in the wrong
-	// place).
-	Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
-			eyeDistance - eyeRay.maxt,
-			eyeDistance - eyeRay.mint,
-			time);
-	traceRay.UpdateMinMaxWithEpsilon();
+				float fluxToRadianceFactor;
+				scene.GetCamera().GetPDF(eyeRay, eyeDistance, filmX, filmY, nullptr, &fluxToRadianceFactor);
 
-	RayHit traceRayHit;
-	BSDF bsdfConn;
-	Spectrum connectionThroughput;
-	PathVolumeInfo volInfo = pathInfo.volume; // I need to use a copy here
-	const bool shadowIntersection = scene.Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-			&connectionThroughput);
+				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
 
-	if (shadowIntersection)
-		return;
-
-	float fluxToRadianceFactor;
-	scene.GetCamera().GetPDF(eyeRay, eyeDistance, filmX, filmY, nullptr, &fluxToRadianceFactor);
-
-	SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
-	sampleResult.filmX = filmX;
-	sampleResult.filmY = filmY;
-
-	sampleResult.pixelX = Floor2UInt(filmX);
-	sampleResult.pixelY = Floor2UInt(filmY);
+				sampleResult.pixelX = Floor2UInt(filmX);
+				sampleResult.pixelY = Floor2UInt(filmY);
 
 #if !defined(NDEBUG)
-	const u_int *subRegion = film.GetSubRegion();
+				const u_int *subRegion = film.GetSubRegion();
 #endif
-	assert (sampleResult.pixelX >= subRegion[0]);
-	assert (sampleResult.pixelX <= subRegion[1]);
-	assert (sampleResult.pixelY >= subRegion[2]);
-	assert (sampleResult.pixelY <= subRegion[3]);
+				assert (sampleResult.pixelX >= subRegion[0]);
+				assert (sampleResult.pixelX <= subRegion[1]);
+				assert (sampleResult.pixelY >= subRegion[2]);
+				assert (sampleResult.pixelY <= subRegion[3]);
 
-	sampleResult.isCaustic = pathInfo.IsCausticPath(event, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold);
+				sampleResult.isCaustic = pathInfo.IsCausticPath(event, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold);
 
-	// Add radiance from the light source
-	sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+				// Add radiance from the light source
+				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
+			}
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
 // RenderLightSample
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderLightSample(IntersectionDevice *device,
+void PathTracer::RenderLightSample(IntersectionDeviceRef device,
 		SceneConstRef scene, FilmConstRef film,
 		Sampler& sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
@@ -857,9 +857,13 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY, &pathInfo.volume, sampler.GetSample(sampleOffset),
-					&nextEventRay, &nextEventRayHit, &bsdf,
-					&connectionThroughput);
+			const bool hit = scene.Intersect(
+				luxrays::make_observer(device),
+				LIGHT_RAY | INDIRECT_RAY,
+				&pathInfo.volume, sampler.GetSample(sampleOffset),
+				&nextEventRay, &nextEventRayHit, &bsdf,
+				&connectionThroughput
+			);
 			if (!hit) {
 				// Ray lost in space...
 				break;

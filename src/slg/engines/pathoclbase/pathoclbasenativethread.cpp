@@ -32,9 +32,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLBaseNativeRenderThread::PathOCLBaseNativeRenderThread(const u_int index,
-		NativeIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+		NativeIntersectionDeviceRef device, PathOCLBaseRenderEngine *re) :
+	intersectionDevice(device)
+{
 	threadIndex = index;
-	intersectionDevice = device;
 	renderEngine = re;
 
 	renderThread = NULL;
@@ -93,7 +94,7 @@ void PathOCLBaseNativeRenderThread::BeginSceneEdit() {
 
 void PathOCLBaseNativeRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Reset statistics in order to be more accurate
-	intersectionDevice->ResetPerformaceStats();
+	intersectionDevice.ResetPerformaceStats();
 
 	StartRenderThread();
 }

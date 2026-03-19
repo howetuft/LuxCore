@@ -43,7 +43,7 @@ public:
 	friend class Context;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	static void AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions);
 };
 
 //------------------------------------------------------------------------------
@@ -52,18 +52,20 @@ protected:
 
 class NativeIntersectionDevice : public IntersectionDevice {
 public:
-	NativeIntersectionDevice(const Context & context,
-			NativeIntersectionDeviceDescription *deviceDesc,
-			const size_t devIndex);
+	NativeIntersectionDevice(
+		const Context & context,
+		NativeIntersectionDeviceDescriptionConstRef deviceDesc,
+		const size_t devIndex
+);
 	virtual ~NativeIntersectionDevice();
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual DeviceDescriptionConstRef GetDeviceDesc() const override { return deviceDesc; }
 
 	virtual void SetDataSet(DataSetSPtr newDataSet);
 
 	friend class Context;
 
-	NativeIntersectionDeviceDescription *deviceDesc;
+	NativeIntersectionDeviceDescriptionConstRef deviceDesc;
 };
 
 }

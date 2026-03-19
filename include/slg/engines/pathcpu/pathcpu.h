@@ -41,7 +41,7 @@ class PathCPURenderEngine;
 class PathCPURenderThread : public CPUNoTileRenderThread {
 public:
 	PathCPURenderThread(PathCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 
 	friend class PathCPURenderEngine;
 
@@ -81,7 +81,7 @@ protected:
 	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
+			luxrays::IntersectionDeviceRef device) {
 		return std::make_unique<PathCPURenderThread>(this, index, device);
 	}
 

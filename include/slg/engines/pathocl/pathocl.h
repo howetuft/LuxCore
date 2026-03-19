@@ -34,7 +34,7 @@ class PathOCLRenderEngine;
 
 class PathOCLOpenCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
-	PathOCLOpenCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
+	PathOCLOpenCLRenderThread(const u_int index, luxrays::HardwareIntersectionDeviceRef device,
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLOpenCLRenderThread();
 
@@ -53,7 +53,7 @@ protected:
 
 class PathOCLNativeRenderThread : public PathOCLBaseNativeRenderThread {
 public:
-	PathOCLNativeRenderThread(const u_int index, luxrays::NativeIntersectionDevice *device,
+	PathOCLNativeRenderThread(const u_int index, luxrays::NativeIntersectionDeviceRef device,
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLNativeRenderThread();
 
@@ -103,9 +103,9 @@ protected:
 	static luxrays::PropertiesUPtr GetDefaultProps();
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::HardwareIntersectionDevice *device);
+			luxrays::HardwareIntersectionDeviceRef device);
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeIntersectionDevice *device);
+			luxrays::NativeIntersectionDeviceRef device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

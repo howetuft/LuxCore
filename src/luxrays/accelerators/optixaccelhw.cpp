@@ -53,7 +53,7 @@ public:
 
 		// Safety checks
 		if (!cudaDevice)
-			throw runtime_error("Used a no CUDA device in OptixKernel::OptixKernel(): " + DeviceDescription::GetDeviceType(dev.GetDeviceDesc()->GetType()));
+			throw runtime_error("Used a no CUDA device in OptixKernel::OptixKernel(): " + DeviceDescription::GetDeviceType(dev.GetDeviceDesc().GetType()));
 		if (!cudaDevice->GetOptixContext())
 			throw runtime_error("No Optix context in OptixKernel::OptixKernel()");
 
@@ -98,8 +98,8 @@ public:
 			// Setup the kernel
 			device.GetKernel(program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
 
-			if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+			if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 			else
 				optixEmptyAccelWorkGroupSize = device.GetKernelWorkGroupSize(optixEmptyAccelKernel); 
 

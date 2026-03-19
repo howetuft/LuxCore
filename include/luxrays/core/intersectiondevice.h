@@ -72,9 +72,10 @@ public:
 
 	friend class Context;
 
+	virtual ~IntersectionDevice();
+
 protected:
 	IntersectionDevice();
-	virtual ~IntersectionDevice();
 
 	virtual void SetDataSet(DataSetSPtr);
 	virtual void Start();
