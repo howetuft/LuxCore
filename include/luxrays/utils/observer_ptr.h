@@ -158,6 +158,14 @@ private:
 };
 
 
+// Maker
+template<typename T>
+inline observer_ptr<T> make_observer(T& obj) {
+	return luxrays::observer_ptr<T>(std::addressof(obj));
+}
+
+
+
 // Free function for dynamic casting observer_ptr<B> to observer_ptr<A>
 template<class T, class U>
 inline observer_ptr<T>
