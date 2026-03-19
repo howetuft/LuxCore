@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
 #include "slg/usings.h"
@@ -34,7 +35,7 @@ using namespace slg;
 // PathTracer
 //------------------------------------------------------------------------------
 
-PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
+PathTracerThreadState::PathTracerThreadState(IntersectionDeviceRef dev,
 		const SamplerUPtr& eSampler,
 		const SamplerUPtr& lSampler,
 		SceneConstRef scn, FilmRef flm,
@@ -134,7 +135,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 //------------------------------------------------------------------------------
 
 PathTracer::DirectLightResult PathTracer::DirectLightSampling(
-		luxrays::IntersectionDevice *device, SceneConstRef scene,
+		luxrays::IntersectionDeviceRef device, SceneConstRef scene,
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
@@ -200,7 +201,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					// Create a new PathVolumeInfo for the path to the light source
 					PathVolumeInfo volInfo = pathInfo.volume;
 					// Check if the light source is visible
-					if (!scene.Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
+					if (!scene.Intersect(IntersectionDevicePtr(&device), EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
@@ -383,12 +384,12 @@ void PathTracer::GenerateEyeRay(CameraConstRef camera, FilmConstRef film, Ray &e
 // RenderEyePath methods
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderEyePath(IntersectionDevice *device,
+void PathTracer::RenderEyePath(IntersectionDeviceRef device,
 		SceneConstRef scene, Sampler& sampler, EyePathInfo &pathInfo,
 		Ray &eyeRay,  const luxrays::Spectrum &eyeTroughput,
 		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
-	const double deviceRayCount = device->GetTotalRaysCount();
+	const double deviceRayCount = device.GetTotalRaysCount();
 
 	// This is used by light strategy
 	pathInfo.lastShadeN = Normal(eyeRay.d);
@@ -409,7 +410,8 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
 		const float passThrough = sampler.GetSample(sampleOffset);
-		const bool hit = scene.Intersect(device,
+		const bool hit = scene.Intersect(
+				IntersectionDevicePtr(&device),
 				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 				&pathInfo.volume, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
@@ -656,7 +658,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 	}
 
-	sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+	sampleResult.rayCount += static_cast<float>(device.GetTotalRaysCount() - deviceRayCount);
 
 	if (sampleResult.isHoldout) {
 		sampleResult.radiance.Clear();
@@ -673,7 +675,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyeSample(
-	IntersectionDevice *device,
+	IntersectionDeviceRef device,
 	SceneConstRef scene, FilmConstRef film,
 	Sampler& sampler,
 	vector<SampleResult> &sampleResults
@@ -702,7 +704,7 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 	return sampleResult;
 }
 
-void PathTracer::ConnectToEye(IntersectionDevice *device,
+void PathTracer::ConnectToEye(IntersectionDeviceRef device,
 		SceneConstRef scene,
 		FilmConstRef film, const float time,
 		const float u0, const float u1, const float u2,
@@ -767,7 +769,10 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 			Spectrum connectionThroughput;
 			// Create a new PathVolumeInfo for the path to the light source
 			PathVolumeInfo volInfo = pathInfo.volume;
-			if (!scene.Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene.Intersect(
+					luxrays::make_observer<IntersectionDevice>(device),
+					LIGHT_RAY | CAMERA_RAY,
+					&volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -802,7 +807,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 // RenderLightSample
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderLightSample(IntersectionDevice *device,
+void PathTracer::RenderLightSample(IntersectionDeviceRef device,
 		SceneConstRef scene, FilmConstRef film,
 		Sampler& sampler, vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
@@ -852,9 +857,13 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY, &pathInfo.volume, sampler.GetSample(sampleOffset),
-					&nextEventRay, &nextEventRayHit, &bsdf,
-					&connectionThroughput);
+			const bool hit = scene.Intersect(
+				luxrays::make_observer(device),
+				LIGHT_RAY | INDIRECT_RAY,
+				&pathInfo.volume, sampler.GetSample(sampleOffset),
+				&nextEventRay, &nextEventRayHit, &bsdf,
+				&connectionThroughput
+			);
 			if (!hit) {
 				// Ray lost in space...
 				break;

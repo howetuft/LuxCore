@@ -21,6 +21,7 @@
 #include <thread>
 #include <cassert>
 
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
@@ -36,7 +37,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 BiDirVMCPURenderThread::BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		BiDirCPURenderThread(engine, index, device) {
 }
 
@@ -188,11 +189,14 @@ void BiDirVMCPURenderThread::RenderFuncVM(std::stop_token stop_token) {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
-				const bool hit = scene.Intersect(device,
-						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
-						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
-						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
-						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);
+				const bool hit = scene.Intersect(
+					IntersectionDevicePtr(&device),
+					EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
+					&eyeVertex.volInfo,
+					sampler->GetSample(sampleOffset),
+					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
+					&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult
+				);
 
 				if (!hit) {
 					// Nothing was hit, look for infinitelight

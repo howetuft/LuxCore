@@ -24,24 +24,27 @@ namespace luxrays {
 // Native Device Description
 //------------------------------------------------------------------------------
 
-void NativeIntersectionDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription *> &descriptions) {
-	descriptions.push_back(new NativeIntersectionDeviceDescription("Native"));
+void NativeIntersectionDeviceDescription::AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions) {
+	descriptions.push_back(
+		std::make_unique<NativeIntersectionDeviceDescription>("Native")
+	);
 }
 
 //------------------------------------------------------------------------------
 // Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-NativeIntersectionDevice::NativeIntersectionDevice(const Context & context,
-		NativeIntersectionDeviceDescription *desc,
-		const size_t devIndex) :
+NativeIntersectionDevice::NativeIntersectionDevice(
+	const Context & context,
+	NativeIntersectionDeviceDescriptionConstRef desc,
+	const size_t devIndex
+) :
 	Device(context, devIndex), deviceDesc(desc) {
 
 	deviceName = std::string("NativeIntersect");
 }
 
-NativeIntersectionDevice::~NativeIntersectionDevice() {
-}
+NativeIntersectionDevice::~NativeIntersectionDevice() = default;
 
 void NativeIntersectionDevice::SetDataSet(DataSetSPtr newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);

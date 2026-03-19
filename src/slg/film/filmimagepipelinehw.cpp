@@ -18,6 +18,8 @@
 
 #include "luxcore/cfg.h"
 
+#include "luxrays/core/device.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/ocldevice.h"
 
 #include "slg/film/film.h"
@@ -68,26 +70,26 @@ void Film::CreateHWContext() {
 	);
 
 	// Select OpenCL device
-	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+	auto descs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_ALL_HARDWARE, descs);
 
-	DeviceDescription *selectedDeviceDesc = nullptr;
+	DeviceDescriptionPtr selectedDeviceDesc = nullptr;
 	if (hwEnable) {
 		if ((hwDeviceIndex >= 0) && (hwDeviceIndex < (int)descs.size())) {
 			// I have to use specific device
-			selectedDeviceDesc = descs[hwDeviceIndex];
+			DeviceDescriptionRef selectedDeviceDescRef = descs[hwDeviceIndex];
+			selectedDeviceDesc = std::addressof(selectedDeviceDescRef);
 		} else if (descs.size() > 0) {
 			// Look for a GPU to use
-			for (size_t i = 0; i < descs.size(); ++i) {
-				DeviceDescription *desc = descs[i];
+			for (DeviceDescriptionRef desc : descs) {
 
-				if (desc->GetType() == DEVICE_TYPE_CUDA_GPU) {
-					selectedDeviceDesc = desc;
+				if (desc.GetType() == DEVICE_TYPE_CUDA_GPU) {
+					selectedDeviceDesc = std::addressof(desc);
 					break;
 
 				}
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU) {
-					selectedDeviceDesc = desc;
+				if (desc.GetType() == DEVICE_TYPE_OPENCL_GPU) {
+					selectedDeviceDesc = std::addressof(desc);
 					// I continue to scan other devices to check if there is a
 					// CUDA one. CUDA is preferred over OpenCL if available.
 				}
@@ -101,23 +103,33 @@ void Film::CreateHWContext() {
 #if !defined(LUXRAYS_DISABLE_CUDA)
 		// Force the Optix usage also on no-RTX GPUs for Optix denoiser plugin
 		if (selectedDeviceDesc->GetType() == DEVICE_TYPE_CUDA_GPU) {
-			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)selectedDeviceDesc;
-			cudaDeviceDesc->SetCUDAUseOptix(true);
+			DeviceDescriptionRef desc = *selectedDeviceDesc;
+			auto& cudaDeviceDesc = dynamic_cast<luxrays::CUDADeviceDescriptionRef>(desc);
+			cudaDeviceDesc.SetCUDAUseOptix(true);
 		}
 #endif
 
 		// Allocate the device
-		vector<luxrays::DeviceDescription *> selectedDeviceDescs;
-		selectedDeviceDescs.push_back(selectedDeviceDesc);
-		vector<HardwareDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
-		hardwareDevice = dynamic_cast<HardwareDevice *>(devs[0]);
-		assert (hardwareDevice);
-		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetDeviceDesc()->GetType()) << ")");
+		DeviceDescriptions selectedDeviceDescs;
+		selectedDeviceDescs.push_back(*selectedDeviceDesc);
+		auto devs = ctx->AddHardwareDevices(selectedDeviceDescs);
+		hardwareDevice = luxrays::make_observer(
+			static_cast<HardwareDeviceRef>(devs[0])
+		);
+		assert(hardwareDevice);
+		SLG_LOG(
+			"Film hardware device used: "
+			<< hardwareDevice->GetName()
+			<< " (Type: "
+			<< DeviceDescription::GetDeviceType(
+				hardwareDevice->GetDeviceDesc().GetType())
+			<< ")"
+		);
 
 		hardwareDevice->PushThreadCurrentDevice();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
+		auto oclDesc = dynamic_observer_cast<OpenCLDeviceDescription>(selectedDeviceDesc);
 		if (oclDesc) {
 			// Check if OpenCL 1.1 is available
 			SLG_LOG("  Device OpenCL version: " << oclDesc->GetOpenCLVersion());
@@ -129,7 +141,7 @@ void Film::CreateHWContext() {
 		}
 #endif
 
-		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
+		if (hardwareDevice->GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL) {
 			// Suggested compiler options: --use_fast_math
 			vector<string> compileOpts;
 			compileOpts.push_back("--use_fast_math");
@@ -137,7 +149,7 @@ void Film::CreateHWContext() {
 			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
 		}
 
-		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+		if (hardwareDevice->GetDeviceDesc().GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
 
 			vector<string> compileOpts;

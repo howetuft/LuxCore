@@ -23,6 +23,9 @@
 #include <cassert>
 #include <boost/format.hpp>
 
+#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bidircpu/bidircpu.h"
@@ -50,7 +53,7 @@ const Film::FilmChannels BiDirCPURenderThread::lightSampleResultsChannels({
 }); 
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
@@ -128,7 +131,7 @@ void BiDirCPURenderThread::AOVWarmUp(
 			// not in any other place)
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device,
+			const bool hit = scene.Intersect(IntersectionDevicePtr(&device),
 					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf,
@@ -293,7 +296,10 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 				lightVertex.bsdf.hitPoint.interiorVolume :
 				lightVertex.bsdf.hitPoint.exteriorVolume
 			);
-			if (!scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY | SHADOW_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
+			if (!scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | INDIRECT_RAY | SHADOW_RAY,
+					&volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -394,7 +400,10 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
-			if (!scene.Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | CAMERA_RAY,
+					&volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -474,8 +483,10 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					Spectrum connectionThroughput;
 					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 					// Check if the light source is visible
-					if (!scene.Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4,
-							&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					if (!scene.Intersect(
+						luxrays::make_observer(device),
+						EYE_RAY | SHADOW_RAY, &volInfo, u4,
+						&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 						// I'm ignoring volume emission because it is not sampled in
 						// direct light step.
 
@@ -642,7 +653,9 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY,
+			const bool hit = scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | INDIRECT_RAY,
 					&lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
 					&connectionThroughput);
@@ -895,7 +908,8 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				const bool hit = scene.Intersect(device,
+				const bool hit = scene.Intersect(
+						luxrays::make_observer(device),
 						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,

@@ -19,8 +19,8 @@
 #ifndef _SLG_CPURENDERENGINE_H
 #define	_SLG_CPURENDERENGINE_H
 
-#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
+#include "luxrays/usings.h"
 
 #include "slg/slg.h"
 #include "slg/engines/renderengine.h"
@@ -36,8 +36,11 @@ class CPURenderEngine;
 
 class CPURenderThread {
 public:
-	CPURenderThread(CPURenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev);
+	CPURenderThread(
+		CPURenderEngine *engine,
+		const u_int index,
+		luxrays::IntersectionDeviceRef dev
+	);
 	virtual ~CPURenderThread();
 
 	virtual void Start();
@@ -50,11 +53,11 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
-	luxrays::IntersectionDevice& GetIntersectionDevice() {
-		return *device;
+	luxrays::IntersectionDeviceRef GetIntersectionDevice() {
+		return device;
 	}
-	const luxrays::IntersectionDevice& GetIntersectionDevice() const {
-		return *device;
+	const luxrays::IntersectionDeviceRef GetIntersectionDevice() const {
+		return device;
 	}
 
 	friend class CPURenderEngine;
@@ -69,7 +72,7 @@ protected:
 	CPURenderEngine *renderEngine;  // Back link
 
 	luxrays::JThreadUPtr renderThread;
-	luxrays::IntersectionDevice *device;
+	luxrays::IntersectionDeviceRef device;
 
 	std::atomic<bool> started, editMode, threadDone;
 };
@@ -89,8 +92,10 @@ public:
 protected:
 	static luxrays::PropertiesUPtr GetDefaultProps();
 
-	virtual CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) = 0;
+	virtual CPURenderThreadUPtr NewRenderThread(
+		const u_int index,
+		luxrays::IntersectionDeviceRef device
+	) = 0;
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -113,7 +118,7 @@ class CPUNoTileRenderEngine;
 class CPUNoTileRenderThread : public CPURenderThread {
 public:
 	CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev);
+			const u_int index, luxrays::IntersectionDeviceRef dev);
 	virtual ~CPUNoTileRenderThread();
 
 	friend class CPUNoTileRenderEngine;
@@ -150,7 +155,7 @@ class CPUTileRenderEngine;
 class CPUTileRenderThread : public CPURenderThread {
 public:
 	CPUTileRenderThread(CPUTileRenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev);
+			const u_int index, luxrays::IntersectionDeviceRef dev);
 	virtual ~CPUTileRenderThread();
 
 	friend class CPUTileRenderEngine;

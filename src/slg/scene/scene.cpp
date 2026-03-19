@@ -663,7 +663,7 @@ void Scene::DeleteLights(std::vector<string> &lightNames) {
 
 //------------------------------------------------------------------------------
 
-bool Scene::Intersect(IntersectionDevice *device,
+bool Scene::Intersect(IntersectionDevicePtr device,
 		const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,

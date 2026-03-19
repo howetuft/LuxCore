@@ -101,11 +101,13 @@ public:
 		return true;
 	}
 
-	const std::vector<luxrays::IntersectionDevice *> &GetIntersectionDevices() const {
+	const std::vector<std::reference_wrapper<luxrays::IntersectionDevice>> &
+	GetIntersectionDevices() const {
 		return intersectionDevices;
 	}
 
-	const std::vector<luxrays::DeviceDescription *> &GetAvailableDeviceDescriptions() const {
+	const std::vector<std::reference_wrapper<luxrays::DeviceDescription>>
+	GetAvailableDeviceDescriptions() const {
 		return ctx->GetAvailableDeviceDescriptions();
 	}
 
@@ -192,8 +194,8 @@ protected:
 
 	std::recursive_mutex engineMutex;
 	luxrays::ContextUPtr ctx;
-	std::vector<luxrays::DeviceDescription *> selectedDeviceDescs;
-	std::vector<luxrays::IntersectionDevice *> intersectionDevices;
+	std::vector<std::reference_wrapper<luxrays::DeviceDescription>> selectedDeviceDescs;
+	std::vector<std::reference_wrapper<luxrays::IntersectionDevice>> intersectionDevices;
 
 	RenderConfigRef renderConfig;
 	FilmPtr film;

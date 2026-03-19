@@ -17,6 +17,9 @@
  ***************************************************************************/
 
 #include "luxrays/core/device.h"
+#include <functional>
+#include <sstream>
+#include <ranges>
 
 using namespace std;
 using namespace luxrays;
@@ -51,21 +54,25 @@ void DeviceDescription::FilterOne(vector<DeviceDescription *> &deviceDescription
 		deviceDescriptions.clear();
 }
 
-void DeviceDescription::Filter(const DeviceType type,
-	vector<DeviceDescription *> &deviceDescriptions) {
+void DeviceDescription::Filter(
+	const DeviceType type,
+	std::vector<std::reference_wrapper<DeviceDescription>> &deviceDescriptions
+) {
 	if (type == DEVICE_TYPE_ALL)
 		return;
 	size_t i = 0;
 	while (i < deviceDescriptions.size()) {
-		if ((deviceDescriptions[i]->GetType() & type) == 0) {
+		DeviceDescriptionRef desc = deviceDescriptions[i];
+		if ((desc.GetType() & type) == 0) {
 			// Remove the device from the list
 			deviceDescriptions.erase(deviceDescriptions.begin() + i);
-		} else
+		} else {
 			++i;
+		}
 	}
 }
 
-string DeviceDescription::GetDeviceType(const DeviceType type) {
+std::string DeviceDescription::GetDeviceType(const DeviceType type) {
 	switch (type) {
 		case DEVICE_TYPE_ALL:
 			return "ALL";
@@ -84,8 +91,30 @@ string DeviceDescription::GetDeviceType(const DeviceType type) {
 		case DEVICE_TYPE_CUDA_GPU:
 			return "CUDA_GPU";
 		default:
-			throw runtime_error("Unknown device type in DeviceDescription::GetDeviceType(): " + ToString(type));
+			throw runtime_error("Unknown device type in DeviceDescription::GetDeviceType(): " + ::ToString(type));
 	}
+}
+
+std::string DeviceDescription::ToString() {
+	std::stringstream ss;
+	ss
+		<< "{"
+		<< "'" << name << "'" << ", "
+		<< GetDeviceType(type)
+		<< "}";
+	return ss.str();
+}
+
+
+std::ostream& luxrays::operator<< (std::ostream& stream, const luxrays::DeviceDescriptions& descriptions) {
+
+	auto toString = std::mem_fn(&DeviceDescription::ToString);
+
+	auto joined = descriptions
+		| std::views::transform(toString)
+		| std::views::join_with(',');
+	std::ranges::copy(joined, std::ostream_iterator<char>(stream));
+	return stream;
 }
 
 //------------------------------------------------------------------------------

@@ -57,7 +57,7 @@ class BiDirCPURenderEngine;
 class BiDirCPURenderThread : public CPUNoTileRenderThread {
 public:
 	BiDirCPURenderThread(BiDirCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 
 	friend class BiDirCPURenderEngine;
 
@@ -177,7 +177,7 @@ protected:
 	SobolSamplerSharedDataSPtr aovWarmupSamplerSharedData;
 
 private:
-	CPURenderThreadUPtr NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
+	CPURenderThreadUPtr NewRenderThread(const u_int index, luxrays::IntersectionDeviceRef device) {
 		return std::make_unique<BiDirCPURenderThread>(this, index, device);
 	}
 };

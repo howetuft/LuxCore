@@ -37,7 +37,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 TilePathNativeRenderThread::TilePathNativeRenderThread(const u_int index,
-	NativeIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	NativeIntersectionDeviceRef device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseNativeRenderThread(index, device, re), tileFilm(nullptr)
 {}
 

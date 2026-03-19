@@ -39,7 +39,7 @@ class LightCPURenderEngine;
 class LightCPURenderThread : public CPUNoTileRenderThread {
 public:
 	LightCPURenderThread(LightCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 
 	friend class LightCPURenderEngine;
 
@@ -85,7 +85,7 @@ protected:
 	virtual void StopLockLess();
 
 	CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
+			luxrays::IntersectionDeviceRef device) {
 		return std::make_unique<LightCPURenderThread>(this, index, device);
 	}
 

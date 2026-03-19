@@ -40,7 +40,7 @@ class TilePathCPURenderEngine;
 class TilePathCPURenderThread : public CPUTileRenderThread {
 public:
 	TilePathCPURenderThread(TilePathCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 
 	friend class TilePathCPURenderEngine;
 
@@ -95,7 +95,7 @@ protected:
 
 private:
 	virtual CPURenderThreadUPtr NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) {
+			luxrays::IntersectionDeviceRef device) {
 		return std::make_unique<TilePathCPURenderThread>(this, index, device);
 	}
 };

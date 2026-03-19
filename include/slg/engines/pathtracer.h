@@ -47,18 +47,20 @@ class VarianceClamping;
 
 class PathTracerThreadState {
 public:
-	PathTracerThreadState(luxrays::IntersectionDevice *device,
-			const SamplerUPtr& eyeSampler,
-			const SamplerUPtr& lightSampler,
-			SceneConstRef scene, FilmRef film,
-			const VarianceClamping *varianceClamping,
-			const bool useFilmSplat = false);
+	PathTracerThreadState(
+		luxrays::IntersectionDeviceRef device,
+		const SamplerUPtr& eyeSampler,
+		const SamplerUPtr& lightSampler,
+		SceneConstRef scene, FilmRef film,
+		const VarianceClamping *varianceClamping,
+		const bool useFilmSplat = false
+	);
 	virtual ~PathTracerThreadState();
 
 	SamplerRef GetEyeSampler() { return *eyeSampler; }
 	SamplerRef GetLightSampler() { return *lightSampler; }
 
-	luxrays::IntersectionDevice *device;
+	luxrays::IntersectionDeviceRef device;
 
 	SceneConstRef scene;
 	FilmRef GetFilm() { return film; }
@@ -105,7 +107,7 @@ public:
 	);
 
 	DirectLightResult DirectLightSampling(
-		luxrays::IntersectionDevice *device, SceneConstRef scene,
+		luxrays::IntersectionDeviceRef device, SceneConstRef scene,
 		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
@@ -114,27 +116,27 @@ public:
 		const bool useBSDFEVal = true) const;
 
 	void RenderEyePath(
-		luxrays::IntersectionDevice *device,
+		luxrays::IntersectionDeviceRef device,
 		SceneConstRef scene,
 		Sampler& sampler,
 		EyePathInfo &pathInfo,
 		luxrays::Ray &eyeRay, const luxrays::Spectrum &eyeTroughput,
 		std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(
-		luxrays::IntersectionDevice *device,
+		luxrays::IntersectionDeviceRef device,
 		SceneConstRef scene, FilmConstRef film,
 		Sampler& sampler,
 		std::vector<SampleResult> &sampleResults) const;
 
 	void RenderLightSample(
-		luxrays::IntersectionDevice *device,
+		luxrays::IntersectionDeviceRef device,
 		SceneConstRef scene,
 		FilmConstRef film,
 		Sampler& sampler,
 		std::vector<SampleResult> &sampleResults,
 		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const;
 	void RenderLightSample(
-		luxrays::IntersectionDevice *device,
+		luxrays::IntersectionDeviceRef device,
 		SceneConstRef scene,
 		FilmConstRef film,
 		Sampler& sampler,
@@ -201,7 +203,7 @@ private:
 
 	// RenderLightSample methods
 
-	void ConnectToEye(luxrays::IntersectionDevice *device,
+	void ConnectToEye(luxrays::IntersectionDeviceRef device,
 			SceneConstRef scene,
 			FilmConstRef film, const float time,
 			const float u0, const float u1, const float u2,

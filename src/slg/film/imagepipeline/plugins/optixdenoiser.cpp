@@ -92,7 +92,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		if (!film.hardwareDevice)
 			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is not enabled");
 
-		cudaDevice = dynamic_cast<CUDADevice *>(film.hardwareDevice);
+		cudaDevice = dynamic_observer_cast<luxrays::CUDADevice>(film.hardwareDevice);
 		if (!cudaDevice)
 			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
 
@@ -121,7 +121,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 				"Optix denoiser state and scratch buffer");
 		cudaDevice->AllocBufferRW(&denoiserTmpBuff, nullptr,
 				3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
-				"Optix denoiser temporary buffer");		
+				"Optix denoiser temporary buffer");
 		if (film.HasChannel(Film::ALBEDO)) {
 			// Allocate ALBEDO and AVG_SHADING_NORMAL temporary buffers
 
@@ -132,7 +132,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 				cudaDevice->AllocBufferRW(&avgShadingNormalTmpBuff, nullptr,
 						3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
 						"Optix denoiser normal temporary buffer");
-			
+
 			// Compile buffer setup kernel
 
 			vector<string> opts;

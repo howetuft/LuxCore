@@ -36,7 +36,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 BakeCPURenderThread::BakeCPURenderThread(BakeCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
@@ -182,7 +182,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			//------------------------------------------------------------------
 
 			// To keep track of the number of rays traced
-			const double deviceRayCount = device->GetTotalRaysCount();
+			const double deviceRayCount = device.GetTotalRaysCount();
 
 			EyePathInfo pathInfo;
 			// I have to set isPassThroughPath to false to avoid problems with the
@@ -199,7 +199,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					pathInfo, 
 					Spectrum(1.f), bsdf, &sampleResult);
 
-			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+			sampleResult.rayCount += (float)(device.GetTotalRaysCount() - deviceRayCount);
 
 			if (bsdf.IsShadowCatcher() && (directLightResult != PathTracer::SHADOWED))
 				sampleResult.alpha = 0.f;
@@ -250,7 +250,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			//--------------------------------------------------------------
 
 			// To keep track of the number of rays traced
-			const double deviceRayCount = device->GetTotalRaysCount();
+			const double deviceRayCount = device.GetTotalRaysCount();
 
 			EyePathInfo pathInfo;
 			// I have to set isPassThroughPath to false to avoid problems with the
@@ -268,7 +268,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					Spectrum(1.f), bsdf, &sampleResult,
 					false);
 
-			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+			sampleResult.rayCount += (float)(device.GetTotalRaysCount() - deviceRayCount);
 
 			if (bsdf.IsShadowCatcher() && (directLightResult != PathTracer::SHADOWED))
 				sampleResult.alpha = 0.f;

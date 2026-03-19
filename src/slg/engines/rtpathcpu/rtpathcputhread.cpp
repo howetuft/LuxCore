@@ -32,7 +32,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathCPURenderThread::RTPathCPURenderThread(RTPathCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device) : 
+			luxrays::IntersectionDeviceRef device) : 
 	PathCPURenderThread(engine, index, device) {
 }
 
