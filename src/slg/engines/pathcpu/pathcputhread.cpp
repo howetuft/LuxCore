@@ -35,7 +35,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		CPUNoTileRenderThread(engine, index, device) {
 }
 

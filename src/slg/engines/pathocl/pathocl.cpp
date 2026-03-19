@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/usings.h"
 #include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -70,12 +71,12 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 }
 
 PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
-    HardwareIntersectionDevice *device) {
+    HardwareIntersectionDeviceRef device) {
     return new PathOCLOpenCLRenderThread(index, device, this);
 }
 
 PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeIntersectionDevice *device) {
+			luxrays::NativeIntersectionDeviceRef device) {
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 
@@ -202,8 +203,8 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 void PathOCLRenderEngine::UpdateCounters() {
 	// Update the ray count statistic
 	double totalCount = 0.0;
-	for (size_t i = 0; i < intersectionDevices.size(); ++i)
-		totalCount += intersectionDevices[i]->GetTotalRaysCount();
+	for (IntersectionDeviceRef dev : intersectionDevices)
+		totalCount += dev.GetTotalRaysCount();
 	raysCount = totalCount;
 }
 
@@ -217,12 +218,12 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;
-		for(DeviceDescription *devDesc: selectedDeviceDescs) {
-			if (devDesc->GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
+		for(DeviceDescription& devDesc: selectedDeviceDescs) {
+			if (devDesc.GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
 				taskCap = Min(taskCap, 256u * 1024u);
-			if (devDesc->GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
+			if (devDesc.GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
 				taskCap = Min(taskCap, 128u * 1024u);
-			if (devDesc->GetMaxMemory() <= 2ull * 1024ull * 1024ull * 1024ull) // For 2GB cards
+			if (devDesc.GetMaxMemory() <= 2ull * 1024ull * 1024ull * 1024ull) // For 2GB cards
 				taskCap = Min(taskCap, 64u * 1024u);
 		}
 

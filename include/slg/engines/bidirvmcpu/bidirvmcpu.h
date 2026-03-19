@@ -99,7 +99,7 @@ private:
 class BiDirVMCPURenderThread : public BiDirCPURenderThread {
 public:
 	BiDirVMCPURenderThread(BiDirVMCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device);
+			luxrays::IntersectionDeviceRef device);
 
 	friend class HashGrid;
 	friend class BiDirVMCPURenderEngine;
@@ -140,7 +140,9 @@ protected:
 	virtual void StartLockLess();
 
 private:
-	CPURenderThreadUPtr NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
+	CPURenderThreadUPtr NewRenderThread(
+		const u_int index, luxrays::IntersectionDeviceRef device
+	) override {
 		return std::make_unique<BiDirVMCPURenderThread>(this, index, device);
 	}
 };

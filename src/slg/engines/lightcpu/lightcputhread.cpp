@@ -30,8 +30,10 @@ using namespace std::literals::chrono_literals;
 // LightCPU RenderThread
 //------------------------------------------------------------------------------
 
-LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+LightCPURenderThread::LightCPURenderThread(
+	LightCPURenderEngine *engine,
+	const u_int index,
+	IntersectionDeviceRef device) :
 		CPUNoTileRenderThread(engine, index, device) {
 }
 

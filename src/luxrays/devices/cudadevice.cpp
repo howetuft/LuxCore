@@ -120,7 +120,7 @@ bool CUDADeviceDescription::HasOutOfCoreMemorySupport() const {
 	return (v == 1);
 }
 
-void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions) {
+void CUDADeviceDescription::AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions) {
 	int devCount;
 	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
 
@@ -128,9 +128,8 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 		CUdevice device;
 		CHECK_CUDA_ERROR(cuDeviceGet(&device, i));
 
-		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i);
+		descriptions.push_back(std::make_unique<CUDADeviceDescription>(device, i));
 
-		descriptions.push_back(desc);
 	}
 }
 
@@ -146,21 +145,23 @@ static void OptixLogCB(u_int level, const char* tag, const char *message, void *
 
 CUDADevice::CUDADevice(
 		const Context & context,
-		CUDADeviceDescription *desc,
+		CUDADeviceDescriptionConstRef desc,
 		const size_t devIndex) :
 		Device(context, devIndex),
 		deviceDesc(desc),
 		cudaContext(nullptr), optixContext(nullptr) {
-	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
+	deviceName = (desc.GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION);
 
-	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+	CHECK_CUDA_ERROR(
+		cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc.GetCUDADevice())
+	);
 
 	// I prefer cache over shared memory because I pretty much never use shared memory
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
-	if (isOptixAvilable && desc->useOptix) {
+	if (isOptixAvilable && desc.useOptix) {
 		OptixDeviceContextOptions optixOptions = {};
 		optixOptions.logCallbackFunction = &OptixLogCB;
 		optixOptions.logCallbackData = (void *)&deviceContext;
@@ -502,15 +503,15 @@ void CUDADevice::AllocBuffer(HardwareDeviceBuffer **hdBuff, const BufferType typ
 				" buffer size: " << ToMemString(size) << ((type & BUFFER_TYPE_OUT_OF_CORE) ? " (OUT OF CORE)" : ""));
 
 	// Check if I was asked for out of core support
-	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc->HasOutOfCoreMemorySupport()) {
-		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc->GetName() << " doesn't support out of core memory buffers: " << desc);
+	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc.HasOutOfCoreMemorySupport()) {
+		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc.GetName() << " doesn't support out of core memory buffers: " << desc);
 	}
 	
 	if (type & BUFFER_TYPE_OUT_OF_CORE) {
 		CHECK_CUDA_ERROR(cuMemAllocManaged(buff, size, CU_MEM_ATTACH_GLOBAL));
 
 		if (type & BUFFER_TYPE_READ_ONLY) {
-			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc->cudaDevice));
+			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc.cudaDevice));
 		}
 	} else {
 		CHECK_CUDA_ERROR(cuMemAlloc(buff, size));

@@ -32,16 +32,18 @@ using namespace slg;
 // CPURenderThread
 //------------------------------------------------------------------------------
 
-CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-		const u_int index, IntersectionDevice *dev) {
-	threadIndex = index;
-	renderEngine = engine;
-	device = dev;
-
-	started = false;
-	editMode = false;
-	threadDone = false;
-}
+CPURenderThread::CPURenderThread(
+	CPURenderEngine *engine,
+	const u_int index,
+	IntersectionDeviceRef dev
+) :
+	device(dev),
+	threadIndex(index),
+	renderEngine(engine),
+	started(false),
+	editMode(false),
+	threadDone(false)
+{}
 
 CPURenderThread::~CPURenderThread() {
 	if (editMode)
@@ -111,9 +113,9 @@ CPURenderEngine::CPURenderEngine(RenderConfigRef cfg) : RenderEngine(cfg) {
 	// Allocate devices
 	//--------------------------------------------------------------------------
 
-	vector<DeviceDescription *>  devDescs = ctx->GetAvailableDeviceDescriptions();
+	auto devDescs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_NATIVE, devDescs);
-	devDescs.resize(1);
+	devDescs.erase(std::next(devDescs.begin()), devDescs.end());  // Keep only 1st
 
 	selectedDeviceDescs.resize(renderThreadCount, devDescs[0]);
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
@@ -200,7 +202,7 @@ PropertiesUPtr CPURenderEngine::GetDefaultProps() {
 //------------------------------------------------------------------------------
 
 CPUNoTileRenderThread::CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
-		const u_int index, IntersectionDevice *dev) : CPURenderThread(engine, index, dev) {
+		const u_int index, IntersectionDeviceRef dev) : CPURenderThread(engine, index, dev) {
 }
 
 CPUNoTileRenderThread::~CPUNoTileRenderThread() {
@@ -263,7 +265,7 @@ luxrays::PropertiesUPtr CPUNoTileRenderEngine::GetDefaultProps() {
 //------------------------------------------------------------------------------
 
 CPUTileRenderThread::CPUTileRenderThread(CPUTileRenderEngine *engine,
-		const u_int index, IntersectionDevice *dev) :
+		const u_int index, IntersectionDeviceRef dev) :
 		CPURenderThread(engine, index, dev) {
 	tileFilm = NULL;
 }

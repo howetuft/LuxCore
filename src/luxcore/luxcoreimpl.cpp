@@ -1984,13 +1984,13 @@ void RenderSessionImpl::UpdateStats() {
 	stats->Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
 
 	// Intersection devices statistics
-	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
+	const auto idevices = renderSession->renderEngine->GetIntersectionDevices();
 
 	std::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
-	for(IntersectionDevice *dev: idevices) {
-		const string &devName = dev->GetName();
+	for(IntersectionDeviceRef dev: idevices) {
+		const string &devName = dev.GetName();
 
 		// Append a device index for the case where the same device is used
 		// multiple times
@@ -2000,18 +2000,22 @@ void RenderSessionImpl::UpdateStats() {
 
 		const string prefix = "stats.renderengine.devices." + uniqueName;
 
-		stats->Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev->GetDeviceDesc()->GetType())));
+		stats->Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev.GetDeviceDesc().GetType())));
 
-		totalPerf += dev->GetTotalPerformance();
-		stats->Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
-		stats->Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
-		stats->Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
+		totalPerf += dev.GetTotalPerformance();
+		stats->Set(Property(prefix + ".performance.total")(dev.GetTotalPerformance()));
+		stats->Set(Property(prefix + ".performance.serial")(dev.GetSerialPerformance()));
+		stats->Set(Property(prefix + ".performance.dataparallel")(dev.GetDataParallelPerformance()));
 
-		auto hardDev = dynamic_cast<const HardwareDevice *>(dev);
-		if (hardDev) {
-			stats->Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
-			stats->Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
-		} else {
+		try {
+			auto& hardDev = dynamic_cast<const HardwareDeviceRef>(dev);
+			stats->Set(Property(prefix + ".memory.total")(
+				static_cast<u_longlong>(hardDev.GetDeviceDesc().GetMaxMemory())
+			));
+			stats->Set(Property(prefix + ".memory.used")(
+				static_cast<u_longlong>(hardDev.GetUsedMemory())
+			));
+		} catch (std::bad_cast&) {
 			stats->Set(Property(prefix + ".memory.total")(0ull));
 			stats->Set(Property(prefix + ".memory.used")(0ull));
 		}

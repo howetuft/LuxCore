@@ -45,7 +45,7 @@ public:
 		size_t maxNodeCount = 0;
 		if (bvh.nNodes) {
 			// Check the max. number of vertices I can store in a single page
-			size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+			size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 
 			const BufferType memTypeFlags = device.GetContext().GetUseOutOfCoreBuffers() ?
 				((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
@@ -210,8 +210,8 @@ public:
 		// Setup the kernel
 		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
 
-		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 		else {
 			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<

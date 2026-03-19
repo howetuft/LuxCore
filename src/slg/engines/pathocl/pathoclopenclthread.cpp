@@ -42,7 +42,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 PathOCLOpenCLRenderThread::PathOCLOpenCLRenderThread(const u_int index,
-		HardwareIntersectionDevice *device, PathOCLRenderEngine *re) :
+		HardwareIntersectionDeviceRef device, PathOCLRenderEngine *re) :
 		PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -85,7 +85,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
 
-	intersectionDevice->PushThreadCurrentDevice();
+	intersectionDevice.PushThreadCurrentDevice();
 
 	//----------------------------------------------------------------------
 	// Execute initialization kernels
@@ -93,16 +93,16 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	// Clear the frame buffer
 	const u_int filmPixelCount = threadFilms[0]->GetFilm().GetWidth() * threadFilms[0]->GetFilm().GetHeight();
-	intersectionDevice->EnqueueKernel(filmClearKernel,
+	intersectionDevice.EnqueueKernel(filmClearKernel,
 		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 		HardwareDeviceRange(filmClearWorkGroupSize));
 
 	// Initialize random number generator seeds
-	intersectionDevice->EnqueueKernel(initSeedKernel,
+	intersectionDevice.EnqueueKernel(initSeedKernel,
 			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// Initialize the tasks buffer
-	intersectionDevice->EnqueueKernel(initKernel,
+	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// Check if I have to load the start film
@@ -151,13 +151,13 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 			threadFilms[0]->RecvFilm(intersectionDevice);
 
 			// Async. transfer of GPU task statistics
-			intersectionDevice->EnqueueReadBuffer(
+			intersectionDevice.EnqueueReadBuffer(
 				taskStatsBuff,
 				CL_FALSE,
 				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
-			intersectionDevice->FinishQueue();
+			intersectionDevice.FinishQueue();
 
 			// I need to update the film samples count
 
@@ -183,14 +183,14 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 		for (u_int i = 0; i < iterations; ++i) {
 			// Trace rays
-			intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
+			intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
 
 			// Advance to next path state
 			EnqueueAdvancePathsKernel();
 		}
 		totalIterations += iterations;
 
-		intersectionDevice->FinishQueue();
+		intersectionDevice.FinishQueue();
 		const double timeKernelEnd = WallClockTime();
 		totalKernelTime += timeKernelEnd - timeKernelStart;
 
@@ -222,7 +222,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 
 	threadFilms[0]->RecvFilm(intersectionDevice);
-	intersectionDevice->FinishQueue();
+	intersectionDevice.FinishQueue();
 	
 	threadDone = true;
 
@@ -232,7 +232,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	if (engine->photonGICache)
 		engine->photonGICache->FinishUpdate(threadIndex);
 	
-	intersectionDevice->PopThreadCurrentDevice();
+	intersectionDevice.PopThreadCurrentDevice();
 }
 
 #endif

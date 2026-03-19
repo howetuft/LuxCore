@@ -94,7 +94,7 @@ public:
 		return v;
 	}
 
-	cl_device_id GetOCLDevice() { return oclDevice; }
+	cl_device_id GetOCLDevice() const { return oclDevice; }
 
 	std::string GetOpenCLVersion() const {
 		size_t valueSize;
@@ -156,7 +156,7 @@ protected:
 
 	static void GetPlatformsList(std::vector<cl_platform_id> &platformsList);
 	static void AddDeviceDescs(const cl_platform_id oclPlatform, const DeviceType filter,
-			std::vector<DeviceDescription *> &descriptions);
+			std::vector<DeviceDescriptionUPtr> &descriptions);
 
 	size_t deviceIndex;
 
@@ -274,11 +274,16 @@ protected:
 
 class OpenCLDevice : virtual public HardwareDevice {
 public:
-	OpenCLDevice(const Context & context,
-		OpenCLDeviceDescription *desc, const size_t devIndex);
+	OpenCLDevice(
+		ContextConstRef context,
+		OpenCLDeviceDescriptionConstRef desc,
+		const size_t devIndex
+	);
 	virtual ~OpenCLDevice();
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual DeviceDescriptionConstRef GetDeviceDesc() const override {
+		return deviceDesc;
+	}
 
 	virtual void PushThreadCurrentDevice() { }
 	virtual void PopThreadCurrentDevice() { }
@@ -329,7 +334,7 @@ protected:
 	void AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 			void *src, const size_t size, const std::string &desc = "");
 
-	OpenCLDeviceDescription *deviceDesc;
+	OpenCLDeviceDescriptionConstRef deviceDesc;
 
 	cl_context oclContext;
 	cl_command_queue oclQueue;

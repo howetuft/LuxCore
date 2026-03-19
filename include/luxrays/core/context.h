@@ -36,6 +36,7 @@
 #define	_LUXRAYS_CONTEXT_H
 
 #include <cstdlib>
+#include <functional>
 #include <sstream>
 #include <ostream>
 
@@ -47,6 +48,7 @@
 namespace luxrays {
 
 typedef void (*LuxRaysDebugHandler)(const char *msg);
+
 
 #define LR_LOG(c, a) { if (c.HasDebugHandler() && c.IsVerbose()) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; c.PrintDebugMsg(_LR_LOG_LOCAL_SS.str().c_str()); } }
 
@@ -97,28 +99,30 @@ public:
 	 *
 	 * \return the vector of all DeviceDescription available.
 	 */
-	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() const;
+	std::vector<std::reference_wrapper<DeviceDescription>>
+	GetAvailableDeviceDescriptions() const;
 
 	/*!
 	 * \brief Return a list of all intersection devices created within the Context.
 	 *
 	 * \return the vector of all IntersectionDevice in the Context.
 	 */
-	const std::vector<IntersectionDevice *> &GetIntersectionDevices() const;
+	const auto& GetIntersectionDevices() const { return idevices; }
+
 
 	/*!
 	 * \brief Return a list of all hardware devices created within the Context.
 	 *
 	 * \return the vector of all HardwareDevice in the Context.
 	 */
-	const std::vector<HardwareDevice *> &GetHardwareDevices() const;
+	const auto& GetHardwareDevices() const { return hdevices; }
 
 	/*!
 	 * \brief Return a list of all devices created within the Context.
 	 *
 	 * \return the vector of all Device in the Context.
 	 */
-	const std::vector<Device *> &GetDevices() const;
+	const std::vector<DeviceUPtr> &GetDevices() const;
 
 	/*!
 	 * \brief Create an IntersectionDevice within the Context.
@@ -127,7 +131,9 @@ public:
 	 *
 	 * \return the vector of all IntersectionDevice created.
 	 */
-	std::vector<IntersectionDevice *> AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDescs);
+	std::vector<std::reference_wrapper<IntersectionDevice>> AddIntersectionDevices(
+		const std::vector<std::reference_wrapper<DeviceDescription>> & deviceDescs
+	);
 
 	/*!
 	 * \brief Create an HardwareDevice within the Context.
@@ -136,7 +142,8 @@ public:
 	 *
 	 * \return the vector of all HardwareDevice created.
 	 */
-	std::vector<HardwareDevice *> AddHardwareDevices(std::vector<DeviceDescription *> &deviceDescs);
+	std::vector<std::reference_wrapper<HardwareDevice>>
+	AddHardwareDevices(const std::vector<std::reference_wrapper<DeviceDescription>> &deviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
@@ -181,24 +188,29 @@ public:
 #endif
 
 private:
-	std::vector<IntersectionDevice *> CreateIntersectionDevices(
-		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
-	std::vector<HardwareDevice *> CreateHardwareDevices(
-		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
+	std::vector<IntersectionDeviceUPtr> CreateIntersectionDevices(
+		const std::vector<std::reference_wrapper<DeviceDescription>> &deviceDesc,
+		const size_t indexOffset
+	);
+	std::vector<HardwareDeviceUPtr> CreateHardwareDevices(
+		const std::vector<std::reference_wrapper<DeviceDescription>> &deviceDesc,
+		const size_t indexOffset
+	);
 
 	PropertiesUPtr cfg;  // Context owns its own properties
 
 	LuxRaysDebugHandler debugHandler;
 
 	DataSetSPtr currentDataSet;
-	std::vector<DeviceDescription *> deviceDescriptions;
+	std::vector<DeviceDescriptionUPtr> deviceDescriptions;  // Owner
 
-	// All intersection devices
-	std::vector<IntersectionDevice *> idevices;
-	// All hardware devices
-	std::vector<HardwareDevice *> hdevices;
-	// All devices (idevices + hdevices)
-	std::vector<Device *> devices;
+	// All intersection devices - Owner container
+	std::vector<std::reference_wrapper<IntersectionDevice>> idevices;
+	// All hardware devices - Owner container
+	std::vector<std::reference_wrapper<HardwareDevice>> hdevices;
+
+	// All devices (idevices + hdevices) - owner container
+	std::vector<DeviceUPtr> devices;
 
 	bool started, verbose, useOutOfCoreBuffers;
 };

@@ -16,6 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/device.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
+#include "luxrays/core/intersectiondevice.h"
+#include <functional>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <cstdio>
@@ -30,6 +34,8 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "luxrays/usings.h"
+#include "luxrays/devices/cudadevice.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/devices/ocldevice.h"
 
@@ -61,7 +67,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 	// Allocate all devices
 	//--------------------------------------------------------------------------
 	
-	vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
+	auto devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Add CUDA devices
@@ -69,19 +75,26 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
 	SLG_LOG("CUDA devices used:");
-	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
-			const CUDADeviceDescription *cudaDesc = dynamic_cast<const CUDADeviceDescription *>(devs[i]->GetDeviceDesc());
-			SLG_LOG("[" << devs[i]->GetName() << " (Optix enabled: " << cudaDesc->GetCUDAUseOptix() << ")]");
-			intersectionDevices.push_back(devs[i]);
+	for (IntersectionDeviceRef dev : devs) {
+		DeviceDescriptionConstRef desc = dev.GetDeviceDesc();
+		if (desc.GetType() & DEVICE_TYPE_CUDA_ALL) {
+			CUDADeviceDescriptionConstRef cudaDesc =
+				dynamic_cast<CUDADeviceDescriptionConstRef>(desc);
+			SLG_LOG(
+				"[" << dev.GetName()
+				<< " (Optix enabled: "
+				<< cudaDesc.GetCUDAUseOptix()
+				<< ")]"
+			);
+			intersectionDevices.push_back(dev);
 
 			// Suggested compiler options: --use_fast_math
-			HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
+			auto& hwDev = dynamic_cast<HardwareDeviceRef>(dev);
 
-			vector<string> compileOpts;
+			std::vector<std::string> compileOpts;
 			compileOpts.push_back("--use_fast_math");
 
-			hwDev->SetAdditionalCompileOpts(compileOpts);
+			hwDev.SetAdditionalCompileOpts(compileOpts);
 		}
 	}
 #endif
@@ -91,30 +104,36 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("OpenCL devices used:");
-	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-			SLG_LOG("[" << devs[i]->GetName() << "]");
-			intersectionDevices.push_back(devs[i]);
+	for (IntersectionDeviceRef dev : devs) {
+		if (dev.GetDeviceDesc().GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			SLG_LOG("[" << dev.GetName() << "]");
+			intersectionDevices.push_back(dev);
 
-			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)oclIntersectionDevice->GetDeviceDesc();
+			auto& oclIntersectionDevice = dynamic_cast<OpenCLIntersectionDeviceRef>(dev);
+			auto& oclDeviceDesc =
+				dynamic_cast<OpenCLDeviceDescriptionConstRef>(
+					oclIntersectionDevice.GetDeviceDesc()
+				);
 
 			// Check if OpenCL 1.1 is available
-			SLG_LOG("  Device OpenCL version: " << oclDeviceDesc->GetOpenCLVersion());
-			if (!oclDeviceDesc->IsOpenCL_1_1()) {
+			SLG_LOG("  Device OpenCL version: " << oclDeviceDesc.GetOpenCLVersion());
+			if (!oclDeviceDesc.IsOpenCL_1_1()) {
 				// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
 				// print a warning instead of throwing an exception
-				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
+				SLG_LOG(
+					"WARNING: OpenCL version 1.1 or better is required. Device "
+					+ dev.GetName() + " may not work."
+				);
 			}
 
 			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
-			HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
+			auto& hwDev = dynamic_cast<HardwareDeviceRef>(dev);
 
-			vector<string> compileOpts;
+			std::vector<std::string> compileOpts;
 			compileOpts.push_back("-cl-fast-relaxed-math");
 			compileOpts.push_back("-cl-mad-enable");
 
-			hwDev->SetAdditionalCompileOpts(compileOpts);
+			hwDev.SetAdditionalCompileOpts(compileOpts);
 		}
 	}
 
@@ -123,11 +142,11 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
-	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_NATIVE)
-			intersectionDevices.push_back(devs[i]);
+	for (IntersectionDeviceRef dev : devs) {
+		if (dev.GetDeviceDesc().GetType() & DEVICE_TYPE_NATIVE)
+			intersectionDevices.push_back(dev);
 	}
-	
+
 	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------
@@ -292,9 +311,16 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	else {
 		// Look for the max. page size allowed
 		maxMemPageSize = std::numeric_limits<size_t>::max();
-		for (u_int i = 0; i < intersectionDevices.size(); ++i) {
-			if (intersectionDevices[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL)
-				maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
+		for (IntersectionDeviceRef idev : intersectionDevices) {
+			if (idev.GetDeviceDesc().GetType() & DEVICE_TYPE_OPENCL_ALL) {
+				auto& desc =
+					dynamic_cast<OpenCLIntersectionDeviceRef>(idev).GetDeviceDesc();
+
+				maxMemPageSize = Min(
+					maxMemPageSize,
+					desc.GetMaxMemoryAllocSize()
+				);
+			}
 		}
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
@@ -339,15 +365,18 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("Starting "<< oclRenderThreadCount << " OpenCL render threads");
 	for (size_t i = 0; i < oclRenderThreadCount; ++i) {
 		if (!renderOCLThreads[i]) {
-			renderOCLThreads[i] = CreateOCLThread(i,
-					(HardwareIntersectionDevice *)(intersectionDevices[i]));
+			IntersectionDeviceRef idev = intersectionDevices[i];
+			renderOCLThreads[i] = CreateOCLThread(
+				i, dynamic_cast<HardwareIntersectionDeviceRef>(idev)
+			);
 		}
 	}
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
-		renderOCLThreads[i]->Start();
-		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	for (auto thread : renderOCLThreads) {
+		auto& idev = thread->intersectionDevice;
+		idev.PushThreadCurrentDevice();
+		thread->Start();
+		idev.PopThreadCurrentDevice();
 	}
 
 	// I know kernels has been compiled at this point
@@ -360,13 +389,15 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("Starting "<< nativeRenderThreadCount << " native render threads");
 	for (size_t i = 0; i < nativeRenderThreadCount; ++i) {
 		if (!renderNativeThreads[i]) {
-			renderNativeThreads[i] = CreateNativeThread(i,
-					(NativeIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
+			IntersectionDeviceRef idev = intersectionDevices[i + oclRenderThreadCount];
+			renderNativeThreads[i] = CreateNativeThread(
+				i,
+				dynamic_cast<NativeIntersectionDeviceRef>(idev));
 		}
 	}
 
-	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
-		renderNativeThreads[i]->Start();
+	for (auto thread : renderNativeThreads)
+		thread->Start();
 }
 
 void PathOCLBaseRenderEngine::StopLockLess() {
@@ -385,9 +416,10 @@ void PathOCLBaseRenderEngine::StopLockLess() {
     }
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
         if (renderOCLThreads[i]) {
-			renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
+			auto& idev = renderOCLThreads[i]->intersectionDevice;
+			idev.PushThreadCurrentDevice();
             renderOCLThreads[i]->Stop();
-			renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+			idev.PopThreadCurrentDevice();
 		}
     }
 
@@ -408,9 +440,9 @@ void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->BeginSceneEdit();
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
+		renderOCLThreads[i]->intersectionDevice.PushThreadCurrentDevice();
 		renderOCLThreads[i]->BeginSceneEdit();
-		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+		renderOCLThreads[i]->intersectionDevice.PopThreadCurrentDevice();
 	}
 }
 
@@ -420,9 +452,9 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	compiledScene->Recompile(editActions);
 
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
+		renderOCLThreads[i]->intersectionDevice.PushThreadCurrentDevice();
 		renderOCLThreads[i]->EndSceneEdit(editActions);
-		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+		renderOCLThreads[i]->intersectionDevice.PopThreadCurrentDevice();
 	}
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->EndSceneEdit(editActions);

@@ -166,6 +166,8 @@ public:
 	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
 
+	virtual ~HardwareDevice();
+
 protected:
 	template <typename T> struct KernelArgumentHandler {
 		static ::size_t Size(const T&) { return sizeof(T); }
@@ -173,7 +175,6 @@ protected:
 	};
 
 	HardwareDevice();
-	virtual ~HardwareDevice();
 	
 	void AllocMemory(const size_t s) { usedMemory += s; }
 	void FreeMemory(const size_t s) { usedMemory -= s; }

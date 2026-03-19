@@ -466,7 +466,7 @@ public:
 
 	luxrays::ContextUPtr ctx;
 	luxrays::DataSetSPtr dataSet;
-	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDevicePtr hardwareDevice;
 
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
 	luxrays::HardwareDeviceBuffer *hw_ALPHA;

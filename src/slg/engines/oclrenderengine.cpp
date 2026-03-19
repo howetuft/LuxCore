@@ -18,8 +18,11 @@
 
 #include "slg/engines/oclrenderengine.h"
 
+#include "luxrays/core/device.h"
+#include "luxrays/devices/cudadevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/thread.h"
+#include <functional>
 #include <memory>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
@@ -55,20 +58,20 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 
 	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
 	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
-	
+
 	useFilmOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.film.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Get OpenCL device descriptions
 	//--------------------------------------------------------------------------
 
-	vector<DeviceDescription *> oclDescs = ctx->GetAvailableDeviceDescriptions();
+	auto oclDescs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, oclDescs);
 
-	vector<DeviceDescription *> cudaDescs = ctx->GetAvailableDeviceDescriptions();
+	auto cudaDescs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, cudaDescs);
 
-	vector<DeviceDescription *> descs;
+	DeviceDescriptions descs;
 	descs.insert(descs.end(), oclDescs.begin(), oclDescs.end());
 	descs.insert(descs.end(), cudaDescs.begin(), cudaDescs.end());
 
@@ -76,41 +79,45 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 	bool haveSelectionString = (oclDeviceConfig.length() > 0);
 	if (haveSelectionString && (oclDeviceConfig.length() != descs.size())) {
 		stringstream ss;
-		ss << "Hardware device selection string has the wrong length, must be " <<
-				descs.size() << " instead of " << oclDeviceConfig.length();
+		ss
+			<< "Hardware device selection string has the wrong length, "
+			<< "must be " << descs.size()
+			<< " (" << descs << ")"
+			<< " instead of " << oclDeviceConfig.length()
+			<< " (" << oclDeviceConfig << ")";
 		throw runtime_error(ss.str().c_str());
 	}
 
 	bool hasCUDADevice = false;
 	size_t cudaDeviceCount = 0;
 	for (size_t i = 0; i < descs.size(); ++i) {
-		DeviceDescription *desc = descs[i];
+		DeviceDescriptionRef desc = descs[i];
 
 		bool selected = false;
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
-					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
-					desc->SetForceWorkGroupSize(forceCPUWorkSize);
+				if (desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
+					desc.SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)
+					desc.SetForceWorkGroupSize(forceCPUWorkSize);
 
 				selectedDeviceDescs.push_back(desc);
 				selected = true;
 			}
 		} else {
-			if ((useCPUs && (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)) ||
-					(useGPUs && desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))) {
-				if (desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
-					desc->SetForceWorkGroupSize(forceGPUWorkSize);
-				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
-					desc->SetForceWorkGroupSize(forceCPUWorkSize);
+			if ((useCPUs && (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)) ||
+					(useGPUs && desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))) {
+				if (desc.GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
+					desc.SetForceWorkGroupSize(forceGPUWorkSize);
+				else if (desc.GetType() & DEVICE_TYPE_OPENCL_CPU)
+					desc.SetForceWorkGroupSize(forceCPUWorkSize);
 
 				selectedDeviceDescs.push_back(desc);
 				selected = true;
 			}
 		}
 
-		if (selected && (desc->GetType() & DEVICE_TYPE_CUDA_ALL)) {
+		if (selected && (desc.GetType() & DEVICE_TYPE_CUDA_ALL)) {
 			hasCUDADevice = true;
 			++cudaDeviceCount;
 		}
@@ -121,22 +128,22 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 		// If there is, at least, a CUDA device available, use only CUDA devices
 		DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, selectedDeviceDescs);
 	}
-	
+
 	// Enable/Disable Optix according cuda.optix.devices.select string
 	if ((cudaDeviceCount > 0) && (cudaOptixDeviceConfig.length() > 0)) {
 		size_t cudaDeviceIndex = 0;
 		for (size_t i = 0; i < descs.size(); ++i) {
-			DeviceDescription *desc = descs[i];
-			
-			if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
-				CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
+			DeviceDescriptionRef desc = descs[i];
+
+			if (desc.GetType() & DEVICE_TYPE_CUDA_ALL) {
+				auto& cudaDesc = dynamic_cast<luxrays::CUDADeviceDescriptionRef>(desc);
 
 				const char &v = cudaOptixDeviceConfig.at(cudaDeviceIndex++);
 
 				if (v == '1') {
-					cudaDesc->SetCUDAUseOptix(true);
+					cudaDesc.SetCUDAUseOptix(true);
 				} else if (v == '0') {
-					cudaDesc->SetCUDAUseOptix(false);
+					cudaDesc.SetCUDAUseOptix(false);
 				} else if (v == 'A') {
 					// Use the default setting
 				}
@@ -157,9 +164,9 @@ OCLRenderEngine::OCLRenderEngine(RenderConfigRef rcfg,
 		// Get native device descriptions
 		//----------------------------------------------------------------------
 
-		vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
+		auto nativeDescs = ctx->GetAvailableDeviceDescriptions();
 		DeviceDescription::Filter(DEVICE_TYPE_NATIVE, nativeDescs);
-		nativeDescs.resize(1);
+		nativeDescs.erase(std::next(nativeDescs.begin()), nativeDescs.end());  // Keep only 1st
 
 		nativeRenderThreadCount = cfg.Get(GetDefaultProps()->Get("opencl.native.threads.count")).Get<u_int>();
 		if (nativeRenderThreadCount > 0)

@@ -87,20 +87,36 @@ void OpenCLDeviceDescription::GetPlatformsList(std::vector<cl_platform_id> &plat
 	CHECK_OCL_ERROR(clGetPlatformIDs(platformsCount, &platformsList[0], nullptr));
 }
 
-void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
-	const DeviceType filter, vector<DeviceDescription *> &descriptions) {
+void OpenCLDeviceDescription::AddDeviceDescs(
+	const cl_platform_id oclPlatform,
+	const DeviceType filter,
+	std::vector<DeviceDescriptionUPtr> &descriptions
+) {
 	// Get the list of devices available on the platform
 	cl_uint deviceCount;
-	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceCount));
-	
-	cl_device_id *devices = (cl_device_id *)alloca(deviceCount * sizeof(cl_device_id));
-	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, deviceCount, devices, nullptr));
+	CHECK_OCL_ERROR(
+		clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceCount)
+	);
+
+	auto devices = std::make_unique<cl_device_id[]>(deviceCount);
+	CHECK_OCL_ERROR(
+		clGetDeviceIDs(
+			oclPlatform,
+			CL_DEVICE_TYPE_ALL,
+			deviceCount,
+			devices.get(),
+			nullptr
+		)
+	);
 
 	// Build the descriptions
 	for (size_t i = 0; i < deviceCount; ++i) {
 		DeviceType devType = GetOCLDeviceType(devices[i]);
-		if (filter & devType)
-			descriptions.push_back(new OpenCLDeviceDescription(devices[i], i));
+		if (filter & devType) {
+			descriptions.push_back(
+				std::make_unique<OpenCLDeviceDescription>(devices[i], i)
+			);
+		}
 	}
 }
 
@@ -109,22 +125,28 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
 //------------------------------------------------------------------------------
 
 OpenCLDevice::OpenCLDevice(
-		const Context & context,
-		OpenCLDeviceDescription *desc,
-		const size_t devIndex) :
-		Device(context, devIndex),
-		deviceDesc(desc), oclContext(nullptr), oclQueue(nullptr) {
-	deviceName = (desc->GetName() + " OpenCLIntersect").c_str();
+	const Context & context,
+	OpenCLDeviceDescriptionConstRef desc,
+	const size_t devIndex
+) :
+	Device(context, devIndex),
+	deviceDesc(desc), oclContext(nullptr), oclQueue(nullptr)
+{
+	deviceName = (desc.GetName() + " OpenCLIntersect").c_str();
 
 	// Check if OpenCL 1.1 is available
-	if (!desc->IsOpenCL_1_1()) {
+	if (!desc.IsOpenCL_1_1()) {
 		// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
 		// print a warning instead of throwing an exception
-		LR_LOG(deviceContext, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
+		LR_LOG(
+			deviceContext,
+			"WARNING: OpenCL version 1.1 or better is required. Device "
+			+ deviceName + " may not work."
+		);
 	}
-	
-	// Allocate a context with the selected device	
-	cl_device_id devices[1] = { desc->GetOCLDevice() };
+
+	// Allocate a context with the selected device
+	cl_device_id devices[1] = { desc.GetOCLDevice() };
 	cl_int error;
 	oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
 	CHECK_OCL_ERROR(error);
@@ -133,7 +155,7 @@ OpenCLDevice::OpenCLDevice(
 }
 
 OpenCLDevice::~OpenCLDevice() {
-	
+
 	if (oclQueue)
 		CHECK_OCL_ERROR(clReleaseCommandQueue(oclQueue));
 	if (oclContext)
@@ -145,7 +167,7 @@ void OpenCLDevice::Start() {
 
 	// Create the OpenCL queue
 	cl_int error;
-	oclQueue = clCreateCommandQueue(oclContext, deviceDesc->GetOCLDevice(), 0, &error);
+	oclQueue = clCreateCommandQueue(oclContext, deviceDesc.GetOCLDevice(), 0, &error);
 	CHECK_OCL_ERROR(error);
 }
 
@@ -190,7 +212,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 
 	bool cached;
 	string error;
-	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc->GetOCLDevice(),
+	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc.GetOCLDevice(),
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
@@ -240,7 +262,7 @@ u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
 	assert (oclDeviceKernel);
 
 	size_t size;
-	CHECK_OCL_ERROR(clGetKernelWorkGroupInfo(oclDeviceKernel->oclKernel, deviceDesc->GetOCLDevice(),
+	CHECK_OCL_ERROR(clGetKernelWorkGroupInfo(oclDeviceKernel->oclKernel, deviceDesc.GetOCLDevice(),
 			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr));
 	
 	return size;
@@ -348,12 +370,12 @@ void OpenCLDevice::FinishQueue() {
 void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 		void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
-	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
+	if (deviceDesc.GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
 		// CL_DEVICE_MAX_MEM_ALLOC_SIZE is lower than the real limit.
 		LR_LOG(deviceContext, "WARNING: the " << desc << " buffer is too big for " << GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				deviceDesc->GetMaxMemoryAllocSize() << ")");
+				deviceDesc.GetMaxMemoryAllocSize() << ")");
 	}
 
 	// Handle the case of an empty buffer
