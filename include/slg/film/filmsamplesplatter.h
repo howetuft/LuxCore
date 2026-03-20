@@ -46,7 +46,7 @@ public:
 	) const;
 
 	// Null singleton instance (do not use nullptr, use this instead)
-	inline const static FilmSampleSplatterUPtr Null;
+	const static FilmSampleSplatterUPtr Null;
 
 	// Make nullptr constructor deleted to control null instance creation
 	// (avoid implicit conversion from : resulting object lifetime can lead to
