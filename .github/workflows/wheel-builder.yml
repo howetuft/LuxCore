@@ -200,19 +200,21 @@ jobs:
             # actually we use recent version of llvm, to get full compatibility
             # with C++20 (in particular: joining threads)
 
+            LLVM_VERSION=20
+
             # llvm
-            brew install llvm@20
-            brew link llvm@20 --overwrite
-            LLVM_PREFIX=$(brew --prefix llvm@20)
+            brew install llvm@${LLVM_VERSION}
+            brew link llvm@${LLVM_VERSION} --overwrite
+            LLVM_PREFIX=$(brew --prefix llvm@${LLVM_VERSION})
             echo "CC=clang" >> $GITHUB_ENV
             echo "CXX=clang++" >> $GITHUB_ENV
             echo "AR=llvm-ar" >> $GITHUB_ENV
             echo "RANLIB=llvm-ranlib" >> $GITHUB_ENV
 
             # lld
-            brew install lld@20
-            brew link lld@20 --overwrite
-            LLD_PREFIX=$(brew --prefix lld@20)
+            brew install lld@${LLVM_VERSION}
+            brew link lld@${LLVM_VERSION} --overwrite
+            LLD_PREFIX=$(brew --prefix lld@${LLVM_VERSION})
 
             # Set paths
             echo "PATH=${LLVM_PREFIX}/bin:${LLD_PREFIX}/bin:$PATH" >> $GITHUB_ENV
