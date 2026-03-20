@@ -200,7 +200,7 @@ jobs:
             # actually we use recent version of llvm, to get full compatibility
             # with C++20 (in particular: joining threads)
 
-            LLVM_VERSION=20
+            LLVM_VERSION=21
 
             # llvm
             brew install llvm@${LLVM_VERSION}
