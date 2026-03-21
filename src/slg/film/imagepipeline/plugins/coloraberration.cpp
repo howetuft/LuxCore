@@ -164,8 +164,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_luxrays_types +
 				luxrays::ocl::KernelSource_utils_funcs +
@@ -177,7 +176,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "ColorAberrationPlugin_Apply");
+		hardwareDevice->GetKernel(*program, &applyKernel, "ColorAberrationPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -193,7 +192,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Copy Kernel");
-		hardwareDevice->GetKernel(program, &copyKernel, "ColorAberrationPlugin_Copy");
+		hardwareDevice->GetKernel(*program, &copyKernel, "ColorAberrationPlugin_Copy");
 
 		// Set kernel arguments
 		argIndex = 0;
@@ -203,8 +202,6 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(copyKernel, argIndex++, hwTmpBuffer);
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[ColorAberrationPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

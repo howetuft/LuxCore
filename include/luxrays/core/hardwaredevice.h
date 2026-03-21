@@ -20,7 +20,9 @@
 #define	_LUXRAYS_HARDWAREDEVICE_H
 
 #include "luxrays/core/device.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/ocl.h"
+#include <functional>
 
 namespace luxrays {
 
@@ -75,6 +77,12 @@ protected:
 
 class HardwareDeviceProgram {
 public:
+    // Prevent copying:
+	// Device programs contain allocated resources which are not trivially
+	// copyable
+    HardwareDeviceProgram(const HardwareDeviceProgram&) = delete;
+    HardwareDeviceProgram& operator=(const HardwareDeviceProgram&) = delete;
+
 	virtual ~HardwareDeviceProgram() { }
 
 	virtual bool IsNull() const = 0;
@@ -82,6 +90,26 @@ public:
 protected:
 	HardwareDeviceProgram() { }
 };
+
+// Create a unique_ptr on a derived type, but with base handler, and
+// provide a reference to the derived managed object
+template <typename Derived>
+std::tuple<HardwareDeviceProgramUPtr, Derived&>
+CreateHDProgram() {
+
+    static_assert(
+		std::is_base_of<HardwareDeviceProgram, Derived>::value,
+		"Derived must be a subclass of Base"
+	);
+	auto derivedProgram = std::make_unique<Derived>();
+	auto derivedProgramRef = std::ref(*derivedProgram);  // We must capture ref before
+														 // derivedProgram is moved...
+	auto baseProgram = static_cast<HardwareDeviceProgramUPtr>(std::move(derivedProgram));
+
+	auto res = std::make_tuple(std::move(baseProgram), derivedProgramRef);
+	return res;
+}
+
 
 //------------------------------------------------------------------------------
 // HardwareDeviceBuffer: a memory region allocated on an hardware device
@@ -118,14 +146,18 @@ public:
 
 	void SetAdditionalCompileOpts(const std::vector<std::string> &opts);
 	const std::vector<std::string> &GetAdditionalCompileOpts();
-	
-	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::vector<std::string> &programParameters, const std::string &programSource,
-			const std::string &programName) = 0;
 
-	virtual void GetKernel(HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			const std::string &kernelName) = 0;
+	virtual HardwareDeviceProgramUPtr CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+	) = 0;
+
+	virtual void GetKernel(
+		HardwareDeviceProgramRef program,
+		HardwareDeviceKernel **kernel,
+		const std::string &kernelName
+	) = 0;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
 
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
@@ -138,7 +170,7 @@ public:
 	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, const T &arg) {
 		SetKernelArg(kernel, index, KernelArgumentHandler<T>::Size(arg), KernelArgumentHandler<T>::Ptr(arg));
 	}
-	
+
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) = 0;

@@ -110,16 +110,13 @@ void VignettingPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				slg::ocl::KernelSource_plugin_vignetting_funcs,
 				"VignettingPlugin");
 
 		SLG_LOG("[VignettingPlugin] Compiling VignettingPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "VignettingPlugin_Apply");
-
-		delete program;
+		hardwareDevice->GetKernel(*program, &applyKernel, "VignettingPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

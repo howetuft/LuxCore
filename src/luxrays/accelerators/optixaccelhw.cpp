@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include "luxrays/core/context.h"
@@ -89,21 +90,18 @@ public:
 				luxrays::ocl::KernelSource_ray_funcs <<
 				luxrays::ocl::KernelSource_optixemptyaccel;
 
-			HardwareDeviceProgram *program = nullptr;
-			device.CompileProgram(&program,
+			auto program = device.CompileProgram(
 					opts,
 					code.str(),
 					"OptixEmptyAccelKernel");
 
 			// Setup the kernel
-			device.GetKernel(program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
+			device.GetKernel(*program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
 
 			if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
 				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 			else
 				optixEmptyAccelWorkGroupSize = device.GetKernelWorkGroupSize(optixEmptyAccelKernel); 
-
-			delete program;
 
 			return;
 		} else

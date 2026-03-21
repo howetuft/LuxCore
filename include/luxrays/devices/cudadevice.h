@@ -176,13 +176,17 @@ public:
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::vector<std::string> &programParameters, const std::string &programSource,
-			const std::string &programName);
+	virtual HardwareDeviceProgramUPtr CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+	) override;
 
-	virtual void GetKernel(HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			const std::string &kernelName);
+	virtual void GetKernel(
+		HardwareDeviceProgramRef program,
+		HardwareDeviceKernel **kernel,
+		const std::string &kernelName
+	) override;
 	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg);

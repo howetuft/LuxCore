@@ -275,8 +275,7 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		if (color)
 			opts.push_back("-D PARAM_CAMERARESPONSE_COLOR");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_color_types +
 				luxrays::ocl::KernelSource_color_funcs +
@@ -288,7 +287,7 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[CameraResponsePlugin] Compiling CameraResponsePlugin_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "CameraResponsePlugin_Apply");
+		hardwareDevice->GetKernel(*program, &applyKernel, "CameraResponsePlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -308,8 +307,6 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		}
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[CameraResponsePlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

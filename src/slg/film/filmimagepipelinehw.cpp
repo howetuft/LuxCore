@@ -238,8 +238,7 @@ void Film::CompileHWKernels() {
 	opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 	opts.push_back("-D SLG_OPENCL_KERNEL");
 
-	HardwareDeviceProgram *program = nullptr;
-	hardwareDevice->CompileProgram(&program,
+	auto program = hardwareDevice->CompileProgram(
 			opts,
 			slg::ocl::KernelSource_film_mergesamplebuffer_funcs,
 			"MergeSampleBuffersOCL");
@@ -249,7 +248,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferInitialize Kernel");
-	hardwareDevice->GetKernel(program, &mergeInitializeKernel, "Film_MergeBufferInitialize");
+	hardwareDevice->GetKernel(*program, &mergeInitializeKernel, "Film_MergeBufferInitialize");
 
 	// Set kernel arguments
 	u_int argIndex = 0;
@@ -262,7 +261,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_PIXEL_NORMALIZED Kernel");
-	hardwareDevice->GetKernel(program, &mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_PIXEL_NORMALIZED");
+	hardwareDevice->GetKernel(*program, &mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_PIXEL_NORMALIZED");
 
 	// Set kernel arguments
 	argIndex = 0;
@@ -277,7 +276,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_SCREEN_NORMALIZED Kernel");
-	hardwareDevice->GetKernel(program, &mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_SCREEN_NORMALIZED");
+	hardwareDevice->GetKernel(*program, &mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_SCREEN_NORMALIZED");
 
 	// Set kernel arguments
 	argIndex = 0;
@@ -292,7 +291,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferFinalize Kernel");
-	hardwareDevice->GetKernel(program, &mergeFinalizeKernel, "Film_MergeBufferFinalize");
+	hardwareDevice->GetKernel(*program, &mergeFinalizeKernel, "Film_MergeBufferFinalize");
 
 	// Set kernel arguments
 	argIndex = 0;
@@ -301,8 +300,6 @@ void Film::CompileHWKernels() {
 	hardwareDevice->SetKernelArg(mergeFinalizeKernel, argIndex++, hw_IMAGEPIPELINE);
 
 	//--------------------------------------------------------------------------
-
-	delete program;
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

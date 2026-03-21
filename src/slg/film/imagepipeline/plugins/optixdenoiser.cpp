@@ -139,17 +139,15 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 			opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 			opts.push_back("-D SLG_OPENCL_KERNEL");
 
-			HardwareDeviceProgram *program = nullptr;
-			cudaDevice->CompileProgram(&program,
+			auto program = cudaDevice->CompileProgram(
 					opts,
 					luxrays::ocl::KernelSource_utils_funcs +
 					slg::ocl::KernelSource_plugin_optixdenoiser_funcs,
 					"OptixDenoiserPlugin");
 
 			SLG_LOG("[OptixDenoiserPlugin] Compiling OptixDenoiserPlugin_BufferSetUp Kernel");
-			cudaDevice->GetKernel(program, &bufferSetUpKernel, "OptixDenoiserPlugin_BufferSetUp");
+			cudaDevice->GetKernel(*program, &bufferSetUpKernel, "OptixDenoiserPlugin_BufferSetUp");
 
-			delete program;
 		}
 
 		CHECK_OPTIX_ERROR(optixDenoiserSetup(denoiserHandle,
