@@ -43,10 +43,11 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
-void PathOCLBaseOCLRenderThread::CompileKernel(HardwareIntersectionDeviceRef device,
-			HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			size_t *workGroupSize, const std::string &name) {
+void PathOCLBaseOCLRenderThread::CompileKernel(
+		HardwareIntersectionDeviceRef device,
+		HardwareDeviceProgramRef program,
+		HardwareDeviceKernel **kernel,
+		size_t *workGroupSize, const std::string &name) {
 	delete *kernel;
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
 	device.GetKernel(program, kernel, name.c_str());
@@ -301,47 +302,46 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
-	HardwareDeviceProgram *program = nullptr;
-	intersectionDevice.CompileProgram(&program, kernelsParameters, kernelSource, "PathOCL kernel");
+	auto program = intersectionDevice.CompileProgram(kernelsParameters, kernelSource, "PathOCL kernel");
 
 	// Film clear kernel
-	CompileKernel(intersectionDevice, program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+	CompileKernel(intersectionDevice, *program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
 
 	// Init kernel
 
-	CompileKernel(intersectionDevice, program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
-	CompileKernel(intersectionDevice, program, &initKernel, &initWorkGroupSize, "Init");
+	CompileKernel(intersectionDevice, *program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
+	CompileKernel(intersectionDevice, *program, &initKernel, &initWorkGroupSize, "Init");
 
 	// AdvancePaths kernel (Micro-Kernels)
 
 	size_t workGroupSize;
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
 			"AdvancePaths_MK_HIT_NOTHING");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
 			"AdvancePaths_MK_HIT_OBJECT");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
 			"AdvancePaths_MK_RT_DL");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
 			"AdvancePaths_MK_DL_ILLUMINATE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
 			"AdvancePaths_MK_DL_SAMPLE_BSDF");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_SPLAT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_NEXT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
+	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
@@ -349,7 +349,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
-	delete program;
 }
 
 void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {

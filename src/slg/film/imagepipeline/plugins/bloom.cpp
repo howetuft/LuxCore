@@ -287,19 +287,19 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_color_types +
 				slg::ocl::KernelSource_plugin_bloom_funcs,
-				"BloomFilterPlugin");
+				"BloomFilterPlugin"
+		);
 
 		//----------------------------------------------------------------------
 		// BloomFilterPlugin_FilterX kernel
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterX Kernel");
-		hardwareDevice->GetKernel(program, &bloomFilterXKernel, "BloomFilterPlugin_FilterX");
+		hardwareDevice->GetKernel(*program, &bloomFilterXKernel, "BloomFilterPlugin_FilterX");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -316,7 +316,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterY Kernel");
-		hardwareDevice->GetKernel(program, &bloomFilterYKernel, "BloomFilterPlugin_FilterY");
+		hardwareDevice->GetKernel(*program, &bloomFilterYKernel, "BloomFilterPlugin_FilterY");
 
 		// Set kernel arguments
 		argIndex = 0;
@@ -333,7 +333,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_Merge Kernel");
-		hardwareDevice->GetKernel(program, &bloomFilterMergeKernel, "BloomFilterPlugin_Merge");
+		hardwareDevice->GetKernel(*program, &bloomFilterMergeKernel, "BloomFilterPlugin_Merge");
 
 		// Set kernel arguments
 		argIndex = 0;
@@ -344,8 +344,6 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[BloomFilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

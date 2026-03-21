@@ -62,6 +62,7 @@ DECLARE_SUBTYPES(DataSet);
 DECLARE_SUBTYPES(Device);
 DECLARE_SUBTYPES(DeviceDescription);
 DECLARE_SUBTYPES(HardwareDevice);
+DECLARE_SUBTYPES(HardwareDeviceProgram);
 DECLARE_SUBTYPES(HardwareIntersectionDevice)
 DECLARE_SUBTYPES(IntersectionDevice)
 DECLARE_SUBTYPES(Mesh);
@@ -75,6 +76,7 @@ DECLARE_SUBTYPES(NativeIntersectionDevice)
 DECLARE_SUBTYPES(NativeIntersectionDeviceDescription);
 DECLARE_SUBTYPES(Normal);
 DECLARE_SUBTYPES(OpenCLDeviceDescription);
+DECLARE_SUBTYPES(OpenCLDeviceProgram);
 DECLARE_SUBTYPES(OpenCLIntersectionDevice);
 DECLARE_SUBTYPES(Point);
 DECLARE_SUBTYPES(Ray);

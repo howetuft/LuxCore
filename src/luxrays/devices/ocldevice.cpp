@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -185,10 +187,11 @@ void OpenCLDevice::Stop() {
 // Kernels handling for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
-		const vector<string> &programParameters, const string &programSource,	
-		const string &programName) {
-	vector <string> oclProgramParameters = programParameters;
+HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
+	const vector<string> &programParameters, const string &programSource,	
+	const string &programName
+) {
+	std::vector <std::string> oclProgramParameters = programParameters;
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
 #if defined (__APPLE__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
@@ -197,14 +200,14 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 #elif defined (__linux__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
-	
+
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache.get())->GetApplicationName()));
-        
+
 
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
@@ -227,28 +230,37 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
 	}
 
-	if (!*program)
-		*program = new OpenCLDeviceProgram();
-	
-	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(*program);
-	assert (oclDeviceProgram);
+	//auto program = std::make_unique<OpenCLDeviceProgram>();
+	//auto program = static_cast<HardwareDeviceProgramUPtr>(std::move(program));
 
-	oclDeviceProgram->Set(oclProgram);
+	//auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(*program);
+
+	auto [program, oclDeviceProgram] = CreateHDProgram<OpenCLDeviceProgram>();
+
+	// Just to be sure...
+	static_assert(std::is_same_v<decltype(oclDeviceProgram), OpenCLDeviceProgramRef>);
+	static_assert(std::is_same_v<decltype(program), HardwareDeviceProgramUPtr>);
+
+	oclDeviceProgram.Set(oclProgram);
+
+	return program;
 }
 
-void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
-		HardwareDeviceKernel **kernel, const string &kernelName) {
+void OpenCLDevice::GetKernel(
+	HardwareDeviceProgramRef program,
+	HardwareDeviceKernel **kernel,
+	const string &kernelName
+) {
 	if (!*kernel)
 		*kernel = new OpenCLDeviceKernel();
-	
+
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(*kernel);
 	assert (oclDeviceKernel);
 
-	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(program);
-	assert (oclDeviceProgram);
+	auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(program);
 
 	cl_int error;
-	cl_kernel k = clCreateKernel(oclDeviceProgram->Get(), kernelName.c_str(), &error);
+	cl_kernel k = clCreateKernel(oclDeviceProgram.Get(), kernelName.c_str(), &error);
 	CHECK_OCL_ERROR(error);
 
 	oclDeviceKernel->Set(k);

@@ -245,14 +245,14 @@ public:
 			luxrays::ocl::KernelSource_bvhbuild_types <<
 			luxrays::ocl::KernelSource_mbvh;
 
-		HardwareDeviceProgram *program = nullptr;
-		device.CompileProgram(&program,
-				opts,
-				code.str(),
-				"MBVHKernel");
+		auto program = device.CompileProgram(
+			opts,
+			code.str(),
+			"MBVHKernel"
+		);
 
 		// Setup the kernel
-		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
+		device.GetKernel(*program, &kernel, "Accelerator_Intersect_RayBuffer");
 
 		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
 			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
@@ -264,8 +264,6 @@ public:
 
 		// Set kernel arguments
 		SetIntersectionKernelArgs();
-
-		delete program;
 	}
 
 	virtual ~MBVHKernel() {

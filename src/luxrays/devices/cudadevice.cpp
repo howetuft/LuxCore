@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 
@@ -240,10 +242,12 @@ string CUDADevice::GetKernelSource(const string &kernelSource) {
 		kernelSource;
 }
 
-void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
-		const vector<string> &programParameters, const string &programSource,	
-		const string &programName) {
-	vector<string> cudaProgramParameters = AddKernelOpts(programParameters);
+HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+) {
+	auto cudaProgramParameters = AddKernelOpts(programParameters);
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
@@ -256,7 +260,7 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	CUmodule module = kernelCache->Compile(cudaProgramParameters, cudaProgramSource, programName, &cached, &error);
 	if (!module) {
 		LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation error: " << endl << error);
-		
+
 		throw runtime_error(programName + " CUDA program compilation error");
 	} else {
 		if (error.length() > 0) {
@@ -269,32 +273,36 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	} else {
 		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
 	}
-	
-	if (!*program)
-		*program = new CUDADeviceProgram();
-	
-	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(*program);
-	assert (cudaDeviceProgram);
+
+	//if (!*program)
+		//*program = new CUDADeviceProgram();
+	auto cudaDeviceProgram = std::make_unique<CUDADeviceProgram>();
 
 	cudaDeviceProgram->Set(module);
-	
+
 	loadedModules.push_back(module);
+
+	return static_cast<HardwareDeviceProgramUPtr>(std::move(cudaDeviceProgram));
 }
 
-void CUDADevice::GetKernel(HardwareDeviceProgram *program,
-		HardwareDeviceKernel **kernel, const string &kernelName) {
+void CUDADevice::GetKernel(
+		HardwareDeviceProgramRef program,
+		HardwareDeviceKernel **kernel, const string &kernelName
+) {
 	if (!*kernel)
 		*kernel = new CUDADeviceKernel();
 
 	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(*kernel);
 	assert (cudaDeviceKernel);
 
-	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(program);
-	assert (cudaDeviceProgram);
+	auto& cudaDeviceProgram = dynamic_cast<CUDADeviceProgram&>(program);
 
 	CUfunction function;
-	CHECK_CUDA_ERROR(cuModuleGetFunction(&function, cudaDeviceProgram->GetModule(), kernelName.c_str()));
-	
+	CHECK_CUDA_ERROR(
+		cuModuleGetFunction(
+			&function, cudaDeviceProgram.GetModule(), kernelName.c_str())
+		);
+
 	cudaDeviceKernel->Set(function);
 }
 

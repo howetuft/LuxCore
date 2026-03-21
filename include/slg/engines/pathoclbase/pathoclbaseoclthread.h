@@ -178,7 +178,7 @@ protected:
 	void SetKernelArgs();
 
 	void CompileKernel(luxrays::HardwareIntersectionDeviceRef device,
-			luxrays::HardwareDeviceProgram *program,
+			luxrays::HardwareDeviceProgramRef program,
 			luxrays::HardwareDeviceKernel **kernel,
 			size_t *workGroupSize, const std::string &name);
 
