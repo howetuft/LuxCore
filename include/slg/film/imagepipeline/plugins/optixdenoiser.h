@@ -77,7 +77,7 @@ private:
 	luxrays::HardwareDeviceBuffer *albedoTmpBuff;
 	luxrays::HardwareDeviceBuffer *avgShadingNormalTmpBuff;
 
-	luxrays::HardwareDeviceKernel *bufferSetUpKernel;
+	luxrays::HardwareDeviceKernelUPtr bufferSetUpKernel;
 };
 
 }

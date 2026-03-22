@@ -49,8 +49,6 @@ GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSiz
 }
 
 GammaCorrectionPlugin::~GammaCorrectionPlugin() {
-	delete applyKernel;
-
 	if (hardwareDevice)
 		hardwareDevice->FreeBuffer(&hwGammaTable);
 }
@@ -125,7 +123,7 @@ void GammaCorrectionPlugin::ApplyHW(Film &film, const u_int index) {
 				"GammaCorrectionPlugin");
 
 		SLG_LOG("[GammaCorrectionPlugin] Compiling GammaCorrectionPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "GammaCorrectionPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "GammaCorrectionPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

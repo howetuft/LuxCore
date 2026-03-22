@@ -182,24 +182,23 @@ public:
 		const std::string &programName
 	) override;
 
-	virtual void GetKernel(
+	virtual HardwareDeviceKernelUPtr GetKernel(
 		HardwareDeviceProgramRef program,
-		HardwareDeviceKernel **kernel,
 		const std::string &kernelName
 	) override;
-	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
-	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
-			const u_int index, const size_t size, const void *arg);
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
+	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
+			const u_int index, const size_t size, const void *arg) override;
 
-	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize);
+			const HardwareDeviceRange &workGroupSize) override;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr);
+			const bool blocking, const size_t size, void *ptr) override;
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr);
-	virtual void FlushQueue();
-	virtual void FinishQueue();
+			const bool blocking, const size_t size, const void *ptr) override;
+	virtual void FlushQueue() override;
+	virtual void FinishQueue() override;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
@@ -223,8 +222,10 @@ public:
 	friend class Context;
 
 protected:
-	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
-		const u_int index, const HardwareDeviceBuffer *buff);
+	virtual void SetKernelArgBuffer(
+		HardwareDeviceKernelRPtr kernel,
+		const u_int index, const HardwareDeviceBuffer *buff
+	) override;
 
 	void AllocBuffer(CUdeviceptr *buff,
 			void *src, const size_t size, const std::string &desc = "");

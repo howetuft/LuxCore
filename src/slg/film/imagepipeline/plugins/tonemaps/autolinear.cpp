@@ -45,10 +45,6 @@ AutoLinearToneMap::AutoLinearToneMap() {
 }
 
 AutoLinearToneMap::~AutoLinearToneMap() {
-	delete opRGBValuesReduceKernel;
-	delete opRGBValueAccumulateKernel;
-	delete applyKernel;
-
 	if (hardwareDevice)
 		hardwareDevice->FreeBuffer(&hwAccumBuffer);
 }
@@ -142,11 +138,11 @@ void AutoLinearToneMap::ApplyHW(Film &film, const u_int index) {
 				"AutoLinearToneMap");
 
 		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValuesReduce Kernel");
-		hardwareDevice->GetKernel(*program, &opRGBValuesReduceKernel, "OpRGBValuesReduce");
+		opRGBValuesReduceKernel = hardwareDevice->GetKernel(*program, "OpRGBValuesReduce");
 		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValueAccumulate Kernel");
-		hardwareDevice->GetKernel(*program, &opRGBValueAccumulateKernel, "OpRGBValueAccumulate");
+		opRGBValueAccumulateKernel = hardwareDevice->GetKernel(*program, "OpRGBValueAccumulate");
 		SLG_LOG("[AutoLinearToneMap] Compiling AutoLinearToneMap_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "AutoLinearToneMap_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "AutoLinearToneMap_Apply");
 
 
 		// Set kernel arguments

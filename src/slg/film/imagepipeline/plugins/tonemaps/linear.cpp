@@ -46,7 +46,6 @@ LinearToneMap::LinearToneMap(const float s) {
 }
 
 LinearToneMap::~LinearToneMap() {
-	delete applyKernel;
 }
 
 //------------------------------------------------------------------------------
@@ -99,7 +98,7 @@ void LinearToneMap::ApplyHW(Film &film, const u_int index) {
 				"LinearToneMap");
 
 		SLG_LOG("[AutoLinearToneMap] Compiling LinearToneMap_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "LinearToneMap_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "LinearToneMap_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

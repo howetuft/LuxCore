@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/usings.h"
+#include <limits>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <mutex>
@@ -43,21 +45,26 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
-void PathOCLBaseOCLRenderThread::CompileKernel(
+std::tuple<HardwareDeviceKernelUPtr, size_t>
+PathOCLBaseOCLRenderThread::CompileKernel(
 		HardwareIntersectionDeviceRef device,
 		HardwareDeviceProgramRef program,
-		HardwareDeviceKernel **kernel,
-		size_t *workGroupSize, const std::string &name) {
-	delete *kernel;
+		const std::string &name
+) {
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
-	device.GetKernel(program, kernel, name.c_str());
+	size_t workGroupSize;
+	auto kernel = device.GetKernel(program, name.c_str());
 
-	if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
-		*workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
-	else {
-		*workGroupSize = device.GetKernelWorkGroupSize(*kernel);
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << name << " workgroup size: " << *workGroupSize);
+	if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0) {
+		workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 	}
+	else {
+		workGroupSize = device.GetKernelWorkGroupSize(kernel);
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] "
+				<< name << " workgroup size: " << workGroupSize);
+	}
+
+	return std::make_tuple(std::move(kernel), workGroupSize);
 }
 
 void PathOCLBaseOCLRenderThread::GetKernelParamters(
@@ -304,47 +311,48 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	auto program = intersectionDevice.CompileProgram(kernelsParameters, kernelSource, "PathOCL kernel");
 
-	// Film clear kernel
-	CompileKernel(intersectionDevice, *program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+	std::tuple<HardwareDeviceKernelUPtr&, size_t&, const char *>
+	kernels[] = {
+		{filmClearKernel, filmClearWorkGroupSize, "Film_Clear"},
+		{initSeedKernel, initWorkGroupSize, "InitSeed"},
+		{initKernel, initWorkGroupSize, "Init"},
+	};
 
-	// Init kernel
+	for (auto& [kernel, workGroupSize, name] : kernels) {
+		std::tie(kernel, workGroupSize) = CompileKernel(intersectionDevice, *program, name);
+	}
 
-	CompileKernel(intersectionDevice, *program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
-	CompileKernel(intersectionDevice, *program, &initKernel, &initWorkGroupSize, "Init");
 
 	// AdvancePaths kernel (Micro-Kernels)
+	std::tuple<HardwareDeviceKernelUPtr&, const char *>
+	microKernels[] = {
+		{advancePathsKernel_MK_RT_NEXT_VERTEX, "AdvancePaths_MK_RT_NEXT_VERTEX"},
+		{advancePathsKernel_MK_HIT_NOTHING, "AdvancePaths_MK_HIT_NOTHING"},
+		{advancePathsKernel_MK_HIT_OBJECT, "AdvancePaths_MK_HIT_OBJECT"},
+		{advancePathsKernel_MK_RT_DL, "AdvancePaths_MK_RT_DL"},
+		{advancePathsKernel_MK_DL_ILLUMINATE, "AdvancePaths_MK_DL_ILLUMINATE"},
+		{advancePathsKernel_MK_DL_SAMPLE_BSDF, "AdvancePaths_MK_DL_SAMPLE_BSDF"},
+		{advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, "AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY"},
+		{advancePathsKernel_MK_SPLAT_SAMPLE, "AdvancePaths_MK_SPLAT_SAMPLE"},
+		{advancePathsKernel_MK_NEXT_SAMPLE, "AdvancePaths_MK_NEXT_SAMPLE"},
+		{advancePathsKernel_MK_GENERATE_CAMERA_RAY, "AdvancePaths_MK_GENERATE_CAMERA_RAY"},
+	};
 
-	size_t workGroupSize;
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
-			"AdvancePaths_MK_RT_NEXT_VERTEX");
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
-			"AdvancePaths_MK_HIT_NOTHING");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
-			"AdvancePaths_MK_HIT_OBJECT");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
-			"AdvancePaths_MK_RT_DL");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
-			"AdvancePaths_MK_DL_ILLUMINATE");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
-			"AdvancePaths_MK_DL_SAMPLE_BSDF");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
-			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
-			"AdvancePaths_MK_SPLAT_SAMPLE");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
-			"AdvancePaths_MK_NEXT_SAMPLE");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(intersectionDevice, *program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
-			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
-	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
+	advancePathsWorkGroupSize = std::numeric_limits<size_t>::max();
+
+	for (auto& [microKernel, name] : microKernels) {
+		// Compile kernel
+		auto [kernel, workGroupSize] = CompileKernel(intersectionDevice, *program, name);
+
+		// Assign to class members
+		microKernel = std::move(kernel);
+		advancePathsWorkGroupSize = std::min(advancePathsWorkGroupSize, workGroupSize);
+	}
+
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex
+			<< "] AdvancePaths_MK_* workgroup size: "
+			<< advancePathsWorkGroupSize
+	);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -380,7 +388,9 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernelArgsCount = argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex) {
+void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(
+	HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex
+) {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;

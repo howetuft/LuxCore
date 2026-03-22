@@ -38,7 +38,6 @@ PremultiplyAlphaPlugin::PremultiplyAlphaPlugin() {
 }
 
 PremultiplyAlphaPlugin::~PremultiplyAlphaPlugin() {
-	delete applyKernel;
 }
 
 ImagePipelinePlugin *PremultiplyAlphaPlugin::Copy() const {
@@ -116,7 +115,7 @@ void PremultiplyAlphaPlugin::ApplyHW(Film &film, const u_int index) {
 				"PremultiplyAlphaPlugin");
 
 		SLG_LOG("[PremultiplyAlphaPlugin] Compiling PremultiplyAlphaPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "PremultiplyAlphaPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "PremultiplyAlphaPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

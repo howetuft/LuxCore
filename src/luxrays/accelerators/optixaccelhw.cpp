@@ -96,7 +96,7 @@ public:
 					"OptixEmptyAccelKernel");
 
 			// Setup the kernel
-			device.GetKernel(*program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
+			optixEmptyAccelKernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
 			if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
 				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
@@ -551,8 +551,6 @@ public:
 	virtual ~OptixKernel() {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
-		delete optixEmptyAccelKernel;
-
 		if (optixPipeline) {
 			CHECK_OPTIX_ERROR(optixPipelineDestroy(optixPipeline));
 		}
@@ -713,7 +711,7 @@ private:
 	HardwareDeviceBuffer *optixHitSbtBuff;
 
 	// For the empty dataset case
-	HardwareDeviceKernel *optixEmptyAccelKernel;
+	HardwareDeviceKernelUPtr optixEmptyAccelKernel;
 	u_int optixEmptyAccelWorkGroupSize;
 	bool emptyDataSet;
 };

@@ -66,10 +66,6 @@ BloomFilterPlugin::~BloomFilterPlugin() {
 	delete[] bloomBufferTmp;
 	delete[] bloomFilter;
 
-	delete bloomFilterXKernel;
-	delete bloomFilterYKernel;
-	delete bloomFilterMergeKernel;
-
 	if (hardwareDevice) {
 		hardwareDevice->FreeBuffer(&hwBloomBuffer);
 		hardwareDevice->FreeBuffer(&hwBloomBufferTmp);
@@ -299,7 +295,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterX Kernel");
-		hardwareDevice->GetKernel(*program, &bloomFilterXKernel, "BloomFilterPlugin_FilterX");
+		bloomFilterXKernel = hardwareDevice->GetKernel(*program, "BloomFilterPlugin_FilterX");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -316,7 +312,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_FilterY Kernel");
-		hardwareDevice->GetKernel(*program, &bloomFilterYKernel, "BloomFilterPlugin_FilterY");
+		bloomFilterYKernel = hardwareDevice->GetKernel(*program, "BloomFilterPlugin_FilterY");
 
 		// Set kernel arguments
 		argIndex = 0;
@@ -333,7 +329,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BloomFilterPlugin] Compiling BloomFilterPlugin_Merge Kernel");
-		hardwareDevice->GetKernel(*program, &bloomFilterMergeKernel, "BloomFilterPlugin_Merge");
+		bloomFilterMergeKernel = hardwareDevice->GetKernel(*program, "BloomFilterPlugin_Merge");
 
 		// Set kernel arguments
 		argIndex = 0;

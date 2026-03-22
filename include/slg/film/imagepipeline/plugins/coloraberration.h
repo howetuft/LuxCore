@@ -71,8 +71,8 @@ private:
 	luxrays::HardwareDevice *hardwareDevice;
 	luxrays::HardwareDeviceBuffer *hwTmpBuffer;
 
-	luxrays::HardwareDeviceKernel *applyKernel;
-	luxrays::HardwareDeviceKernel *copyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
+	luxrays::HardwareDeviceKernelUPtr copyKernel;
 };
 
 }

@@ -62,6 +62,13 @@ public:
 
 class HardwareDeviceKernel {
 public:
+
+	// Prevent copying:
+	// Device kernels contain allocated resources which are not trivially
+	// copyable
+	HardwareDeviceKernel(const HardwareDeviceKernel&) = delete;
+	HardwareDeviceKernel& operator=(const HardwareDeviceKernel&) = delete;
+
 	virtual ~HardwareDeviceKernel() { }
 
 	virtual bool IsNull() const = 0;
@@ -93,20 +100,20 @@ protected:
 
 // Create a unique_ptr on a derived type, but with base handler, and
 // provide a reference to the derived managed object
-template <typename Derived>
-std::tuple<HardwareDeviceProgramUPtr, Derived&>
-CreateHDProgram() {
+template <typename Base, typename Derived>
+std::tuple<std::unique_ptr<Base>, Derived&>
+CreateUniquePtr(auto&&... args) {
 
     static_assert(
-		std::is_base_of<HardwareDeviceProgram, Derived>::value,
+		std::is_base_of<Base, Derived>::value,
 		"Derived must be a subclass of Base"
 	);
-	auto derivedProgram = std::make_unique<Derived>();
-	auto derivedProgramRef = std::ref(*derivedProgram);  // We must capture ref before
+	auto derivedPtr = std::make_unique<Derived>(std::forward<decltype(args)>(args)...);
+	auto derivedRef = std::ref(*derivedPtr);  // We must capture ref before
 														 // derivedProgram is moved...
-	auto baseProgram = static_cast<HardwareDeviceProgramUPtr>(std::move(derivedProgram));
+	auto basePtr = static_cast<std::unique_ptr<Base>>(std::move(derivedPtr));
 
-	auto res = std::make_tuple(std::move(baseProgram), derivedProgramRef);
+	auto res = std::make_tuple(std::move(basePtr), derivedRef);
 	return res;
 }
 
@@ -153,25 +160,24 @@ public:
 		const std::string &programName
 	) = 0;
 
-	virtual void GetKernel(
+	virtual HardwareDeviceKernelUPtr GetKernel(
 		HardwareDeviceProgramRef program,
-		HardwareDeviceKernel **kernel,
 		const std::string &kernelName
 	) = 0;
-	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) = 0;
 
-	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
+	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
 protected:
-	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+	virtual void SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const HardwareDeviceBuffer *buff) = 0;
 public:
 	template <typename T>
-	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, const T &arg) {
+	void SetKernelArg(HardwareDeviceKernelRPtr kernel, const u_int index, const T &arg) {
 		SetKernelArg(kernel, index, KernelArgumentHandler<T>::Size(arg), KernelArgumentHandler<T>::Ptr(arg));
 	}
 
-	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) = 0;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
@@ -207,7 +213,7 @@ protected:
 	};
 
 	HardwareDevice();
-	
+
 	void AllocMemory(const size_t s) { usedMemory += s; }
 	void FreeMemory(const size_t s) { usedMemory -= s; }
 
@@ -216,7 +222,7 @@ protected:
 };
 
 typedef HardwareDeviceBuffer * HardwareDeviceBufferRPtr;
-template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
+template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernelRPtr kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
 
 }
 

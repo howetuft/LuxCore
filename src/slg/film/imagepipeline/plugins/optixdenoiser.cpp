@@ -48,7 +48,6 @@ OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 		if (denoiserHandle)
 			CHECK_OPTIX_ERROR(optixDenoiserDestroy(denoiserHandle));
 
-		delete bufferSetUpKernel;
 		cudaDevice->FreeBuffer(&denoiserStateScratchBuff);
 		cudaDevice->FreeBuffer(&denoiserTmpBuff);
 		cudaDevice->FreeBuffer(&albedoTmpBuff);
@@ -146,7 +145,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 					"OptixDenoiserPlugin");
 
 			SLG_LOG("[OptixDenoiserPlugin] Compiling OptixDenoiserPlugin_BufferSetUp Kernel");
-			cudaDevice->GetKernel(*program, &bufferSetUpKernel, "OptixDenoiserPlugin_BufferSetUp");
+			bufferSetUpKernel = cudaDevice->GetKernel(*program, "OptixDenoiserPlugin_BufferSetUp");
 
 		}
 

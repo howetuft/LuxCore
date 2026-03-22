@@ -75,10 +75,13 @@ public:
 			const u_int threadFilmWidth, const u_int threadFilmHeight,
 			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
-		u_int SetFilmKernelArgs(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
-			luxrays::HardwareDeviceKernel *filmClearKernel, u_int argIndex) const;
+		u_int SetFilmKernelArgs(
+			luxrays::HardwareIntersectionDeviceRef intersectionDevice,
+			luxrays::HardwareDeviceKernelRPtr filmClearKernel,
+			u_int argIndex) const;
 		void ClearFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice,
-			luxrays::HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize);
+			luxrays::HardwareDeviceKernelRPtr filmClearKernel,
+			const size_t filmClearWorkGroupSize);
 		void RecvFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 		void SendFilm(luxrays::HardwareIntersectionDeviceRef intersectionDevice);
 
@@ -173,14 +176,16 @@ protected:
 	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
-	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex);
+	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernelRPtr advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
 
-	void CompileKernel(luxrays::HardwareIntersectionDeviceRef device,
-			luxrays::HardwareDeviceProgramRef program,
-			luxrays::HardwareDeviceKernel **kernel,
-			size_t *workGroupSize, const std::string &name);
+
+	std::tuple<luxrays::HardwareDeviceKernelUPtr, size_t> CompileKernel(
+		luxrays::HardwareIntersectionDeviceRef device,
+		luxrays::HardwareDeviceProgramRef program,
+		const std::string &name
+	);
 
 	void EnqueueAdvancePathsKernel();
 
@@ -197,7 +202,7 @@ protected:
 
 	// OpenCL variables
 	std::string kernelSrcHash;
-	luxrays::HardwareDeviceKernel *filmClearKernel;
+	luxrays::HardwareDeviceKernelUPtr filmClearKernel;
 	size_t filmClearWorkGroupSize;
 
 	// Scene buffers
@@ -268,19 +273,19 @@ protected:
 	std::vector<std::shared_ptr<ThreadFilm> > threadFilms;
 
 	// OpenCL kernels
-	luxrays::HardwareDeviceKernel *initSeedKernel;
-	luxrays::HardwareDeviceKernel *initKernel;
+	luxrays::HardwareDeviceKernelUPtr initSeedKernel;
+	luxrays::HardwareDeviceKernelUPtr initKernel;
 	size_t initWorkGroupSize;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_NOTHING;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_OBJECT;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_DL;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_ILLUMINATE;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_SAMPLE_BSDF;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_SPLAT_SAMPLE;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_NEXT_SAMPLE;
-	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_NEXT_VERTEX;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_NOTHING;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_HIT_OBJECT;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_RT_DL;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_DL_ILLUMINATE;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_SPLAT_SAMPLE;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_NEXT_SAMPLE;
+	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 
 	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;

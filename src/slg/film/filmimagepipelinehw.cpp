@@ -177,11 +177,6 @@ void Film::DeleteHWContext() {
 		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for hardware image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
-		delete mergeInitializeKernel;
-		delete mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
-		delete mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-		delete mergeFinalizeKernel;
-
 		hardwareDevice->FreeBuffer(&hw_IMAGEPIPELINE);
 		hardwareDevice->FreeBuffer(&hw_ALPHA);
 		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
@@ -248,7 +243,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferInitialize Kernel");
-	hardwareDevice->GetKernel(*program, &mergeInitializeKernel, "Film_MergeBufferInitialize");
+	mergeInitializeKernel = hardwareDevice->GetKernel(*program, "Film_MergeBufferInitialize");
 
 	// Set kernel arguments
 	u_int argIndex = 0;
@@ -261,7 +256,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_PIXEL_NORMALIZED Kernel");
-	hardwareDevice->GetKernel(*program, &mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_PIXEL_NORMALIZED");
+	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel = hardwareDevice->GetKernel(*program, "Film_MergeRADIANCE_PER_PIXEL_NORMALIZED");
 
 	// Set kernel arguments
 	argIndex = 0;
@@ -276,7 +271,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeRADIANCE_PER_SCREEN_NORMALIZED Kernel");
-	hardwareDevice->GetKernel(*program, &mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, "Film_MergeRADIANCE_PER_SCREEN_NORMALIZED");
+	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel = hardwareDevice->GetKernel(*program, "Film_MergeRADIANCE_PER_SCREEN_NORMALIZED");
 
 	// Set kernel arguments
 	argIndex = 0;
@@ -291,7 +286,7 @@ void Film::CompileHWKernels() {
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("[MergeSampleBuffersOCL] Compiling Film_MergeBufferFinalize Kernel");
-	hardwareDevice->GetKernel(*program, &mergeFinalizeKernel, "Film_MergeBufferFinalize");
+	mergeFinalizeKernel = hardwareDevice->GetKernel(*program, "Film_MergeBufferFinalize");
 
 	// Set kernel arguments
 	argIndex = 0;

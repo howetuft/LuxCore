@@ -147,7 +147,6 @@ CameraResponsePlugin::CameraResponsePlugin(const string &name) {
 }
 
 CameraResponsePlugin::~CameraResponsePlugin() {
-	delete applyKernel;
 
 	if (hardwareDevice) {
 		hardwareDevice->FreeBuffer(&hwRedI);
@@ -287,7 +286,7 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[CameraResponsePlugin] Compiling CameraResponsePlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "CameraResponsePlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "CameraResponsePlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

@@ -46,9 +46,6 @@ ColorAberrationPlugin::ColorAberrationPlugin(const float ax, const float ay) :
 ColorAberrationPlugin::~ColorAberrationPlugin() {
 	delete[] tmpBuffer;
 
-	delete applyKernel;
-	delete copyKernel;
-
 	if (hardwareDevice)
 		hardwareDevice->FreeBuffer(&hwTmpBuffer);
 }
@@ -176,7 +173,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "ColorAberrationPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "ColorAberrationPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -192,7 +189,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Copy Kernel");
-		hardwareDevice->GetKernel(*program, &copyKernel, "ColorAberrationPlugin_Copy");
+		copyKernel = hardwareDevice->GetKernel(*program, "ColorAberrationPlugin_Copy");
 
 		// Set kernel arguments
 		argIndex = 0;

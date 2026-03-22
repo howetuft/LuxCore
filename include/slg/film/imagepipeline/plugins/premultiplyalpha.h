@@ -56,7 +56,7 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 	}
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

@@ -81,7 +81,7 @@ private:
 	luxrays::HardwareDeviceBuffer *hwFilmImageMapDesc;
 	luxrays::HardwareDeviceBuffer *hwFilmImageMap;
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

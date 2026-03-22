@@ -68,7 +68,7 @@ private:
 	luxrays::HardwareDevice *hardwareDevice;
 	luxrays::HardwareDeviceBuffer *hwGammaTable;
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

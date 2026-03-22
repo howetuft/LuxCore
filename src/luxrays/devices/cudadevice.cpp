@@ -285,17 +285,17 @@ HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
 	return static_cast<HardwareDeviceProgramUPtr>(std::move(cudaDeviceProgram));
 }
 
-void CUDADevice::GetKernel(
+HardwareDeviceKernelUPtr CUDADevice::GetKernel(
 		HardwareDeviceProgramRef program,
-		HardwareDeviceKernel **kernel, const string &kernelName
+		const string &kernelName
 ) {
-	if (!*kernel)
-		*kernel = new CUDADeviceKernel();
+	//if (!*kernel)
+		//*kernel = new CUDADeviceKernel();
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(*kernel);
-	assert (cudaDeviceKernel);
+	auto [kernel, cudaDeviceKernel] =
+		CreateUniquePtr<HardwareDeviceKernel, CUDADeviceKernel>();
 
-	auto& cudaDeviceProgram = dynamic_cast<CUDADeviceProgram&>(program);
+	auto& cudaDeviceProgram = dynamic_cast<CUDADeviceProgramRef>(program);
 
 	CUfunction function;
 	CHECK_CUDA_ERROR(
@@ -303,26 +303,28 @@ void CUDADevice::GetKernel(
 			&function, cudaDeviceProgram.GetModule(), kernelName.c_str())
 		);
 
-	cudaDeviceKernel->Set(function);
+	cudaDeviceKernel.Set(function);
+
+	return kernel;
 }
 
-u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
 	return 32;
 }
 
-void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
+void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
 	assert (cudaDeviceKernel);
 
-	if (index >= cudaDeviceKernel->args.size())
-		cudaDeviceKernel->args.resize(index + 1, nullptr);
+	if (index >= cudaDeviceKernel.args.size())
+		cudaDeviceKernel.args.resize(index + 1, nullptr);
 
 	void *argCpy;
 	if (arg) {
@@ -335,15 +337,15 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		memcpy(argCpy, &p, sizeof(CUdeviceptr));
 	}
 
-	if (cudaDeviceKernel->args[index]) {
-		delete[] (char *)cudaDeviceKernel->args[index];
-		cudaDeviceKernel->args[index] = nullptr;
+	if (cudaDeviceKernel.args[index]) {
+		delete[] (char *)cudaDeviceKernel.args[index];
+		cudaDeviceKernel.args[index] = nullptr;
 	}
 
-	cudaDeviceKernel->args[index] = argCpy;
+	cudaDeviceKernel.args[index] = argCpy;
 }
 
-void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (kernel);
 	assert (!kernel->IsNull());
@@ -390,13 +392,13 @@ static void ConvertHardwareRange(const HardwareDeviceRange &globalSize,
 	}
 }
 
-void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+void CUDADevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
 	assert (cudaDeviceKernel);
 
 	u_int blockX, blockY, blockZ;
@@ -405,11 +407,11 @@ void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			blockX, blockY, blockZ,
 			threadX, threadY, threadZ);
 
-	CHECK_CUDA_ERROR(cuLaunchKernel(cudaDeviceKernel->cudaKernel,
+	CHECK_CUDA_ERROR(cuLaunchKernel(cudaDeviceKernel.cudaKernel,
 			blockX, blockY, blockZ,  // blocks
 			threadX, threadY, threadZ,  // threads
 			0, 0,
-			&cudaDeviceKernel->args[0],
+			&cudaDeviceKernel.args[0],
 			nullptr));
 }
 
