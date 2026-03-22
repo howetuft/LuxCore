@@ -43,7 +43,6 @@ ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin() {
 }
 
 ObjectIDMaskFilterPlugin::~ObjectIDMaskFilterPlugin() {
-	delete applyKernel;
 }
 
 ImagePipelinePlugin *ObjectIDMaskFilterPlugin::Copy() const {
@@ -121,7 +120,7 @@ void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ObjectIDMaskFilterPlugin] Compiling ObjectIDMaskFilterPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "ObjectIDMaskFilterPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "ObjectIDMaskFilterPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

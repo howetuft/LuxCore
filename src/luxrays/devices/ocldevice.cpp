@@ -235,7 +235,8 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 
 	//auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(*program);
 
-	auto [program, oclDeviceProgram] = CreateHDProgram<OpenCLDeviceProgram>();
+	auto [program, oclDeviceProgram] =
+		CreateUniquePtr<HardwareDeviceProgram, OpenCLDeviceProgram>();
 
 	// Just to be sure...
 	static_assert(std::is_same_v<decltype(oclDeviceProgram), OpenCLDeviceProgramRef>);
@@ -246,16 +247,12 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 	return program;
 }
 
-void OpenCLDevice::GetKernel(
+HardwareDeviceKernelUPtr OpenCLDevice::GetKernel(
 	HardwareDeviceProgramRef program,
-	HardwareDeviceKernel **kernel,
 	const string &kernelName
 ) {
-	if (!*kernel)
-		*kernel = new OpenCLDeviceKernel();
-
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(*kernel);
-	assert (oclDeviceKernel);
+	auto [kernel, oclDeviceKernel] =
+		CreateUniquePtr<HardwareDeviceKernel, OpenCLDeviceKernel>();
 
 	auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(program);
 
@@ -263,45 +260,57 @@ void OpenCLDevice::GetKernel(
 	cl_kernel k = clCreateKernel(oclDeviceProgram.Get(), kernelName.c_str(), &error);
 	CHECK_OCL_ERROR(error);
 
-	oclDeviceKernel->Set(k);
+	oclDeviceKernel.Set(k);
+
+	return kernel;
 }
 
-u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-	assert (oclDeviceKernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 
 	size_t size;
-	CHECK_OCL_ERROR(clGetKernelWorkGroupInfo(oclDeviceKernel->oclKernel, deviceDesc.GetOCLDevice(),
-			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr));
-	
+	CHECK_OCL_ERROR(
+		clGetKernelWorkGroupInfo(
+			oclDeviceKernel.oclKernel, deviceDesc.GetOCLDevice(),
+			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr
+		)
+	);
+
 	return size;
 }
 
-void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 	assert (oclDeviceKernel);
 
-	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, size, arg));
+	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel.oclKernel, index, size, arg));
 }
 
-void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 	assert (oclDeviceKernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 
-	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, sizeof(cl_mem), oclDeviceBuff ? &(oclDeviceBuff->oclBuff) : nullptr));
+	CHECK_OCL_ERROR(
+		clSetKernelArg(
+			oclDeviceKernel.oclKernel,
+			index,
+			sizeof(cl_mem),
+			oclDeviceBuff ? &(oclDeviceBuff->oclBuff) : nullptr
+		)
+	);
 }
 
 static void ConvertHardwareRange(const HardwareDeviceRange &range, size_t *globalSizeArray) {
@@ -317,13 +326,13 @@ static void ConvertHardwareRange(const HardwareDeviceRange &range, size_t *globa
 	}
 }
 
-void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+void OpenCLDevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 	assert (oclDeviceKernel);
 
 	size_t globalSizeArray[3];
@@ -331,9 +340,9 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 	size_t workGroupSizeArray[3];
 	ConvertHardwareRange(workGroupSize, workGroupSizeArray);
 
-	CHECK_OCL_ERROR(clEnqueueNDRangeKernel(oclQueue, oclDeviceKernel->oclKernel,
+	CHECK_OCL_ERROR(clEnqueueNDRangeKernel(oclQueue, oclDeviceKernel.oclKernel,
 			globalSize.dimensions,
-			nullptr, 
+			nullptr,
 			globalSizeArray,
 			workGroupSizeArray,
 			0, nullptr, nullptr));

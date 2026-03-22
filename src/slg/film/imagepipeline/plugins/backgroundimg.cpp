@@ -40,7 +40,6 @@ BackgroundImgPlugin::BackgroundImgPlugin(ImageMapUPtr&& map) : imgMap(std::move(
 	hwFilmImageMapDesc = nullptr;
 	hwFilmImageMap = nullptr;
 
-	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::BackgroundImgPlugin() {
@@ -49,11 +48,9 @@ BackgroundImgPlugin::BackgroundImgPlugin() {
 	hwFilmImageMapDesc = nullptr;
 	hwFilmImageMap = nullptr;
 
-	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::~BackgroundImgPlugin() {
-	delete applyKernel;
 
 	if (hardwareDevice) {
 		hardwareDevice->FreeBuffer(&hwFilmImageMapDesc);
@@ -185,7 +182,7 @@ void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BackgroundImgPlugin] Compiling BackgroundImgPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "BackgroundImgPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "BackgroundImgPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

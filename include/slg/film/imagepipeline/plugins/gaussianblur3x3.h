@@ -80,8 +80,8 @@ private:
 	luxrays::HardwareDevice *hardwareDevice;
 	luxrays::HardwareDeviceBuffer *hwTmpBuffer;
 
-	luxrays::HardwareDeviceKernel *filterXKernel;
-	luxrays::HardwareDeviceKernel *filterYKernel;
+	luxrays::HardwareDeviceKernelUPtr filterXKernel;
+	luxrays::HardwareDeviceKernelUPtr filterYKernel;
 };
 
 }

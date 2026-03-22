@@ -252,12 +252,12 @@ public:
 		);
 
 		// Setup the kernel
-		device.GetKernel(*program, &kernel, "Accelerator_Intersect_RayBuffer");
+		kernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
 		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
 			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 		else {
-			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			workGroupSize = device.GetKernelWorkGroupSize(kernel);
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
 			//	"] BVH kernel work group size: " << workGroupSize);
 		}
@@ -267,8 +267,6 @@ public:
 	}
 
 	virtual ~MBVHKernel() {
-		delete kernel;
-
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device.FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
@@ -297,7 +295,7 @@ public:
 	// Used to update BVH node buffers
 	vector<vector<u_int> > vertOffsetPerLeafMesh;
 
-	HardwareDeviceKernel *kernel;
+	HardwareDeviceKernelUPtr kernel;
 	u_int workGroupSize;
 };
 
@@ -306,7 +304,7 @@ void MBVHKernel::UpdateBVHNodes() {
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
 		device.FreeBuffer(&nodeBuffs[i]);
 	nodeBuffs.resize(0);
-	
+
 	const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 	const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 

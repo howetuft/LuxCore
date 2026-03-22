@@ -86,7 +86,7 @@ private:
 	luxrays::HardwareDeviceBuffer *hwBlueI;
 	luxrays::HardwareDeviceBuffer *hwBlueB;
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

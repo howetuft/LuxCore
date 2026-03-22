@@ -66,9 +66,9 @@ private:
 	luxrays::HardwareDevice *hardwareDevice;
 	luxrays::HardwareDeviceBuffer *hwAccumBuffer;
 
-	luxrays::HardwareDeviceKernel *opRGBValuesReduceKernel;
-	luxrays::HardwareDeviceKernel *opRGBValueAccumulateKernel;
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr opRGBValuesReduceKernel;
+	luxrays::HardwareDeviceKernelUPtr opRGBValueAccumulateKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

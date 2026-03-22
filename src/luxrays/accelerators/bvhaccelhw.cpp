@@ -208,12 +208,13 @@ public:
 		);
 
 		// Setup the kernel
-		device.GetKernel(*program, &kernel, "Accelerator_Intersect_RayBuffer");
+		kernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
-		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0) {
 			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
+		}
 		else {
-			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			workGroupSize = device.GetKernelWorkGroupSize(kernel);
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
 			//	"] BVH kernel work group size: " << workGroupSize);
 		}
@@ -235,7 +236,6 @@ public:
 	}
 
 	virtual ~BVHKernel() {
-		delete kernel;
 
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device.FreeBuffer(&vertsBuffs[i]);
@@ -251,7 +251,7 @@ public:
 	vector<HardwareDeviceBuffer *> vertsBuffs;
 	vector<HardwareDeviceBuffer *> nodeBuffs;
 	
-	HardwareDeviceKernel *kernel;
+	HardwareDeviceKernelUPtr kernel;
 	u_int workGroupSize;
 };
 

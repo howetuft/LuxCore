@@ -142,20 +142,6 @@ PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 
 	FreeThreadFilms();
 
-	delete filmClearKernel;
-	delete initSeedKernel;
-	delete initKernel;
-	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
-	delete advancePathsKernel_MK_HIT_NOTHING;
-	delete advancePathsKernel_MK_HIT_OBJECT;
-	delete advancePathsKernel_MK_RT_DL;
-	delete advancePathsKernel_MK_DL_ILLUMINATE;
-	delete advancePathsKernel_MK_DL_SAMPLE_BSDF;
-	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
-	delete advancePathsKernel_MK_SPLAT_SAMPLE;
-	delete advancePathsKernel_MK_NEXT_SAMPLE;
-	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
-
 	delete[] gpuTaskStats;
 }
 
