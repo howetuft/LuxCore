@@ -41,7 +41,7 @@ public:
 	virtual bool HasNativeSupport(const IntersectionDevice &device) const;
 	virtual bool HasHWSupport(const IntersectionDevice &device) const;
 
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
+	virtual HardwareIntersectionKernelUPtr NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const override;
 
 	virtual void Init(
 		const std::deque<const Mesh *> &meshes,

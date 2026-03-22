@@ -68,8 +68,7 @@ void OpenCLIntersectionDevice::Start() {
 }
 
 void OpenCLIntersectionDevice::Stop() {
-	delete kernel;
-	kernel = nullptr;
+	kernel.reset();
 
 	OpenCLDevice::Stop();
 }

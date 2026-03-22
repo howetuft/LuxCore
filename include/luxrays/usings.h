@@ -67,6 +67,7 @@ DECLARE_SUBTYPES(HardwareDevice);
 DECLARE_SUBTYPES(HardwareDeviceKernel);
 DECLARE_SUBTYPES(HardwareDeviceProgram);
 DECLARE_SUBTYPES(HardwareIntersectionDevice)
+DECLARE_SUBTYPES(HardwareIntersectionKernel)
 DECLARE_SUBTYPES(IntersectionDevice)
 DECLARE_SUBTYPES(Mesh);
 DECLARE_SUBTYPES(ExtMesh);

@@ -27,6 +27,7 @@
 
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/context.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/strutils.h"
@@ -274,9 +275,10 @@ bool BVHAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new BVHKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, BVHKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

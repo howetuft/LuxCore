@@ -72,8 +72,7 @@ void CUDAIntersectionDevice::Start() {
 }
 
 void CUDAIntersectionDevice::Stop() {
-	delete kernel;
-	kernel = nullptr;
+	kernel.reset();
 
 	CUDADevice::Stop();
 }

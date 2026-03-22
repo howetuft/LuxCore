@@ -46,7 +46,7 @@ public:
 	virtual bool HasNativeSupport(const IntersectionDevice &device) const = 0;
 	virtual bool HasHWSupport(const IntersectionDevice &device) const = 0;
 
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
+	virtual HardwareIntersectionKernelUPtr NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
 
 	virtual void Init(const std::deque<const Mesh * > &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
 	virtual bool DoesSupportUpdate() const { return false; }

@@ -27,9 +27,11 @@
 
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/accelerators/mbvhaccel.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/strutils.h"
 
 using namespace std;
@@ -500,9 +502,10 @@ bool MBVHAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new MBVHKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, MBVHKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

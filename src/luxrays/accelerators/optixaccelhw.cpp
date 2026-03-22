@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/hardwaredevice.h"
+#include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include "luxrays/core/context.h"
@@ -752,9 +753,10 @@ bool OptixAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *OptixAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr OptixAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new OptixKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, OptixKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

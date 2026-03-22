@@ -53,7 +53,7 @@ public:
 protected:
 	virtual void Update();
 
-	HardwareIntersectionKernel *kernel;
+	HardwareIntersectionKernelUPtr kernel;
 };
 
 }
