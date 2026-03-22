@@ -23,6 +23,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
+#include "luxrays/usings.h"
 
 namespace luxrays {
 
@@ -39,9 +40,7 @@ public:
 	virtual bool HasHWSupport(const IntersectionDevice &device) const {
 		return false;
 	}
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
-		return nullptr;
-	}
+	virtual HardwareIntersectionKernelUPtr NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const override;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
