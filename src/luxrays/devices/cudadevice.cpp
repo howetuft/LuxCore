@@ -154,7 +154,7 @@ CUDADevice::CUDADevice(
 		cudaContext(nullptr), optixContext(nullptr) {
 	deviceName = (desc.GetName() + " CUDAIntersect").c_str();
 
-	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION);
+	kernelCache = std::make_unique<cudaKernelPersistentCache>("LUXRAYS_" LUXRAYS_VERSION);
 
 	CHECK_CUDA_ERROR(
 		cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc.GetCUDADevice())
@@ -201,7 +201,6 @@ CUDADevice::~CUDADevice() {
 		CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
 	}
 
-	delete kernelCache;
 }
 
 void CUDADevice::PushThreadCurrentDevice() {

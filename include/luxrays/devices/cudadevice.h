@@ -213,7 +213,10 @@ public:
 	//--------------------------------------------------------------------------
 
 	CUcontext GetCUDAContext() { return cudaContext; }
-	luxrays::cudaKernelPersistentCache *GetCUDAKernelCache() { return kernelCache; }
+
+	const std::unique_ptr<luxrays::cudaKernelPersistentCache>&
+	GetCUDAKernelCache() { return kernelCache; }
+
 	OptixDeviceContext GetOptixContext() { return optixContext; }
 
 	std::vector<std::string> AddKernelOpts(const std::vector<std::string> &programParameters);
@@ -234,7 +237,7 @@ protected:
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
 
-	luxrays::cudaKernelPersistentCache *kernelCache;
+	std::unique_ptr<luxrays::cudaKernelPersistentCache> kernelCache;
 
 	OptixDeviceContext optixContext;
 };
