@@ -81,9 +81,9 @@ private:
 	luxrays::HardwareDeviceBuffer *hwBloomBufferTmp;
 	luxrays::HardwareDeviceBuffer *hwBloomFilter;
 
-	luxrays::HardwareDeviceKernel *bloomFilterXKernel;
-	luxrays::HardwareDeviceKernel *bloomFilterYKernel;
-	luxrays::HardwareDeviceKernel *bloomFilterMergeKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterXKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterYKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterMergeKernel;
 };
 
 }

@@ -64,7 +64,7 @@ private:
 
 	float GetScale(const float gamma) const;
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

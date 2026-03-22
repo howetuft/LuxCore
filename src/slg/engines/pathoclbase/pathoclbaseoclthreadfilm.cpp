@@ -431,9 +431,9 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 }
 
 u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(HardwareIntersectionDeviceRef intersectionDevice,
-		HardwareDeviceKernel *kernel, u_int argIndex) const {
+		HardwareDeviceKernelRPtr kernel, u_int argIndex) const {
 	// Film parameters
-	
+
 	intersectionDevice.SetKernelArg(kernel, argIndex++, film->GetWidth());
 	intersectionDevice.SetKernelArg(kernel, argIndex++, film->GetHeight());
 
@@ -1204,15 +1204,18 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 	}
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(HardwareIntersectionDeviceRef intersectionDevice,
-		HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(
+		HardwareIntersectionDeviceRef intersectionDevice,
+		HardwareDeviceKernelRPtr filmClearKernel,
+		const size_t filmClearWorkGroupSize
+) {
 	// Set kernel arguments
-	
+
 	// This is the dummy variable required by KERNEL_ARGS_FILM macro
 	intersectionDevice.SetKernelArg(filmClearKernel, 0, 0);
 
 	SetFilmKernelArgs(intersectionDevice, filmClearKernel, 1);
-	
+
 	// Clear the film
 	const u_int filmPixelCount = film->GetWidth() * film->GetHeight();
 	intersectionDevice.EnqueueKernel(filmClearKernel,

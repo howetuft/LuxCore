@@ -50,7 +50,6 @@ WhiteBalance::WhiteBalance(const Spectrum &s): scale(s), applyKernel(nullptr) {
 }
 
 WhiteBalance::~WhiteBalance() {
-	delete applyKernel;
 }
 
 ImagePipelinePlugin *WhiteBalance::Copy() const {
@@ -101,7 +100,7 @@ void WhiteBalance::ApplyHW(Film &film, const u_int index) {
 				"WhiteBalance");
 
 		SLG_LOG("[WhiteBalance] Compiling WhiteBalance_Apply Kernel");
-		hardwareDevice->GetKernel(*program, &applyKernel, "WhiteBalance_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "WhiteBalance_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
