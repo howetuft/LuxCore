@@ -26,6 +26,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/utils/strutils.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 
 namespace luxrays {
 
@@ -273,6 +274,12 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	} else {
 		return false;
 	}
+}
+
+HardwareIntersectionKernelUPtr EmbreeAccel::NewHardwareIntersectionKernel(
+	HardwareIntersectionDevice &device
+) const {
+	return HardwareIntersectionKernelUPtr(nullptr);
 }
 
 }
