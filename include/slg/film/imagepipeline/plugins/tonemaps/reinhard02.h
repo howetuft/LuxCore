@@ -64,7 +64,7 @@ private:
 
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *hwAccumBuffer;
+	luxrays::HardwareDeviceBufferUPtr hwAccumBuffer;
 
 	luxrays::HardwareDeviceKernelUPtr opRGBValuesReduceKernel;
 	luxrays::HardwareDeviceKernelUPtr opRGBValueAccumulateKernel;

@@ -69,7 +69,7 @@ private:
 
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *hwTmpBuffer;
+	luxrays::HardwareDeviceBufferUPtr hwTmpBuffer;
 
 	luxrays::HardwareDeviceKernelUPtr applyKernel;
 	luxrays::HardwareDeviceKernelUPtr copyKernel;

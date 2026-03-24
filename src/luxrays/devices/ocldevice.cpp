@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/hardwaredevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -293,15 +294,18 @@ void OpenCLDevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel.oclKernel, index, size, arg));
 }
 
-void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
-		const u_int index, const HardwareDeviceBuffer *buff) {
+void OpenCLDevice::SetKernelArgBuffer(
+	HardwareDeviceKernelRPtr kernel,
+	const u_int index,
+	HardwareDeviceBufferRPtr buff
+) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
 	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 	assert (oclDeviceKernel);
 
-	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff.get());
 
 	CHECK_OCL_ERROR(
 		clSetKernelArg(
@@ -348,29 +352,32 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			0, nullptr, nullptr));
 }
 
-void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+void OpenCLDevice::EnqueueReadBuffer(HardwareDeviceBufferRPtr buff,
 		const bool blocking, const size_t size, void *ptr) {
 	assert (buff);
 	assert (!buff->IsNull());
 
-	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
-	assert (oclDeviceBuff);
-	assert (!oclDeviceBuff->IsNull());
+	auto& oclDeviceBuff = dynamic_cast<OpenCLDeviceBufferRef>(*buff);
+	assert (!oclDeviceBuff.IsNull());
 
-	CHECK_OCL_ERROR(clEnqueueReadBuffer(oclQueue, oclDeviceBuff->oclBuff,
+	CHECK_OCL_ERROR(clEnqueueReadBuffer(oclQueue, oclDeviceBuff.oclBuff,
 			blocking, 0, size, ptr, 0, nullptr, nullptr));
 }
 
-void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-		const bool blocking, const size_t size, const void *ptr) {
+void OpenCLDevice::EnqueueWriteBuffer(
+	HardwareDeviceBufferRPtr buff,
+	const bool blocking,
+	const size_t size,
+	const void *ptr
+) {
 	assert (buff);
 	assert (!buff->IsNull());
 
-	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	const auto& oclDeviceBuff = dynamic_cast<OpenCLDeviceBufferConstRef>(*buff);
 	assert (oclDeviceBuff);
 	assert (!oclDeviceBuff->IsNull());
 
-	CHECK_OCL_ERROR(clEnqueueWriteBuffer(oclQueue, oclDeviceBuff->oclBuff,
+	CHECK_OCL_ERROR(clEnqueueWriteBuffer(oclQueue, oclDeviceBuff.oclBuff,
 			blocking, 0, size, ptr, 0, nullptr, nullptr));
 }
 
@@ -443,13 +450,16 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 	AllocMemory(OpenCLDeviceBuffer::GetSize(*buff));
 }
 
-void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+HardwareDeviceBufferUPtr OpenCLDevice::AllocBuffer(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		const BufferType type,
 		void *src, const size_t size, const string &desc) {
-	if (!*buff)
-		*buff = new OpenCLDeviceBuffer();
+	//if (!*buff)
+		//*buff = new OpenCLDeviceBuffer();
 
-	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
-	assert (oclDeviceBuff);
+	auto [buff, oclDeviceBuff] = !oldBuff ? 
+		CreateUniquePtr<HardwareDeviceBuffer, OpenCLDeviceBuffer>(usedMemory) :
+		std::make_tuple(std::move(oldBuff), std::ref(dynamic_cast<OpenCLDeviceBufferRef>(*oldBuff)));
 
 	cl_mem_flags clFlags = BUFFER_TYPE_NONE;
 	if (type & BUFFER_TYPE_READ_ONLY)
@@ -464,19 +474,21 @@ void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType typ
 		LR_LOG(deviceContext, "WARNING: OpenCL devices don't support out of core memory buffers: " << desc);
 	}
 	
-	AllocBuffer(clFlags, &(oclDeviceBuff->oclBuff), src, size, desc);
+	AllocBuffer(clFlags, &(oclDeviceBuff.oclBuff), src, size, desc);
+	return buff;
 }
 
-void OpenCLDevice::FreeBuffer(HardwareDeviceBuffer **buff) {
-	if (*buff && !(*buff)->IsNull()) {
-		OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
-		assert (oclDeviceBuff);
+void OpenCLDevice::FreeBuffer(HardwareDeviceBufferUPtr &&buff) {
+	//TODO
+	//Should be handled by HardwareDeviceBuffert
+	//if (buff && !(buff->IsNull()) {
+		//auto& oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer&>(*buff);
 
-		FreeMemory(oclDeviceBuff->GetSize());
+		//FreeMemory(oclDeviceBuff->GetSize());
 
-		delete *buff;
-		*buff = nullptr;
-	}
+		//delete *buff;
+		//*buff = nullptr;
+	//}
 }
 
 }

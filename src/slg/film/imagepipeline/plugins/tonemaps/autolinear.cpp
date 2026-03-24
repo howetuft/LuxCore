@@ -46,7 +46,7 @@ AutoLinearToneMap::AutoLinearToneMap() {
 
 AutoLinearToneMap::~AutoLinearToneMap() {
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&hwAccumBuffer);
+		hardwareDevice->FreeBuffer(std::move(hwAccumBuffer));
 }
 
 float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const u_int index, const float Y) {

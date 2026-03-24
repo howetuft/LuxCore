@@ -231,7 +231,8 @@ protected:
 
 class OpenCLDeviceBuffer : public HardwareDeviceBuffer {
 public:
-	OpenCLDeviceBuffer() : oclBuff(nullptr) { }
+	OpenCLDeviceBuffer(std::atomic<size_t>& counter)
+		: HardwareDeviceBuffer(counter), oclBuff(nullptr) { }
 	virtual ~OpenCLDeviceBuffer() {
 		if (oclBuff)
 			CHECK_OCL_ERROR(clReleaseMemObject(oclBuff));
@@ -312,13 +313,26 @@ public:
 			HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) override;
 
-	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
-			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize) override;
-	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr) override;
-	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr) override;
+	virtual void EnqueueKernel(
+		HardwareDeviceKernelRPtr kernel,
+		const HardwareDeviceRange &globalSize,
+		const HardwareDeviceRange &workGroupSize
+	) override;
+
+	virtual void EnqueueReadBuffer(
+		HardwareDeviceBufferRPtr buff,
+		const bool blocking,
+		const size_t size,
+		void *ptr
+	) override;
+
+	virtual void EnqueueWriteBuffer(
+		HardwareDeviceBufferRPtr buff,
+		const bool blocking,
+		const size_t size,
+		const void *ptr
+	) override;
+
 	virtual void FlushQueue() override;
 	virtual void FinishQueue() override;
 
@@ -326,17 +340,21 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
+	virtual HardwareDeviceBufferUPtr AllocBuffer(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		const BufferType type,
+		void *src, const size_t size, const std::string &desc = ""
+	) override;
 
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+	virtual void FreeBuffer(HardwareDeviceBufferUPtr&& buff) override;
 
 	friend class Context;
 
 protected:
 	virtual void SetKernelArgBuffer(
 		HardwareDeviceKernelRPtr kernel,
-		const u_int index, const HardwareDeviceBuffer *buff
+		const u_int index,
+		HardwareDeviceBufferRPtr buff
 	) override;
 
 	void AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,

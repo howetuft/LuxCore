@@ -21,6 +21,7 @@
 
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/cuda.h"
 #include "luxrays/utils/cudacache.h"
 
@@ -128,9 +129,10 @@ protected:
 
 class CUDADeviceBuffer : public HardwareDeviceBuffer {
 public:
-	CUDADeviceBuffer() : cudaBuff(0) { }
-	virtual ~CUDADeviceBuffer() {
-	}
+	CUDADeviceBuffer(std::atomic<size_t>& count)
+		: HardwareDeviceBuffer(count), cudaBuff(0) { }
+
+	virtual ~CUDADeviceBuffer();
 
 	bool IsNull() const { 
 		return (cudaBuff == 0);
@@ -144,11 +146,11 @@ public:
 
 		return cudaSize;
 	}
-	
+
 	//--------------------------------------------------------------------------
 	// CUDADevice specific methods
 	//--------------------------------------------------------------------------
-	
+
 	CUdeviceptr &GetCUDADevicePointer() { return cudaBuff; }
 
 	friend class CUDADevice;
@@ -190,13 +192,26 @@ public:
 	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) override;
 
-	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
-			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize) override;
-	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr) override;
-	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr) override;
+	virtual void EnqueueKernel(
+		HardwareDeviceKernelRPtr kernel,
+		const HardwareDeviceRange &globalSize,
+		const HardwareDeviceRange &workGroupSize
+	) override;
+
+	virtual void EnqueueReadBuffer(
+		HardwareDeviceBufferRPtr buff,
+		const bool blocking,
+		const size_t size,
+		void *ptr
+	) override;
+
+	virtual void EnqueueWriteBuffer(
+		const HardwareDeviceBufferRPtr buff,
+		const bool blocking,
+		const size_t size,
+		const void *ptr
+	) override;
+
 	virtual void FlushQueue() override;
 	virtual void FinishQueue() override;
 
@@ -204,9 +219,13 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-		void *src, const size_t size, const std::string &desc = "");
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+	virtual HardwareDeviceBufferUPtr AllocBuffer(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		const BufferType type,
+		void *src, const size_t size,
+		const std::string &desc = ""
+	) override;
+	virtual void FreeBuffer(HardwareDeviceBufferUPtr&& buff) override;
 
 	//--------------------------------------------------------------------------
 	// CUDADevice specific methods
@@ -227,7 +246,8 @@ public:
 protected:
 	virtual void SetKernelArgBuffer(
 		HardwareDeviceKernelRPtr kernel,
-		const u_int index, const HardwareDeviceBuffer *buff
+		const u_int index,
+		HardwareDeviceBufferRPtr buff
 	) override;
 
 	void AllocBuffer(CUdeviceptr *buff,

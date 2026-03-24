@@ -45,10 +45,10 @@ const vector<string> &HardwareDevice::GetAdditionalCompileOpts() {
 }
 
 template <>
-void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(
+void HardwareDevice::SetKernelArg<HardwareDeviceBufferUPtr>(
 	HardwareDeviceKernelRPtr kernel,
 	const u_int index,
-	const HardwareDeviceBufferRPtr &buff
+	HardwareDeviceBufferRPtr buff
 ) {
 	SetKernelArgBuffer(kernel, index, buff);
 }

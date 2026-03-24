@@ -57,6 +57,7 @@ DECLARE_SUBTYPES(Blob);
 DECLARE_SUBTYPES(BSphere);
 DECLARE_SUBTYPES(Context);
 DECLARE_SUBTYPES(CUDADevice);
+DECLARE_SUBTYPES(CUDADeviceBuffer);
 DECLARE_SUBTYPES(CUDADeviceKernel);
 DECLARE_SUBTYPES(CUDADeviceProgram);
 DECLARE_SUBTYPES(CUDADeviceDescription);
@@ -64,6 +65,7 @@ DECLARE_SUBTYPES(DataSet);
 DECLARE_SUBTYPES(Device);
 DECLARE_SUBTYPES(DeviceDescription);
 DECLARE_SUBTYPES(HardwareDevice);
+DECLARE_SUBTYPES(HardwareDeviceBuffer);
 DECLARE_SUBTYPES(HardwareDeviceKernel);
 DECLARE_SUBTYPES(HardwareDeviceProgram);
 DECLARE_SUBTYPES(HardwareIntersectionDevice)
@@ -79,6 +81,7 @@ DECLARE_SUBTYPES(NamedObject);
 DECLARE_SUBTYPES(NativeIntersectionDevice)
 DECLARE_SUBTYPES(NativeIntersectionDeviceDescription);
 DECLARE_SUBTYPES(Normal);
+DECLARE_SUBTYPES(OpenCLDeviceBuffer);
 DECLARE_SUBTYPES(OpenCLDeviceDescription);
 DECLARE_SUBTYPES(OpenCLDeviceProgram);
 DECLARE_SUBTYPES(OpenCLDeviceKernel);

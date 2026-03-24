@@ -62,7 +62,7 @@ Reinhard02ToneMap::Reinhard02ToneMap(const float preS, const float postS, const 
 
 Reinhard02ToneMap::~Reinhard02ToneMap() {
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&hwAccumBuffer);
+		hardwareDevice->FreeBuffer(std::move(hwAccumBuffer));
 }
 
 //------------------------------------------------------------------------------
@@ -131,7 +131,7 @@ void Reinhard02ToneMap::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate buffers
-		hardwareDevice->AllocBufferRW(&hwAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
+		hwAccumBuffer = hardwareDevice->AllocBufferRW( nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
 
 		// Compile sources
 		const double tStart = WallClockTime();

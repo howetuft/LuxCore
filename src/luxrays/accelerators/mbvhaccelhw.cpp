@@ -114,13 +114,20 @@ public:
 
 				if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh.uniqueLeafs.size())) {
 					// The temporary buffer is full, send the data to the HardwareIntersectionDevice
-					vertsBuffs.push_back(nullptr);
-					if (vertsBuffs.size() > 8)
-						throw std::runtime_error("Too many vertex pages required in MBVHKernels()");
+					if (vertsBuffs.size() > 7)
+						throw std::runtime_error(
+							"Too many vertex pages required in MBVHKernels()"
+						);
 
-					device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
-							&tmpVerts[0], sizeof(Point) * tmpVertIndex,
-							"MBVH mesh vertices");
+					vertsBuffs.emplace_back(
+						device.AllocBuffer(
+							nullptr,
+							memTypeFlags,
+							&tmpVerts[0],
+							sizeof(Point) * tmpVertIndex,
+							"MBVH mesh vertices"
+						)
+					);
 					device.FinishQueue();
 
 					tmpVertIndex = 0;
@@ -145,7 +152,9 @@ public:
 				mats.push_back(t->mInv);
 
 			// Allocate the transformation buffer
-			device.AllocBuffer(&uniqueLeafsTransformBuff, memTypeFlags,
+			uniqueLeafsTransformBuff = device.AllocBuffer(
+					std::move(uniqueLeafsInterpolatedTransformBuff),
+					memTypeFlags,
 					&mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
 					"MBVH leaf transformations");
 			device.FinishQueue();
@@ -153,7 +162,7 @@ public:
 
 		if (mbvh.uniqueLeafsMotionSystem.size() > 0) {
 			// Transform CPU data structures in OpenCL data structures
-			
+
 			vector<luxrays::ocl::MotionSystem> motionSystems;
 			vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
 			for(const MotionSystem *ms: mbvh.uniqueLeafsMotionSystem) {
@@ -175,7 +184,9 @@ public:
 			}
 			
 			// Allocate the motion system buffer
-			device.AllocBuffer(&uniqueLeafsMotionSystemBuff, memTypeFlags,
+			uniqueLeafsMotionSystemBuff = device.AllocBuffer(
+					std::move(uniqueLeafsMotionSystemBuff),
+					memTypeFlags,
 					&motionSystems[0],
 					sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
 					"MBVH leaf motion systems buffer");
@@ -185,7 +196,9 @@ public:
 			//	"] Leaf interpolated transforms buffer size: " <<
 			//	(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
 			//	"Kbytes");
-			device.AllocBuffer(&uniqueLeafsInterpolatedTransformBuff,  memTypeFlags,
+			uniqueLeafsInterpolatedTransformBuff = device.AllocBuffer(
+					std::move(uniqueLeafsInterpolatedTransformBuff),
+					memTypeFlags,
 					&interpolatedTransforms[0],
 					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
 					"MBVH leaf interpolated transforms buffer");
@@ -269,13 +282,14 @@ public:
 	}
 
 	virtual ~MBVHKernel() {
-		for (u_int i = 0; i < vertsBuffs.size(); ++i)
-			device.FreeBuffer(&vertsBuffs[i]);
-		for (u_int i = 0; i < nodeBuffs.size(); ++i)
-			device.FreeBuffer(&nodeBuffs[i]);
-		device.FreeBuffer(&uniqueLeafsTransformBuff);
-		device.FreeBuffer(&uniqueLeafsMotionSystemBuff);
-		device.FreeBuffer(&uniqueLeafsInterpolatedTransformBuff);
+		//TODO
+		//for (u_int i = 0; i < vertsBuffs.size(); ++i)
+			//device.FreeBuffer(&vertsBuffs[i]);
+		//for (u_int i = 0; i < nodeBuffs.size(); ++i)
+			//device.FreeBuffer(&nodeBuffs[i]);
+		//device.FreeBuffer(&uniqueLeafsTransformBuff);
+		//device.FreeBuffer(&uniqueLeafsMotionSystemBuff);
+		//device.FreeBuffer(&uniqueLeafsInterpolatedTransformBuff);
 	}
 
 	void UpdateBVHNodes();
@@ -288,11 +302,11 @@ public:
 	const MBVHAccel &mbvh;
 
 	// BVH fields
-	vector<HardwareDeviceBuffer *> vertsBuffs;
-	vector<HardwareDeviceBuffer *> nodeBuffs;
-	HardwareDeviceBuffer *uniqueLeafsTransformBuff;
-	HardwareDeviceBuffer *uniqueLeafsMotionSystemBuff;
-	HardwareDeviceBuffer *uniqueLeafsInterpolatedTransformBuff;
+	std::vector<HardwareDeviceBufferUPtr> vertsBuffs;
+	std::vector<HardwareDeviceBufferUPtr> nodeBuffs;
+	HardwareDeviceBufferUPtr uniqueLeafsTransformBuff;
+	HardwareDeviceBufferUPtr uniqueLeafsMotionSystemBuff;
+	HardwareDeviceBufferUPtr uniqueLeafsInterpolatedTransformBuff;
 
 	// Used to update BVH node buffers
 	vector<vector<u_int> > vertOffsetPerLeafMesh;
@@ -304,7 +318,7 @@ public:
 void MBVHKernel::UpdateBVHNodes() {
 	// Free old buffers
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
-		device.FreeBuffer(&nodeBuffs[i]);
+		device.FreeBuffer(std::move(nodeBuffs[i]));
 	nodeBuffs.resize(0);
 
 	const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
@@ -419,15 +433,27 @@ void MBVHKernel::UpdateBVHNodes() {
 			}
 		}
 
-		if ((tmpNodeIndex >= pageNodeCount) || (currentLeafIndex >=  mbvh.uniqueLeafs.size())) {
-			// The temporary buffer is full, send the data to the HardwareIntersectionDevice
-			nodeBuffs.push_back(nullptr);
-			if (nodeBuffs.size() > 8)
+		if (
+				(tmpNodeIndex >= pageNodeCount) ||
+				(currentLeafIndex >=  mbvh.uniqueLeafs.size())
+		) {
+			// The temporary buffer is full, send the data to the
+			// HardwareIntersectionDevice
+			if (nodeBuffs.size() > 7)
 				throw runtime_error("Too many BVH node pages required in MBVHKernels()");
 
-			device.AllocBufferRO(&nodeBuffs.back(), &tmpNodes[0], sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
-					"MBVH nodes");
-			// I have to wait for the end of the transfer as tmpNodes is edited and deallocated on exit
+			nodeBuffs.push_back(nullptr);
+
+			nodeBuffs.emplace_back(
+				device.AllocBufferRO(
+					nullptr,
+					&tmpNodes[0],
+					sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
+					"MBVH nodes"
+				)
+			);
+			// I have to wait for the end of the transfer as tmpNodes is edited
+			// and deallocated on exit
 			device.FinishQueue();
 
 			tmpNodeIndex = 0;
@@ -455,7 +481,10 @@ void MBVHKernel::Update(DataSetConstSPtr newDataSet) {
 	for(const Transform *t: mbvh.uniqueLeafsTransform)
 		mats.push_back(t->mInv);
 
-	device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+	uniqueLeafsTransformBuff = device.AllocBufferRO(
+		std::move(uniqueLeafsTransformBuff),
+		&mats[0],
+		sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
 		"MBVH leaf transformations");
 	// I have to wait for the end of the transfer as mats is deallocated on exit
 	device.FinishQueue();

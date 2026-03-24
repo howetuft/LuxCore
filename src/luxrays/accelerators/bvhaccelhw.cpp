@@ -92,14 +92,19 @@ public:
 					++vertsCopied;
 				}
 
-				// Allocate the OpenCL buffer
-				vertsBuffs.push_back(nullptr);
-				if (vertsBuffs.size() > 8)
+				if (vertsBuffs.size() > 7)
 					throw runtime_error("Too many vertex pages required in BVHKernels()");
 
-				device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
-						tmpVerts, sizeof(Point) * pageVertCount,
-						"BVH mesh vertices");
+				// Allocate the OpenCL buffer
+				vertsBuffs.emplace_back(
+					device.AllocBuffer(
+						nullptr,
+						memTypeFlags,
+						tmpVerts,
+						sizeof(Point) * pageVertCount,
+						"BVH mesh vertices"
+					)
+				);
 				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
@@ -146,13 +151,18 @@ public:
 				}
 
 				// Allocate OpenCL buffer
-				nodeBuffs.push_back(nullptr);
-				if (nodeBuffs.size() > 8)
+				if (nodeBuffs.size() > 7)
 					throw runtime_error("Too many node pages required in BVHKernels()");
 
-				device.AllocBuffer(&nodeBuffs.back(), memTypeFlags,
-						tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
-						"BVH nodes");
+				nodeBuffs.emplace_back(
+					device.AllocBuffer(
+						nullptr,
+						memTypeFlags,
+						tmpNodes,
+						sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+						"BVH nodes"
+					)
+				);
 				device.FinishQueue();
 
 				nodeIndex += pageNodeCount;
@@ -238,10 +248,11 @@ public:
 
 	virtual ~BVHKernel() {
 
-		for (u_int i = 0; i < vertsBuffs.size(); ++i)
-			device.FreeBuffer(&vertsBuffs[i]);
-		for (u_int i = 0; i < nodeBuffs.size(); ++i)
-			device.FreeBuffer(&nodeBuffs[i]);
+		// TODO Remove
+		//for (u_int i = 0; i < vertsBuffs.size(); ++i)
+			//device.FreeBuffer(&vertsBuffs[i]);
+		//for (u_int i = 0; i < nodeBuffs.size(); ++i)
+			//device.FreeBuffer(&nodeBuffs[i]);
 	}
 
 	virtual void Update(DataSetConstSPtr newDataSet) override { assert(false); }
@@ -249,8 +260,8 @@ public:
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
 	// BVH fields
-	vector<HardwareDeviceBuffer *> vertsBuffs;
-	vector<HardwareDeviceBuffer *> nodeBuffs;
+	std::vector<HardwareDeviceBufferUPtr> vertsBuffs;
+	std::vector<HardwareDeviceBufferUPtr> nodeBuffs;
 	
 	HardwareDeviceKernelUPtr kernel;
 	u_int workGroupSize;

@@ -67,9 +67,9 @@ BloomFilterPlugin::~BloomFilterPlugin() {
 	delete[] bloomFilter;
 
 	if (hardwareDevice) {
-		hardwareDevice->FreeBuffer(&hwBloomBuffer);
-		hardwareDevice->FreeBuffer(&hwBloomBufferTmp);
-		hardwareDevice->FreeBuffer(&hwBloomFilter);
+		hardwareDevice->FreeBuffer(std::move(hwBloomBuffer));
+		hardwareDevice->FreeBuffer(std::move(hwBloomBufferTmp));
+		hardwareDevice->FreeBuffer(std::move(hwBloomFilter));
 	}
 }
 
@@ -272,9 +272,9 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRW(&hwBloomBuffer, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
-		hardwareDevice->AllocBufferRW(&hwBloomBufferTmp, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
-		hardwareDevice->AllocBufferRO(&hwBloomFilter, bloomFilter, bloomFilterSize * sizeof(float), "Bloom filter table");
+		hwBloomBuffer = hardwareDevice->AllocBufferRW( nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
+		hwBloomBufferTmp = hardwareDevice->AllocBufferRW( nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
+		hwBloomFilter = hardwareDevice->AllocBufferRO( bloomFilter, bloomFilterSize * sizeof(float), "Bloom filter table");
 
 		// Compile sources
 		const double tStart = WallClockTime();

@@ -18,6 +18,7 @@
 
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/usings.h"
+#include "optix_types.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include "luxrays/core/context.h"
@@ -133,12 +134,9 @@ public:
 				case TYPE_EXT_TRIANGLE: {
 					auto& tm = dynamic_cast<const TriangleMesh &>(*mesh);
 
-					OptixTraversableHandle handle;
-					HardwareDeviceBuffer *outputBuffer = nullptr;
+					auto [outputBuffer, handle] = BuildTraversable(tm);
 
-					BuildTraversable(tm, handle, &outputBuffer);
-
-					optixOutputBuffers.push_back(outputBuffer);
+					optixOutputBuffers.push_back(std::move(outputBuffer));
 
 					// Add an instance of this mesh
 
@@ -259,8 +257,9 @@ public:
 						*ptr++ = m.m[2][3];
 					}
 
-					HardwareDeviceBuffer *optixMotionBuff = nullptr;
-					cudaDevice->AllocBufferRO(&optixMotionBuff, motionTransform.get(), transformSizeInBytes);
+					auto optixMotionBuff = cudaDevice->AllocBufferRO(
+						motionTransform.get(), transformSizeInBytes
+					);
 					optixOutputBuffers.push_back(optixMotionBuff);
 
 					OptixTraversableHandle motionMeshHandle;
@@ -510,7 +509,8 @@ public:
 		optixAccelParams.optixHandle = topLevelHandle;
 		optixAccelParams.rayBuff = 0;
 		optixAccelParams.rayHitBuff = 0;
-		cudaDevice->AllocBufferRO(&optixAccelParamsBuff, &optixAccelParams, sizeof(OptixAccelParams));
+		cudaDevice->AllocBufferRO(
+			&optixAccelParamsBuff, &optixAccelParams, sizeof(OptixAccelParams));
 
 		// Raygen SBT
 		char sbtRayGenBuff[OPTIX_SBT_RECORD_HEADER_SIZE];
@@ -582,29 +582,35 @@ public:
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
 private:
-	void BuildTraversable(TriangleMeshConstRef mesh,
-			OptixTraversableHandle &handle,
-			HardwareDeviceBuffer **outputBuffer) {
-		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
+	std::tuple<HardwareDeviceBufferUPtr, OptixTraversableHandle>
+	BuildTraversable(TriangleMeshConstRef mesh) {
+
+		HardwareDeviceBufferUPtr outputBuffer;
+		auto& cudaDevice = dynamic_cast<CUDAIntersectionDeviceRef>(device);
 
 		// Allocate CUDA vertices buffer
-		HardwareDeviceBuffer *vertsBuff = nullptr;
-		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices(), sizeof(Point) * mesh.GetTotalVertexCount());
+		auto vertsBuff = cudaDevice->AllocBufferRO(
+			mesh.GetVertices(), sizeof(Point) * mesh.GetTotalVertexCount()
+		);
 
 		// Allocate CUDA triangle vertices indices buffer
-		HardwareDeviceBuffer *trisBuff = nullptr;
-		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
+		auto trisBuff = cudaDevice->AllocBufferRO(
+			mesh.GetTriangles(), sizeof(Triangle) * mesh.GetTotalTriangleCount()
+		);
 
 		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
 
 		// Initialize OptixBuildInput for each mesh
 		OptixBuildInput buildInput = {};
 		buildInput.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
-		buildInput.triangleArray.vertexBuffers = &(((CUDADeviceBuffer *)vertsBuff)->GetCUDADevicePointer());
+		//buildInput.triangleArray.vertexBuffers = &(((CUDADeviceBuffer *)vertsBuff)->GetCUDADevicePointer());
+		buildInput.triangleArray.vertexBuffers =
+			&(dynamic_cast<CUDADeviceBufferRef>(vertsBuff).GetCUDADevicePointer());
 		buildInput.triangleArray.numVertices = mesh.GetTotalVertexCount();
 		buildInput.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
 		buildInput.triangleArray.vertexStrideInBytes = sizeof(Point);
-		buildInput.triangleArray.indexBuffer = ((CUDADeviceBuffer *)trisBuff)->GetCUDADevicePointer();
+		buildInput.triangleArray.indexBuffer =
+			dynamic_cast<CUDADeviceBufferRef>(trisBuff).GetCUDADevicePointer();
 		buildInput.triangleArray.numIndexTriplets = mesh.GetTotalTriangleCount();
 		buildInput.triangleArray.indexFormat = OPTIX_INDICES_FORMAT_UNSIGNED_INT3;
 		buildInput.triangleArray.indexStrideInBytes = sizeof(Triangle);
@@ -615,20 +621,23 @@ private:
 		buildInput.triangleArray.sbtIndexOffsetSizeInBytes = 0;
 		buildInput.triangleArray.sbtIndexOffsetStrideInBytes = 0;
 		buildInput.triangleArray.primitiveIndexOffset = 0;
-		
-		BuildTraversable(buildInput, handle, outputBuffer);
-		
+
+		outputBuffer = BuildTraversable(buildInput, handle);
+
 		// Free temporary memory
 
 		cudaDevice->FreeBuffer(&vertsBuff);
 		cudaDevice->FreeBuffer(&trisBuff);
+
+		return std::make_tuple(std::move(outputBuffer), handle);
 	}
 
-	void BuildTraversable(const OptixBuildInput &buildInput,
-			OptixTraversableHandle &handle,
-			HardwareDeviceBuffer **outputBuffer) {
-		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
-		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
+	std::tuple<HardwareDeviceUPtr, OptixTraversableHandle> BuildTraversable(
+		const OptixBuildInput &buildInput
+	) {
+
+		auto& cudaDevice = dynamic_cast<CUDAIntersectionDeviceRef>(device);
+		OptixDeviceContext optixContext = cudaDevice.GetOptixContext();
 
 		// Allocate temporary build buffers
 
@@ -638,16 +647,20 @@ private:
 		accelOptions.motionOptions.numKeys = 0;
 
 		OptixAccelBufferSizes gasBufferSizes;
-		CHECK_OPTIX_ERROR(optixAccelComputeMemoryUsage(optixContext,
-				&accelOptions, &buildInput, 1,
-				&gasBufferSizes));
+		CHECK_OPTIX_ERROR(
+			optixAccelComputeMemoryUsage(
+				optixContext,
+				&accelOptions,
+				&buildInput,
+				1,
+				&gasBufferSizes
+			)
+		);
 
-		HardwareDeviceBuffer *tmpBufferGas = nullptr;
-		cudaDevice->AllocBufferRW(&tmpBufferGas, nullptr, gasBufferSizes.tempSizeInBytes);
+		auto tmpBufferGas = cudaDevice.AllocBufferRW(nullptr, nullptr, gasBufferSizes.tempSizeInBytes);
 
-		HardwareDeviceBuffer *bufferTempOutputGasAndCompactedSize = nullptr;
 		const size_t compactedSizeOffset = RoundUp<size_t>(gasBufferSizes.outputSizeInBytes, 8ull);
-		cudaDevice->AllocBufferRW(&bufferTempOutputGasAndCompactedSize, nullptr, compactedSizeOffset + 8);
+		auto bufferTempOutputGasAndCompactedSize = cudaDevice.AllocBufferRW(nullptr, nullptr, compactedSizeOffset + 8);
 
 		// Build the accelerator structure (GAS)
 
@@ -669,17 +682,15 @@ private:
 				&emitProperty,
 				1));
 
-		// Free temporary memory
-
-		cudaDevice->FreeBuffer(&tmpBufferGas);
 
 		// Compact the accelerator structure 
 
 		size_t compactedGasSize;
 		CHECK_CUDA_ERROR(cuMemcpyDtoH(&compactedGasSize, emitProperty.result, sizeof(size_t)));
 
+		HardwareDeviceBufferUPtr outputBuffer;
 		if (compactedGasSize < gasBufferSizes.outputSizeInBytes) {
-			cudaDevice->AllocBufferRW(outputBuffer, nullptr, compactedGasSize);
+			outputBuffer = cudaDevice->AllocBufferRW(nullptr, compactedGasSize);
 
 			// Use handle as input and output
 			OptixTraversableHandle newHandle;
@@ -697,19 +708,19 @@ private:
 	}
 
 	// For normal data set case
-	vector<HardwareDeviceBuffer *> optixOutputBuffers;
+	std::vector<HardwareDeviceBufferUPtr> optixOutputBuffers;
 
 	OptixModule optixModule;
 	OptixProgramGroup optixRaygenProgGroup, optixMissProgGroup, optixHitProgGroup;
 	OptixPipeline optixPipeline;
 
 	OptixAccelParams optixAccelParams;
-	HardwareDeviceBuffer *optixAccelParamsBuff;
+	HardwareDeviceBufferUPtr optixAccelParamsBuff;
 
 	OptixShaderBindingTable optixSbt;
-	HardwareDeviceBuffer *optixRayGenSbtBuff;
-	HardwareDeviceBuffer *optixMissSbtBuff;
-	HardwareDeviceBuffer *optixHitSbtBuff;
+	HardwareDeviceBufferUPtr optixRayGenSbtBuff;
+	HardwareDeviceBufferUPtr optixMissSbtBuff;
+	HardwareDeviceBufferUPtr optixHitSbtBuff;
 
 	// For the empty dataset case
 	HardwareDeviceKernelUPtr optixEmptyAccelKernel;
@@ -733,7 +744,9 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 		// This is always true at the moment for all render engines.
 		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
 		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
-		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+		cudaDevice->EnqueueWriteBuffer(
+			optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams
+		);
 
 		CHECK_OPTIX_ERROR(optixLaunch(
 				optixPipeline,

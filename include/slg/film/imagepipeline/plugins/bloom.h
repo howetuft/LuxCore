@@ -77,9 +77,9 @@ private:
 
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *hwBloomBuffer;
-	luxrays::HardwareDeviceBuffer *hwBloomBufferTmp;
-	luxrays::HardwareDeviceBuffer *hwBloomFilter;
+	luxrays::HardwareDeviceBufferUPtr hwBloomBuffer;
+	luxrays::HardwareDeviceBufferUPtr hwBloomBufferTmp;
+	luxrays::HardwareDeviceBufferUPtr hwBloomFilter;
 
 	luxrays::HardwareDeviceKernelUPtr bloomFilterXKernel;
 	luxrays::HardwareDeviceKernelUPtr bloomFilterYKernel;

@@ -468,13 +468,13 @@ public:
 	luxrays::DataSetSPtr dataSet;
 	luxrays::HardwareDevicePtr hardwareDevice;
 
-	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
-	luxrays::HardwareDeviceBuffer *hw_ALPHA;
-	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
-	luxrays::HardwareDeviceBuffer *hw_ALBEDO;
-	luxrays::HardwareDeviceBuffer *hw_AVG_SHADING_NORMAL;
+	luxrays::HardwareDeviceBufferUPtr hw_IMAGEPIPELINE;
+	luxrays::HardwareDeviceBufferUPtr hw_ALPHA;
+	luxrays::HardwareDeviceBufferUPtr hw_OBJECT_ID;
+	luxrays::HardwareDeviceBufferUPtr hw_ALBEDO;
+	luxrays::HardwareDeviceBufferUPtr hw_AVG_SHADING_NORMAL;
 
-	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
+	luxrays::HardwareDeviceBufferUPtr hw_mergeBuffer;
 
 	luxrays::HardwareDeviceKernelUPtr mergeInitializeKernel;
 	luxrays::HardwareDeviceKernelUPtr mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;

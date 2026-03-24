@@ -47,7 +47,7 @@ ColorAberrationPlugin::~ColorAberrationPlugin() {
 	delete[] tmpBuffer;
 
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&hwTmpBuffer);
+		hardwareDevice->FreeBuffer(std::move(hwTmpBuffer));
 }
 
 ImagePipelinePlugin *ColorAberrationPlugin::Copy() const {
@@ -152,7 +152,7 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRW(&hwTmpBuffer, nullptr, width * height * sizeof(Spectrum), "ColorAberration");
+		hwTmpBuffer = hardwareDevice->AllocBufferRW(nullptr, nullptr, width * height * sizeof(Spectrum), "ColorAberration");
 
 		// Compile sources
 		const double tStart = WallClockTime();

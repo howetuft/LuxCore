@@ -177,12 +177,12 @@ void Film::DeleteHWContext() {
 		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for hardware image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
-		hardwareDevice->FreeBuffer(&hw_IMAGEPIPELINE);
-		hardwareDevice->FreeBuffer(&hw_ALPHA);
-		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
-		hardwareDevice->FreeBuffer(&hw_ALBEDO);
-		hardwareDevice->FreeBuffer(&hw_AVG_SHADING_NORMAL);
-		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
+		hardwareDevice->FreeBuffer(std::move(hw_IMAGEPIPELINE));
+		hardwareDevice->FreeBuffer(std::move(hw_ALPHA));
+		hardwareDevice->FreeBuffer(std::move(hw_OBJECT_ID));
+		hardwareDevice->FreeBuffer(std::move(hw_ALBEDO));
+		hardwareDevice->FreeBuffer(std::move(hw_AVG_SHADING_NORMAL));
+		hardwareDevice->FreeBuffer(std::move(hw_mergeBuffer));
 
 		hardwareDevice->PopThreadCurrentDevice();
 		hardwareDevice = nullptr;
@@ -201,22 +201,22 @@ void Film::AllocateHWBuffers() {
 		ip->AddHWChannelsUsed(hwChannelsUsed);
 	
 	// I have to allocate this anyway because of the Film::MergeSampleBuffersHW()
-	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+	hw_IMAGEPIPELINE = hardwareDevice->AllocBufferRW(channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 
 	if (HasChannel(ALPHA) && hwChannelsUsed.count(ALPHA))
-		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
+		hw_ALPHA = hardwareDevice->AllocBufferRO( channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
 	if (HasChannel(OBJECT_ID) && hwChannelsUsed.count(OBJECT_ID))
-		hardwareDevice->AllocBufferRO(&hw_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
+		hw_OBJECT_ID = hardwareDevice->AllocBufferRO( channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
 	if (HasChannel(ALBEDO) && hwChannelsUsed.count(ALBEDO))
-		hardwareDevice->AllocBufferRO(&hw_ALBEDO, channel_ALBEDO->GetPixels(), channel_ALBEDO->GetSize(), "ALBEDO");
+		hw_ALBEDO = hardwareDevice->AllocBufferRO( channel_ALBEDO->GetPixels(), channel_ALBEDO->GetSize(), "ALBEDO");
 	if (HasChannel(AVG_SHADING_NORMAL) && hwChannelsUsed.count(AVG_SHADING_NORMAL))
-		hardwareDevice->AllocBufferRO(&hw_AVG_SHADING_NORMAL, channel_AVG_SHADING_NORMAL->GetPixels(), channel_AVG_SHADING_NORMAL->GetSize(), "AVG_SHADING_NORMAL");
+		hw_AVG_SHADING_NORMAL = hardwareDevice->AllocBufferRO( channel_AVG_SHADING_NORMAL->GetPixels(), channel_AVG_SHADING_NORMAL->GetSize(), "AVG_SHADING_NORMAL");
 
 	const size_t mergeBufferSize = Max(
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
 			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
 	if (mergeBufferSize > 0)
-		hardwareDevice->AllocBufferRO(&hw_mergeBuffer, nullptr, mergeBufferSize, "Merge");
+		hw_mergeBuffer = hardwareDevice->AllocBufferRO( nullptr, mergeBufferSize, "Merge");
 
 	hardwareDevice->PopThreadCurrentDevice();
 	ctx->SetVerbose(false);

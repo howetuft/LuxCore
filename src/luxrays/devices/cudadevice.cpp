@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "cuew.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
@@ -344,18 +345,21 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 	cudaDeviceKernel.args[index] = argCpy;
 }
 
-void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
-		const u_int index, const HardwareDeviceBuffer *buff) {
+void CUDADevice::SetKernelArgBuffer(
+		HardwareDeviceKernelRPtr kernel,
+		const u_int index,
+		HardwareDeviceBufferRPtr buff
+) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
 	if (buff) {
-		const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
-		assert (cudaDeviceBuff);
+		auto& cudaDeviceBuff = dynamic_cast<CUDADeviceBufferRef>(*buff);
 
-		SetKernelArg(kernel, index, sizeof(CUdeviceptr), &cudaDeviceBuff->cudaBuff);
-	} else
+		SetKernelArg(kernel, index, sizeof(CUdeviceptr), &cudaDeviceBuff.cudaBuff);
+	} else {
 		SetKernelArg(kernel, index, sizeof(CUdeviceptr), nullptr);
+	}
 }
 
 static void ConvertHardwareRange(const u_int globalSize, const u_int workGroupSize,
@@ -414,33 +418,31 @@ void CUDADevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			nullptr));
 }
 
-void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+void CUDADevice::EnqueueReadBuffer(HardwareDeviceBufferRPtr buff,
 		const bool blocking, const size_t size, void *ptr) {
 	assert (buff);
 	assert (!buff->IsNull());
 
-	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
-	assert (cudaDeviceBuff);
+	auto& cudaDeviceBuff = dynamic_cast<CUDADeviceBufferRef>(*buff);
 
 	if (blocking) {
-		CHECK_CUDA_ERROR(cuMemcpyDtoH(ptr, cudaDeviceBuff->cudaBuff, size));
+		CHECK_CUDA_ERROR(cuMemcpyDtoH(ptr, cudaDeviceBuff.cudaBuff, size));
 	} else {
-		CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(ptr, cudaDeviceBuff->cudaBuff, size, 0));
+		CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(ptr, cudaDeviceBuff.cudaBuff, size, 0));
 	}
 }
 
-void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
+void CUDADevice::EnqueueWriteBuffer(HardwareDeviceBufferRPtr buff,
 		const bool blocking, const size_t size, const void *ptr) {
 	assert (buff);
 	assert (!buff->IsNull());
 
-	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
-	assert (cudaDeviceBuff);
+	auto& cudaDeviceBuff = dynamic_cast<CUDADeviceBufferRef>(*buff);
 
 	if (blocking) {
-		CHECK_CUDA_ERROR(cuMemcpyHtoD(cudaDeviceBuff->cudaBuff, ptr, size));
+		CHECK_CUDA_ERROR(cuMemcpyHtoD(cudaDeviceBuff.cudaBuff, ptr, size));
 	} else {
-		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(cudaDeviceBuff->cudaBuff, ptr, size, 0));
+		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(cudaDeviceBuff.cudaBuff, ptr, size, 0));
 	}
 }
 
@@ -455,97 +457,127 @@ void CUDADevice::FinishQueue() {
 // Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void CUDADevice::AllocBuffer(HardwareDeviceBuffer **hdBuff, const BufferType type,
-		void *src, const size_t size, const string &desc) {
-	if (!*hdBuff)
-		*hdBuff = new CUDADeviceBuffer();
+HardwareDeviceBufferUPtr CUDADevice::AllocBuffer(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		const BufferType type,
+		void *src,
+		const size_t size,
+		const string &desc
+) {
+	//if (!*hdBuff)
+		//*hdBuff = new CUDADeviceBuffer();
+	auto [hdBuff, cudaDeviceBuff] = !oldBuff ?
+		CreateUniquePtr<HardwareDeviceBuffer, CUDADeviceBuffer>() :
+		std::make_tuple(std::move(oldBuff), std::ref(dynamic_cast<CUDADeviceBufferRef>(*oldBuff)));
 
-	CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*hdBuff);
-	assert (cudaDeviceBuff);
 
-	CUdeviceptr *buff = &cudaDeviceBuff->cudaBuff;
+	auto& buff = cudaDeviceBuff.cudaBuff;
 
 	// Handle the case of an empty buffer
 	if (!size) {
-		if (*buff) {
+		if (buff) {
 			// Free the buffer
 			size_t cudaSize;
-			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, buff));
 			FreeMemory(cudaSize);
 
-			CHECK_CUDA_ERROR(cuMemFree(*buff));
+			CHECK_CUDA_ERROR(cuMemFree(buff));
 		}
 
-		*buff = 0;
+		buff = 0;
 
-		return;
+		return hdBuff;
 	}
 
-	if (*buff) {
+	if (buff) {
 		// Check the size of the already allocated buffer
 
 		size_t cudaSize;
-		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, buff));
 
 		if (size == cudaSize) {
 			// I can reuse the buffer; just update the content
 
 			//LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
 			if (src) {
-				CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(*buff, src, size, 0));
+				CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(buff, src, size, 0));
 			}
 
-			return;
+			return hdBuff;
 		} else {
 			// Free the buffer
 			size_t cudaSize;
-			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, buff));
 			FreeMemory(cudaSize);
 
-			CHECK_CUDA_ERROR(cuMemFree(*buff));
-			*buff = 0;
+			CHECK_CUDA_ERROR(cuMemFree(buff));
+			buff = 0;
 		}
 	}
 
-	if (desc != "")
-		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
-				" buffer size: " << ToMemString(size) << ((type & BUFFER_TYPE_OUT_OF_CORE) ? " (OUT OF CORE)" : ""));
+	if (desc != "") {
+		LR_LOG(
+			deviceContext,
+			"[Device " << GetName() << "] " << desc <<
+			" buffer size: " << ToMemString(size)
+			<< ((type & BUFFER_TYPE_OUT_OF_CORE) ? " (OUT OF CORE)" : "")
+		);
+	}
 
 	// Check if I was asked for out of core support
-	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc.HasOutOfCoreMemorySupport()) {
-		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc.GetName() << " doesn't support out of core memory buffers: " << desc);
+	if (
+		(type & BUFFER_TYPE_OUT_OF_CORE) &&
+		!deviceDesc.HasOutOfCoreMemorySupport()
+	) {
+		LR_LOG(
+			deviceContext,
+			"WARNING: CUDA device " << deviceDesc.GetName()
+			<< " doesn't support out of core memory buffers: "
+			<< desc
+		);
 	}
-	
+
 	if (type & BUFFER_TYPE_OUT_OF_CORE) {
-		CHECK_CUDA_ERROR(cuMemAllocManaged(buff, size, CU_MEM_ATTACH_GLOBAL));
+		CHECK_CUDA_ERROR(cuMemAllocManaged(&buff, size, CU_MEM_ATTACH_GLOBAL));
 
 		if (type & BUFFER_TYPE_READ_ONLY) {
-			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc.cudaDevice));
+			CHECK_CUDA_ERROR(
+				cuMemAdvise(
+					buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc.cudaDevice
+				)
+			);
 		}
 	} else {
-		CHECK_CUDA_ERROR(cuMemAlloc(buff, size));
+		CHECK_CUDA_ERROR(cuMemAlloc(&buff, size));
 	}
 
 	if (src) {
-		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(*buff, src, size, 0));
+		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(buff, src, size, 0));
 	}
-	
+
 	AllocMemory(size);
 }
 
-void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
-	if (*buff) {
-		if (!(*buff)->IsNull()) {
-			CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
-			assert (cudaDeviceBuff);
 
-			FreeMemory(cudaDeviceBuff->GetSize());
+CUDADeviceBuffer::~CUDADeviceBuffer() {
+	//TODO
+	//cudaDevice.FreeMemory(cudaDeviceBuff.GetSize());
 
-			CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+	CHECK_CUDA_ERROR(cuMemFree(cudaBuff));
+	memCounter -= GetSize();
+}
+
+void CUDADevice::FreeBuffer(HardwareDeviceBufferUPtr&& buff) {
+	if (buff) {
+		if (!(buff)->IsNull()) {
+			auto& cudaDeviceBuff = dynamic_cast<CUDADeviceBufferRef>(*buff);
+
+			FreeMemory(cudaDeviceBuff.GetSize());
+
+			CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff.cudaBuff));
 		}
 
-		delete *buff;
-		*buff = nullptr;
+		buff.reset();
 	}
 }
 

@@ -131,14 +131,24 @@ typedef enum {
 
 class HardwareDeviceBuffer {
 public:
+
+	// No copy
+	HardwareDeviceBuffer(const HardwareDeviceBuffer&) = delete;
+	HardwareDeviceBuffer& operator=(const HardwareDeviceBuffer&) = delete;
+
 	virtual ~HardwareDeviceBuffer() { }
 
 	virtual bool IsNull() const = 0;
-	
+
 	virtual size_t GetSize() const = 0;
 
 protected:
-	HardwareDeviceBuffer() { }
+	HardwareDeviceBuffer(std::atomic<size_t>& counter) : memCounter(counter) { }
+
+	// Reference to memory counter
+	std::atomic<size_t>& memCounter;
+
+
 };
 
 //------------------------------------------------------------------------------
@@ -170,20 +180,38 @@ public:
 			const u_int index, const size_t size, const void *arg) = 0;
 protected:
 	virtual void SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
-			const u_int index, const HardwareDeviceBuffer *buff) = 0;
+			const u_int index, HardwareDeviceBufferRPtr buff) = 0;
 public:
 	template <typename T>
-	void SetKernelArg(HardwareDeviceKernelRPtr kernel, const u_int index, const T &arg) {
-		SetKernelArg(kernel, index, KernelArgumentHandler<T>::Size(arg), KernelArgumentHandler<T>::Ptr(arg));
+	void SetKernelArg(
+		HardwareDeviceKernelRPtr kernel,
+		const u_int index,
+		const T &arg
+	) {
+		SetKernelArg(
+			kernel,
+			index,
+			KernelArgumentHandler<T>::Size(arg),
+			KernelArgumentHandler<T>::Ptr(arg)
+		);
 	}
 
-	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
-			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize) = 0;
-	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr) = 0;
-	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr) = 0;
+	virtual void EnqueueKernel(
+		HardwareDeviceKernelRPtr kernel,
+		const HardwareDeviceRange &globalSize,
+		const HardwareDeviceRange &workGroupSize
+	) = 0;
+
+	virtual void EnqueueReadBuffer(
+		HardwareDeviceBufferRPtr buff,
+		const bool blocking, const size_t size, void *ptr
+	) = 0;
+
+	virtual void EnqueueWriteBuffer(
+		const HardwareDeviceBufferRPtr buff,
+		const bool blocking, const size_t size, const void *ptr
+	) = 0;
+
 	virtual void FlushQueue() = 0;
 	virtual void FinishQueue() = 0;
 
@@ -193,16 +221,26 @@ public:
 
 	size_t GetUsedMemory() const { return usedMemory; }
 
-	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
-			void *src, const size_t size, const std::string &desc = "") = 0;
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff,
-			void *src, const size_t size, const std::string &desc = "") {
-		AllocBuffer(buff, BUFFER_TYPE_READ_ONLY, src, size, desc);
+	virtual HardwareDeviceBufferUPtr AllocBuffer(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		const BufferType type,
+		void *src, const size_t size, const std::string &desc = ""
+	) = 0;
+
+	virtual HardwareDeviceBufferUPtr AllocBufferRO(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		void *src, const size_t size, const std::string &desc = ""
+	) {
+		return AllocBuffer(std::move(oldBuff), BUFFER_TYPE_READ_ONLY, src, size, desc);
 	}
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") {
-		AllocBuffer(buff, BUFFER_TYPE_READ_WRITE, src, size, desc);
+
+	virtual HardwareDeviceBufferUPtr AllocBufferRW(
+		HardwareDeviceBufferUPtr&& oldBuff,
+		void *src, const size_t size, const std::string &desc = ""
+	) {
+		return AllocBuffer(std::move(oldBuff), BUFFER_TYPE_READ_WRITE, src, size, desc);
 	}
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
+	virtual void FreeBuffer(HardwareDeviceBufferUPtr&& buff) = 0;
 
 	virtual ~HardwareDevice();
 
@@ -218,11 +256,18 @@ protected:
 	void FreeMemory(const size_t s) { usedMemory -= s; }
 
 	std::vector<std::string> additionalCompileOpts;
-	size_t usedMemory;
+	std::atomic<size_t> usedMemory;
 };
 
-typedef HardwareDeviceBuffer * HardwareDeviceBufferRPtr;
-template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernelRPtr kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
+//TODO Remove
+//typedef HardwareDeviceBuffer * HardwareDeviceBufferRPtr;
+//template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernelRPtr kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
+
+template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(
+	HardwareDeviceKernelRPtr kernel,
+	const u_int index,
+	const HardwareDeviceBufferRPtr &buff
+);
 
 }
 
