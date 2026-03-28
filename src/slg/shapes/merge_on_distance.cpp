@@ -958,7 +958,8 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		meshUVs,
 		meshCols,
 		meshAlphas,
-		srcMesh.GetBevelRadius()
+		srcMesh.GetBevelRadius(),
+		std::move(meshTriangleUVs)
 	);
 
 	// Copy AOV to new mesh

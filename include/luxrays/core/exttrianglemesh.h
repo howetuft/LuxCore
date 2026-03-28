@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <array>
+#include <memory>
 #include <span>
 
 #include <boost/lexical_cast.hpp>
@@ -142,7 +143,8 @@ public:
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f);
+			const float bRadius = 0.f,
+			std::unique_ptr<std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT>>&& meshTriangleUVs = nullptr);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
@@ -372,9 +374,11 @@ public:
 	}
 
 	void Init(Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+		std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+		std::unique_ptr<std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT>>&& meshTriangleUVs
+	);
 
 	void Preprocess();
 	void PreprocessBevel();
@@ -488,6 +492,7 @@ public:
 	Normal *triNormals; // Triangle normals
 
 	std::array<UV *, EXTMESH_MAX_DATA_COUNT> uvs; // Vertex uvs
+	std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT> triangleUVs; // Triangle uvs (just for subdiv needs, at the moment - no rendering treatment associated)
 	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols; // Vertex colors
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> alphas; // Vertex alphas
 
@@ -501,7 +506,7 @@ public:
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh& m, const Transform &t) : 
+	ExtInstanceTriangleMesh(ExtTriangleMesh& m, const Transform &t) :
 		InstanceTriangleMesh(m, t) { }
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}

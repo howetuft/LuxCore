@@ -148,7 +148,9 @@ inline UV operator*(float f, const UV &p) {
 	return p*f;
 }
 
-}
+using TriangleUV = std::array<UV, 3>;
+
+}  // namespace luxrays
 
 // Eliminate serialization overhead at the cost of
 // never being able to increase the version.

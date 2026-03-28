@@ -24,8 +24,10 @@
 #include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <filesystem>
+#include <memory>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/strutils.h"
@@ -124,7 +126,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) :
+		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius
+) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
@@ -153,7 +156,9 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	if (mAlphas)
 		meshAlphas[0] = mAlphas;
 
-	Init(meshNormals, &meshUVs, &meshCols, &meshAlphas);
+
+
+	Init(meshNormals, &meshUVs, &meshCols, &meshAlphas, nullptr);
 }
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
@@ -161,7 +166,9 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-		const float bRadius) :
+		const float bRadius,
+		std::unique_ptr<std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT>>&& meshTriangleUVs
+		) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
@@ -174,13 +181,15 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	vertAOV.fill(nullptr);
 	triAOV.fill(nullptr);
 
-	Init(meshNormals, meshUVs, meshCols, meshAlphas);
+	Init(meshNormals, meshUVs, meshCols, meshAlphas, std::move(meshTriangleUVs));
 }
 
 void ExtTriangleMesh::Init(Normal *meshNormals,
-		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) {
+	array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+	array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+	std::unique_ptr<std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT>>&& meshTriangleUVs
+) {
 	if (meshUVs && (meshUVs->size() > EXTMESH_MAX_DATA_COUNT)) {
 		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
 				ToString(meshUVs->size()) + ") UV sets than EXTMESH_MAX_DATA_COUNT");
@@ -193,6 +202,10 @@ void ExtTriangleMesh::Init(Normal *meshNormals,
 		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
 				ToString(meshAlphas->size()) + ") Alpha sets than EXTMESH_MAX_DATA_COUNT");
 	}
+	if (meshTriangleUVs && (meshTriangleUVs->size() > EXTMESH_MAX_DATA_COUNT)) {
+		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
+				ToString(meshAlphas->size()) + ") TriangleUV sets than EXTMESH_MAX_DATA_COUNT");
+	}
 
 	normals = meshNormals;
 	triNormals = new Normal[triCount];
@@ -203,6 +216,8 @@ void ExtTriangleMesh::Init(Normal *meshNormals,
 		cols = *meshCols;
 	if (meshAlphas)
 		alphas = *meshAlphas;
+	if (meshTriangleUVs)
+		triangleUVs = std::move(*meshTriangleUVs);
 
 	Preprocess();
 }
