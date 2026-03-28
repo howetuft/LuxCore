@@ -871,7 +871,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}  // Body lambda
 	);  // tbb::parallel_for
 
-	// Recompute triangles
+	// Recompute triangles and extended UVs
 	const u_int numTriangles = srcMesh.GetTotalTriangleCount();
 	SDL_LOG("Number of triangles " << numTriangles);
 	auto oldTriangles = srcMesh.GetTriangles();
@@ -879,17 +879,37 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		luxrays::ExtTriangleMesh::AllocTrianglesBuffer(numTriangles)
 	);
 	auto newTrianglesPtr = newTriangles.get();
+	using TriangleUV = std::array<luxrays::UV, 3>;
+	std::array<std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT> newTriangleUVs;
+
+	for (u_int uvlayer = 0; uvlayer < EXTMESH_MAX_DATA_COUNT; ++uvlayer) {
+		if (not srcMesh.HasUVs(uvlayer)) continue;
+		newTriangleUVs[uvlayer] = std::make_unique<TriangleUV[]>(numTriangles);
+	}
+
 	tbb::parallel_for(
 		tbb::blocked_range<u_int>(0, numTriangles),
 		[&](const tbb::blocked_range<u_int>& r) {
-			for (u_int i = r.begin(); i != r.end(); ++i) {
-				const auto& oldTriangle = oldTriangles[i];
+			for (u_int triangle = r.begin(); triangle != r.end(); ++triangle) {
+				const auto& oldTriangle = oldTriangles[triangle];
+
+				// Triangle
 				auto newTriangle = luxrays::Triangle(
 					pointMap[oldTriangle.v[0]],
 					pointMap[oldTriangle.v[1]],
 					pointMap[oldTriangle.v[2]]
 				);
-				newTrianglesPtr[i] = newTriangle;
+				newTrianglesPtr[triangle] = newTriangle;
+
+				// Triangle UVs (per triangle vertex)
+				for (u_int uvlayer = 0; uvlayer < EXTMESH_MAX_DATA_COUNT; ++uvlayer) {
+					if (not srcMesh.HasUVs(uvlayer)) continue;
+					newTriangleUVs[uvlayer][triangle] = TriangleUV{
+						srcUVs[uvlayer][oldTriangle.v[0]],
+						srcUVs[uvlayer][oldTriangle.v[1]],
+						srcUVs[uvlayer][oldTriangle.v[2]]
+					};
+				}
 			}
 		}
 	);
@@ -898,6 +918,9 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	auto meshUVs = new std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT>;
 	auto meshCols = new std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT>;
 	auto meshAlphas = new std::array<float *, EXTMESH_MAX_DATA_COUNT>;
+	auto meshTriangleUVs = std::make_unique<
+		std::array< std::unique_ptr<TriangleUV[]>, EXTMESH_MAX_DATA_COUNT >
+	>();
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasUVs(i)) {
@@ -917,6 +940,12 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		} else {
 			(*meshAlphas)[i] = nullptr;
 		}
+
+		// Face vertex uvs
+		if (srcMesh.HasUVs(i)) {
+			(*meshTriangleUVs)[i] = std::move(newTriangleUVs[i]);
+		}
+
 	}
 
 	// Create new mesh
