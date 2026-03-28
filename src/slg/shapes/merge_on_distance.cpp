@@ -706,7 +706,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	auto newPointsPtr = newPoints.get();
 
 	// Normals
-	std::unique_ptr<luxrays::Normal> newNormals;
+	std::unique_ptr<luxrays::Normal[]> newNormals;
 	const auto srcNormals = srcMesh.GetNormals();
 	if (srcMesh.HasNormals()) {
 		newNormals.reset(new luxrays::Normal[numNewPoints]);
@@ -714,7 +714,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	auto newNormalsPtr = importNormals ? newNormals.get() : nullptr;
 
 	// UV
-	std::array<std::unique_ptr<luxrays::UV>, EXTMESH_MAX_DATA_COUNT> newUVs;
+	std::array<std::unique_ptr<luxrays::UV[]>, EXTMESH_MAX_DATA_COUNT> newUVs;
 	std::array<luxrays::UV*, EXTMESH_MAX_DATA_COUNT> srcUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasUVs(i)) {
@@ -724,7 +724,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	}
 
 	// Colors
-	std::array<std::unique_ptr<luxrays::Spectrum>, EXTMESH_MAX_DATA_COUNT> newColors;
+	std::array<std::unique_ptr<luxrays::Spectrum[]>, EXTMESH_MAX_DATA_COUNT> newColors;
 	std::array<luxrays::Spectrum*, EXTMESH_MAX_DATA_COUNT> srcColors;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasColors(i)) {
@@ -734,7 +734,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	}
 
 	// Alphas
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newAlphas;
+	std::array<std::unique_ptr<float[]>, EXTMESH_MAX_DATA_COUNT> newAlphas;
 	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasAlphas(i)) {
@@ -744,7 +744,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	}
 
 	// VertexAOVs
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newVertexAOVs;
+	std::array<std::unique_ptr<float[]>, EXTMESH_MAX_DATA_COUNT> newVertexAOVs;
 	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcVertexAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasVertexAOV(i)) {
