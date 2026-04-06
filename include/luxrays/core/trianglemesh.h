@@ -150,6 +150,9 @@ public:
 		TriangleMeshID **preprocessedMeshIDs = NULL,
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
+	ExtTriangleMeshConstPtr GetOriginMesh() const { return originMesh; }
+	void SetOriginMesh(const ExtTriangleMesh * mesh) { originMesh = mesh; }
+
 protected:
 	void Preprocess();
 
@@ -169,10 +172,13 @@ protected:
 
 	friend class boost::serialization::access;
 
+
 protected:
 	// Used by serialization
 	TriangleMesh() {
 	}
+
+	ExtTriangleMeshConstPtr originMesh = nullptr;  // Original mesh, in shape process
 
 private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {

@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/geometry/triangle.h"
 #include <unordered_map>
 #include <format>
+#include <execution>
 
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/patchMap.h>
@@ -204,6 +206,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 		patchOptions.SetEndCapType(
 				Far::PatchTableFactory::Options::ENDCAP_BSPLINE_BASIS
 		);
+		patchOptions.generateFVarLegacyLinearPatches = false;
 
 		patchTable = PatchTablePtr(Far::PatchTableFactory::Create(*refiner, patchOptions));
 
@@ -740,7 +743,8 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	const std::map<std::pair<int, int>, EdgeInfo>& edgeMap,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight,
-	const Far::PatchTableFactory::Options& patchOptions
+	const Far::PatchTableFactory::Options& patchOptions,
+	const int * originVertIndices
 ) {
 
 	// Be sure patch options were intialized with the desired max level
@@ -752,6 +756,7 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 
 	Sdc::Options sdc_options;
 	sdc_options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
+	sdc_options.SetFVarLinearInterpolation(Sdc::Options::FVAR_LINEAR_NONE);
 
 	// Populate a topology descriptor with our raw data
 	Far::TopologyDescriptor desc;
@@ -775,6 +780,21 @@ TopologyRefinerPtr createTopologyAdaptiveRefiner(
 	desc.numCreases = creaseWeights.size();
 	desc.creaseVertexIndexPairs = creases.data();
 	desc.creaseWeights = creaseWeights.data();
+
+	// Add face uvs
+	Far::TopologyDescriptor::FVarChannel channels[1];
+	if (originVertIndices) {
+		SDL_LOG("Subdivision (enhanced) - Original vertex indices found");
+		channels[0].numValues = numVertices;
+		channels[0].valueIndices = originVertIndices;
+		desc.numFVarChannels = 1;
+		desc.fvarChannels = channels;
+	} else {
+		channels[0].numValues = 0;
+		channels[0].valueIndices = nullptr;
+		desc.numFVarChannels = 0;
+		desc.fvarChannels = nullptr;
+	}
 
 	// Create refiner
 	using RefinerFactory = Far::TopologyRefinerFactory<Far::TopologyDescriptor>;
@@ -829,6 +849,17 @@ struct Surface {
 		std::map<std::pair<int, int>, EdgeInfo> edgeMap;
 		processEdgesForSharpness(srcMesh, edgeMap, sharpnessThresholdRadians);
 
+		// Get original topology
+		const auto orgMesh = srcMesh.GetOriginMesh();
+		const int * originTriangles = orgMesh ?
+			reinterpret_cast<const int *>(orgMesh->GetTriangles()) :
+			nullptr;
+		// Check orginal mesh and source mesh have the same number of faces
+		assert(orgMesh ?
+			orgMesh->GetTotalTriangleCount() == srcMesh.GetTotalTriangleCount() :
+			true
+		);
+
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
@@ -838,7 +869,8 @@ struct Surface {
 				edgeMap,
 				sharpnessThresholdRadians,
 				creaseWeight,
-				patchTableOptions
+				patchTableOptions,
+				originTriangles
 			)
 		);
 	}
@@ -853,6 +885,9 @@ struct Surface {
 	void Subdivide(int maxLevel) {
 		// Set refinement level
 		patchTableOptions.maxIsolationLevel = maxLevel;
+
+		patchTableOptions.fvarChannelIndices = {0};
+		patchTableOptions.generateFVarTables = 1;
 
 		// Apply adaptive refinement
 		refiner->RefineAdaptive(patchTableOptions.GetRefineAdaptiveOptions());
@@ -1093,22 +1128,34 @@ struct Surface {
 	}  // ~Tessellate
 
 
-	template <typename T>
-	InterpolatedValues Interpolate(const T* baseValues, int numBaseValues) const {
+	template <typename T, bool FACE_VARYING=false>
+	InterpolatedValues Interpolate(
+		const T* baseValues, int numBaseValues, int channel = 0
+	) const {
 
-		assert(numBaseValues == refiner->GetLevel(0).GetNumVertices());
+		if (FACE_VARYING) {
+			assert(numBaseValues == refiner->GetLevel(0).GetNumFVarValues(channel));
+		} else {
+			assert(numBaseValues == refiner->GetLevel(0).GetNumVertices());
+		}
 
 		// Set dimensions
 		int stride = sizeof(T) / sizeof(float);
-		int numRegularRefinedValues = refiner->GetNumVerticesTotal();
+		int numRegularRefinedValues = FACE_VARYING ?
+			refiner->GetNumFVarValuesTotal(channel) : refiner->GetNumVerticesTotal();
 		int numLocalRefinedValues   = patchTable->GetNumLocalPoints();
 		int numAllRefinedValues = numRegularRefinedValues + numLocalRefinedValues;
 
 		// Allocate output
-		std::unique_ptr<T[]> refinedValues(new T[numAllRefinedValues]);
+		auto refinedValues = std::make_unique<T[]>(numAllRefinedValues);
 
 		// Copy base values in refined values
-		std::memcpy(&refinedValues.get()[0], &baseValues[0], numBaseValues * sizeof(T));
+		std::copy(
+			std::execution::par,
+			baseValues,
+			baseValues + numBaseValues,
+			refinedValues.get()
+		);
 
 		// Interpolate on refined vertices and local points (Tutorial 5_1)
 		if (numRegularRefinedValues) {
@@ -1116,8 +1163,14 @@ struct Surface {
 
 			T * srcValues = refinedValues.get();
 			for (int level = 1; level < refiner->GetNumLevels(); ++level) {
-				T * dstValues = srcValues + refiner->GetLevel(level - 1).GetNumVertices();
-				primvarRefiner.Interpolate(level, srcValues, dstValues);
+				T * dstValues;
+				if (FACE_VARYING) {
+					dstValues = srcValues + refiner->GetLevel(level - 1).GetNumFVarValues(channel);
+					primvarRefiner.InterpolateFaceVarying(level, srcValues, dstValues, channel);
+				} else {
+					dstValues = srcValues + refiner->GetLevel(level - 1).GetNumVertices();
+					primvarRefiner.Interpolate(level, srcValues, dstValues);
+				}
 				srcValues = dstValues;
 			}
 		}
@@ -1129,7 +1182,7 @@ struct Surface {
 		}
 
 		return InterpolatedValues(
-			(float*) refinedValues.release(),
+			(float*) refinedValues.release(),  // TODO
 			numAllRefinedValues,
 			stride
 		);
@@ -1271,16 +1324,17 @@ struct Surface {
 	///
 	///	@return A smart pointer to a buffer containing the evaluated data
 	///
-	template<typename T>
+	template<typename T, bool FACE_VARYING=false>
 	std::unique_ptr<T[]> Evaluate(
 		const InterpolatedValues& interpolatedValues,
-		const CoordVector& tessCoords
+		const CoordVector& tessCoords,
+		int channel=0
 	) const {
 
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessValues = std::unique_ptr<T[]>(new T[numCoords]);
+		auto tessValues = std::make_unique<T[]>(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1302,11 +1356,23 @@ struct Surface {
 			assert(handle);
 
 			float pWeights[20];
-			patchTable->EvaluateBasis(*handle, coords.x, coords.y, pWeights);
+			float duWeights[20];
+			float dvWeights[20];
+			if (FACE_VARYING) {
+				patchTable->EvaluateBasisFaceVarying(
+					*handle, coords.x, coords.y, pWeights, duWeights, dvWeights);  // TODO Add channel
+			} else {
+				patchTable->EvaluateBasis(*handle, coords.x, coords.y, pWeights);
+			}
 
 			//  Identify the patch cvs and combine with the evaluated weights --
 			//  remember to distinguish cvs in the base level:
-			Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+			Far::ConstIndexArray cvIndices;
+			if (FACE_VARYING) {
+				Far::ConstIndexArray cvIndices = patchTable->GetPatchFVarValues(*handle);
+			} else {
+				Far::ConstIndexArray cvIndices = patchTable->GetPatchVertices(*handle);
+			}
 
 			// Evaluate
 			T& val = tessValues[vertex];
@@ -1337,6 +1403,7 @@ struct Surface {
 
 // Helper to evaluate multi-layers data, like UV, Colors, Gamma, AOV.
 // EXTRACTOR is a callable type providing the coarse data for a given layer.
+template <bool FACE_VARYING=false>
 struct MultiLayerDataEvaluator{
 
 	// Constructor
@@ -1372,7 +1439,7 @@ struct MultiLayerDataEvaluator{
 
 
 	// Evaluator
-	template < typename EXTRACTOR >
+	template <typename EXTRACTOR>
 	auto evaluate(EXTRACTOR getLayerData) {
 
 		// Evaluated data are stored as smart pointers in a vector (one row per
@@ -1390,15 +1457,16 @@ struct MultiLayerDataEvaluator{
 			std::is_same_v<DATA_IN, FloatAdapter>, float, DATA_IN
 		>;
 
-		// Return object
+		// Declare return object
 		EvaluatedLayers<DATA_BUFFER, DATA_OUT> res(EXTMESH_MAX_DATA_COUNT);
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
 			DATA_IN* layerData = getLayerData(layer);
 			if (layerData) {
-				auto interpolatedData = surface.Interpolate(layerData, layerSize);
-				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
+				auto interpolatedData =
+					surface.Interpolate<DATA_IN, FACE_VARYING>(layerData, layerSize);
+				res[layer] = surface.Evaluate<DATA_IN, FACE_VARYING>(interpolatedData, coords);
 			}
 		}
 		return res;
@@ -1434,15 +1502,10 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	// Subdivide
 	surface.Subdivide(maxLevel);
 
-	// Compute tesselletion rate, from maxLevel
+	// Tessellate
 	size_t tessellationRate = 1 << maxLevel;
 
-	// Tessellate
-	CoordVector tessCoords;
-	TriangleArrayPtr tessTriangles;
-	int numPoints, numTriangles;
-
-	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
+	auto [tessCoords, tessTriangles, numPoints, numTriangles] =
 		surface.Tessellate(tessellationRate);
 
 	// Record initial vertex count
@@ -1460,6 +1523,29 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
 		tie(tessPoints, tessNormals) =
 			surface.EvaluatePositions(interpolatedPositions, tessCoords);
+	}
+
+	// Evaluate Triangle UV
+	// TODO modify FACE_VARYING in enum
+	auto orgMesh = srcMesh.GetOriginMesh();
+	if (orgMesh) {
+		SDL_LOG("Subdivision (enhanced) - Evaluating face UVs");
+		MultiLayerDataEvaluator<true> evaluatorFV(surface, numMeshVertex, tessCoords);  // TODO
+
+		auto extractorTriUV = [&orgMesh](u_int layer) {
+			return orgMesh->GetUVs(layer);
+		};
+		auto tessTriUVs = evaluatorFV.evaluate(extractorTriUV);
+
+		// Debug
+		for (auto &layer: tessTriUVs) {
+			if (!layer) continue;
+			auto size = numMeshVertex;
+			SDL_LOG("Layer: " << size << " elements");
+			for (auto& uv: std::span(layer.get(), size)) {
+				SDL_LOG("TriUV: " << uv);
+			}
+		}
 	}
 
 	// Evaluate other primvars
@@ -1524,13 +1610,13 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 SubdivShape::SubdivShape(
 	CameraConstPtr camera,
-	ExtTriangleMeshRef srcMesh,
+	ExtTriangleMeshRef _srcMesh,
 	const u_int maxLevel,
 	const float maxEdgeScreenSize,
 	const bool enhanced,
 	const float sharpnessThresholdRadians,
 	const float creaseWeight
-) {
+) : srcMesh(_srcMesh) {
 	const double startTime = WallClockTime();
 
 	if ((maxEdgeScreenSize > 0.f) && !camera) {

@@ -674,6 +674,7 @@ ClusterMap mergePoints(
 
 // Recreate a mesh, based on a source mesh and a clusterisation
 // Replace each variable with interpolated value
+// Compute also face UVs
 luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	const luxrays::ExtTriangleMesh& srcMesh,
 	const ClusterMap& clustermap,
@@ -699,13 +700,13 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	std::vector<u_int> pointMap(numPoints);
 
 	// Allocate mesh data structures
-	// Points
+	// Allocate Points
 	std::unique_ptr<Point> newPoints{
 		luxrays::ExtTriangleMesh::AllocVerticesBuffer(numNewPoints)
 	};
 	auto newPointsPtr = newPoints.get();
 
-	// Normals
+	// Allocate Normals
 	std::unique_ptr<luxrays::Normal[]> newNormals;
 	const auto srcNormals = srcMesh.GetNormals();
 	if (srcMesh.HasNormals()) {
@@ -713,7 +714,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	}
 	auto newNormalsPtr = importNormals ? newNormals.get() : nullptr;
 
-	// UV
+	// Allocate UV
 	std::array<std::unique_ptr<luxrays::UV[]>, EXTMESH_MAX_DATA_COUNT> newUVs;
 	std::array<luxrays::UV*, EXTMESH_MAX_DATA_COUNT> srcUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -723,7 +724,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	}
 
-	// Colors
+	// Allocate Colors
 	std::array<std::unique_ptr<luxrays::Spectrum[]>, EXTMESH_MAX_DATA_COUNT> newColors;
 	std::array<luxrays::Spectrum*, EXTMESH_MAX_DATA_COUNT> srcColors;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -733,7 +734,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	}
 
-	// Alphas
+	// Allocate Alphas
 	std::array<std::unique_ptr<float[]>, EXTMESH_MAX_DATA_COUNT> newAlphas;
 	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -743,7 +744,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	}
 
-	// VertexAOVs
+	// Allocate VertexAOVs
 	std::array<std::unique_ptr<float[]>, EXTMESH_MAX_DATA_COUNT> newVertexAOVs;
 	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcVertexAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -969,6 +970,9 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	}
 
+	// Reference source mesh
+	newMesh->SetOriginMesh(std::addressof(srcMesh));
+
 	return newMesh;
 }
 
@@ -980,10 +984,10 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 namespace slg {
 
 MergeOnDistanceShape::MergeOnDistanceShape(
-	luxrays::ExtTriangleMeshRef  srcMesh,
+	luxrays::ExtTriangleMeshRef _srcMesh,
 	u_int tolerance,
 	bool importNormals
-) {
+) : srcMesh(_srcMesh) {
 
 	SDL_LOG("Merge On Distance - Applying to " << srcMesh.GetName());
 

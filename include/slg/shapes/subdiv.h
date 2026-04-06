@@ -21,6 +21,7 @@
 
 #include <string>
 
+#include "luxrays/usings.h"
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 
@@ -52,6 +53,7 @@ public:
 
 protected:
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
+	luxrays::ExtTriangleMeshRef srcMesh;
 
 };
 

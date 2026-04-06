@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "luxrays/usings.h"
 #include "slg/shapes/shape.h"
 
 namespace slg {
@@ -25,7 +26,7 @@ namespace slg {
 class MergeOnDistanceShape : public Shape {
 public:
 	MergeOnDistanceShape(
-		luxrays::ExtTriangleMeshRef srcMesh,
+		luxrays::ExtTriangleMeshRef _srcMesh,
 		u_int tolerance,
 		bool importNormals
 	);
@@ -33,14 +34,18 @@ public:
 	virtual ~MergeOnDistanceShape();
 	virtual ShapeType GetType() const override { return MERGEONDISTANCE; }
 
+	luxrays::ExtTriangleMeshConstRef GetSrcMesh() const { return srcMesh; }
+
 	static luxrays::ExtTriangleMeshUPtr ApplyMergeOnDistance(
-		luxrays::ExtTriangleMeshRef srcMesh,
+		luxrays::ExtTriangleMeshRef _srcMesh,
 		u_int tolerance,
 		bool importNormals
 	);
 
 protected:
 	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(slg::SceneConstRef scene);
+
+	luxrays::ExtTriangleMeshRef srcMesh;
 
 };
 
