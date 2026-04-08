@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include <boost/format.hpp>
+#include <memory>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
@@ -316,7 +317,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	// UVs, Colors and Alphas for each vertex
 
 	array<UV *, EXTMESH_MAX_DATA_COUNT> uvs;
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols;
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> cols;
 	array<float *, EXTMESH_MAX_DATA_COUNT> alphas;
 	array<float *, EXTMESH_MAX_DATA_COUNT> vertexAOVs;
 
@@ -379,7 +380,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		if (plyNbColors[i] == 0)
 			cols[i] = nullptr;
 		else
-			cols[i] = new Spectrum[plyNbColors[i]];
+			cols[i] = std::make_unique<Spectrum[]>(plyNbColors[i]);
 
 		if (plyNbAlphas[i] == 0)
 			alphas[i] = nullptr;
@@ -406,7 +407,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 			delete[] uvs[i];
-			delete[] cols[i];
+			cols[i].reset();
 			delete[] alphas[i];
 			delete[] vertexAOVs[i];
 			delete[] TriAOVs[i];

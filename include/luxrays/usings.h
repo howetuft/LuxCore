@@ -34,7 +34,9 @@ class T; \
 using T##Ref = T&;                                 /* Reference */\
 using T##ConstRef = const T&;                      /* Const reference */\
 using T##UPtr = std::unique_ptr<T>;				   /* Unique pointer (OWNING) */\
-using T##ConstUPtr = std::unique_ptr<const T>;     /* Const unique point (OWNING) */\
+using T##UAPtr = std::unique_ptr<T[]>;			   /* Unique pointer to array (OWNING) */\
+using T##ConstUPtr = std::unique_ptr<const T>;     /* Const unique pointer (OWNING) */\
+using T##ConstUAPtr = std::unique_ptr<const T[]>;  /* Const unique pointer to array (OWNING) */\
 using T##RPtr = const std::unique_ptr<T> &;		   /* Reference to unique */\
 using T##ConstRPtr = const std::unique_ptr<const T> &; /* Reference to const unique */\
 using T##SPtr = std::shared_ptr<T>;                /* Shared pointer (OWNING) */\
@@ -81,6 +83,9 @@ DECLARE_SUBTYPES(RandomGenerator);
 
 using JThread = std::jthread;
 using JThreadUPtr = std::unique_ptr<std::jthread>;
+using SpectrumUPtr = std::unique_ptr<RGBColor>;
+using SpectrumPtr = luxrays::observer_ptr<RGBColor>;
+using SpectrumUAPtr = std::unique_ptr<RGBColor[]>;
 
 
 }

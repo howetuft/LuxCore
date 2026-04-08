@@ -167,7 +167,7 @@ public:
 			hasUVs = false;
 		
 		if (srcMesh.HasColors(0)) {
-			const Spectrum *cols = srcMesh.GetColors(0);
+			const auto& cols = srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].col = cols[i];
 
@@ -217,9 +217,9 @@ public:
 				newUVs[i] = vertices[i].uv;
 		}
 
-		Spectrum *newCols = nullptr;
+		SpectrumUAPtr newCols = nullptr;
 		if (hasColors) {
-			newCols = new Spectrum[vertCount];
+			newCols = std::make_unique<Spectrum[]>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
 				newCols[i] = vertices[i].col;
 		}
@@ -244,7 +244,7 @@ public:
 		}
 
 		return std::make_unique<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
-				newUVs, newCols, newAlphas);
+				newUVs, std::move(newCols), newAlphas);
 	}
 
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,

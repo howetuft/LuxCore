@@ -26,6 +26,7 @@
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -952,9 +953,11 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
+	auto colsPtr = SpectrumUAPtr(reinterpret_cast<Spectrum *>(cols));
+
 	GetSlgScene().DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
 			(Triangle *)vi, (Normal *)n,
-			(UV *)uvs, (Spectrum *)cols, alphas);
+			(UV *)uvs, std::move(colsPtr), alphas);
 
 	API_END();
 }
@@ -984,10 +987,10 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	} else
 		fill(slgUVs.begin(), slgUVs.end(), nullptr);
 
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> slgCols;
 	if (cols) {
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgCols[i] = (Spectrum *)((*cols)[i]);
+			slgCols[i] = SpectrumUAPtr(reinterpret_cast<Spectrum *>((*cols)[i]));
 	} else
 		fill(slgCols.begin(), slgCols.end(), nullptr);
 

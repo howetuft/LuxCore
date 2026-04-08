@@ -150,7 +150,7 @@ public:
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
 		luxrays::UV *uv,
-		luxrays::Spectrum *cols,
+		luxrays::SpectrumUAPtr&& cols,
 		float *alphas
 	);
 
@@ -162,7 +162,7 @@ public:
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
 		std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-		std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
+		std::array<luxrays::SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *cols,
 		std::array<float *, EXTMESH_MAX_DATA_COUNT> *alphas
 	);
 

@@ -282,11 +282,11 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	Triangle *vi,
 	Normal *n,
 	UV *uvs,
-	Spectrum *cols,
+	SpectrumUAPtr&& cols,
 	float *alphas
 ) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
-			uvs, cols, alphas);
+			uvs, std::move(cols), alphas);
 	mesh->SetName(shapeName);
 
 	return DefineMesh(std::move(mesh));
@@ -298,7 +298,7 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	const long plyNbTris,
 	Point *p, Triangle *vi, Normal *n,
 	array<UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *cols,
 	array<float *, EXTMESH_MAX_DATA_COUNT> *alphas)
 {
 	auto mesh = std::make_unique<ExtTriangleMesh>(

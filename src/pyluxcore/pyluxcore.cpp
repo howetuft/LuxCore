@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and   *
  * limitations under the License.                      *
  ***************************************************************************/
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include <pybind11/detail/common.h>
 #include <pybind11/detail/using_smart_holder.h>
@@ -1096,13 +1097,13 @@ static void Scene_DefineMesh1(
   }
 
   // Translate all colors
-  luxrays::Spectrum *colors = NULL;
+  luxrays::SpectrumUAPtr colors = nullptr;
   if (!cols.is_none()) {
     if(py::isinstance<py::list>(cols)) {
       const py::list &l = py::cast<py::list>(cols);
       const py::ssize_t size = len(l);
 
-      colors = new luxrays::Spectrum[size];
+      colors = std::make_unique<luxrays::Spectrum[]>(size);
       for (py::ssize_t i = 0; i < size; ++i) {
         if(py::isinstance<py::tuple>(l[i])) {
           const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1135,7 +1136,7 @@ static void Scene_DefineMesh1(
   }
 
 	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as
+		plyNbVerts, plyNbTris, points, tris, normals, uvs, std::move(colors), as
 	);
 
 	// Apply the transformation if required
@@ -1275,7 +1276,7 @@ static void Scene_DefineMeshExt1(
   }
 
   // Translate all colors
-  std::array<luxrays::Spectrum *, LC_MESH_MAX_DATA_COUNT> colors;
+  std::array<luxrays::SpectrumUAPtr, LC_MESH_MAX_DATA_COUNT> colors;
   std::fill(colors.begin(), colors.end(), nullptr);
   if (!cols.is_none()) {
     if(py::isinstance<py::list>(cols)) {
@@ -1288,7 +1289,7 @@ static void Scene_DefineMeshExt1(
           if (!l.is_none()) {
             const py::ssize_t size = len(l);
 
-            colors[j] = new luxrays::Spectrum[size];
+            colors[j] = std::make_unique<luxrays::Spectrum[]>(size);
             for (py::ssize_t i = 0; i < size; ++i) {
               if(py::isinstance<py::tuple>(l[i])) {
                 const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1387,7 +1388,7 @@ template<
 	D* (*Allocator)(unsigned int),
 	size_t stride=3
 >
-std::tuple<std::unique_ptr<D>, u_int> dataCopy(
+std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
 	py::array_t<S, py::array::c_style> src,
 	const std::string& meshName,
 	const std::string& propertyName
@@ -1415,7 +1416,7 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	// Allocate & copy
 	u_int count = src.shape(0);
 	if (!count) return std::tuple(nullptr, 0);
-    auto dest = std::unique_ptr<D>(Allocator(count));
+    auto dest = std::unique_ptr<D[]>(Allocator(count));
 	std::memcpy(dest.get(), direct_src.data(0, 0), direct_src.nbytes());
 
 	return std::tuple(std::move(dest), count);
@@ -1428,7 +1429,7 @@ template<
 	D* (*Allocator)(unsigned int),
 	size_t stride=3
 >
-std::tuple<std::unique_ptr<D>, u_int> dataCopyOptional(
+std::tuple<std::unique_ptr<D[]>, u_int> dataCopyOptional(
 	std::optional<py::array_t<S, py::array::c_style>> src,
 	const std::string& meshName,
 	const std::string& propertyName
@@ -1503,7 +1504,7 @@ static void Scene_DefineMeshExt3(
 	}
 
 	// Colors
-	std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	std::array<luxrays::SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> meshCols;
 	std::fill(meshCols.begin(), meshCols.end(), nullptr);
 	if (color_layers.has_value()) {
 		auto color_layer_count = color_layers.value().size();
@@ -1517,7 +1518,7 @@ static void Scene_DefineMeshExt3(
 			auto [colors, numColors] = dataCopy< float, luxrays::Spectrum, &AllocRGBBuffer, 3>(
 				color_layer, meshName, "colors"
 			);
-			meshCols[i] = colors.release();
+			meshCols[i] = std::move(colors);
 		}
 	}
 

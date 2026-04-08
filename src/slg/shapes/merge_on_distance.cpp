@@ -28,6 +28,7 @@
 #include <format>
 #include <execution>
 
+#include "luxrays/usings.h"
 #include "oneapi/tbb.h"
 #include "oneapi/tbb/scalable_allocator.h"
 #include "oneapi/tbb/cache_aligned_allocator.h"
@@ -724,12 +725,12 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	}
 
 	// Colors
-	std::array<std::unique_ptr<luxrays::Spectrum>, EXTMESH_MAX_DATA_COUNT> newColors;
-	std::array<luxrays::Spectrum*, EXTMESH_MAX_DATA_COUNT> srcColors;
+	std::array<luxrays::SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> newColors;
+	std::array<luxrays::SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> srcColors;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasColors(i)) {
-			srcColors[i] = srcMesh.GetColors(i);
-			newColors[i].reset(new luxrays::Spectrum[numNewPoints]);
+			srcColors[i] = srcMesh.GetColors(i).get();
+			newColors[i] = std::make_unique<luxrays::Spectrum[]>(numNewPoints);
 		}
 	}
 
@@ -896,7 +897,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 
 	// Create layer arrays (release smart pointers...)
 	auto meshUVs = new std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT>;
-	auto meshCols = new std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT>;
+	auto meshCols = new std::array<luxrays::SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT>;
 	auto meshAlphas = new std::array<float *, EXTMESH_MAX_DATA_COUNT>;
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -906,11 +907,11 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 			(*meshUVs)[i] = nullptr;
 		}
 
-		if (srcMesh.HasColors(i)) {
-			(*meshCols)[i] = newColors[i].release();
-		} else {
-			(*meshCols)[i] = nullptr;
-		}
+		//if (srcMesh.HasColors(i)) {
+			//(*meshCols)[i] = newColors[i].release();
+		//} else {
+			//(*meshCols)[i] = nullptr;
+		//}
 
 		if (srcMesh.HasAlphas(i)) {
 			(*meshAlphas)[i] = newAlphas[i].release();
@@ -927,7 +928,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		newTriangles.release(),
 		importNormals ? newNormals.release() : nullptr,
 		meshUVs,
-		meshCols,
+		&newColors,
 		meshAlphas,
 		srcMesh.GetBevelRadius()
 	);

@@ -35,6 +35,7 @@
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/core/namedobject.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 
@@ -135,12 +136,14 @@ class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
+			UV *meshUVs = nullptr,
+			SpectrumUAPtr&& meshCols = nullptr,
+			float *meshAlphas = nullptr,
 			const float bRadius = 0.f);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+			std::array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
 			const float bRadius = 0.f);
 	~ExtTriangleMesh() { };
@@ -176,14 +179,13 @@ public:
 	}
 	UV *GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
 
-	void SetColors(const u_int dataIndex, Spectrum *data) {
-		cols[dataIndex] = data;
-	}
 	void DeleteColors(const u_int dataIndex) {
-		delete [] cols[dataIndex];
-		cols[dataIndex] = nullptr;
+		cols[dataIndex].reset();
 	}
-	Spectrum *GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
+	const SpectrumUAPtr& GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
+	const auto GetColorsSpan(const u_int dataIndex) const {
+		return std::span<Spectrum>(cols[dataIndex].get(), vertCount);
+	}
 
 	void SetAlphas(const u_int dataIndex, float *data) {
 		alphas[dataIndex] = data;
@@ -195,7 +197,7 @@ public:
 	float *GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
 
 	const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
-	const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }
+	const auto &GetAllColors() const { return cols; }
 	const std::array<float *, EXTMESH_MAX_DATA_COUNT> &GetAllAlphas() const { return alphas; }
 
 	Normal *ComputeNormals();
@@ -303,11 +305,11 @@ public:
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
 	ExtTriangleMeshUPtr CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+			std::array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
 			const float bRadius = 0.f) const;
 	ExtTriangleMeshUPtr Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
+			UV *meshUVs, SpectrumUAPtr&& meshCols, float *meshAlphas,
 			const float bRadius = 0.f) const;
 	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
 		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
@@ -373,7 +375,7 @@ public:
 
 	void Init(Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+			std::array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
 
 	void Preprocess();
@@ -401,7 +403,7 @@ public:
 			const bool hasColors = HasColors(i);
 			ar & hasColors;
 			if (hasColors)
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+				ar & boost::serialization::make_array<Spectrum>(cols[i].get(), vertCount);
 
 			const bool hasAlphas = HasAlphas(i);
 			ar & hasAlphas;
@@ -446,8 +448,8 @@ public:
 			bool hasColors;
 			ar & hasColors;
 			if (hasColors) {
-				cols[i] = new Spectrum[vertCount];
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+				cols[i] = std::make_unique<Spectrum[]>(vertCount);
+				ar & boost::serialization::make_array<Spectrum>(cols[i].get(), vertCount);
 			} else
 				cols[i] = nullptr;
 
@@ -488,7 +490,7 @@ public:
 	Normal *triNormals; // Triangle normals
 
 	std::array<UV *, EXTMESH_MAX_DATA_COUNT> uvs; // Vertex uvs
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols; // Vertex colors
+	std::array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> cols; // Vertex colors
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> alphas; // Vertex alphas
 
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV

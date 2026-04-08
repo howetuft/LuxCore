@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/usings.h"
 #include <unordered_map>
 #include <format>
 
@@ -266,7 +267,7 @@ nRefinedVerts
 		if (srcMesh.HasColors(i)) {
 			colsBuffers[i] = BuildBuffer<3>(
 				stencilTable,
-				(const float *)srcMesh.GetColors(i),
+				(const float *)srcMesh.GetColors(i).get(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -342,13 +343,14 @@ nRefinedVerts
 	}
 
 	// New colors
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
+	std::array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasColors(i)) {
-			newCols[i] = new Spectrum[nRefinedVerts];
+			newCols[i] = std::make_unique<Spectrum[]>(nRefinedVerts);
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, &newCols[i]->c[0]);
+			//std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, &newCols[i]->c[0]);
+			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, newCols[i].get());
 		} else
 			newCols[i] = nullptr;
 	}
@@ -1367,7 +1369,17 @@ struct MultiLayerDataEvaluator{
 			return &outBuffers;
 		}
 
+		// Return object
+		std::array<DATA_BUFFER, EXTMESH_MAX_DATA_COUNT>* GetLayers() {
+			for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+				smartOutBuffers[layer] = std::move((*this)[layer]);
+			}
+			return &smartOutBuffers;
+		}
+
+
 		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
+		std::array<DATA_BUFFER, EXTMESH_MAX_DATA_COUNT> smartOutBuffers;
 	};
 
 
@@ -1470,7 +1482,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer); };
+	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer).get(); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
@@ -1498,7 +1510,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 		tessTriangles.release(),
 		tessNormals.release(),
 		tessUVs.releaseLayers(),
-		tessCols.releaseLayers(),
+		tessCols.GetLayers(),
 		tessAlphas.releaseLayers()
 	);
 

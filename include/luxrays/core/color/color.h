@@ -491,7 +491,7 @@ inline std::ostream &operator<<(std::ostream &os, const XYZColor &s) {
 	return os;
 }
 
-typedef RGBColor Spectrum;
+using Spectrum = RGBColor;
 
 extern Spectrum TemperatureToWhitePoint(const float temperature, const bool normalize);
 

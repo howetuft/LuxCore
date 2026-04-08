@@ -260,8 +260,8 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasColors(dataIndex)) {
-					const Spectrum *c = baseMesh.get().GetColors(dataIndex);
-					cols.insert(cols.end(), c, c + baseMesh.get().GetTotalVertexCount());
+					const auto& c = baseMesh.get().GetColorsSpan(dataIndex);
+					cols.insert(cols.end(), c.begin(), c.begin() + baseMesh.get().GetTotalVertexCount());
 				}
 
 				//--------------------------------------------------------------

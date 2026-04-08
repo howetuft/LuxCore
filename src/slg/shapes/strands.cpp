@@ -406,14 +406,14 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		copy(meshUVs.begin(), meshUVs.end(), newMeshUVs);
 		
 		// Check if I have to include vertex colors too
-		Spectrum *newMeshCols = NULL;
+		SpectrumUAPtr newMeshCols = nullptr;
 		for(const Spectrum &c: meshCols) {
 			if (c != Spectrum(1.f)) {
 				// The mesh uses vertex colors
 				SLG_LOG("Strands shape uses colors");
 
-				newMeshCols = new Spectrum[meshUVs.size()];
-				copy(meshCols.begin(), meshCols.end(), newMeshCols);
+				newMeshCols = std::make_unique<Spectrum[]>(meshUVs.size());
+				copy(meshCols.begin(), meshCols.end(), newMeshCols.get());
 				break;
 			}
 		}
@@ -433,7 +433,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 
 		mesh = std::make_unique<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
 				newMeshVerts, newMeshTris, newMeshNorms, newMeshUVs,
-				newMeshCols, newMeshTransps);
+				std::move(newMeshCols), newMeshTransps);
 	} else
 		throw runtime_error("Strands shape without segments are not supported");
 

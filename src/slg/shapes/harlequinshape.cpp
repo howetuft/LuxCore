@@ -38,7 +38,7 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 
 	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(triCount * 3);
 	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	Spectrum *newVertCols = new Spectrum[triCount * 3];
+	SpectrumUAPtr newVertCols = std::make_unique<Spectrum[]>(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
 		const Triangle &tri = tris[i];
 		Triangle &newTri = newTris[i];
@@ -59,7 +59,7 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 	}
 
 	mesh = std::make_unique<ExtTriangleMesh>(triCount * 3, triCount, newVertices, newTris,
-			nullptr, nullptr, newVertCols);
+			nullptr, nullptr, std::move(newVertCols));
 
 	// For some debugging
 	//mesh->Save("debug.ply");

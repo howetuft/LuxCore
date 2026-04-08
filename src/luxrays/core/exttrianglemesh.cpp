@@ -26,6 +26,7 @@
 #include <filesystem>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/strutils.h"
@@ -124,7 +125,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) :
+		UV *mUVs, SpectrumUAPtr&& mCols, float *mAlphas, const float bRadius) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
@@ -133,7 +134,7 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 
 
 	uvs.fill(nullptr);
-	cols.fill(nullptr);
+	for (auto& c: cols) c.reset();
 	alphas.fill(nullptr);
 	vertAOV.fill(nullptr);
 	triAOV.fill(nullptr);
@@ -143,10 +144,10 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	if (mUVs)
 		meshUVs[0] = mUVs;
 
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
-	meshCols.fill(nullptr);
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> meshCols;
+	for (auto& c: meshCols) c.reset();
 	if (mCols)
-		meshCols[0] = mCols;
+		meshCols[0] = std::move(mCols);
 
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
 	meshAlphas.fill(nullptr);
@@ -159,7 +160,7 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
 		const float bRadius) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
@@ -169,7 +170,7 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	bevelBVHArrayNodes = nullptr;
 
 	uvs.fill(nullptr);
-	cols.fill(nullptr);
+	for (auto& c : cols) c.reset();
 	alphas.fill(nullptr);
 	vertAOV.fill(nullptr);
 	triAOV.fill(nullptr);
@@ -179,7 +180,7 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 
 void ExtTriangleMesh::Init(Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) {
 	if (meshUVs && (meshUVs->size() > EXTMESH_MAX_DATA_COUNT)) {
 		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
@@ -200,7 +201,7 @@ void ExtTriangleMesh::Init(Normal *meshNormals,
 	if (meshUVs)
 		uvs = *meshUVs;
 	if (meshCols)
-		cols = *meshCols;
+		cols = std::move(*meshCols);
 	if (meshAlphas)
 		alphas = *meshAlphas;
 
@@ -225,8 +226,8 @@ void ExtTriangleMesh::Delete() {
 
 	for (UV *uv : uvs)
 		delete[] uv;
-	for (Spectrum *c : cols)
-		delete[] c;
+	for (auto& c : cols)
+		c.reset();
 	for (float *a : alphas)
 		delete[] a;
 	for (float *v : vertAOV)
@@ -311,7 +312,7 @@ void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
 
 ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<SpectrumUAPtr , EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
 		const float bRadius) const {
 	Point *vs = meshVertices;
@@ -333,7 +334,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *mesh
 	}
 
 	array<UV *, EXTMESH_MAX_DATA_COUNT> us;
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cs;
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> cs;
 	array<float *, EXTMESH_MAX_DATA_COUNT> as;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (HasUVs(i) && (!meshUVs || !(*meshUVs)[i])) {
@@ -343,10 +344,12 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *mesh
 			us[i] = meshUVs ? (*meshUVs)[i] : nullptr;
 
 		if (HasColors(i) && (!meshCols || !(*meshCols)[i])) {
-			cs[i] = new Spectrum[vertCount];
-			copy(cols[i], cols[i] + vertCount, cs[i]);
+			cs[i] = std::make_unique<Spectrum[]>(vertCount);
+			std::span src{cols[i].get(), vertCount};
+			std::span dst{cs[i].get(), vertCount};
+			std::copy(src.begin(), src.end(), dst.begin());
 		} else
-			cs[i] = meshCols ? (*meshCols)[i] : nullptr;
+			cs[i] = meshCols ? std::move((*meshCols)[i]) : nullptr;
 
 		if (HasAlphas(i) && (!meshAlphas || !(*meshAlphas)[i])) {
 			as[i] = new float[vertCount];
@@ -366,16 +369,16 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *mesh
 }
 
 ExtTriangleMeshUPtr ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) const {
+		UV *mUVs, SpectrumUAPtr&& mCols, float *mAlphas, const float bRadius) const {
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
 	if (mUVs)
 		meshUVs[0] = mUVs;
 
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> meshCols;
 	fill(meshCols.begin(), meshCols.end(), nullptr);
 	if (mCols)
-		meshCols[0] = mCols;
+		meshCols[0] = std::move(mCols);
 
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
 	fill(meshAlphas.begin(), meshAlphas.end(), nullptr);
@@ -406,7 +409,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 
 	Normal *meshNormals = nullptr;
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	array<SpectrumUAPtr, EXTMESH_MAX_DATA_COUNT> meshCols;
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshVertAOV;
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshTriAOV;
@@ -422,7 +425,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 			meshUVs[i] = nullptr;
 
 		if (mesh0.HasColors(i))
-			meshCols[i] = new Spectrum[totalVertexCount];
+			meshCols[i] = std::make_unique<Spectrum[]>(totalVertexCount);
 		else
 			meshCols[i] = nullptr;
 
