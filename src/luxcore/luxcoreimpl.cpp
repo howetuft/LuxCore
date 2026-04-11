@@ -952,9 +952,19 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
-	GetSlgScene().DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n,
-			(UV *)uvs, (Spectrum *)cols, alphas);
+	auto toSpan = [plyNbVerts]<typename T>(float * data) {
+		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
+	};
+
+	GetSlgScene().DefineMesh(
+		meshName, plyNbVerts, plyNbTris,
+		(Point *)p,
+		(Triangle *)vi,
+		(Normal *)n,
+		toSpan.template operator()<UV>(uvs),
+		toSpan.template operator()<Spectrum>(cols),
+		toSpan.template operator()<float>(alphas)
+	);
 
 	API_END();
 }
@@ -977,48 +987,43 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
-	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
-	if (uvs) {
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgUVs[i] = (UV *)((*uvs)[i]);
-	} else
-		fill(slgUVs.begin(), slgUVs.end(), nullptr);
+	auto initProp = [plyNbVerts]<typename T>(
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> * propPtr
+	) -> std::optional<ExtMeshProp<T>> {
+		ExtMeshProp<T> res;
+		if (!propPtr) return std::nullopt;
 
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
-	if (cols) {
+		auto& prop = *propPtr;
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgCols[i] = (Spectrum *)((*cols)[i]);
-	} else
-		fill(slgCols.begin(), slgCols.end(), nullptr);
+			res.Set(i, std::span<T>(reinterpret_cast<T*>(prop[i]), plyNbVerts));
+		return std::make_optional(res);
+	};
 
-	array<float *, EXTMESH_MAX_DATA_COUNT> slgAlphas;
-	if (alphas) {
-		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
-			slgAlphas[i] = (*alphas)[i];
-	} else
-		fill(slgAlphas.begin(), slgAlphas.end(), nullptr);
+	auto slgUVs = initProp.template operator()<UV>(uvs);
+	auto slgCols = initProp.template operator()<Spectrum>(cols);
+	auto slgAlphas = initProp.template operator()<float>(alphas);
 
 	GetSlgScene().DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
 			(Triangle *)vi, (Normal *)n,
-			&slgUVs, &slgCols, &slgAlphas);
+			slgUVs, slgCols, slgAlphas);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
+		const unsigned int index, float *data, size_t size) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
 
-	GetSlgScene().SetMeshVertexAOV(meshName, index, data);
+	GetSlgScene().SetMeshVertexAOV(meshName, index, data, size);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
+		const unsigned int index, float *data, size_t size) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
 
-	GetSlgScene().SetMeshTriangleAOV(meshName, index, data);
+	GetSlgScene().SetMeshTriangleAOV(meshName, index, data, size);
 
 	API_END();
 }

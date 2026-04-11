@@ -714,42 +714,39 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	auto newNormalsPtr = importNormals ? newNormals.get() : nullptr;
 
 	// UV
-	std::array<std::unique_ptr<luxrays::UV>, EXTMESH_MAX_DATA_COUNT> newUVs;
-	std::array<luxrays::UV*, EXTMESH_MAX_DATA_COUNT> srcUVs;
+	luxrays::ExtMeshProp<luxrays::UV> newUVs;
+	luxrays::ExtMeshProp<luxrays::UV> srcUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasUVs(i)) {
-			srcUVs[i] = srcMesh.GetUVs(i);
-			newUVs[i].reset(new luxrays::UV[numNewPoints]);
+			srcUVs.Set(i, srcMesh.GetUVs(i), numPoints);
+			newUVs.Allocate(i, numNewPoints);
 		}
 	}
 
 	// Colors
-	std::array<std::unique_ptr<luxrays::Spectrum>, EXTMESH_MAX_DATA_COUNT> newColors;
-	std::array<luxrays::Spectrum*, EXTMESH_MAX_DATA_COUNT> srcColors;
+	luxrays::ExtMeshProp<luxrays::Spectrum> newColors, srcColors;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasColors(i)) {
 			srcColors[i] = srcMesh.GetColors(i);
-			newColors[i].reset(new luxrays::Spectrum[numNewPoints]);
+			newColors.Allocate(i, numNewPoints);
 		}
 	}
 
 	// Alphas
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newAlphas;
-	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcAlphas;
+	luxrays::ExtMeshProp<float> newAlphas, srcAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasAlphas(i)) {
 			srcAlphas[i] = srcMesh.GetAlphas(i);
-			newAlphas[i].reset(new float[numNewPoints]);
+			newAlphas.Allocate(i, numNewPoints);
 		}
 	}
 
 	// VertexAOVs
-	std::array<std::unique_ptr<float>, EXTMESH_MAX_DATA_COUNT> newVertexAOVs;
-	std::array<float*, EXTMESH_MAX_DATA_COUNT> srcVertexAOVs;
+	luxrays::ExtMeshProp<float>  newVertexAOVs, srcVertexAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasVertexAOV(i)) {
 			srcVertexAOVs[i] = srcMesh.GetVertexAOVs(i);
-			newVertexAOVs[i].reset(new float[numNewPoints]);
+			newVertexAOVs.Allocate(i, numNewPoints);
 		}
 	}
 
@@ -894,30 +891,31 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		}
 	);
 
-	// Create layer arrays (release smart pointers...)
-	auto meshUVs = new std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT>;
-	auto meshCols = new std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT>;
-	auto meshAlphas = new std::array<float *, EXTMESH_MAX_DATA_COUNT>;
+	///TODO
+	//// Create layer arrays (release smart pointers...)
+	//ExtMeshProp<UV> meshUVs;
+	//ExtMeshProp<Spectrum> meshCols;
+	//ExtMeshProp<float> meshAlphas;
 
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		if (srcMesh.HasUVs(i)) {
-			(*meshUVs)[i] = newUVs[i].release();
-		} else {
-			(*meshUVs)[i] = nullptr;
-		}
+	//for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		//if (srcMesh.HasUVs(i)) {
+			//(*meshUVs)[i] = newUVs[i].release();
+		//} else {
+			//(*meshUVs)[i] = nullptr;
+		//}
 
-		if (srcMesh.HasColors(i)) {
-			(*meshCols)[i] = newColors[i].release();
-		} else {
-			(*meshCols)[i] = nullptr;
-		}
+		//if (srcMesh.HasColors(i)) {
+			//(*meshCols)[i] = newColors[i].release();
+		//} else {
+			//(*meshCols)[i] = nullptr;
+		//}
 
-		if (srcMesh.HasAlphas(i)) {
-			(*meshAlphas)[i] = newAlphas[i].release();
-		} else {
-			(*meshAlphas)[i] = nullptr;
-		}
-	}
+		//if (srcMesh.HasAlphas(i)) {
+			//(*meshAlphas)[i] = newAlphas[i].release();
+		//} else {
+			//(*meshAlphas)[i] = nullptr;
+		//}
+	//}
 
 	// Create new mesh
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
@@ -926,16 +924,16 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 		newPoints.release(),
 		newTriangles.release(),
 		importNormals ? newNormals.release() : nullptr,
-		meshUVs,
-		meshCols,
-		meshAlphas,
+		newUVs,
+		newColors,
+		newAlphas,
 		srcMesh.GetBevelRadius()
 	);
 
 	// Copy AOV to new mesh
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (srcMesh.HasVertexAOV(i)) {
-			newMesh->SetVertexAOV(i, newVertexAOVs[i].release());
+			newMesh->SetVertexAOV(i, newVertexAOVs.Get(i), newVertexAOVs.GetLayerSize());
 		}
 	}
 

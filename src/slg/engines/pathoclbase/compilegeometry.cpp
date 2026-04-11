@@ -251,7 +251,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasUVs(dataIndex)) {
-					const UV *u = baseMesh.get().GetUVs(dataIndex);
+					const UV *u = baseMesh.get().GetUVs(dataIndex).get();
 					uvs.insert(uvs.end(), u, u + baseMesh.get().GetTotalVertexCount());
 				}
 
@@ -260,7 +260,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasColors(dataIndex)) {
-					const Spectrum *c = baseMesh.get().GetColors(dataIndex);
+					const Spectrum *c = baseMesh.get().GetColors(dataIndex).get();
 					cols.insert(cols.end(), c, c + baseMesh.get().GetTotalVertexCount());
 				}
 
@@ -269,7 +269,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasAlphas(dataIndex)) {
-					const float *a = baseMesh.get().GetAlphas(dataIndex);
+					const float *a = baseMesh.get().GetAlphas(dataIndex).get();
 					alphas.insert(alphas.end(), a, a + baseMesh.get().GetTotalVertexCount());
 				}
 
@@ -278,7 +278,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasVertexAOV(dataIndex)) {
-					const float *v = baseMesh.get().GetVertexAOVs(dataIndex);
+					const float *v = baseMesh.get().GetVertexAOVs(dataIndex).get();
 					vertexAOVs.insert(vertexAOVs.end(), v, v + baseMesh.get().GetTotalVertexCount());
 				}
 
@@ -287,7 +287,7 @@ void CompiledScene::CompileGeometry() {
 				//--------------------------------------------------------------
 
 				if (baseMesh.get().HasTriAOV(dataIndex)) {
-					const float *t = baseMesh.get().GetTriAOVs(dataIndex);
+					const float *t = baseMesh.get().GetTriAOVs(dataIndex).get();
 					triAOVs.insert(triAOVs.end(), t, t + baseMesh.get().GetTotalTriangleCount());
 				}
 			}

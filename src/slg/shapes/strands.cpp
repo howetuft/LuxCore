@@ -20,6 +20,7 @@
 #include "slg/shapes/strands.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"
+#include <memory>
 
 using namespace std;
 using namespace luxrays;
@@ -401,39 +402,52 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 
 		Normal *newMeshNorms = new Normal[meshNorms.size()];
 		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
-		
-		UV *newMeshUVs = new UV[meshUVs.size()];
-		copy(meshUVs.begin(), meshUVs.end(), newMeshUVs);
-		
-		// Check if I have to include vertex colors too
-		Spectrum *newMeshCols = NULL;
-		for(const Spectrum &c: meshCols) {
-			if (c != Spectrum(1.f)) {
-				// The mesh uses vertex colors
-				SLG_LOG("Strands shape uses colors");
 
-				newMeshCols = new Spectrum[meshUVs.size()];
-				copy(meshCols.begin(), meshCols.end(), newMeshCols);
-				break;
-			}
+		auto newMeshUVs = std::make_shared<UV[]>(meshUVs.size());
+		std::copy(meshUVs.begin(), meshUVs.end(), newMeshUVs.get());
+
+		// Check if I have to include vertex colors too
+		ExtMeshProp<Spectrum>::Layer newMeshCols = nullptr;
+		const Spectrum spectrum1(1.f);
+		for(const Spectrum &c: meshCols) {
+			if (c == spectrum1) continue;
+
+			// The mesh uses vertex colors
+			SLG_LOG("Strands shape uses colors");
+
+			newMeshCols = std::make_shared<Spectrum[]>(meshUVs.size());
+			std::copy(
+				std::execution::par,
+				meshCols.begin(),
+				meshCols.end(),
+				newMeshCols.get()
+			);
+			break;
 		}
 
 		// Check if I have to include vertex alpha too
-		float *newMeshTransps = NULL;
+		ExtMeshProp<float>::Layer newMeshTransps = nullptr;
 		for(const float &a: meshTransps) {
-			if (a != 1.f) {
-				// The mesh uses vertex alphas
-				SLG_LOG("Strands shape uses alphas");
+			if (a == 1.f) continue;
 
-				newMeshTransps = new float[meshTransps.size()];
-				copy(meshTransps.begin(), meshTransps.end(), newMeshTransps);
-				break;
-			}
+			// The mesh uses vertex alphas
+			SLG_LOG("Strands shape uses alphas");
+
+			newMeshTransps = std::make_shared<float[]>(meshTransps.size());
+			std::copy(meshTransps.begin(), meshTransps.end(), newMeshTransps.get());
+			break;
 		}
 
-		mesh = std::make_unique<ExtTriangleMesh>(meshVerts.size(), meshTris.size(),
-				newMeshVerts, newMeshTris, newMeshNorms, newMeshUVs,
-				newMeshCols, newMeshTransps);
+		mesh = std::make_unique<ExtTriangleMesh>(
+			meshVerts.size(),
+			meshTris.size(),
+			newMeshVerts,
+			newMeshTris,
+			newMeshNorms,
+			newMeshUVs,
+			newMeshCols,
+			newMeshTransps
+		);
 	} else
 		throw runtime_error("Strands shape without segments are not supported");
 

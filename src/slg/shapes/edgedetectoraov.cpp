@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <memory>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/edgedetectoraov.h"
@@ -109,22 +110,24 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshRef srcMesh,
 	}
 
 	// Create the processed mesh
-	
+
 	mesh = srcMesh.Copy();
 
-	float *aovEdge[3];
-	aovEdge[0] = new float[triCount];
-	aovEdge[1] = new float[triCount];
-	aovEdge[2] = new float[triCount];
+	ExtMeshProp<float>::Layer aovEdge[3] {
+		std::make_shared<float[]>(triCount),
+		std::make_shared<float[]>(triCount),
+		std::make_shared<float[]>(triCount)
+	};
+
 	for (u_int edgeIndex = 0; edgeIndex < edges.size(); ++edgeIndex) {
 		Edge &e = edges[edgeIndex];
 
 		aovEdge[e.edge][e.tri] = e.aovValue;
 	}
-	
-	mesh->SetTriAOV(destAOVIndex0, aovEdge[0]);
-	mesh->SetTriAOV(destAOVIndex1, aovEdge[1]);
-	mesh->SetTriAOV(destAOVIndex2, aovEdge[2]);
+
+	mesh->SetTriAOV(destAOVIndex0, aovEdge[0], triCount);
+	mesh->SetTriAOV(destAOVIndex1, aovEdge[1], triCount);
+	mesh->SetTriAOV(destAOVIndex2, aovEdge[2], triCount);
 
 	const double endTime = WallClockTime();
 	SDL_LOG("EdgeDetectorAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

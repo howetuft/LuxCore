@@ -1004,7 +1004,7 @@ public:
 	 * \param data to use for the AOV.
 	 */
 	virtual void SetMeshVertexAOV(const std::string &meshName,
-			const unsigned int index, float *data) = 0;
+			const unsigned int index, float *data, size_t size) = 0;
 	/*!
 	 * \brief Set a mesh geometry triangle AOV (i.e. generic data associated to
 	 * triangles and used by textures and more).
@@ -1017,7 +1017,7 @@ public:
 	 * \param data to use for the AOV.
 	 */
 	virtual void SetMeshTriangleAOV(const std::string &meshName,
-			const unsigned int index, float *data) = 0;
+			const unsigned int index, float *data, size_t size) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *

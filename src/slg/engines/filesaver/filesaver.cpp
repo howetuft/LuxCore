@@ -215,7 +215,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		if (scnObj.HasBakeMap(COMBINED) && triMesh.HasUVs(scnObj.GetBakeMapUVIndex())) {
 			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh.GetTotalVertexCount();
 			const string encodedVertexUVs = Base64Encode(
-					(const char *)(triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()]),
+					(const char *)(triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()].get()),
 					encodedVertexUVsSize);
 
 			j["buffers"].push_back(json::object({
@@ -236,7 +236,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 			UV minUV(numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
 			UV maxUV(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
-			UV *uv = triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()];
+			UV *uv = triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()].get();
 			for (u_int uvIndex = 0; uvIndex < triMesh.GetTotalVertexCount(); ++uvIndex) {
 				minUV.u = Min(minUV.u, uv[uvIndex].u);
 				minUV.v = Min(minUV.v, uv[uvIndex].v);

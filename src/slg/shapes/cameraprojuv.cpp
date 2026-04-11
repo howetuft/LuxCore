@@ -41,7 +41,7 @@ ExtTriangleMeshUPtr CameraProjUVShape::RefineImpl(SceneConstRef scene) {
 
 	auto& camera = scene.GetCamera();
 
-	UV *uvs = new UV[vertCount];
+	auto uvs = std::make_shared<UV[]>(vertCount);
 	const float invFilmWidth = 1.f / camera.filmWidth;
 	const float invFilmHeight = 1.f / camera.filmHeight;
 
@@ -60,10 +60,10 @@ ExtTriangleMeshUPtr CameraProjUVShape::RefineImpl(SceneConstRef scene) {
 		uvs[i].u = filmX * invFilmWidth;
 		uvs[i].v = filmY * invFilmHeight;
 	}
-	
+
 	if (mesh->HasUVs(uvIndex))
 		mesh->DeleteUVs(uvIndex);
-	mesh->SetUVs(uvIndex, uvs);
+	mesh->SetUVs(uvIndex, uvs, vertCount);
 	
 	return std::move(mesh);
 }

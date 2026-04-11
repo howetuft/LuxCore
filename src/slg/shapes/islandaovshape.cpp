@@ -88,7 +88,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex
 	}
 
 	// Build the list of islands
-	float *triAOV = new float[triCount];
+	auto triAOV = std::make_shared<float[]>(triCount);
 	unordered_map<u_int, u_int> islandIndices;
 	u_int islandCount = 0;
 	for (u_int i = 0; i < triCount; ++i) {
@@ -101,15 +101,15 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex
 			islandIndices[leaderIndex] = islandCount++;
 		} else
 			islandIndex = islandIndices[leaderIndex];
-		
+
 		triAOV[i] = islandIndex;
 	}
-	
+
 	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
 	mesh = srcMesh.Copy();
 	mesh->DeleteTriAOV(dataIndex);
-	mesh->SetTriAOV(dataIndex, &triAOV[0]);
+	mesh->SetTriAOV(dataIndex, triAOV, triCount);
 
 	const double endTime = WallClockTime();
 	SDL_LOG("IslandAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

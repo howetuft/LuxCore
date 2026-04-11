@@ -348,9 +348,9 @@ public:
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t size) override;
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t size) override;
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(

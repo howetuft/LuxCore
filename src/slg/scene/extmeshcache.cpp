@@ -109,7 +109,7 @@ ExtMeshCache::DefineExtMesh(ExtMeshUPtr&& mesh) {
 }
 
 void ExtMeshCache::SetMeshVertexAOV(const string &meshName,
-	const unsigned int index, float *data) {
+	const unsigned int index, float *data, size_t dataSize) {
 	if (!meshes.IsObjDefined(meshName))
 		throw runtime_error("Unknown mesh " + meshName + " while trying to set vertex AOV");
 
@@ -119,11 +119,11 @@ void ExtMeshCache::SetMeshVertexAOV(const string &meshName,
 
 	auto& triMesh = static_cast<ExtTriangleMesh&>(mesh);
 	triMesh.DeleteVertexAOV(index);
-	triMesh.SetVertexAOV(index, data);
+	triMesh.SetVertexAOV(index, std::span(data, dataSize));
 }
 
 void ExtMeshCache::SetMeshTriangleAOV(const string &meshName,
-	const unsigned int index, float *data) {
+	const unsigned int index, float *data, size_t dataSize) {
 	if (!meshes.IsObjDefined(meshName))
 		throw runtime_error("Unknown mesh " + meshName + " while trying to set triangle AOV");
 
@@ -133,7 +133,7 @@ void ExtMeshCache::SetMeshTriangleAOV(const string &meshName,
 
 	auto& triMesh = static_cast<ExtTriangleMesh&>(mesh);
 	triMesh.DeleteTriAOV(index);
-	triMesh.SetTriAOV(index, data);
+	triMesh.SetTriAOV(index, std::span(data, dataSize));
 }
 
 ExtMeshUPtr ExtMeshCache::DeleteExtMesh(const string &meshName) {

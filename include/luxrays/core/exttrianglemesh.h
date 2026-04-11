@@ -22,9 +22,13 @@
 #include <cassert>
 #include <cstdlib>
 #include <array>
+#include <memory>
 #include <span>
+#include <execution>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/array.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/bvh/bvhbuild.h"
@@ -48,6 +52,135 @@ namespace ocl {
 class Ray;
 class RayHit;
 
+// We use shared pointer, as it allows shallow copy (can be useful for such
+// large data sets)
+// All methods run on a per layer basis, except those suffixed by 'All', which
+// run on all layers
+template <typename T>
+class ExtMeshProp : std::array<std::shared_ptr<T[]>, EXTMESH_MAX_DATA_COUNT> {
+public:
+	using Layer = std::shared_ptr<T[]>;
+	using Base = std::array<Layer, EXTMESH_MAX_DATA_COUNT>;
+
+	ExtMeshProp() { this->fill(nullptr); }
+
+	// Construct from a single layer of data
+	ExtMeshProp(Layer layer) : ExtMeshProp() {
+		if (layer) (*this)[0] = layer;
+	}
+
+	// Per-layer
+	void Allocate(const u_int dataIndex, size_t layerSize) {
+		assert(!_size || _size == layerSize);  // Should always be the same size once it
+										  // has been set
+		(*this)[dataIndex] = std::make_shared<T[]>(layerSize);
+		if (layerSize) _size = layerSize;
+	}
+	auto Get(const u_int dataIndex) const {
+		assert(dataIndex < size());
+		return (*this)[dataIndex];
+	}
+	void Set(const u_int dataIndex, Layer values, size_t layerSize) {
+		assert(!_size || _size == layerSize);
+		(*this)[dataIndex] = values;
+		if (layerSize) _size = layerSize;
+	}
+	void Set(const u_int dataIndex, std::tuple<Layer, size_t> in) {
+		auto [layer, layerSize] = in;
+		Set(dataIndex, layer, layerSize);
+	}
+	void Set(const u_int dataIndex, std::span<T> in) {
+		auto layerSize = in.size();
+		assert(!_size || _size == layerSize);
+
+		Allocate(dataIndex, layerSize);
+		auto layerSpan = GetSpan(dataIndex);
+
+		std::copy(std::execution::par, in.begin(), in.end(), layerSpan.begin());
+		if (layerSize) _size = layerSize;
+	}
+
+	void Delete(const u_int dataIndex) {
+		(*this)[dataIndex].reset();
+		(*this)[dataIndex] = nullptr;
+	}
+	bool HasValues(const u_int dataIndex) const {
+		return (*this)[dataIndex] != nullptr;
+	}
+
+	std::span<T> GetSpan(const u_int dataIndex) const {
+		auto& layer = (*this)[dataIndex];
+		if (!layer) return std::span<T>();
+		return std::span<T>(layer.get(), _size);
+	}
+
+	std::tuple<Layer, size_t> Copy(
+		const u_int dataIndex,
+		const std::optional<ExtMeshProp<T>> force = std::nullopt
+	) const {
+		if (force) {
+			return std::make_tuple(force->Get(dataIndex), force->GetLayerSize());
+		}
+
+		if (HasValues(dataIndex)) {
+			auto res = std::make_shared<T[]>(size());
+
+			auto srcSpan = GetSpan(dataIndex);
+			auto dstSpan = std::span(res.get(), size());
+			std::copy(
+				std::execution::par,
+				srcSpan.begin(),
+				srcSpan.end(),
+				dstSpan.begin()
+			);
+
+			return std::make_tuple(res, GetLayerSize());
+		}
+
+		return std::make_tuple(Layer(nullptr), 0);
+	};
+
+	// All layers
+	void DeleteAll() {
+		for (size_t i = 0; i < this->size(); ++i)
+			Delete(i);
+	}
+	size_t GetLayerSize() const { return _size; }
+
+	// Serialization
+	template<typename Archive>
+	void Serialize(const u_int dataIndex, Archive& ar, size_t count) const {
+		const bool hasValues = HasValues(dataIndex);
+		ar & hasValues;
+		if (hasValues) {
+			auto data = (*this)[dataIndex].get();
+			ar & boost::serialization::make_array(data, count);
+		}
+	}
+
+	template<typename Archive>
+	void Deserialize(const u_int dataIndex, Archive& ar, size_t count) {
+		bool hasValues;
+		ar & hasValues;
+		if (hasValues) {
+			Allocate(dataIndex, count);
+			auto data = (*this)[dataIndex].get();
+			ar & boost::serialization::make_array(data, count);
+		} else {
+			(*this)[dataIndex] = nullptr;
+		}
+	}
+
+	// Base
+	using Base::operator[];  // TODO Make private
+	using Base::size;  // Size of the array
+
+private:
+	size_t _size = 0;
+
+};
+
+
 /*
  * The inheritance scheme used here:
  *
@@ -66,7 +199,7 @@ class RayHit;
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
-	ExtMesh() : bevelRadius(0.f) { }
+	ExtMesh(float bRadius = 0.f) : bevelRadius(bRadius) { }
 	virtual ~ExtMesh() = default;
 
 	virtual float GetBevelRadius() const { return bevelRadius; }
@@ -133,82 +266,117 @@ private:
 
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
-			const float bRadius = 0.f);
-	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals = nullptr,
+		ExtMeshProp<UV>::Layer meshUVs = nullptr,
+		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
+		ExtMeshProp<float>::Layer meshAlphas = nullptr,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::optional<std::span<UV>> meshUVs,
+		std::optional<std::span<Spectrum>> meshCols,
+		std::optional<std::span<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
+	ExtTriangleMesh(
+		const u_int meshVertCount,
+		const u_int meshTriCount,
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::optional<ExtMeshProp<UV>> meshUVs,
+		std::optional<ExtMeshProp<Spectrum>> meshCols,
+		std::optional<ExtMeshProp<float>> meshAlphas,
+		const float bRadius = 0.f
+	);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
-
-	void SetVertexAOV(const u_int dataIndex, float *values) {
-		vertAOV[dataIndex] = values;
-	}
-	void DeleteVertexAOV(const u_int dataIndex) {
-		delete[] vertAOV[dataIndex];
-		vertAOV[dataIndex] = nullptr;
-	}
-	float *GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
-
-	void SetTriAOV(const u_int dataIndex, float *values) {
-		triAOV[dataIndex] = values;
-	}
-	void DeleteTriAOV(const u_int dataIndex) {
-		delete[] triAOV[dataIndex];
-		triAOV[dataIndex] = nullptr;
-	}
-	float *GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
 
 	Normal *GetNormals() const { return normals; }
 	Normal *GetTriNormals() const { return triNormals; }
 
-	void SetUVs(const u_int dataIndex, UV *data) {
-		uvs[dataIndex] = data;
+	// AOV
+	void SetVertexAOV(
+		const u_int dataIndex,
+		std::shared_ptr<float[]> values,
+		size_t size
+	) {
+		vertAOV.Set(dataIndex, values, size);
 	}
-	void DeleteUVs(const u_int dataIndex) {
-		delete [] uvs[dataIndex];
-		uvs[dataIndex] = nullptr;
+	void SetVertexAOV(
+		const u_int dataIndex,
+		std::span<float> dataSpan
+	) {
+		vertAOV.Set(dataIndex, dataSpan);
 	}
-	UV *GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
+	void DeleteVertexAOV(const u_int dataIndex) { vertAOV.Delete(dataIndex); }
+	auto GetVertexAOVs(const u_int dataIndex) const { return vertAOV.Get(dataIndex); }
+	virtual bool HasVertexAOV(const u_int dataIndex) const {
+		return vertAOV.HasValues(dataIndex);
+	}
 
-	void SetColors(const u_int dataIndex, Spectrum *data) {
-		cols[dataIndex] = data;
+	// Triangle AOV
+	void SetTriAOV(
+		const u_int dataIndex, std::shared_ptr<float[]> values, size_t size
+	) {
+		triAOV.Set(dataIndex, values, size);
 	}
-	void DeleteColors(const u_int dataIndex) {
-		delete [] cols[dataIndex];
-		cols[dataIndex] = nullptr;
+	void SetTriAOV(
+		const u_int dataIndex, std::span<float> dataSpan
+	) {
+		triAOV.Set(dataIndex, dataSpan);
 	}
-	Spectrum *GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
+	void DeleteTriAOV(const u_int dataIndex) { triAOV.Delete(dataIndex); }
+	auto GetTriAOVs(const u_int dataIndex) const { return triAOV.Get(dataIndex); }
+	virtual bool HasTriAOV(const u_int dataIndex) const {
+		return triAOV.HasValues(dataIndex);
+	}
 
-	void SetAlphas(const u_int dataIndex, float *data) {
-		alphas[dataIndex] = data;
+	// UV
+	void SetUVs(const u_int dataIndex, std::shared_ptr<UV[]> values, size_t size) {
+		uvs.Set(dataIndex, values, size);
 	}
-	void DeleteAlphas(const u_int dataIndex) {
-		delete [] alphas[dataIndex];
-		alphas[dataIndex] = nullptr;
-	}
-	float *GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
+	void DeleteUVs(const u_int dataIndex) { uvs.Delete(dataIndex); }
+	auto GetUVs(const u_int dataIndex) const { return uvs.Get(dataIndex); }
+	virtual bool HasUVs(const u_int dataIndex) const { return uvs.HasValues(dataIndex); }
+	const auto& GetAllUVs() const { return uvs; }
 
-	const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
-	const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }
-	const std::array<float *, EXTMESH_MAX_DATA_COUNT> &GetAllAlphas() const { return alphas; }
+	// Vertex colors
+	void SetColors(const u_int dataIndex, std::shared_ptr<Spectrum[]> values, size_t size) {
+		cols.Set(dataIndex, values, size);
+	}
+	void DeleteColors(const u_int dataIndex) { cols.Delete(dataIndex); }
+	auto GetColors(const u_int dataIndex) const { return cols.Get(dataIndex); }
+	virtual bool HasColors(const u_int dataIndex) const {
+		return cols.HasValues(dataIndex);
+	}
+	const auto& GetAllColors() const { return cols; }
+
+	// Vertex alphas
+	void SetAlphas(const u_int dataIndex, std::shared_ptr<float[]> values, size_t size) {
+		alphas.Set(dataIndex, values, size);
+	}
+	void DeleteAlphas(const u_int dataIndex) { alphas.Delete(dataIndex); }
+	auto GetAlphas(const u_int dataIndex) const { return alphas.Get(dataIndex); }
+	virtual bool HasAlphas(const u_int dataIndex) const { return alphas.HasValues(dataIndex); }
+	const auto& GetAllAlphas() const { return alphas; }
+
 
 	Normal *ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
 	virtual bool HasNormals() const { return normals != nullptr; }
-	virtual bool HasUVs(const u_int dataIndex) const { return uvs[dataIndex] != nullptr; }
-	virtual bool HasColors(const u_int dataIndex) const { return cols[dataIndex] != nullptr; }
-	virtual bool HasAlphas(const u_int dataIndex) const { return alphas[dataIndex] != nullptr; }
-
-	virtual bool HasVertexAOV(const u_int dataIndex) const { return vertAOV[dataIndex] != nullptr; }
-	virtual bool HasTriAOV(const u_int dataIndex) const { return triAOV[dataIndex] != nullptr; }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
 		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
@@ -223,8 +391,10 @@ public:
 
 	virtual UV GetUV(const u_int vertIndex, const u_int dataIndex) const { return uvs[dataIndex][vertIndex]; }
 	virtual Spectrum GetColor(const u_int vertIndex, const u_int dataIndex) const { return cols[dataIndex][vertIndex]; }
-	virtual float GetAlpha(const u_int vertIndex, const u_int dataIndex) const { return alphas[dataIndex][vertIndex]; }
-	
+	virtual float GetAlpha(const u_int vertIndex, const u_int dataIndex) const {
+		assert(vertIndex < alphas.GetLayerSize());
+		return alphas[dataIndex][vertIndex];
+	}
 	virtual float GetVertexAOV(const u_int vertIndex, const u_int dataIndex) const {
 		if (HasTriAOV(dataIndex))
 			return vertAOV[dataIndex][vertIndex];
@@ -301,24 +471,39 @@ public:
 	virtual void Save(const std::string &fileName) const;
 
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
-	ExtTriangleMeshUPtr CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bRadius = 0.f) const;
-	ExtTriangleMeshUPtr Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
-			const float bRadius = 0.f) const;
+
+	ExtTriangleMeshUPtr CopyExt(
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::optional<ExtMeshProp<UV>> meshUVs,
+		std::optional<ExtMeshProp<Spectrum>> meshCols,
+		std::optional<ExtMeshProp<float>> meshAlphas,
+		const float bRadius = 0.f
+	) const;
+
+	ExtTriangleMeshUPtr Copy(
+		Point *meshVertices,
+		Triangle *meshTris,
+		Normal *meshNormals,
+		std::optional<std::span<UV>> mUVs,
+		std::optional<std::span<Spectrum>> mCols,
+		std::optional<std::span<float>> mAlphas,
+		const float bRadius = 0.f
+	) const;
+
 	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
+		return CopyExt(
+			nullptr, nullptr, nullptr, std::nullopt, std::nullopt, std::nullopt, bRadius
+		);
 	}
 
 	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
 			bool &continueToTrace, float &rayHitT,
 			luxrays::Point &p, luxrays::Normal &n) const;
-	
+
 	static ExtTriangleMeshUPtr Load(const std::string &fileName);
-	
+
 	static ExtTriangleMeshUPtr Merge(
 		std::vector<std::reference_wrapper<const ExtTriangleMesh>> meshes,
 		std::optional<std::vector<luxrays::Transform>> trans
@@ -359,7 +544,7 @@ public:
 		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
 		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
 				luxrays::Normal &n) const;
-		
+
 		luxrays::Point v0, v1;
 		float radius;
 	};
@@ -371,10 +556,12 @@ public:
 	ExtTriangleMesh() {
 	}
 
-	void Init(Normal *meshNormals,
-			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
-			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+	void Init(
+		Normal *meshNormals,
+		std::optional<ExtMeshProp<UV>> meshUVs,
+		std::optional<ExtMeshProp<Spectrum>> meshCols,
+		std::optional<ExtMeshProp<float>> meshAlphas
+	);
 
 	void Preprocess();
 	void PreprocessBevel();
@@ -393,30 +580,11 @@ public:
 				ar & normals[i];
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-			const bool hasUVs = HasUVs(i);
-			ar & hasUVs;
-			if (hasUVs)
-				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
-
-			const bool hasColors = HasColors(i);
-			ar & hasColors;
-			if (hasColors)
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
-
-			const bool hasAlphas = HasAlphas(i);
-			ar & hasAlphas;
-			if (hasAlphas)
-				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
-			
-			const bool hasVertexAOV = HasVertexAOV(i);
-			ar & hasVertexAOV;
-			if (hasVertexAOV)
-				ar & boost::serialization::make_array<float>(vertAOV[i], vertCount);
-			
-			const bool hasTriangleAOV = HasTriAOV(i);
-			ar & hasTriangleAOV;
-			if (hasTriangleAOV)
-				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
+			uvs.Serialize(i, ar, vertCount);
+			cols.Serialize(i, ar, vertCount);
+			alphas.Serialize(i, ar, vertCount);
+			vertAOV.Serialize(i, ar, vertCount);
+			triAOV.Serialize(i, ar, triCount);
 		}
 	}
 
@@ -435,51 +603,17 @@ public:
 		triNormals = new Normal[triCount];
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-			bool hasUVs;
-			ar & hasUVs;
-			if (hasUVs) {
-				uvs[i] = new UV[vertCount];
-				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
-			} else
-				uvs[i] = nullptr;
-
-			bool hasColors;
-			ar & hasColors;
-			if (hasColors) {
-				cols[i] = new Spectrum[vertCount];
-				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
-			} else
-				cols[i] = nullptr;
-
-			bool hasAlphas;
-			ar & hasAlphas;
-			if (hasAlphas) {
-				alphas[i] = new float[vertCount];
-				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
-			} else
-				alphas[i] = nullptr;
-
-			bool hasVertexAOV;
-			ar & hasVertexAOV;
-			if (hasVertexAOV) {
-				vertAOV[i] = new float[vertCount];
-				ar & boost::serialization::make_array<float>(vertAOV[i], vertCount);
-			} else
-				vertAOV[i] = nullptr;
-
-			bool hasTriangleAOV;
-			ar & hasTriangleAOV;
-			if (hasTriangleAOV) {
-				triAOV[i] = new float[triCount];
-				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
-			} else
-				triAOV[i] = nullptr;
+			uvs.Deserialize(i, ar, vertCount);
+			cols.Deserialize(i, ar, vertCount);
+			alphas.Deserialize(i, ar, vertCount);
+			vertAOV.Deserialize(i, ar, vertCount);
+			triAOV.Deserialize(i, ar, triCount);
 		}
 
 		bevelCylinders = nullptr;
 		bevelBoundingCylinders = nullptr;
 		bevelBVHArrayNodes = nullptr;
-		
+
 		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -487,12 +621,12 @@ public:
 	Normal *normals; // Vertices normals
 	Normal *triNormals; // Triangle normals
 
-	std::array<UV *, EXTMESH_MAX_DATA_COUNT> uvs; // Vertex uvs
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols; // Vertex colors
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> alphas; // Vertex alphas
+	ExtMeshProp<UV> uvs; // Vertex uvs
+	ExtMeshProp<Spectrum> cols; // Vertex colors
+	ExtMeshProp<float> alphas; // Vertex alphas
 
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
+	ExtMeshProp<float> vertAOV; // Vertex AOV
+	ExtMeshProp<float> triAOV; // Triangle AOV
 
 	BevelCylinder *bevelCylinders;
 	BevelBoundingCylinder *bevelBoundingCylinders;

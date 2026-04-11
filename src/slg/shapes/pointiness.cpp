@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <optional>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/pointiness.h"
@@ -147,14 +148,15 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	}
 
 	// Blur the curvature information
-	float *curvature = new float[originalVertCount];
-	fill(curvature, curvature + originalVertCount, 0.f);
-	fill(vertexCounters.begin(), vertexCounters.end(), 1);
+	auto curvature = std::make_unique<float[]>(originalVertCount);
+	std::span<float> curvatureSpan(curvature.get(), originalVertCount);
+	std::fill(curvatureSpan.begin(), curvatureSpan.end(), 0.f);
+	std::fill(vertexCounters.begin(), vertexCounters.end(), 1);
 	for(const Edge &e: edges) {
-		curvature[e.v0] += rawCurvature[e.v1];
+		curvatureSpan[e.v0] += rawCurvature[e.v1];
 		vertexCounters[e.v0]++;
 
-		curvature[e.v1] += rawCurvature[e.v0];
+		curvatureSpan[e.v1] += rawCurvature[e.v0];
 		vertexCounters[e.v1]++;
 	}
 
@@ -162,21 +164,28 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	for (u_int i = 0; i < originalVertCount; ++i) {
 		if (uniqueVertices[i] == i) {
 			// It is an unique vertex
-			curvature[i] *= (srcMesh.HasAlphas(0) ? srcMesh.GetAlpha(i, 0) : 1.f) / vertexCounters[i];
+			curvatureSpan[i] *= (srcMesh.HasAlphas(0) ? srcMesh.GetAlpha(i, 0) : 1.f) / vertexCounters[i];
 		} else {
 			// It is a duplicate, just copy the already compute curvature
-			curvature[i] = curvature[uniqueVertices[i]];
+			curvatureSpan[i] = curvatureSpan[uniqueVertices[i]];
 		}
 	}
 
 	if (destAOVIndex == NULL_INDEX) {
 		// Make a copy of the original mesh and overwrite vertex color information
-		mesh = srcMesh.Copy(NULL, NULL, NULL, NULL, NULL, curvature);
+		mesh = srcMesh.Copy(
+			nullptr,
+			nullptr,
+			nullptr,
+			std::nullopt,
+			std::nullopt,
+			curvatureSpan
+		);
 	} else {
 		mesh = srcMesh.Copy();
 
 		assert (destAOVIndex < EXTMESH_MAX_DATA_COUNT);
-		mesh->SetVertexAOV(destAOVIndex, curvature);
+		mesh->SetVertexAOV(destAOVIndex, curvatureSpan);
 	}
 
 	const double endTime = WallClockTime();

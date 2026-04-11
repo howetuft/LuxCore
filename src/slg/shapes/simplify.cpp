@@ -158,7 +158,7 @@ public:
 			hasNormals = false;
 		
 		if (srcMesh.HasUVs(0)) {
-			const UV *uvs = srcMesh.GetUVs(0);
+			const auto uvs = srcMesh.GetUVs(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].uv = uvs[i];
 
@@ -167,7 +167,7 @@ public:
 			hasUVs = false;
 		
 		if (srcMesh.HasColors(0)) {
-			const Spectrum *cols = srcMesh.GetColors(0);
+			const auto cols = srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].col = cols[i];
 
@@ -176,7 +176,7 @@ public:
 			hasColors = false;
 
 		if (srcMesh.HasAlphas(0)) {
-			const float *alphas = srcMesh.GetAlphas(0);
+			const auto alphas = srcMesh.GetAlphas(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].alpha = alphas[i];
 
@@ -199,7 +199,7 @@ public:
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
+		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
 
@@ -210,23 +210,23 @@ public:
 				newNorms[i] = vertices[i].norm;
 		}
 
-		UV *newUVs = nullptr;
+		ExtMeshProp<UV>::Layer newUVs = nullptr;
 		if (hasUVs) {
-			newUVs = new UV[vertCount];
+			newUVs = std::make_shared<UV[]>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
 				newUVs[i] = vertices[i].uv;
 		}
 
-		Spectrum *newCols = nullptr;
+		ExtMeshProp<Spectrum>::Layer newCols = nullptr;
 		if (hasColors) {
-			newCols = new Spectrum[vertCount];
+			newCols = std::make_shared<Spectrum[]>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
 				newCols[i] = vertices[i].col;
 		}
 
-		float *newAlphas = nullptr;
+		ExtMeshProp<float>::Layer newAlphas = nullptr;
 		if (hasAlphas) {
-			newAlphas = new float[vertCount];
+			newAlphas = std::make_shared<float[]>(vertCount);
 			for (u_int i = 0; i < vertCount; ++i)
 				newAlphas[i] = vertices[i].alpha;
 		}
@@ -243,8 +243,16 @@ public:
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 
-		return std::make_unique<ExtTriangleMesh>(vertCount, triCount, newVertices, newTris, newNorms,
-				newUVs, newCols, newAlphas);
+		return std::make_unique<ExtTriangleMesh>(
+			vertCount,
+			triCount,
+			newVertices,
+			newTris,
+			newNorms,
+			newUVs,
+			newCols,
+			newAlphas
+		);
 	}
 
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,

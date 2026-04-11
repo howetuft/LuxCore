@@ -120,19 +120,19 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 		}
 	}
 
-	UV *uvs = NULL;
+	ExtMeshProp<UV>::Layer uvs = nullptr;
 	if (props.IsDefined(propName + ".uvs")) {
 		Property prop = props.Get(propName + ".uvs");
 		if ((prop.GetSize() == 0) || (prop.GetSize() / 2 != pointsSize))
 			throw runtime_error("Wrong shape uv list length: " + shapeName);
 
-		uvs = new UV[pointsSize];
+		uvs = std::make_shared<UV[]>(pointsSize);
 		for (u_int i = 0; i < pointsSize; ++i) {
 			const u_int index = i * 2;
 			uvs[i] = UV(prop.Get<double>(index), prop.Get<double>(index + 1));
 		}
 	}
-	
+
 	return std::make_unique<ExtTriangleMesh>(pointsSize, trisSize, points, tris, normals, uvs);
 }
 

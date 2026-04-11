@@ -281,9 +281,27 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	Point *p,
 	Triangle *vi,
 	Normal *n,
-	UV *uvs,
-	Spectrum *cols,
-	float *alphas
+	ExtMeshProp<UV>::Layer uvs,
+	ExtMeshProp<Spectrum>::Layer cols,
+	ExtMeshProp<float>::Layer alphas
+) {
+	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
+			uvs, cols, alphas);
+	mesh->SetName(shapeName);
+
+	return DefineMesh(std::move(mesh));
+}
+
+Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
+	const string &shapeName,
+	const long plyNbVerts,
+	const long plyNbTris,
+	Point *p,
+	Triangle *vi,
+	Normal *n,
+	std::span<UV> uvs,
+	std::span<Spectrum> cols,
+	std::span<float> alphas
 ) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
 			uvs, cols, alphas);
@@ -297,10 +315,10 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	const long plyNbVerts,
 	const long plyNbTris,
 	Point *p, Triangle *vi, Normal *n,
-	array<UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
-	array<float *, EXTMESH_MAX_DATA_COUNT> *alphas)
-{
+	std::optional<ExtMeshProp<UV>> uvs,
+	std::optional<ExtMeshProp<Spectrum>> cols,
+	std::optional<ExtMeshProp<float>> alphas
+) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(
 			plyNbVerts, plyNbTris, p, vi, n,
 			uvs, cols, alphas
@@ -354,13 +372,13 @@ Scene::ReturnType<ExtMotionTriangleMesh> Scene::DefineMesh(
 }
 
 void Scene::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	extMeshCache.SetMeshVertexAOV(meshName, index, data);
+		const unsigned int index, float *data, size_t size) {
+	extMeshCache.SetMeshVertexAOV(meshName, index, data, size);
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data) {
-	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
+		const unsigned int index, float *data, size_t size) {
+	extMeshCache.SetMeshTriangleAOV(meshName, index, data, size);
 }
 
 Scene::ReturnType<ExtTriangleMesh>

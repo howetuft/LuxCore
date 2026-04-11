@@ -253,7 +253,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 		if (srcMesh.HasUVs(i)) {
 			uvsBuffers[i] = BuildBuffer<2>(
 				stencilTable,
-				(const float *)srcMesh.GetUVs(i),
+				(const float *)srcMesh.GetUVs(i).get(),
 				nCoarseVerts,
 nRefinedVerts
 			);
@@ -266,7 +266,7 @@ nRefinedVerts
 		if (srcMesh.HasColors(i)) {
 			colsBuffers[i] = BuildBuffer<3>(
 				stencilTable,
-				(const float *)srcMesh.GetColors(i),
+				(const float *)srcMesh.GetColors(i).get(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -279,7 +279,7 @@ nRefinedVerts
 		if (srcMesh.HasAlphas(i)) {
 			alphasBuffers[i] = BuildBuffer<1>(
 				stencilTable,
-				(const float *)srcMesh.GetAlphas(i),
+				(const float *)srcMesh.GetAlphas(i).get(),
 				nCoarseVerts,
 				nRefinedVerts
 			);
@@ -293,7 +293,7 @@ nRefinedVerts
 			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 				vertAOVSsBuffers[i] = BuildBuffer<1>(
 					stencilTable,
-					(const float *)srcMesh.GetVertexAOVs(i),
+					(const float *)srcMesh.GetVertexAOVs(i).get(),
 					nCoarseVerts,
 					nRefinedVerts
 				);
@@ -330,50 +330,50 @@ nRefinedVerts
 	}
 
 	// New UVs
-	std::array<UV *, EXTMESH_MAX_DATA_COUNT> newUVs;
+	ExtMeshProp<UV> newUVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasUVs(i)) {
-			newUVs[i] = new UV[nRefinedVerts];
+			newUVs[i] = std::make_shared<UV[]>(nRefinedVerts);
 
 			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * nCoarseVerts;
-			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, &newUVs[i]->u);
+			std::copy(refinedUVs, refinedUVs + 2 * nRefinedVerts, newUVs[i].get());
 		} else
 			newUVs[i] = nullptr;
 	}
 
 	// New colors
-	std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
+	ExtMeshProp<Spectrum> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasColors(i)) {
-			newCols[i] = new Spectrum[nRefinedVerts];
+			newCols[i] = std::make_shared<Spectrum[]>(nRefinedVerts);
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * nCoarseVerts;
-			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, &newCols[i]->c[0]);
+			std::copy(refinedCols, refinedCols + 3 * nRefinedVerts, newCols[i].get());
 		} else
 			newCols[i] = nullptr;
 	}
 
 	// New alphas
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newAlphas;
+	ExtMeshProp<float> newAlphas;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasAlphas(i)) {
-			newAlphas[i] = new float[nRefinedVerts];
+			newAlphas[i] = std::make_shared<float[]>(nRefinedVerts);
 
 			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i]);
+			std::copy(refinedAlphas, refinedAlphas + 1 * nRefinedVerts, newAlphas[i].get());
 		} else
 			newAlphas[i] = nullptr;
 	}
 
 	// New vertAOVs
-	std::array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
+	ExtMeshProp<float> newVertAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 		if (srcMesh.HasVertexAOV(i)) {
 			SDL_LOG("Subdivision (enhanced) - Evaluating AOV layer #" << i);
-			newVertAOVs[i] = new float[nRefinedVerts];
+			newVertAOVs[i] = std::make_shared<float[]>(nRefinedVerts);
 
 			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * nCoarseVerts;
-			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i]);
+			std::copy(refinedVertAOVs, refinedVertAOVs + 1 * nRefinedVerts, newVertAOVs[i].get());
 		} else
 			newVertAOVs[i] = nullptr;
 	}
@@ -382,11 +382,11 @@ nRefinedVerts
 	ExtTriangleMeshUPtr newMesh =  std::make_unique<ExtTriangleMesh>(
 		nRefinedVerts, nRefinedFaces,
 		newVerts, newTris, newNorms,
-		&newUVs, &newCols, &newAlphas
+		newUVs, newCols, newAlphas
 	);
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		newMesh->SetVertexAOV(i, newVertAOVs[i]);
+		newMesh->SetVertexAOV(i, newVertAOVs.Get(i), newVertAOVs.size());
 	}
 
 	return newMesh;
@@ -1354,20 +1354,33 @@ struct MultiLayerDataEvaluator{
 	template <typename DATA_BUFFER, typename DATA_OUT>
 	struct EvaluatedLayers: std::vector<DATA_BUFFER> {
 
+		using DATA_IN = DATA_BUFFER::element_type;
+
 		// Return-object constructor
 		EvaluatedLayers(size_t num_layers):
 			std::vector<DATA_BUFFER>(num_layers)
 		{}
 
 		// Return-object releaser
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT>* releaseLayers() {
-			for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-				outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
+		ExtMeshProp<DATA_OUT> releaseLayers() {
+			for (size_t i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+				auto& layer = (*this)[i];
+				auto layerPtr = std::shared_ptr<DATA_IN[]>(std::move(layer));
+				outBuffers[i] = reinterpret_pointer_cast<DATA_OUT[]>(layerPtr);
 			}
-			return &outBuffers;
+			return outBuffers;
 		}
+		// TODO
+		//std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT>* releaseLayers() {
+			//for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
+				//outBuffers[layer] = reinterpret_cast<DATA_OUT *>((*this)[layer].release());
+			//}
+			//return &outBuffers;
+		//}
 
-		std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
+		ExtMeshProp<DATA_OUT> outBuffers;
+		// TODO
+		//std::array<DATA_OUT *, EXTMESH_MAX_DATA_COUNT> outBuffers;
 	};
 
 
@@ -1466,21 +1479,21 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	MultiLayerDataEvaluator evaluator(surface, numMeshVertex, tessCoords);
 
 	// Evaluate UV
-	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh.GetUVs(layer); };
+	auto extractorUV = [&srcMesh](u_int layer) { return srcMesh.GetUVs(layer).get(); };
 	auto tessUVs = evaluator.evaluate(extractorUV);
 
 	// Evaluate Colors
-	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer); };
+	auto extractorCols = [&srcMesh](u_int layer) { return srcMesh.GetColors(layer).get(); };
 	auto tessCols = evaluator.evaluate(extractorCols);
 
 	// Evaluate Alphas
 	auto extractorAlphas = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetAlphas(layer); };
+		{ return (FloatAdapter*) srcMesh.GetAlphas(layer).get(); };
 	auto tessAlphas = evaluator.evaluate(extractorAlphas);
 
 	// Evaluate AOVs
 	auto extractorAOVs = [&srcMesh](u_int layer)
-		{ return (FloatAdapter*) srcMesh.GetVertexAOVs(layer); };
+		{ return (FloatAdapter*) srcMesh.GetVertexAOVs(layer).get(); };
 	auto tessAOVs = evaluator.evaluate(extractorAOVs);
 
 	// Allocate the new mesh and release buffers (transfer ownership to new
@@ -1503,9 +1516,9 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	);
 
 	// Handle AOVs
-	auto tessAOVs_released = *tessAOVs.releaseLayers();
+	auto tessAOVs_released = tessAOVs.releaseLayers();
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		newMesh->SetVertexAOV(i, tessAOVs_released[i]);
+		newMesh->SetVertexAOV(i, tessAOVs_released.GetSpan(i));
 	}
 
 	return newMesh;

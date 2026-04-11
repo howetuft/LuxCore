@@ -149,9 +149,21 @@ public:
 		luxrays::Point *p,
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
-		luxrays::UV *uv,
-		luxrays::Spectrum *cols,
-		float *alphas
+		luxrays::ExtMeshProp<luxrays::UV>::Layer uvs,
+		luxrays::ExtMeshProp<luxrays::Spectrum>::Layer cols,
+		luxrays::ExtMeshProp<float>::Layer alphas
+	);
+
+	ReturnType<ExtTriangleMesh> DefineMesh(
+		const std::string &shapeName,
+		const long plyNbVerts,
+		const long plyNbTris,
+		luxrays::Point *p,
+		luxrays::Triangle *vi,
+		luxrays::Normal *n,
+		std::span<luxrays::UV> uvs,
+		std::span<luxrays::Spectrum> cols,
+		std::span<float> alphas
 	);
 
 	ReturnType<ExtTriangleMesh> DefineMeshExt(
@@ -161,9 +173,9 @@ public:
 		luxrays::Point *p,
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
-		std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
-		std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
-		std::array<float *, EXTMESH_MAX_DATA_COUNT> *alphas
+		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,
+		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols,
+		std::optional<luxrays::ExtMeshProp<float>> alphas
 	);
 
 	ReturnType<ExtInstanceTriangleMesh> DefineMesh(
@@ -179,9 +191,9 @@ public:
 	);
 
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t size);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data);
+		const unsigned int index, float *data, size_t size);
 
 	// Strands shape
 	Scene::ReturnType<ExtTriangleMesh> DefineStrands(

@@ -140,7 +140,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 			// Build the local reference system, uses shadeN, dpdu and dpdv
 			const Frame frame = hitPoint.GetFrame();
-			
+
 			disp = frame.ToWorld(Vector(dispValue.c[binormalIndex], dispValue.c[tangentIndex], dispValue.c[normalIndex]));
 
 
@@ -148,22 +148,29 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 			// the tangent, G along the normal and B along the bitangent.
 			// This is the Blender standard.
 			//disp = frame.ToWorld(Vector(dispValue.c[2], dispValue.c[0], dispValue.c[1]));
-			
+
 			// This is the Mudbox standard.
 			//disp = frame.ToWorld(Vector(dispValue.c[0], dispValue.c[2], dispValue.c[1]));
 		}
 
 		newVertices[i] = vertices[i] + disp;
 	}
-	
+
 	// Make a copy of the original mesh and overwrite vertex information
-	mesh = srcMesh.Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
+	mesh = srcMesh.Copy(
+		newVertices,
+		nullptr,
+		nullptr,
+		std::nullopt,
+		std::nullopt,
+		std::nullopt
+	);
 	if (params.normalSmooth)
 		mesh->ComputeNormals();
-	
+
 	// For some debugging
 	//mesh->Save("debug.ply");
-	
+
 	const double endTime = WallClockTime();
 	SDL_LOG("Displacement time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
