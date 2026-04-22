@@ -224,6 +224,7 @@ jobs:
             echo "CPPFLAGS=${CPPFLAGS} -I${LLVM_PREFIX}/include -I${LLD_PREFIX}/include" >> $GITHUB_ENV
 
             # OpenMP
+            brew search libomp
             brew install libomp
             brew link libomp --overwrite
             echo "OpenMP_ROOT=$(brew --prefix libomp)" >> $GITHUB_ENV
