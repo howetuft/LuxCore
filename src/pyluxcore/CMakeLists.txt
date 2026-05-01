@@ -24,8 +24,7 @@
 
 set(PYLUXCORE_SRCS)
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
-
-pybind11_add_module(pyluxcore MODULE
+pybind11_add_module(pyluxcore
   ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcore.cpp
   ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcoreforblender.cpp
 )
@@ -33,8 +32,6 @@ pybind11_add_module(pyluxcore MODULE
 target_link_libraries(pyluxcore PRIVATE
     luxcore_static
     OpenVDB::openvdb
-    pybind11::pybind11
-    Python::Module
     robin_hood::robin_hood
     openimageio::openimageio
     embree::embree

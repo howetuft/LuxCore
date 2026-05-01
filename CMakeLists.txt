@@ -212,7 +212,7 @@ find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
 # Additional dependencies for pyluxcore
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 # Additional dependencies for luxcoreui
