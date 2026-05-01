@@ -52,16 +52,6 @@ INSTALL(
     WORLD_READ WORLD_EXECUTE
 )
 
-INSTALL(
-  TARGETS luxwranglers
-  DESTINATION lib
-  COMPONENT pyluxcore
-  PERMISSIONS
-    OWNER_WRITE OWNER_READ OWNER_EXECUTE
-    GROUP_READ GROUP_EXECUTE
-    WORLD_READ WORLD_EXECUTE
-)
-
 # Install pdb file (if msvc and debug)
 if(MSVC)
   install(FILES "$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:pyluxcore>>"

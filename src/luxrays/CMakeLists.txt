@@ -169,6 +169,8 @@ set(LUXRAYS_SRCS
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/properties.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/utils.cpp
+  ${PROJECT_SOURCE_DIR}/deps/cuew/src/cuew.cpp
+  ${PROJECT_SOURCE_DIR}/deps/clew/src/clew.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
@@ -240,13 +242,6 @@ target_link_libraries(luxrays PRIVATE
   embree::embree
   boost::boost
   OpenMP::OpenMP_CXX
-)
-
-# Due to use of dlopen, those files are better hosted in a shared lib
-add_library(luxwranglers SHARED
-  ${PROJECT_SOURCE_DIR}/deps/cuew/src/cuew.cpp
-  ${PROJECT_SOURCE_DIR}/deps/clew/src/clew.cpp
-  ${PROJECT_SOURCE_DIR}/src/luxrays/utils/optix.cpp
 )
 
 ################################################################################

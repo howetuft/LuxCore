@@ -87,7 +87,6 @@ target_link_libraries(luxcore PRIVATE
     boost::boost
     spdlog::spdlog_header_only
     luxparser
-    luxwranglers
 )
 target_link_libraries(luxcore_static PRIVATE
     slg-core
@@ -99,7 +98,6 @@ target_link_libraries(luxcore_static PRIVATE
     boost::boost
     spdlog::spdlog_header_only
     luxparser
-    luxwranglers
 )
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
@@ -114,7 +112,7 @@ set_target_properties(luxcore_static PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 message(status ${INSTALL_EXCLUDE_REGEXES})
 install(
-    TARGETS luxcore luxwranglers
+    TARGETS luxcore
     RUNTIME_DEPENDENCIES
     PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-" "clang_rt"
     POST_EXCLUDE_REGEXES ${INSTALL_EXCLUDE_REGEXES}

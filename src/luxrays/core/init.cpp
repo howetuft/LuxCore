@@ -25,7 +25,6 @@
 #endif
 #if !defined(LUXRAYS_DISABLE_CUDA)
 #include "luxrays/utils/cuda.h"
-#include "luxrays/utils/optix.h"
 #endif
 
 using namespace std;
@@ -80,7 +79,7 @@ void Init() {
 			isCudaAvilable = true;
 
 			// Try to initialize Optix too
-			if (luxOptixInit() == OPTIX_SUCCESS)
+			if (optixInit() == OPTIX_SUCCESS)
 				isOptixAvilable = true;
 		}
 	}
