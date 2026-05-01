@@ -37,6 +37,9 @@ MESSAGE(STATUS "C++ compiler version is ${CMAKE_CXX_COMPILER_VERSION}")
 MESSAGE(STATUS "C compiler identifier is ${CMAKE_C_COMPILER_ID}")
 MESSAGE(STATUS "C compiler version is ${CMAKE_C_COMPILER_VERSION}")
 
+# Helpers
+include(CMakePrintHelpers)
+
 # Version computation
 #
 # Version number can be set by external caller (for instance, Github action)
