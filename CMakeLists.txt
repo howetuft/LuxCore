@@ -141,6 +141,8 @@ endif()
 
 # Link directives
 set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)  # Raise error in target is not a true target
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")

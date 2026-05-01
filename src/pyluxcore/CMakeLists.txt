@@ -36,7 +36,7 @@ target_link_libraries(pyluxcore PRIVATE
 )
 target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
 
-set_target_properties(pyluxcore PROPERTIES PREFIX "")
+set_target_properties(pyluxcore PROPERTIES PREFIX "" CXX_VISIBILITY_PRESET hidden C_VISIBILITY_PRESET hidden)
 if(MSVC)
   set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
