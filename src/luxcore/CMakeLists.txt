@@ -89,11 +89,9 @@ target_link_libraries(luxcore PRIVATE
     luxparser
     luxwranglers
 )
-target_link_options(luxcore PRIVATE -static-libgcc)
-
-target_link_libraries(luxcore_static PUBLIC
-    slg-film
+target_link_libraries(luxcore_static PRIVATE
     slg-core
+    slg-film
     slg-kernels
     luxrays
     bcd
