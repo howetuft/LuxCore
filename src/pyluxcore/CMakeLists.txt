@@ -30,11 +30,14 @@ pybind11_add_module(pyluxcore
 )
 
 target_link_libraries(pyluxcore PRIVATE
+    -Wl,-Bstatic
     luxcore_static
     robin_hood::robin_hood
     OpenVDB::openvdb
+    -Wl,-Bdynamic
 )
 target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
+target_link_options(pyluxcore PRIVATE -static-libgcc)
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")
 if(MSVC)
