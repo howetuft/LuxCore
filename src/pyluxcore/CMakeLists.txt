@@ -31,10 +31,8 @@ pybind11_add_module(pyluxcore
 
 target_link_libraries(pyluxcore PRIVATE
     luxcore_static
-    OpenVDB::openvdb
     robin_hood::robin_hood
-    openimageio::openimageio
-    embree::embree
+    OpenVDB::openvdb
 )
 target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
 

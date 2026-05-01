@@ -78,18 +78,14 @@ add_library(luxcore SHARED ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 
 target_link_libraries(luxcore PRIVATE
+    luxrays
     slg-core
     slg-film
     slg-kernels
-    luxrays
     bcd
     robin_hood::robin_hood
     boost::boost
     spdlog::spdlog_header_only
-    openjph::openjph
-    openimageio::openimageio
-    openjp2
-    embree::embree
     luxparser
 )
 target_link_libraries(luxcore_static PRIVATE
@@ -101,16 +97,17 @@ target_link_libraries(luxcore_static PRIVATE
     robin_hood::robin_hood
     boost::boost
     spdlog::spdlog_header_only
-    openjph::openjph
-    openimageio::openimageio
-    embree::embree
     luxparser
 )
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
-set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(
+  luxcore PROPERTIES
+  WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
+
 set_target_properties(luxcore_static PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 message(status ${INSTALL_EXCLUDE_REGEXES})

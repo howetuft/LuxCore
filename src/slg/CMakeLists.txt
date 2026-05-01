@@ -495,10 +495,10 @@ target_link_libraries(slg-core PRIVATE
   boost::boost
   OpenColorIO::OpenColorIO
   OpenVDB::openvdb
-  openexr::openexr
   opensubdiv::opensubdiv
   Imath::Imath
   embree::embree
+  openexr::openexr
   openimageio::openimageio
   nlohmann_json::nlohmann_json
   robin_hood::robin_hood
