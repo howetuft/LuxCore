@@ -139,6 +139,9 @@ if(LINUX)
   add_link_options("LINKER:--disable-new-dtags")
 endif()
 
+# Link directives
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)  # Raise error in target is not a true target
+
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
   # CUDA requires OpenCL support
