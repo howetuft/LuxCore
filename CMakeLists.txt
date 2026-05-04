@@ -134,6 +134,8 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
 if(LINUX)
   add_link_options("LINKER:--disable-new-dtags" "LINKER:-Bsymbolic")
+elseif(APPLE)
+  add_link_options("LINKER:-Bsymbolic")
 endif()
 
 if (LUXRAYS_DISABLE_OPENCL)
