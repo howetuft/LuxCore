@@ -387,7 +387,8 @@ class RenderFarmJobSingleImageThread:
         self.workDirectory = self.jobSingleImage.GetWorkDirectory()
 
     def GetNodeFilmFileName(self):
-        filename = f"{self.thread.name.replace(":", "_")}-{self.seed}.flm"
+        thread_name = self.thread.name.replace(":", "_")
+        filename = f"{thread_name}-{self.seed}.flm"
         return os.path.join(self.workDirectory, filename)
 
     def Start(self):

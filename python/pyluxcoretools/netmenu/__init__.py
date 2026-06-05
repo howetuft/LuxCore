@@ -16,4 +16,6 @@
 # limitations under the License.
 ###############################################################################
 
-from .cmd import MenuApp
+"""PyLuxCore Tools Menu package."""
+
+from .cmd import main

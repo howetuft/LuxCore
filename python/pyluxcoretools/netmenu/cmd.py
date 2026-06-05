@@ -16,10 +16,11 @@
 # limitations under the License.
 ###############################################################################
 
-import logging
-import tkinter as tk
+"""Command-line entry point for PyLuxCore Tools Menu."""
 
-from .menuwindow_tk import setup_ui
+import logging
+
+from .menuwindow_dp import run_menu
 from ..netnode import ui as netnode_ui
 from ..netconsole import ui as netconsole_ui
 from .._utils import loghandler
@@ -28,39 +29,11 @@ from .._utils import loghandler
 logger = logging.getLogger(loghandler.loggerName + ".luxcoremenu")
 
 
-class MenuApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.selectedTool = "None"
-        self.title("LuxCoreMenu")
-        self.geometry("300x200")
-        self.center_window()
-
-        # Assuming menuwindow.setup_ui(self) sets up the UI
-        setup_ui(self)
-
-    def center_window(self):
-        self.update_idletasks()
-        width = self.winfo_width()
-        height = self.winfo_height()
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
-
-    def clickedNetNode(self):
-        self.selectedTool = "NetNode"
-        self.destroy()
-
-    def clickedNetConsole(self):
-        self.selectedTool = "NetConsole"
-        self.destroy()
-
-
 def main():
-    app = MenuApp()
-    app.mainloop()
+    """Main entry point for the PyLuxCore Tools Menu."""
+    selected_tool = run_menu()
 
-    if app.selectedTool == "NetNode":
+    if selected_tool == "NetNode":
         netnode_ui()
-    elif app.selectedTool == "NetConsole":
+    elif selected_tool == "NetConsole":
         netconsole_ui()
