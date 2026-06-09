@@ -627,8 +627,8 @@ public:
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	Normal *normals; // Vertices normals
-	Normal *triNormals; // Triangle normals
+	Normal *normals = nullptr; // Vertices normals
+	Normal *triNormals = nullptr; // Triangle normals
 
 	ExtMeshProp<UV> uvs; // Vertex uvs
 	ExtMeshProp<Spectrum> cols; // Vertex colors
