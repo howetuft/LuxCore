@@ -30,7 +30,12 @@ pybind11_add_module(pyluxcore MODULE
   ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcoreforblender.cpp
 )
 
+# First lines take care of linking tbbmalloc_proxy in 1st position
 target_link_libraries(pyluxcore PRIVATE
+    $<LINK_ONLY:$<$<CONFIG:Debug>:$<TARGET_FILE:CONAN_LIB::onetbb_TBB_tbbmalloc_tbbmalloc_DEBUG>>>
+    $<LINK_ONLY:$<$<CONFIG:Release>:$<TARGET_FILE:CONAN_LIB::onetbb_TBB_tbbmalloc_tbbmalloc_RELEASE>>>
+    $<LINK_ONLY:$<$<CONFIG:Debug>:$<TARGET_FILE:CONAN_LIB::onetbb_TBB_tbbmalloc_proxy_tbbmalloc_proxy_DEBUG>>>
+    $<LINK_ONLY:$<$<CONFIG:Release>:$<TARGET_FILE:CONAN_LIB::onetbb_TBB_tbbmalloc_proxy_tbbmalloc_proxy_RELEASE>>>
     luxcore_static
     OpenVDB::openvdb
     pybind11::pybind11
