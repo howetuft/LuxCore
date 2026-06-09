@@ -78,6 +78,7 @@ add_library(luxcore SHARED ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 
 target_link_libraries(luxcore PRIVATE
+    onetbb::onetbb
     slg-core
     slg-film
     slg-kernels
@@ -93,6 +94,7 @@ target_link_libraries(luxcore PRIVATE
     luxparser
 )
 target_link_libraries(luxcore_static PRIVATE
+    onetbb::onetbb
     slg-core
     slg-film
     slg-kernels

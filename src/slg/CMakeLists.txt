@@ -497,6 +497,7 @@ SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 
 target_link_libraries(slg-core PRIVATE
+  onetbb::onetbb
   luxrays
   boost::boost
   OpenColorIO::OpenColorIO
@@ -655,7 +656,7 @@ set(SLG_KERNEL_SRCS
 SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})
 
 add_library(slg-kernels STATIC ${SLG_KERNELS} ${SLG_KERNEL_SRCS})
-target_link_libraries(slg-kernels PRIVATE boost::boost OpenMP::OpenMP_CXX)
+target_link_libraries(slg-kernels PRIVATE onetbb::onetbb boost::boost OpenMP::OpenMP_CXX)
 
 #############################################################################
 #
@@ -727,6 +728,7 @@ SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 
 add_library(slg-film STATIC ${SLG_FILM_SRCS})
 target_link_libraries(slg-film PRIVATE
+    onetbb::onetbb
     boost::boost
     OpenColorIO::OpenColorIO
     embree::embree

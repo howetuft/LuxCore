@@ -239,6 +239,7 @@ set(LUXRAYS_LIB_SRCS
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 target_link_libraries(luxrays PRIVATE
+  onetbb::onetbb
   embree::embree
   openimageio::openimageio
   boost::boost
