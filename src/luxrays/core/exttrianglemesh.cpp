@@ -258,6 +258,7 @@ void ExtTriangleMesh::Delete() {
 	delete[] tris;
 
 	delete[] normals;
+	normals = nullptr;
 	delete[] triNormals;
 
 	uvs.DeleteAll();
