@@ -360,7 +360,9 @@ void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entr
 		for (auto &l : entryReceivedLuminance)
 			l = Max(l * invMaxLuminanceValue , .025f);
 
-		cacheEntries[entryIndex].lightsDistribution = new Distribution1D(&entryReceivedLuminance[0], entryReceivedLuminance.size());
+		cacheEntries[entryIndex].lightsDistribution = new Distribution1D(
+			entryReceivedLuminance
+		);
 	}
 }
 

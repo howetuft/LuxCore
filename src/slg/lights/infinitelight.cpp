@@ -64,7 +64,12 @@ void InfiniteLight::Preprocess() {
 	
 	//SLG_LOG("InfiniteLight luminance  Max=" << maxVal << " Min=" << minVal);
 
-	imageMapDistribution = std::make_unique<Distribution2D>(&data[0], imageMap->GetWidth(), imageMap->GetHeight());
+	imageMapDistribution =
+		std::make_unique<Distribution2D>(
+			data,
+			imageMap->GetWidth(),
+			imageMap->GetHeight()
+		);
 }
 
 

@@ -88,7 +88,7 @@ public:
 	 * @param f The values of the function.
 	 * @param n The number of samples.
 	 */
-	Distribution1D(const float *f, u_int n);
+	Distribution1D(std::span<float> data);
 	~Distribution1D();
 
 	/**
@@ -176,7 +176,7 @@ private:
 class Distribution2D {
 public:
 	// Distribution2D Public Methods
-	Distribution2D(const float *data, u_int nu, u_int nv);
+	Distribution2D(std::span<float> data, u_int nu, u_int nv);
 	~Distribution2D();
 
 	void SampleContinuous(float u0, float u1, float uv[2],
