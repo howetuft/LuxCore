@@ -32,7 +32,7 @@ FilterDistribution::FilterDistribution(const FilterUPtr& f, const u_int s) :
 	size = s;
 	distrib = NULL;
 
-	float *data = new float[size * size];
+	std::vector<float> data(size * size);
 
 	const float isize = 1.f / (float)size;
 	for (u_int y = 0; y < size; ++y) {
@@ -45,7 +45,6 @@ FilterDistribution::FilterDistribution(const FilterUPtr& f, const u_int s) :
 	}
 
 	distrib = new Distribution2D(data, size, size);
-	delete[] data;
 }
 
 FilterDistribution::~FilterDistribution() {

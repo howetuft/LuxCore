@@ -60,7 +60,8 @@ Spectrum ImageMapSphericalFunction::Evaluate(const float phi, const float theta)
 SampleableSphericalFunction::SampleableSphericalFunction(const SphericalFunction *aFunc,
 		const u_int xRes, const u_int yRes) : func(aFunc) {
 	// Compute scalar-valued image
-	float *img = new float[xRes * yRes];
+	//float *img = new float[xRes * yRes]; TODO
+	std::vector<float> img(xRes * yRes);
 	average = 0.f;
 	float normalize = 0.f;
 	for (u_int y = 0; y < yRes; ++y) {
@@ -78,7 +79,6 @@ SampleableSphericalFunction::SampleableSphericalFunction(const SphericalFunction
 
 	// Initialize sampling PDFs
 	uvDistrib = new Distribution2D(img, xRes, yRes);
-	delete[] img;
 }
 
 SampleableSphericalFunction::~SampleableSphericalFunction() {

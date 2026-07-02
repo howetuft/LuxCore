@@ -73,7 +73,7 @@ void LightStrategyLogPower::Preprocess(SceneConstRef scene, const LightStrategyT
 	}
 
 	// Build the data to power based light sampling
-	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+	lightsDistribution = new Distribution1D(lightPower);
 }
 
 // Static methods used by LightStrategyRegistry

@@ -100,7 +100,7 @@ void PerspectiveCamera::InitCameraData() {
 			}
 		}
 
-		bokehDistributionMap = new Distribution2D(&data[0], distributionWidth, distributionHeight);
+		bokehDistributionMap = new Distribution2D(data, distributionWidth, distributionHeight);
 	}
 	
 	// Normalize bokeh scale vector

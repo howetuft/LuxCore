@@ -108,12 +108,15 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 			engine->currentSceneObjsToBakeArea[sceneObjIndex] += trisArea[triIndex];
 		}
 
-		engine->currentSceneObjDist[sceneObjIndex] = new Distribution1D(&trisArea[0], trisArea.size());
+		engine->currentSceneObjDist[sceneObjIndex] = new Distribution1D(trisArea);
 	}
 
 	// To sample the meshes according their area
 	delete engine->currentSceneObjsDist;
-	engine->currentSceneObjsDist = new Distribution1D(&engine->currentSceneObjsToBakeArea[0], engine->currentSceneObjsToBakeArea.size());
+	engine->currentSceneObjsDist = new Distribution1D(
+		engine->currentSceneObjsToBakeArea
+	);
+		//engine->currentSceneObjsToBakeArea.size()); TODO
 
 	// Reset the main film
 	engine->GetFilm().Reset();

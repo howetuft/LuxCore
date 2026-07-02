@@ -514,7 +514,11 @@ void EnvLightVisibilityCache::BuildCacheEntry(
 		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
-	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], tilesXCount, tilesYCount);
+	cacheEntry.visibilityMap = new Distribution2D(
+		std::span<float>(visibilityMap, tilesXCount * tilesYCount),
+		tilesXCount,
+		tilesYCount
+	);
 	
 	//const double t3 = WallClockTime();
 	//SLG_LOG("Visibility map rendering times: " << int((t2 - t1) * 1000.0) << "ms + " << int((t3 - t2) * 1000.0) << "ms");
@@ -613,7 +617,7 @@ void EnvLightVisibilityCache::BuildTileDistributions() {
 			}
 		}
 
-		tileDistributions[i] = new Distribution2D(&tileLuminance[0], params.map.tileWidth, params.map.tileHeight);
+		tileDistributions[i] = new Distribution2D(tileLuminance, params.map.tileWidth, params.map.tileHeight);
 	}
 }
 

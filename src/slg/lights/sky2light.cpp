@@ -219,7 +219,7 @@ void SkyLight2::Preprocess() {
 		}
 	}
 
-	skyDistribution = new Distribution2D(&data[0], distributionWidth, distributionHeight);
+	skyDistribution = new Distribution2D(data, distributionWidth, distributionHeight);
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
