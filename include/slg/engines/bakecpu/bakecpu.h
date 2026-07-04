@@ -138,8 +138,8 @@ protected:
 
 	std::vector<const SceneObject *> currentSceneObjsToBake;
 	std::vector<float> currentSceneObjsToBakeArea;
-	luxrays::Distribution1D *currentSceneObjsDist;
-	std::vector<luxrays::Distribution1D *> currentSceneObjDist;
+	luxrays::Distribution1DUPtr currentSceneObjsDist;
+	std::vector<luxrays::Distribution1DUPtr> currentSceneObjDist;
 
 	std::barrier<completion_t> *threadsSyncBarrier;
 

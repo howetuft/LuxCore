@@ -238,53 +238,70 @@ void CompiledScene::CompileTextureMapping3D(
 	}
 }
 
-float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *size) {
-	const u_int count = dist->GetCount();
+// TODO return a vector!
+float *CompiledScene::CompileDistribution1D(
+	Distribution1DConstRef dist,  // Argument in
+	u_int *size  // Argument out
+) {
+	const u_int count = dist.GetCount();
 
-	// Here, I assume sizeof(u_int) = sizeof(float)
+	// Here, I assume sizeof(u_int) == sizeof(float)
+	static_assert(sizeof(u_int) == sizeof(float));
+
 	*size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
 	// Size is expressed in bytes while I'm working with float
 	float *compDist = new float[*size / sizeof(float)];
 
 	*((u_int *)&compDist[0]) = count;
-	copy(dist->GetFuncs(), dist->GetFuncs() + count,
+	std::copy(dist.GetFuncs(), dist.GetFuncs() + count,
 			compDist + 1);
-	copy(dist->GetCDFs(), dist->GetCDFs() + count + 1,
+	std::copy(dist.GetCDFs(), dist.GetCDFs() + count + 1,
 			compDist + 1 + count);
 
 	return compDist;
 }
 
-float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *size) {
+// TODO return a vector!
+float *CompiledScene::CompileDistribution2D(
+	Distribution2DConstRef dist,  // Argument in
+	u_int *size  // Argument out
+) {
 	u_int marginalSize;
-	float *marginalDist = CompileDistribution1D(dist->GetMarginalDistribution(),
-			&marginalSize);
+	float *marginalDist = CompileDistribution1D(
+		*dist.GetMarginalDistribution(),
+		&marginalSize
+	);
 
 	u_int condSize;
-	vector<float *> condDists;
-	for (u_int i = 0; i < dist->GetHeight(); ++i) {
+	std::vector<float *> condDists;
+	for (u_int i = 0; i < dist.GetHeight(); ++i) {
 		condDists.push_back(
-			CompileDistribution1D(dist->GetConditionalDistribution(i), &condSize)
+			CompileDistribution1D(
+				*dist.GetConditionalDistribution(i),
+				&condSize
+			)
 		);
 	}
 
-	// Here, I assume sizeof(u_int) = sizeof(float)
+	// Here, I assume sizeof(u_int) == sizeof(float)
+	static_assert(sizeof(u_int) == sizeof(float));
+	//
 	*size = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
 	// Size is expressed in bytes while I'm working with float
 	float *compDist = new float[*size / sizeof(float)];
 
-	*((u_int *)&compDist[0]) = dist->GetWidth();
-	*((u_int *)&compDist[1]) = dist->GetHeight();
+	*((u_int *)&compDist[0]) = dist.GetWidth();
+	*((u_int *)&compDist[1]) = dist.GetHeight();
 
 	float *ptr = &compDist[2];
 	const u_int marginalSize4 = marginalSize / sizeof(float);
-	copy(marginalDist, marginalDist + marginalSize4, ptr);
+	std::copy(marginalDist, marginalDist + marginalSize4, ptr);
 	ptr += marginalSize4;
 	delete[] marginalDist;
 
 	const u_int condSize4 = condSize / sizeof(float);
-	for (u_int i = 0; i < dist->GetHeight(); ++i) {
-		copy(condDists[i], condDists[i] + condSize4, ptr);
+	for (u_int i = 0; i < dist.GetHeight(); ++i) {
+		std::copy(condDists[i], condDists[i] + condSize4, ptr);
 		ptr += condSize4;
 		delete[] condDists[i];
 	}

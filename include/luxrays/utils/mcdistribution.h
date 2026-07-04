@@ -24,6 +24,7 @@
 
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/usings.h"
 
 namespace luxrays {
 
@@ -192,12 +193,14 @@ public:
 
 	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }
 	const u_int GetHeight() const { return pMarginal->GetCount(); }
-	const Distribution1D *GetMarginalDistribution() const { return pMarginal; }
-	const Distribution1D *GetConditionalDistribution(const u_int i) const {
+	const Distribution1DRPtr GetMarginalDistribution() const { return pMarginal; }
+	const Distribution1DRPtr GetConditionalDistribution(const u_int i) const {
 		return pConditionalV[i];
 	}
 
 	friend class boost::serialization::access;
+
+	static constexpr auto NullPtr = std::unique_ptr<Distribution2D>(nullptr);
 
 private:
 	// Used by serialization
@@ -209,8 +212,8 @@ private:
 	}
 
 	// Distribution2D Private Data
-	std::vector<Distribution1D *> pConditionalV;
-	Distribution1D *pMarginal;
+	std::vector<Distribution1DUPtr> pConditionalV;
+	Distribution1DUPtr pMarginal;
 };
 
 /**

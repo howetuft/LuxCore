@@ -34,13 +34,13 @@ public:
 
 	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
 
-	const luxrays::Distribution2D *GetDistribution2D() const { return distrib; }
+	const luxrays::Distribution2DRPtr GetDistribution2D() const { return distrib; }
 
 private:
 	const FilterUPtr & filter;
 	u_int size;
 
-	luxrays::Distribution2D *distrib;
+	luxrays::Distribution2DUPtr distrib;
 };
 
 //------------------------------------------------------------------------------
