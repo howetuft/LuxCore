@@ -95,6 +95,8 @@ public:
 	// Cache information
 	luxrays::Distribution1DUPtr lightsDistribution;
 
+	constexpr static auto NullPtr = std::unique_ptr<DLSCacheEntry>(nullptr);
+
 	friend class boost::serialization::access;
 	
 protected:

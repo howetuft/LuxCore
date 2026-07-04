@@ -146,6 +146,7 @@ public:
 
 	friend class boost::serialization::access;
 
+	constexpr auto static NullPtr = std::unique_ptr<Distribution1D>(nullptr);
 private:
 	// Used by serialization
 	Distribution1D() { }
