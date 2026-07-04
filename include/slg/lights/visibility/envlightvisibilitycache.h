@@ -89,9 +89,32 @@ public:
 		const bool isVol, luxrays::Distribution2D *vm) :
 			p(pt), n(nm), isVolume(isVol), visibilityMap(vm) {
 	}
-	
+
+	// Move is ok, but copy isn't
+	ELVCacheEntry(ELVCacheEntry&& other) :
+		p(std::move(other.p)),
+		n(std::move(other.n)),
+		isVolume(std::move(other.isVolume)),
+		visibilityMap(std::move(other.visibilityMap))
+	{}
+
+	ELVCacheEntry& operator=(ELVCacheEntry&& other) noexcept
+	{
+		if (this != &other) {
+			p = std::move(other.p);
+			n = std::move(other.n);
+			isVolume = std::move(other.isVolume);
+			visibilityMap = std::move(other.visibilityMap);
+		}
+		return *this;
+	};
+
+	ELVCacheEntry(ELVCacheEntry& other) = delete;
+	ELVCacheEntry& operator=(ELVCacheEntry& other) = delete;
+
+
+
 	~ELVCacheEntry() {
-		delete visibilityMap;
 	}
 
 	// Point information
@@ -100,7 +123,7 @@ public:
 	bool isVolume;
 
 	// Cache information
-	luxrays::Distribution2D *visibilityMap;
+	luxrays::Distribution2DUPtr visibilityMap;
 	
 	friend class boost::serialization::access;
 	
@@ -217,7 +240,7 @@ public:
 	const u_int GetXTileCount() const { return tilesXCount; }
 	const u_int GetYTileCount() const { return tilesYCount; }
 	bool HasTileDistributions() const { return (tileDistributions.size() > 0);}
-	const luxrays::Distribution2D *GetTileDistribution(const u_int index) const {
+	const luxrays::Distribution2DRPtr GetTileDistribution(const u_int index) const {
 		return tileDistributions[index];
 	}
 
@@ -246,7 +269,7 @@ private:
 	void BuildCacheEntries();
 	void BuildTileDistributions();
 
-	const luxrays::Distribution2D *GetVisibilityMap(const BSDF &bsdf) const;
+	luxrays::Distribution2DRPtr GetVisibilityMap(const BSDF &bsdf) const;
 
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
@@ -265,7 +288,7 @@ private:
 	ELVCBvh *cacheEntriesBVH;
 	u_int mapWidth, mapHeight;
 	u_int tilesXCount, tilesYCount;
-	std::vector<luxrays::Distribution2D *> tileDistributions;
+	std::vector<luxrays::Distribution2DUPtr> tileDistributions;
 };
 
 }

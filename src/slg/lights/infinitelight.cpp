@@ -18,8 +18,10 @@
 
 #include <memory>
 
+#include "luxrays/usings.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/usings.h"
 #include "slg/lights/infinitelight.h"
 
 using namespace std;
@@ -73,14 +75,9 @@ void InfiniteLight::Preprocess() {
 }
 
 
-void InfiniteLight::GetPreprocessedData(
-	const Distribution2D **imageMapDistributionData,
-	const EnvLightVisibilityCache **elvc
-) const {
-	if (imageMapDistributionData)
-		*imageMapDistributionData = imageMapDistribution.get();
-	if (elvc)
-		*elvc = visibilityMapCache.get();
+std::tuple<Distribution2DRef, EnvLightVisibilityCacheRPtr>
+InfiniteLight::GetPreprocessedData() const {
+	return std::make_tuple(std::ref(*imageMapDistribution), std::cref(visibilityMapCache));
 }
 
 float InfiniteLight::GetPower(SceneConstRef scene) const {

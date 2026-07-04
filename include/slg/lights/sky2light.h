@@ -34,13 +34,13 @@ public:
 	virtual ~SkyLight2();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData, float *absoluteUpDirData,
+	std::tuple<luxrays::Distribution2DRef, EnvLightVisibilityCacheRPtr>
+	GetPreprocessedData(float *absoluteDirData, float *absoluteUpDirData,
 		float *scaledGroundColor, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
-		float *iTermData, float *radianceTermData,
-		const luxrays::Distribution2D **skyDistributionData,
-		const EnvLightVisibilityCache **visibilityMapCache) const;
+		float *iTermData, float *radianceTermData
+	) const;
 
 	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode);
 
@@ -92,9 +92,9 @@ private:
 
 	bool isGroundBlack;
 
-	luxrays::Distribution2D *skyDistribution;
+	luxrays::Distribution2DUPtr skyDistribution;
 
-	EnvLightVisibilityCache *visibilityMapCache;
+	EnvLightVisibilityCacheUPtr visibilityMapCache;
 };
 
 }

@@ -70,7 +70,7 @@ public:
 	u_int bokehBlades, bokehPower;
 	BokehDistributionType bokehDistribution;
 	ImageMapConstPtr bokehDistributionImageMap;
-	luxrays::Distribution2D *bokehDistributionMap;
+	luxrays::Distribution2DUPtr bokehDistributionMap;
 	float bokehScaleX, bokehScaleY;
 
 	bool enableOculusRiftBarrel;

@@ -90,7 +90,9 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy) 
 				oclEntry.lightsDistributionOffset = size;
 
 				u_int distributionSize;
-				float *dist = CompileDistribution1D(entry.lightsDistribution, &distributionSize);
+				float *dist = CompileDistribution1D(
+					*entry.lightsDistribution, &distributionSize
+				);
 
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 				dlscDistributions.resize(size + distributionSize4);
@@ -140,7 +142,7 @@ void CompiledScene::CompileLightStrategy() {
 
 		if (distributionIllumLightStrategy.GetLightsDistribution()) {
 			lightsDistribution = CompileDistribution1D(
-				distributionIllumLightStrategy.GetLightsDistribution(),
+				*distributionIllumLightStrategy.GetLightsDistribution(),
 				&lightsDistributionSize);
 		}
 	} catch(std::bad_cast&) {
@@ -154,7 +156,7 @@ void CompiledScene::CompileLightStrategy() {
 
 			if (dlscLightStrategy.GetLightsDistribution()) {
 				lightsDistribution = CompileDistribution1D(
-					dlscLightStrategy.GetLightsDistribution(),
+					*dlscLightStrategy.GetLightsDistribution(),
 					&lightsDistributionSize
 				);
 			}
@@ -181,7 +183,7 @@ void CompiledScene::CompileLightStrategy() {
 			dynamic_cast<const DistributionLightStrategy&>(infiniteLightStrategy);
 		if (distributionInfLightStrategy.GetLightsDistribution()) {
 			infiniteLightSourcesDistribution = CompileDistribution1D(
-				distributionInfLightStrategy.GetLightsDistribution(),
+				*distributionInfLightStrategy.GetLightsDistribution(),
 				&infiniteLightSourcesDistributionSize
 			);
 		}
@@ -192,7 +194,7 @@ void CompiledScene::CompileLightStrategy() {
 				dynamic_cast<const LightStrategyDLSCache&>(illuminateLightStrategy);
 			if (dlscLightStrategy.GetLightsDistribution()) {
 				infiniteLightSourcesDistribution = CompileDistribution1D(
-					dlscLightStrategy.GetLightsDistribution(),
+					*dlscLightStrategy.GetLightsDistribution(),
 					&infiniteLightSourcesDistributionSize);
 			}
 		} catch (std::bad_cast&) {
@@ -201,7 +203,7 @@ void CompiledScene::CompileLightStrategy() {
 	}
 }
 
-void CompiledScene::CompileELVC(EnvLightVisibilityCacheConstPtr visibilityMapCache) {
+void CompiledScene::CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache) {
 	if (!visibilityMapCache ||  !visibilityMapCache->GetBVH()) {
 		elvcAllEntries.clear();
 		elvcAllEntries.shrink_to_fit();
@@ -246,7 +248,9 @@ void CompiledScene::CompileELVC(EnvLightVisibilityCacheConstPtr visibilityMapCac
 				oclEntry.distributionOffset = size;
 
 				u_int distributionSize;
-				float *dist = CompileDistribution2D(entry.visibilityMap, &distributionSize);
+				float *dist = CompileDistribution2D(
+					*entry.visibilityMap, &distributionSize
+				);
 
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 				elvcDistributions.resize(size + distributionSize4);
@@ -273,14 +277,14 @@ void CompiledScene::CompileELVC(EnvLightVisibilityCacheConstPtr visibilityMapCac
 			elvcTileDistributionOffsets.resize(totalTileCount);
 
 			for (u_int i = 0; i < totalTileCount; ++i) {
-				auto tileDist = visibilityMapCache->GetTileDistribution(i);
+				auto& tileDist = visibilityMapCache->GetTileDistribution(i);
 
 				// Compile the tile Distribution2D
 				const u_int size = elvcDistributions.size();
 				elvcTileDistributionOffsets[i] = size;
 
 				u_int distributionSize;
-				float *dist = CompileDistribution2D(tileDist, &distributionSize);
+				float *dist = CompileDistribution2D(*tileDist, &distributionSize);
 
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 				elvcDistributions.resize(size + distributionSize4);
@@ -321,7 +325,7 @@ void CompiledScene::CompileLights() {
 	envLightIndices.clear();
 	envLightDistributions.clear();
 
-	CompileELVC(EnvLightVisibilityCacheConstPtr(nullptr));
+	CompileELVC(EnvLightVisibilityCacheRPtr(nullptr));
 
 	for (u_int i = 0; i < lightCount; ++i) {
 		auto& l = scene.GetLightSources().GetLightSource(i);
@@ -380,9 +384,7 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersectable.infinite.imageMapIndex = scene.GetImageMaps().GetImageMapIndex(il.imageMap);
 
 				// Compile the image map Distribution2D
-				const Distribution2D * dist;
-				const EnvLightVisibilityCache * visibilityMapCache;
-				il.GetPreprocessedData(&dist, &visibilityMapCache);
+				auto [dist, visibilityMapCache] = il.GetPreprocessedData();
 
 				oclLight->notIntersectable.infinite.useVisibilityMapCache = false;
 				if (il.useVisibilityMapCache && visibilityMapCache) {
@@ -390,18 +392,14 @@ void CompiledScene::CompileLights() {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
 						using optmapcache_t = EnvLightVisibilityCacheConstPtr;
-						CompileELVC(
-							visibilityMapCache ?
-							optmapcache_t(visibilityMapCache) :
-							optmapcache_t(nullptr)
-						);
-
+						CompileELVC(visibilityMapCache);
 						oclLight->notIntersectable.infinite.useVisibilityMapCache = true;
 					}
 				}
 
 				u_int distributionSize;
-				auto infiniteLightDistribution = CompileDistribution2D(dist,
+				auto* infiniteLightDistribution = CompileDistribution2D(
+						dist,
 						&distributionSize);
 				// distributionSize is expressed in bytes while I'm working with float
 				const u_int distributionSize4 = distributionSize / sizeof(float);
@@ -428,9 +426,9 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.temperatureScale, sl.GetTemperatureScale());
 
 				// SkyLight2 data
-				const Distribution2D *dist;
-				const EnvLightVisibilityCache* visibilityMapCache;
-				sl.GetPreprocessedData(
+				//const Distribution2DUPtr * dist;
+				//const EnvLightVisibilityCache* visibilityMapCache;
+				auto [dist, visibilityMapCache] = sl.GetPreprocessedData(
 						&oclLight->notIntersectable.sky2.absoluteSunDir.x,
 						&oclLight->notIntersectable.sky2.absoluteUpDir.x,
 						oclLight->notIntersectable.sky2.scaledGroundColor.c,
@@ -444,9 +442,8 @@ void CompiledScene::CompileLights() {
 						oclLight->notIntersectable.sky2.gTerm.c,
 						oclLight->notIntersectable.sky2.hTerm.c,
 						oclLight->notIntersectable.sky2.iTerm.c,
-						oclLight->notIntersectable.sky2.radianceTerm.c,
-						&dist,
-						&visibilityMapCache);
+						oclLight->notIntersectable.sky2.radianceTerm.c
+				);
 
 				oclLight->notIntersectable.sky2.useVisibilityMapCache = false;
 				if (sl.useVisibilityMapCache && visibilityMapCache) {
@@ -454,11 +451,7 @@ void CompiledScene::CompileLights() {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
 						using optmapcache_t = EnvLightVisibilityCacheConstPtr;
-						CompileELVC(
-							visibilityMapCache ?
-							optmapcache_t(visibilityMapCache) :
-							optmapcache_t(nullptr)
-						);
+						CompileELVC(visibilityMapCache);
 
 						oclLight->notIntersectable.sky2.useVisibilityMapCache = true;
 					}
@@ -622,8 +615,7 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.constantInfinite.color, cil.color);
 
 				// Compile the visibility map Distribution2D
-				const EnvLightVisibilityCache *visibilityMapCache;
-				cil.GetPreprocessedData(&visibilityMapCache);
+				auto& visibilityMapCache = cil.GetPreprocessedData();
 
 				oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = false;
 				if (cil.useVisibilityMapCache && visibilityMapCache) {
@@ -631,12 +623,7 @@ void CompiledScene::CompileLights() {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
 					} else {
 						using optmapcache_t = EnvLightVisibilityCacheConstPtr;
-						CompileELVC(
-							visibilityMapCache ?
-							optmapcache_t(visibilityMapCache) :
-							optmapcache_t(nullptr)
-						);
-
+						CompileELVC(visibilityMapCache);
 						oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = true;
 					}
 				}

@@ -44,12 +44,11 @@ FilterDistribution::FilterDistribution(const FilterUPtr& f, const u_int s) :
 		}
 	}
 
-	distrib = new Distribution2D(data, size, size);
+	distrib = std::make_unique<Distribution2D>(data, size, size);
 }
 
-FilterDistribution::~FilterDistribution() {
-	delete distrib;
-}
+FilterDistribution::~FilterDistribution() {}
+
 void FilterDistribution::SampleContinuous(const float u0, const float u1, float *su0, float *su1) const {
 	if (filter) {
 		float uv[2];

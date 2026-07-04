@@ -161,10 +161,10 @@ public:
 	float Average() const;
 
 	const SphericalFunction *GetFunc() const { return func; }
-	const luxrays::Distribution2D *GetDistribution2D() const { return uvDistrib; }
+	const luxrays::Distribution2DRPtr GetDistribution2D() const { return uvDistrib; }
 
 private:
-	luxrays::Distribution2D *uvDistrib;
+	luxrays::Distribution2DUPtr uvDistrib;
 	const SphericalFunction *func;
 	float average;
 };

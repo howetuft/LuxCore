@@ -34,8 +34,9 @@ public:
 	virtual ~InfiniteLight();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution,
-		const EnvLightVisibilityCache **visibilityMapCache) const;
+
+	std::tuple<luxrays::Distribution2DRef, EnvLightVisibilityCacheRPtr>
+	GetPreprocessedData() const;
 
 	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode);
 

@@ -85,7 +85,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 		return;
 
 	// To sample the each mesh triangle according its area
-	engine->currentSceneObjDist.resize(engine->currentSceneObjsToBake.size(), nullptr);
+	engine->currentSceneObjDist.resize(engine->currentSceneObjsToBake.size());
 	engine->currentSceneObjsToBakeArea.resize(engine->currentSceneObjsToBake.size());
 
 	#pragma omp parallel for
@@ -108,15 +108,13 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 			engine->currentSceneObjsToBakeArea[sceneObjIndex] += trisArea[triIndex];
 		}
 
-		engine->currentSceneObjDist[sceneObjIndex] = new Distribution1D(trisArea);
+		engine->currentSceneObjDist[sceneObjIndex] = std::make_unique<Distribution1D>(trisArea);
 	}
 
 	// To sample the meshes according their area
-	delete engine->currentSceneObjsDist;
-	engine->currentSceneObjsDist = new Distribution1D(
+	engine->currentSceneObjsDist = std::make_unique<Distribution1D>(
 		engine->currentSceneObjsToBakeArea
 	);
-		//engine->currentSceneObjsToBakeArea.size()); TODO
 
 	// Reset the main film
 	engine->GetFilm().Reset();

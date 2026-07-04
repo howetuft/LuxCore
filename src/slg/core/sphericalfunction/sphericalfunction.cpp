@@ -78,11 +78,10 @@ SampleableSphericalFunction::SampleableSphericalFunction(const SphericalFunction
 	average *= 4.f * M_PI / normalize;
 
 	// Initialize sampling PDFs
-	uvDistrib = new Distribution2D(img, xRes, yRes);
+	uvDistrib = std::make_unique<Distribution2D>(img, xRes, yRes);
 }
 
 SampleableSphericalFunction::~SampleableSphericalFunction() {
-	delete uvDistrib;
 	delete func;
 }
 

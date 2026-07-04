@@ -49,8 +49,8 @@ public:
 
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
-	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
-	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
+	static float *CompileDistribution1D(luxrays::Distribution1DConstRef dist, u_int *size);
+	static float *CompileDistribution2D(luxrays::Distribution2DConstRef dist, u_int *size);
 
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
 
@@ -172,7 +172,7 @@ private:
 	void CompileLights();
 
 	void CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy);
-	void CompileELVC(EnvLightVisibilityCacheConstPtr visibilityMapCache);
+	void CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache);
 	void CompileLightStrategy();
 
 	void CompilePhotonGI();

@@ -33,7 +33,7 @@ public:
 	ConstantInfiniteLight();
 	virtual ~ConstantInfiniteLight();
 
-	void GetPreprocessedData(const EnvLightVisibilityCache **visibilityMapCache) const;
+	EnvLightVisibilityCacheRPtr GetPreprocessedData() const;
 
 	virtual void UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode);
 
@@ -70,7 +70,7 @@ public:
 	bool useVisibilityMapCache;
 
 private:
-	EnvLightVisibilityCache *visibilityMapCache;
+	EnvLightVisibilityCacheUPtr visibilityMapCache;
 };
 
 }

@@ -63,6 +63,8 @@ DECLARE_SUBTYPES(CUDADeviceDescription);
 DECLARE_SUBTYPES(DataSet);
 DECLARE_SUBTYPES(Device);
 DECLARE_SUBTYPES(DeviceDescription);
+DECLARE_SUBTYPES(Distribution1D);
+DECLARE_SUBTYPES(Distribution2D);
 DECLARE_SUBTYPES(HardwareDevice);
 DECLARE_SUBTYPES(HardwareDeviceKernel);
 DECLARE_SUBTYPES(HardwareDeviceProgram);

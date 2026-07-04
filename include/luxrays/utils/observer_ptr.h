@@ -160,7 +160,15 @@ private:
 
 // Maker
 template<typename T>
+inline observer_ptr<T> make_observer(const std::unique_ptr<T>& uptr) {
+	return luxrays::observer_ptr<T>(uptr.get());
+}
+template<typename T>
 inline observer_ptr<T> make_observer(T& obj) {
+	return luxrays::observer_ptr<T>(std::addressof(obj));
+}
+template<typename T>
+inline observer_ptr<T> make_observer(const T& obj) {
 	return luxrays::observer_ptr<T>(std::addressof(obj));
 }
 
