@@ -221,27 +221,24 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 	u_int nVFuncs = horizAngles.size();
 	IrregularFunction1D **vFuncs = new IrregularFunction1D*[nVFuncs];
 	u_int vFuncLength = vertAngles.size();
-	float *vFuncX = new float[vFuncLength];
-	float *vFuncY = new float[vFuncLength];
-	float *uFuncX = new float[nVFuncs];
-	float *uFuncY = new float[nVFuncs];
+
+	std::vector<float> vFuncX(vFuncLength);
+	std::vector<float> vFuncY(vFuncLength);
+	std::vector<float> uFuncX(nVFuncs);
+	std::vector<float> uFuncY(nVFuncs);
+
 	for (u_int i = 0; i < nVFuncs; ++i) {
 		for (u_int j = 0; j < vFuncLength; ++j) {
 			vFuncX[j] = Clamp(Radians(vertAngles[j]) * INV_PI, 0.f, 1.f);
 			vFuncY[j] = values[i][j] * valueScale;
 		}
 
-		vFuncs[i] = new IrregularFunction1D(vFuncX, vFuncY, vFuncLength);
+		vFuncs[i] = new IrregularFunction1D(vFuncX.data(), vFuncY.data(), vFuncLength);
 
 		uFuncX[i] = Clamp(Radians(horizAngles[i] ) * INV_TWOPI, 0.f, 1.f);
 		uFuncY[i] = i;
 	}
-	delete[] vFuncX;
-	delete[] vFuncY;
-
-	IrregularFunction1D *uFunc = new IrregularFunction1D(uFuncX, uFuncY, nVFuncs);
-	delete[] uFuncX;
-	delete[] uFuncY;
+	IrregularFunction1D *uFunc = new IrregularFunction1D(uFuncX.data(), uFuncY.data(), nVFuncs);
 
 	// Resample the irregular functions
 	auto imgMap = ImageMap::AllocImageMap(1, xRes, yRes, ImageMapConfig());
