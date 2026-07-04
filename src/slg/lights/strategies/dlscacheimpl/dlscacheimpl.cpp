@@ -566,7 +566,7 @@ Distribution1DRPtr DirectLightSamplingCache::GetLightDistribution(const luxrays:
 			return entry->lightsDistribution;
 	}
 	
-	return nullptr;
+	return Distribution1D::NullPtr;
 }
 
 void DirectLightSamplingCache::DebugExport(const string &fileName, const float sphereRadius) const {
