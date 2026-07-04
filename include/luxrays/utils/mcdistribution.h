@@ -38,16 +38,12 @@ public:
 	 * It is assumed that the given function is sampled regularly sampled in
 	 * the interval [0,1] (ex. 0.1, 0.3, 0.5, 0.7, 0.9 for 5 samples).
 	 *
-	 * @param f The values of the function.
-	 * @param n The number of samples.
+	 * @param s The values of the function.
 	 */
-	Function1D(float *f, int n) {
-		func = new float[n];
-		count = n;
-		memcpy(func, f, n*sizeof(float));
-	}
-	~Function1D() {
-		delete[] func;
+	Function1D(std::span<float> source) {
+		func.reserve(source.size());
+
+		std::ranges::copy(source.begin(), source.end(), std::back_inserter(func));
 	}
 
 	/**
@@ -58,9 +54,10 @@ public:
 	 * @return The function value at the given position.
 	 */
 	float Eval(float x) const {
+		auto count = func.size();
 		float pos = Clamp(x, 0.f, 1.f) * count + .5f;
-		int off1 = (int)pos;
-		int off2 = Min(count-1, off1 + 1);
+		auto off1 = static_cast<decltype(count)>(pos);
+		auto off2 = std::min(count-1, off1 + 1);
 		float d = pos - off1;
 		return func[off1] * (1.f - d) * func[off2] * d;
 	}
@@ -69,11 +66,7 @@ public:
 	/*
 	 * The function values.
 	 */
-	float *func;
-	/*
-	 * The number of function values.
-	 */
-	int count;
+	std::vector<float> func;
 };
 
 /**
