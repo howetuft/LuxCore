@@ -204,8 +204,9 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
 	const FilterDistribution filterDistribution(pixelFilter, 64);
-	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
-			*filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
+	auto [pixelFilterDistribution, pixelFilterDistributionSize] =
+		CompiledScene::CompileDistribution2D(*filterDistribution.GetDistribution2D()
+	);
 }
 
 void PathOCLBaseRenderEngine::InitFilm() {

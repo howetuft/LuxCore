@@ -49,8 +49,12 @@ public:
 
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
-	static float *CompileDistribution1D(luxrays::Distribution1DConstRef dist, u_int *size);
-	static float *CompileDistribution2D(luxrays::Distribution2DConstRef dist, u_int *size);
+	static std::tuple<std::vector<float>, size_t>
+	CompileDistribution1D(luxrays::Distribution1DConstRef dist);
+
+
+	static std::tuple<std::vector<float>, size_t>
+	CompileDistribution2D(luxrays::Distribution2DConstRef dist);
 
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
 
@@ -84,9 +88,9 @@ public:
 	// Env. light Distribution2Ds
 	std::vector<float> envLightDistributions;
 	// Compiled light sampling strategy
-	float *lightsDistribution;
+	std::vector<float> lightsDistribution;
 	u_int lightsDistributionSize;
-	float *infiniteLightSourcesDistribution;
+	std::vector<float> infiniteLightSourcesDistribution;
 	u_int infiniteLightSourcesDistributionSize;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
