@@ -86,21 +86,17 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy) 
 
 			if (entry.lightsDistribution) {
 				// Compile the light Distribution1D
-				const u_int size = dlscDistributions.size();
+				const auto size = dlscDistributions.size();
+
 				oclEntry.lightsDistributionOffset = size;
 
-				u_int distributionSize;
-				float *dist = CompileDistribution1D(
-					*entry.lightsDistribution, &distributionSize
-				);
+				auto [dist, distributionSize] = CompileDistribution1D(*entry.lightsDistribution);
 
-				const u_int distributionSize4 = distributionSize / sizeof(float);
+				const auto distributionSize4 = distributionSize / sizeof(float);
 				dlscDistributions.resize(size + distributionSize4);
 
-				copy(dist, dist + distributionSize4,
-						&dlscDistributions[size]);
+				std::copy_n(dist.begin(), distributionSize4, &dlscDistributions[size]);
 
-				delete[] dist;
 			} else
 				oclEntry.lightsDistributionOffset = NULL_INDEX;
 
@@ -136,29 +132,27 @@ void CompiledScene::CompileLightStrategy() {
 	try {
 		auto& distributionIllumLightStrategy =
 			dynamic_cast<const DistributionLightStrategy&>(illuminateLightStrategy);
-		delete[] lightsDistribution;
-		lightsDistribution = nullptr;
+		lightsDistribution.clear();
 		lightsDistributionSize = 0;
 
 		if (distributionIllumLightStrategy.GetLightsDistribution()) {
-			lightsDistribution = CompileDistribution1D(
-				*distributionIllumLightStrategy.GetLightsDistribution(),
-				&lightsDistributionSize);
+			std::tie(lightsDistribution, lightsDistributionSize) = CompileDistribution1D(
+				*distributionIllumLightStrategy.GetLightsDistribution()
+			);
 		}
 	} catch(std::bad_cast&) {
 		// Check if it is an LightStrategyDLSCache
 		try {
 			auto& dlscLightStrategy =
 				dynamic_cast<const LightStrategyDLSCache&>(illuminateLightStrategy);
-			delete[] lightsDistribution;
-			lightsDistribution = nullptr;
+			lightsDistribution.clear();
 			lightsDistributionSize = 0;
 
 			if (dlscLightStrategy.GetLightsDistribution()) {
-				lightsDistribution = CompileDistribution1D(
-					*dlscLightStrategy.GetLightsDistribution(),
-					&lightsDistributionSize
-				);
+				std::tie(lightsDistribution, lightsDistributionSize) =
+					CompileDistribution1D(
+						*dlscLightStrategy.GetLightsDistribution()
+					);
 			}
 
 			CompileDLSC(dlscLightStrategy);
@@ -171,9 +165,6 @@ void CompiledScene::CompileLightStrategy() {
 	// Compile infiniteLightDistribution
 	//--------------------------------------------------------------------------
 
-	delete[] infiniteLightSourcesDistribution;
-	infiniteLightSourcesDistribution = nullptr;
-	infiniteLightSourcesDistributionSize = 0;
 
 	auto& infiniteLightStrategy = scene.GetLightSources().GetInfiniteLightStrategy();
 
@@ -182,10 +173,10 @@ void CompiledScene::CompileLightStrategy() {
 		auto& distributionInfLightStrategy =
 			dynamic_cast<const DistributionLightStrategy&>(infiniteLightStrategy);
 		if (distributionInfLightStrategy.GetLightsDistribution()) {
-			infiniteLightSourcesDistribution = CompileDistribution1D(
-				*distributionInfLightStrategy.GetLightsDistribution(),
-				&infiniteLightSourcesDistributionSize
-			);
+			std::tie(infiniteLightSourcesDistribution, infiniteLightSourcesDistributionSize) =
+				CompileDistribution1D(
+					*distributionInfLightStrategy.GetLightsDistribution()
+				);
 		}
 	} catch(std::bad_cast&) {
 		// Check if it is an LightStrategyDLSCache
@@ -193,9 +184,9 @@ void CompiledScene::CompileLightStrategy() {
 			auto& dlscLightStrategy =
 				dynamic_cast<const LightStrategyDLSCache&>(illuminateLightStrategy);
 			if (dlscLightStrategy.GetLightsDistribution()) {
-				infiniteLightSourcesDistribution = CompileDistribution1D(
-					*dlscLightStrategy.GetLightsDistribution(),
-					&infiniteLightSourcesDistributionSize);
+				std::tie(
+					infiniteLightSourcesDistribution, infiniteLightSourcesDistributionSize
+				) = CompileDistribution1D(*dlscLightStrategy.GetLightsDistribution());
 			}
 		} catch (std::bad_cast&) {
 			throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
@@ -247,18 +238,16 @@ void CompiledScene::CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache) 
 				const u_int size = elvcDistributions.size();
 				oclEntry.distributionOffset = size;
 
-				u_int distributionSize;
-				float *dist = CompileDistribution2D(
-					*entry.visibilityMap, &distributionSize
+				auto [dist, distributionSize] = CompileDistribution2D(
+					*entry.visibilityMap
 				);
 
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 				elvcDistributions.resize(size + distributionSize4);
 
-				copy(dist, dist + distributionSize4,
-						&elvcDistributions[size]);
-
-				delete[] dist;
+				std::copy_n(
+					dist.begin(), distributionSize4, elvcDistributions.begin() + size
+				);
 			}
 		}
 	
@@ -283,16 +272,16 @@ void CompiledScene::CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache) 
 				const u_int size = elvcDistributions.size();
 				elvcTileDistributionOffsets[i] = size;
 
-				u_int distributionSize;
-				float *dist = CompileDistribution2D(*tileDist, &distributionSize);
+				auto [dist, distributionSize] = CompileDistribution2D(*tileDist);
 
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 				elvcDistributions.resize(size + distributionSize4);
 
-				copy(dist, dist + distributionSize4,
-						&elvcDistributions[size]);
-
-				delete[] dist;
+				std::copy_n(
+					dist.begin(),
+					distributionSize4,
+					elvcDistributions.begin() + size
+				);
 			}
 		} else {
 			elvcTileDistributionOffsets.clear();
@@ -397,19 +386,18 @@ void CompiledScene::CompileLights() {
 					}
 				}
 
-				u_int distributionSize;
-				auto* infiniteLightDistribution = CompileDistribution2D(
-						dist,
-						&distributionSize);
+				auto [infiniteLightDistribution, distributionSize] =
+					CompileDistribution2D(dist);
 				// distributionSize is expressed in bytes while I'm working with float
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 
 				// Copy the Distribution2D data in the right place
 				const u_int size = envLightDistributions.size();
 				envLightDistributions.resize(size + distributionSize4);
-				copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize4,
-						&envLightDistributions[size]);
-				delete[] infiniteLightDistribution;
+				std::copy_n(
+					infiniteLightDistribution.begin(),
+					distributionSize4,
+					envLightDistributions.begin() + size);
 				oclLight->notIntersectable.infinite.distributionOffset = size;
 				break;
 			}
@@ -458,19 +446,19 @@ void CompiledScene::CompileLights() {
 				}
 
 				oclLight->notIntersectable.sky2.hasGround = sl.hasGround;
-				
-				u_int distributionSize;
-				auto skyDistribution = CompileDistribution2D(dist,
-						&distributionSize);
+
+				auto [skyDistribution, distributionSize] = CompileDistribution2D(dist);
 				// distributionSize is expressed in bytes while I'm working with float
 				const u_int distributionSize4 = distributionSize / sizeof(float);
 
 				// Copy the Distribution2D data in the right place
 				const u_int size = envLightDistributions.size();
 				envLightDistributions.resize(size + distributionSize4);
-				copy(skyDistribution, skyDistribution + distributionSize4,
-						&envLightDistributions[size]);
-				delete[] skyDistribution;
+				std::copy_n(
+					skyDistribution.begin(),
+					distributionSize4,
+					envLightDistributions.begin() + size
+				);
 				oclLight->notIntersectable.sky2.distributionOffset = size;
 				break;
 			}

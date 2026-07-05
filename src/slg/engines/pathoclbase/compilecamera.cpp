@@ -147,7 +147,8 @@ void CompiledScene::CompileCamera() {
 				case PerspectiveCamera::DIST_CUSTOM: {
 					camera.persp.bokehDistribution = slg::ocl::DIST_CUSTOM;
 
-					cameraBokehDistribution = CompileDistribution2D(*perspCamera.bokehDistributionMap, &cameraBokehDistributionSize);
+					auto [cameraBokehDistribution, cameraBokehDistributionSize] =
+						CompileDistribution2D(*perspCamera.bokehDistributionMap);
 					break;
 				}
 				default:

@@ -220,14 +220,18 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		intersectionDevice.FreeBuffer(&envLightDistributionsBuff);
 
 	if (cscene->lightsDistributionSize > 0) {
-		intersectionDevice.AllocBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
-			cscene->lightsDistributionSize, "LightsDistribution");
+		intersectionDevice.AllocBufferRO(
+			&lightsDistributionBuff,
+			cscene->lightsDistribution.data(),
+			cscene->lightsDistributionSize,
+			"LightsDistribution"
+		);
 	} else {
 		intersectionDevice.FreeBuffer(&lightsDistributionBuff);
 	}
 
 	if (cscene->infiniteLightSourcesDistributionSize > 0) {
-		intersectionDevice.AllocBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
+		intersectionDevice.AllocBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution.data(),
 			cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
 	} else {
 		intersectionDevice.FreeBuffer(&infiniteLightSourcesDistributionBuff);
