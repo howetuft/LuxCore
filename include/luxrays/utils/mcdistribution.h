@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_MCDISTRIBUTION_H
 #define _LUXRAYS_MCDISTRIBUTION_H
 
+#include <stdexcept>
 #include <vector>
 #include <cstring>
 
@@ -225,18 +226,15 @@ public:
 	 * @param aFx  The values of the function.
 	 * @param aN   The number of samples.
 	 */
-	IrregularFunction1D(float *aX, float *aFx, int aN) {
-		count = aN;
-		xFunc = new float[count];
-		yFunc = new float[count];
-		memcpy(xFunc, aX, aN*sizeof(float));
-		memcpy(yFunc, aFx, aN*sizeof(float));
+	IrregularFunction1D(std::span<float> aX, std::span<float> aFx) :
+		xFunc(aX.begin(), aX.end()), yFunc(aFx.begin(), aFx.end())
+	{
+		if (aX.size() != aFx.size()) {
+			throw std::runtime_error("IrregularFunction1D: misaligned arguments.");
+		}
 	}
 
-	~IrregularFunction1D() {
-		delete[] xFunc;
-		delete[] yFunc;
-	}
+	~IrregularFunction1D() {}
 
 	/**
 	 * Evaluates the function at the given position.
@@ -246,13 +244,15 @@ public:
 	 * @return The function value at the given position.
 	 */
 	float Eval(float x) const {
+		auto count = xFunc.size();
 		if (x <= xFunc[0])
 			return yFunc[0];
 		if (x >= xFunc[count - 1])
 			return yFunc[count - 1];
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		const u_int offset = static_cast<u_int>(ptr - xFunc - 1);
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		//const u_int offset = static_cast<u_int>(ptr - xFunc - 1);
+		const size_t offset = std::distance(xFunc.begin(), upper);
 
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
@@ -268,6 +268,7 @@ public:
 	 * @return The index of the given position.
 	 */
 	int IndexOf(float x, float *d) const {
+		auto count = xFunc.size();
 		if (x <= xFunc[0]) {
 			*d = 0.f;
 			return 0;
@@ -277,8 +278,8 @@ public:
 			return count - 1;
 		}
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		auto offset = std::distance(xFunc.begin(), upper);
 
 		*d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 		return offset;
@@ -289,11 +290,7 @@ private:
 	/*
 	 * The sample locations and the function values.
 	 */
-	float *xFunc, *yFunc;
-	/*
-	 * The number of function values. The number of cdf values is count+1.
-	 */
-	int count;
+	std::vector<float> xFunc, yFunc;
 };
 
 /**
