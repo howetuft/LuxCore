@@ -252,7 +252,7 @@ public:
 
 		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
 		//const u_int offset = static_cast<u_int>(ptr - xFunc - 1);
-		const size_t offset = std::distance(xFunc.begin(), upper);
+		const size_t offset = std::distance(xFunc.begin(), upper) - 1;
 
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
@@ -279,7 +279,7 @@ public:
 		}
 
 		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
-		auto offset = std::distance(xFunc.begin(), upper);
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
 
 		*d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 		return offset;
@@ -309,17 +309,24 @@ public:
 	 * @param aFx The values of the function.
 	 * @param aN  The number of samples.
 	 */
-	IrregularDistribution1D(float aX0, float aX1, float *aX, float *aFx, int aN) {
-		count = aN;
+	IrregularDistribution1D(
+		float aX0, float aX1,
+		std::span<float> aX,
+		std::span<float> aFx
+	) :
+		xFunc(aX.begin(), aX.end()),
+		yFunc(aFx.begin(), aFx.end()),
+		xCdf(aX.size()),
+		yCdf(aX.size())
+	{
+		if (aX.size() != aFx.size()) {
+			throw std::runtime_error("IrregularDistribution1D: misaligned arguments.");
+		}
+
+		count = aX.size();
 		x0 = aX0;
 		x1 = aX1;
-		xFunc = new float[count];
-		yFunc = new float[count];
-		xCdf = new float[count+1];
-		yCdf = new float[count+1];
-		memcpy(xFunc, aX, count*sizeof(float));
-		memcpy(yFunc, aFx, count*sizeof(float));
-		
+
 		// Compute integrals of step function
 		xCdf[0] = aX0;
 		for (int i = 1; i < count; ++i)
@@ -327,7 +334,7 @@ public:
 		xCdf[count] = aX1;
 		yCdf[0] = 0.f;
 		for (int i = 1; i < count+1; ++i) {
-			yCdf[i] = yCdf[i-1] + Max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
+			yCdf[i] = yCdf[i-1] + std::max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
 		}
 		funcInt = yCdf[count];
 		// Transform step function integral into cdf
@@ -338,12 +345,6 @@ public:
 		invCount = 1.f / count;
 	}
 
-	~IrregularDistribution1D() {
-		delete[] xFunc;
-		delete[] yFunc;
-		delete[] xCdf;
-		delete[] yCdf;
-	}
 
 	/**
 	 * Samples from this distribution.
@@ -354,22 +355,24 @@ public:
 	 *
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */ 
-	float Sample(float u, float *pdf) const {
+	std::tuple<float, float>
+	Sample(float u) const {
+		auto count = xFunc.size();
 		// Find surrounding cdf segments
 		if (u >= yCdf[count]) {
-			*pdf = xFunc[count] * invFuncInt;
-			return xCdf[count];
+			auto pdf = xFunc[count] * invFuncInt;
+			return std::make_tuple(xCdf[count], pdf);
 		}
 		if (u <= yCdf[0]) {
-			*pdf = xFunc[0] * invFuncInt;
-			return xCdf[0];
+			auto pdf = xFunc[0] * invFuncInt;
+			return std::make_tuple(xCdf[0], pdf);
 		}
-		float *ptr = std::upper_bound(yCdf, yCdf + count + 1, u);
-		int offset = ptr - yCdf - 1;
+		auto upper = std::upper_bound(yCdf.begin(), yCdf.end(), u);
+		auto offset = std::distance(yCdf.begin(), upper) - 1;
 		// Return offset along current cdf segment
 		float du = (u - yCdf[offset]) / (yCdf[offset + 1] - yCdf[offset]);
-		*pdf = xFunc[offset] * invFuncInt;
-		return Lerp(du, xCdf[offset], xCdf[offset + 1]);
+		auto pdf = xFunc[offset] * invFuncInt;
+		return std::make_tuple(Lerp(du, xCdf[offset], xCdf[offset + 1]), pdf);
 	}
 
 	/**
@@ -385,8 +388,8 @@ public:
 		if (x >= xFunc[count - 1])
 			return yFunc[count - 1];
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
 
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
@@ -401,21 +404,21 @@ public:
 	 *
 	 * @return The index of the given position.
 	 */
-	int IndexOf(float x, float *d) const {
+	std::tuple<int, float>
+	IndexOf(const float x) const {
 		if (x <= xFunc[0]) {
-			*d = 0.f;
-			return 0;
-		}
-		else if (x >= xFunc[count - 1]) {
-			*d = 0.f;
-			return count - 1;
+			return std::tuple<int, float>(0, 0.f);
 		}
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		if (x >= xFunc[xFunc.size() - 1]) {
+			return std::tuple<int, float>(xFunc.size() - 1, 0.f);
+		}
 
-		*d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
-		return offset;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		int offset = std::distance(xFunc.begin(), upper) - 1;
+		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
+
+		return std::make_tuple(offset, d);
 	}
 
 	// IrregularDistribution1D Data
@@ -426,11 +429,11 @@ public:
 	/*
 	 * The sample locations and the function values.
 	 */
-	float *xFunc, *yFunc;
+	std::vector<float> xFunc, yFunc;
 	/*
 	 * The sample locations of the cdf and the cdf values.
 	 */
-	float *xCdf, *yCdf;
+	std::vector<float> xCdf, yCdf;
 	/**
 	 * The function integral (of the scaled function!),
 	 * the inverted function integral and the inverted count.
