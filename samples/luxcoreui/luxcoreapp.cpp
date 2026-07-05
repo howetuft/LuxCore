@@ -57,7 +57,6 @@ LuxCoreApp::LuxCoreApp(RenderConfigRPtr & renderConfig) :
 	session = NULL;
 	window = NULL;
 
-	renderImageBuffer = NULL;
 	renderImageWidth = 0xffffffffu;
 	renderImageHeight = 0xffffffffu;
 
@@ -99,7 +98,6 @@ LuxCoreApp::LuxCoreApp(RenderConfigRPtr & renderConfig) :
 
 LuxCoreApp::~LuxCoreApp() {
 	currentLogWindow = NULL;
-	delete[] renderImageBuffer;
 }
 
 static int MaximumExtent(const float pMin[3], const float pMax[3]) {

@@ -80,11 +80,11 @@ void LuxCoreApp::RefreshRenderingTexture() {
 
   if ((currentTool == TOOL_OBJECT_SELECTION) || (currentTool == TOOL_USER_IMPORTANCE_PAINT)) {
     // Allocate the renderImageBuffer if needed
-    if (!renderImageBuffer || (renderImageWidth != filmWidth) || (renderImageHeight != filmHeight)) {
-      delete[] renderImageBuffer;
+    if (not renderImageBuffer.empty() || (renderImageWidth != filmWidth) || (renderImageHeight != filmHeight)) {
+      renderImageBuffer.clear();
       renderImageWidth = filmWidth;
       renderImageHeight = filmHeight;
-      renderImageBuffer = new float[renderImageWidth * renderImageHeight * 3];
+      renderImageBuffer.resize(renderImageWidth * renderImageHeight * 3);
     }
   }
 
@@ -125,13 +125,13 @@ void LuxCoreApp::RefreshRenderingTexture() {
         }
       }
 
-      pixels = renderImageBuffer;
+      pixels = renderImageBuffer.data();
     }
   } else if (currentTool == TOOL_USER_IMPORTANCE_PAINT) {
     if (userImportancePaintWindow.showOverlay) {
-      userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer);
+      userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer.data());
   
-      pixels = renderImageBuffer;
+      pixels = renderImageBuffer.data();
     }
   }
 
