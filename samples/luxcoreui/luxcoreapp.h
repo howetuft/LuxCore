@@ -176,7 +176,7 @@ private:
 	GLuint backgroundLogoTexID;
 
 	unsigned int renderImageWidth, renderImageHeight;
-	float *renderImageBuffer;
+	std::vector<float> renderImageBuffer;
 
 	GLFWwindow *window;
 
