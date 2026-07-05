@@ -219,7 +219,7 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 		   data.BallastFactor * 
 		   data.BallastLampPhotometricFactor;
 	u_int nVFuncs = horizAngles.size();
-	IrregularFunction1D **vFuncs = new IrregularFunction1D*[nVFuncs];
+	std::vector<IrregularFunction1DUPtr> vFuncs(nVFuncs);
 	u_int vFuncLength = vertAngles.size();
 
 	std::vector<float> vFuncX(vFuncLength);
@@ -233,12 +233,12 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 			vFuncY[j] = values[i][j] * valueScale;
 		}
 
-		vFuncs[i] = new IrregularFunction1D(vFuncX.data(), vFuncY.data(), vFuncLength);
+		vFuncs[i] = std::make_unique<IrregularFunction1D>(vFuncX, vFuncY);
 
 		uFuncX[i] = Clamp(Radians(horizAngles[i] ) * INV_TWOPI, 0.f, 1.f);
 		uFuncY[i] = i;
 	}
-	IrregularFunction1D *uFunc = new IrregularFunction1D(uFuncX.data(), uFuncY.data(), nVFuncs);
+	auto uFunc = std::make_unique<IrregularFunction1D>(uFuncX, uFuncY);
 
 	// Resample the irregular functions
 	auto imgMap = ImageMap::AllocImageMap(1, xRes, yRes, ImageMapConfig());
@@ -260,10 +260,6 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 			img[x + tgtY * xRes] = value;
 		}
 	}
-	delete uFunc;
-	for (u_int i = 0; i < nVFuncs; ++i)
-		delete vFuncs[i];
-	delete[] vFuncs;
 
 	imgMap->Preprocess();
 	return imgMap;
