@@ -66,7 +66,7 @@ struct cyHairFileHeader
 	float			d_transparency;	///< default transparency of hair strands
 	float			d_color[3];		///< default color of hair strands
 
-	char			info[CY_HAIR_FILE_INFO_SIZE];	///< information about the file
+	std::array<char, CY_HAIR_FILE_INFO_SIZE>	info;	///< information about the file
 };
 
 //-------------------------------------------------------------------------------
@@ -75,31 +75,31 @@ struct cyHairFileHeader
 CPP_EXPORT class CPP_API cyHairFile
 {
 public:
-	cyHairFile() : segments(NULL), points(NULL), thickness(NULL), transparency(NULL), colors(NULL), uvs(NULL) { Initialize(); }
+	cyHairFile() { Initialize(); }
 	~cyHairFile() { Initialize(); }
 
 
 	//////////////////////////////////////////////////////////////////////////
 	///@name Constant Data Access Methods
 	
-	const cyHairFileHeader& GetHeader() const { return header; }		///< Use this method to access header data.
-	const unsigned short* GetSegmentsArray() const { return segments; }	///< Returns segments array (segment count for each hair strand).
-	const float* GetPointsArray() const { return points; }				///< Returns points array (xyz coordinates of each hair point).
-	const float* GetThicknessArray() const { return thickness; }		///< Returns thickness array (thickness at each hair point}.
-	const float* GetTransparencyArray() const { return transparency; }	///< Returns transparency array (transparency at each hair point).
-	const float* GetColorsArray() const { return colors; }				///< Returns colors array (rgb color at each hair point).
-	const float* GetUVsArray() const { return uvs; }					///< Returns uvs array (uv at each hair point).
+	const cyHairFileHeader& GetHeader() const { return header; }				///< Use this method to access header data.
+	std::span<const unsigned short> GetSegmentsArray() const { return segments; }	///< Returns segments array (segment count for each hair strand).
+	std::span<const float> GetPointsArray() const { return points; }				///< Returns points array (xyz coordinates of each hair point).
+	std::span<const float> GetThicknessArray() const { return thickness; }			///< Returns thickness array (thickness at each hair point}.
+	std::span<const float> GetTransparencyArray() const { return transparency; }	///< Returns transparency array (transparency at each hair point).
+	std::span<const float> GetColorsArray() const { return colors; }				///< Returns colors array (rgb color at each hair point).
+	std::span<const float> GetUVsArray() const { return uvs; }						///< Returns uvs array (uv at each hair point).
 
 
 	//////////////////////////////////////////////////////////////////////////
 	///@name Data Access Methods
 
-	unsigned short* GetSegmentsArray() { return segments; }	///< Returns segments array (segment count for each hair strand).
-	float* GetPointsArray() { return points; }				///< Returns points array (xyz coordinates of each hair point).
-	float* GetThicknessArray() { return thickness; }		///< Returns thickness array (thickness at each hair point}.
-	float* GetTransparencyArray() { return transparency; }	///< Returns transparency array (transparency at each hair point).
-	float* GetColorsArray() { return colors; }				///< Returns colors array (rgb color at each hair point).
-	float* GetUVsArray() { return uvs; }					///< Returns uvs array (uv at each hair point).
+	unsigned short* GetSegmentsArray() { return segments.data(); }				///< Returns segments array (segment count for each hair strand).
+	float* GetPointsArray() { return points.data(); }							///< Returns points array (xyz coordinates of each hair point).
+	float* GetThicknessArray() { return thickness.data(); }						///< Returns thickness array (thickness at each hair point}.
+	float* GetTransparencyArray() { return transparency.data(); }				///< Returns transparency array (transparency at each hair point).
+	float* GetColorsArray() { return colors.data(); }							///< Returns colors array (rgb color at each hair point).
+	float* GetUVsArray() { return uvs.data(); }									///< Returns uvs array (uv at each hair point).
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -108,12 +108,13 @@ public:
 	/// Deletes all arrays and initializes the header data.
 	void Initialize()
 	{
-		if ( segments ) delete [] segments;
-		if ( points ) delete [] points;
-		if ( colors ) delete [] colors;
-		if ( thickness ) delete [] thickness;
-		if ( transparency ) delete [] transparency;
-		if ( uvs ) delete [] uvs;
+		segments.clear();
+		points.clear();
+		colors.clear();
+		thickness.clear();
+		transparency.clear();
+		uvs.clear();
+
 		header.signature[0] = 'H';
 		header.signature[1] = 'A';
 		header.signature[2] = 'I';
@@ -127,43 +128,35 @@ public:
 		header.d_color[0] = 1.0f;
 		header.d_color[1] = 1.0f;
 		header.d_color[2] = 1.0f;
-		memset( header.info, '\0', CY_HAIR_FILE_INFO_SIZE );
+		std::ranges::fill(std::span(header.info), '\0');
 	}
 
 	/// Sets the hair count, re-allocates segments array if necessary.
 	void SetHairCount( int count )
 	{
 		header.hair_count = count;
-		if ( segments ) {
-			delete [] segments;
-			segments = new unsigned short[ header.hair_count ];
+		if ( not segments.empty() ) {
+			segments.clear();
+			segments.resize(header.hair_count);
 		}
 	}
 
 	// Sets the point count, re-allocates points, thickness, transparency, and colors arrays if necessary.
-	void SetPointCount( int count )
+	void SetPointCount(size_t count)
 	{
 		header.point_count = count;
-		if ( points ) {
-			delete [] points;
-			points = new float[ header.point_count*3 ];
-		}
-		if ( thickness ) {
-			delete [] thickness;
-			thickness = new float[ header.point_count ];
-		}
-		if ( transparency ) {
-			delete [] transparency;
-			transparency = new float[ header.point_count ];
-		}
-		if ( colors ) {
-			delete [] colors;
-			colors = new float[ header.point_count*3 ];
-		}
-		if ( uvs ) {
-			delete [] uvs;
-			uvs = new float[ header.point_count*2 ];
-		}
+
+		auto reset = [&](std::vector<float>& arr, size_t dimension) {
+			if (arr.empty()) return;
+			arr.clear();
+			arr.resize(dimension * count);
+		};
+
+		reset(points, 3);
+		reset(thickness, 1);
+		reset(transparency, 1);
+		reset(colors, 3);
+		reset(uvs, 2);
 	}
 
 	/// Use this function to allocate/delete arrays.
@@ -172,18 +165,24 @@ public:
 	void SetArrays( int array_types )
 	{
 		header.arrays = array_types;
-		if ( header.arrays & CY_HAIR_FILE_SEGMENTS_BIT && !segments ) segments = new unsigned short[header.hair_count];
-		if ( ! (header.arrays & CY_HAIR_FILE_SEGMENTS_BIT) && segments ) { delete [] segments; segments=NULL; }
-		if ( header.arrays & CY_HAIR_FILE_POINTS_BIT && !points ) points = new float[header.point_count*3];
-		if ( ! (header.arrays & CY_HAIR_FILE_POINTS_BIT) && points ) { delete [] points; points=NULL; }
-		if ( header.arrays & CY_HAIR_FILE_THICKNESS_BIT && !thickness ) thickness = new float[header.point_count];
-		if ( ! (header.arrays & CY_HAIR_FILE_THICKNESS_BIT) && thickness ) { delete [] thickness; thickness=NULL; }
-		if ( header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT && !transparency ) transparency = new float[header.point_count];
-		if ( ! (header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT) && transparency ) { delete [] transparency; transparency=NULL; }
-		if ( header.arrays & CY_HAIR_FILE_COLORS_BIT && !colors ) colors = new float[header.point_count*3];
-		if ( ! (header.arrays & CY_HAIR_FILE_COLORS_BIT) && colors ) { delete [] colors; colors=NULL; }
-		if ( header.arrays & CY_HAIR_FILE_UVS_BIT && !uvs ) uvs = new float[header.point_count*2];
-		if ( ! (header.arrays & CY_HAIR_FILE_UVS_BIT) && uvs ) { delete [] uvs; uvs=NULL; }
+		if ( header.arrays & CY_HAIR_FILE_SEGMENTS_BIT && segments.empty() ) segments.resize(header.hair_count);
+		if ( ! (header.arrays & CY_HAIR_FILE_SEGMENTS_BIT) && !segments.empty() ) segments.clear();
+
+		if ( header.arrays & CY_HAIR_FILE_POINTS_BIT && points.empty() ) points.resize(header.point_count * 3);
+		if ( ! (header.arrays & CY_HAIR_FILE_POINTS_BIT) && !points.empty() ) points.clear();
+
+		if ( header.arrays & CY_HAIR_FILE_THICKNESS_BIT && thickness.empty() ) thickness.resize(header.point_count);
+		if ( ! (header.arrays & CY_HAIR_FILE_THICKNESS_BIT) && !thickness.empty() ) thickness.clear();
+
+		if ( header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT && transparency.empty() ) transparency.resize(header.point_count);
+		if ( ! (header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT) && !transparency.empty() ) transparency.clear();
+
+		if ( header.arrays & CY_HAIR_FILE_COLORS_BIT && colors.empty() ) colors.resize(header.point_count*3);
+		if ( ! (header.arrays & CY_HAIR_FILE_COLORS_BIT) && !colors.empty() ) colors.clear();
+
+		if ( header.arrays & CY_HAIR_FILE_UVS_BIT && uvs.empty() ) uvs.resize(header.point_count*2);
+		if ( ! (header.arrays & CY_HAIR_FILE_UVS_BIT) && !uvs.empty() ) uvs.clear();
+
 	}
 
 	/// Sets default number of segments for all hair strands, which is used if segments array does not exist.
@@ -222,47 +221,28 @@ public:
 		// Check if this is a hair file
 		if ( strncmp( header.signature, "HAIR", 4) != 0 ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_WRONG_SIGNATURE);
 
-		// Read segments array
-		if ( header.arrays & CY_HAIR_FILE_SEGMENTS_BIT ) {
-			segments = new unsigned short[ header.hair_count ];
-			size_t readcount = fread( segments, sizeof(unsigned short), header.hair_count, fp );
-			if ( readcount < header.hair_count ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_SEGMENTS);
-		}
+		// Read helper
+		auto read = [&]<typename T>(
+			std::vector<T>& arr, unsigned int mask, size_t dimension
+		) {
+			if ( !(header.arrays & mask)) return 0;
+			arr.clear();
+			arr.resize(header.hair_count);
+			size_t readcount = fread(
+				arr.data(), sizeof(T), header.hair_count, fp
+			);
+			if ( readcount < header.hair_count )
+				_CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_SEGMENTS);
+			return 0;
+		};
 
-		// Read points array
-		if ( header.arrays & CY_HAIR_FILE_POINTS_BIT ) {
-			points = new float[ header.point_count*3 ];
-			size_t readcount = fread( points, sizeof(float), header.point_count*3, fp );
-			if ( readcount < header.point_count*3 ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_POINTS);
-		}
-
-		// Read thickness array
-		if ( header.arrays & CY_HAIR_FILE_THICKNESS_BIT ) {
-			thickness = new float[ header.point_count ];
-			size_t readcount = fread( thickness, sizeof(float), header.point_count, fp );
-			if ( readcount < header.point_count ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_THICKNESS);
-		}
-
-		// Read transparency array
-		if ( header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT ) {
-			transparency = new float[ header.point_count ];
-			size_t readcount = fread( transparency, sizeof(float), header.point_count, fp );
-			if ( readcount < header.point_count ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_TRANSPARENCY);
-		}
-
-		// Read colors array
-		if ( header.arrays & CY_HAIR_FILE_COLORS_BIT ) {
-			colors = new float[ header.point_count*3 ];
-			size_t readcount = fread( colors, sizeof(float), header.point_count*3, fp );
-			if ( readcount < header.point_count*3 ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_COLORS);
-		}
-
-		// Read UVs array
-		if ( header.arrays & CY_HAIR_FILE_UVS_BIT ) {
-			uvs = new float[ header.point_count*2 ];
-			size_t readcount = fread( uvs, sizeof(float), header.point_count*2, fp );
-			if ( readcount < header.point_count*2 ) _CY_FAILED_RETURN(CY_HAIR_FILE_ERROR_READING_UVS);
-		}
+		// Read arrays
+		read(segments, CY_HAIR_FILE_SEGMENTS_BIT, 1);
+		read(points, CY_HAIR_FILE_POINTS_BIT, 3);
+		read(thickness, CY_HAIR_FILE_THICKNESS_BIT, 1);
+		read(transparency, CY_HAIR_FILE_TRANSPARENCY_BIT, 1);
+		read(colors, CY_HAIR_FILE_COLORS_BIT, 3);
+		read(uvs, CY_HAIR_FILE_UVS_BIT, 2);
 
 		fclose( fp );
 
@@ -280,12 +260,12 @@ public:
 		fwrite( &header, sizeof(cyHairFileHeader), 1, fp );
 
 		// Write arrays
-		if ( header.arrays & CY_HAIR_FILE_SEGMENTS_BIT ) fwrite( segments, sizeof(unsigned short), header.hair_count, fp );
-		if ( header.arrays & CY_HAIR_FILE_POINTS_BIT ) fwrite( points, sizeof(float), header.point_count*3, fp );
-		if ( header.arrays & CY_HAIR_FILE_THICKNESS_BIT ) fwrite( thickness, sizeof(float), header.point_count, fp );
-		if ( header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT ) fwrite( transparency, sizeof(float), header.point_count, fp );
-		if ( header.arrays & CY_HAIR_FILE_COLORS_BIT ) fwrite( colors, sizeof(float), header.point_count*3, fp );
-		if ( header.arrays & CY_HAIR_FILE_UVS_BIT ) fwrite( uvs, sizeof(float), header.point_count*2, fp );
+		if ( header.arrays & CY_HAIR_FILE_SEGMENTS_BIT ) fwrite( segments.data(), sizeof(unsigned short), header.hair_count, fp );
+		if ( header.arrays & CY_HAIR_FILE_POINTS_BIT ) fwrite( points.data(), sizeof(float), header.point_count*3, fp );
+		if ( header.arrays & CY_HAIR_FILE_THICKNESS_BIT ) fwrite( thickness.data(), sizeof(float), header.point_count, fp );
+		if ( header.arrays & CY_HAIR_FILE_TRANSPARENCY_BIT ) fwrite( transparency.data(), sizeof(float), header.point_count, fp );
+		if ( header.arrays & CY_HAIR_FILE_COLORS_BIT ) fwrite( colors.data(), sizeof(float), header.point_count*3, fp );
+		if ( header.arrays & CY_HAIR_FILE_UVS_BIT ) fwrite( uvs.data(), sizeof(float), header.point_count*2, fp );
 
 		fclose( fp );
 
@@ -302,15 +282,22 @@ public:
 	/// Returns point count, returns zero if fails.
 	int FillDirectionArray( float *dir )
 	{
-		if ( dir==NULL || header.point_count<=0 || points==NULL ) return 0;
+		if ( dir==NULL || header.point_count<=0 || points.empty() ) return 0;
 
 		int p = 0;	// point index
 		for ( unsigned int i=0; i<header.hair_count; i++ ) {
-			int s = (segments) ? segments[i] : header.d_segments;
+			int s = (not segments.empty()) ? segments[i] : header.d_segments;
 			if ( s > 1 ) {
 				// direction at point1
 				float len0, len1;
-				ComputeDirection( &dir[(p+1)*3], len0, len1, &points[p*3], &points[(p+1)*3], &points[(p+2)*3] );
+				ComputeDirection(
+					span3f(&dir[(p + 1) * 3], 3),
+					len0,
+					len1,
+					span3f(&points[p * 3], 3),
+					span3f(&points[(p + 1) * 3], 3),
+					span3f(&points[(p + 2) * 3], 3)
+				);
 
 				// direction at point0
 				float d0[3];
@@ -328,7 +315,13 @@ public:
 
 				// Compute the direction for the rest
 				for ( int t=2; t<s; t++, p++ ) {
-					ComputeDirection( &dir[p*3], len0, len1, &points[(p-1)*3], &points[p*3], &points[(p+1)*3] );
+					ComputeDirection(
+						span3f(&dir[p * 3], 3),
+						len0, len1,
+						span3f(&points[(p - 1) * 3], 3),
+						span3f(&points[p * 3], 3),
+						span3f(&points[(p + 1) * 3], 3)
+					);
 				}
 
 				// direction at the last point
@@ -369,15 +362,17 @@ private:
 	///@name Private Variables and Methods
 
 	cyHairFileHeader header;
-	unsigned short	*segments;
-	float			*points;
-	float			*thickness;
-	float			*transparency;
-	float			*colors;
-	float			*uvs;
+	std::vector<unsigned short>	segments;
+	std::vector<float>			points;
+	std::vector<float>			thickness;
+	std::vector<float>			transparency;
+	std::vector<float>			colors;
+	std::vector<float>			uvs;
+
+	using span3f = std::span<float, 3>;
 
 	// Given point before (p0) and after (p2), computes the direction (d) at p1.
-	float ComputeDirection( float *d, float &d0len, float &d1len, const float *p0, const float *p1, const float *p2 )
+	float ComputeDirection(span3f d, float &d0len, float &d1len, const span3f p0, const span3f p1, const span3f p2 )
 	{
 		// line from p0 to p1
 		float d0[3];
