@@ -35,7 +35,6 @@ CompiledScene::CompiledScene(SceneConstRef scn, const PathTracer *pt) : scene(sc
 	pathTracer = pt;
 	maxMemPageSize = numeric_limits<size_t>::max();
 
-	cameraBokehDistribution = nullptr;
 	lightsDistribution.clear();
 	
 	EditActionList editActions;
@@ -44,7 +43,6 @@ CompiledScene::CompiledScene(SceneConstRef scn, const PathTracer *pt) : scene(sc
 }
 
 CompiledScene::~CompiledScene() {
-	delete[] cameraBokehDistribution;
 }
 
 void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {

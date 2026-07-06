@@ -59,8 +59,8 @@ void PathOCLBaseOCLRenderThread::InitCamera() {
 
 	intersectionDevice.AllocBufferRO(&cameraBuff, &cscene->camera,
 			sizeof(slg::ocl::Camera), "Camera");
-	if (cscene->cameraBokehDistribution)
-		intersectionDevice.AllocBufferRO(&cameraBokehDistributionBuff, cscene->cameraBokehDistribution,
+	if (not cscene->cameraBokehDistribution.empty())
+		intersectionDevice.AllocBufferRO(&cameraBokehDistributionBuff, cscene->cameraBokehDistribution.data(),
 				cscene->cameraBokehDistributionSize, "CameraBokehDistribution");
 	else
 		intersectionDevice.FreeBuffer(&cameraBokehDistributionBuff);
