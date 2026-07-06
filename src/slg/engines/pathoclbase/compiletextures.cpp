@@ -274,6 +274,7 @@ CompiledScene::CompileDistribution2D(Distribution2DConstRef dist) {
 		auto& conditionalDist = dist.GetConditionalDistribution(i);
 		auto [dist1D, sizeDist] = CompileDistribution1D(*conditionalDist);
 		condDists.push_back(dist1D);
+		condSize = sizeDist;
 	}
 
 	// Here, I assume sizeof(u_int) == sizeof(float)
