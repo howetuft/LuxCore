@@ -126,8 +126,8 @@ private:
 	float largeMutationProbability, imageMutationRange;
 	bool addOnlyCuastics;
 
-	float *samples;
-	u_int *sampleStamps;
+	std::vector<float> samples;
+	std::vector<u_int> sampleStamps;
 
 	float weight;
 	u_int consecRejects;
@@ -136,8 +136,8 @@ private:
 	// Data saved for the current sample
 	u_int currentStamp;
 	double currentLuminance;
-	float *currentSamples;
-	u_int *currentSampleStamps;
+	std::vector<float> currentSamples;
+	std::vector<u_int> currentSampleStamps;
 	std::vector<SampleResult> currentSampleResults;
 
 	// Used, most of the times, when not having a film
