@@ -59,7 +59,7 @@ using namespace std;
 
 PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
-		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
+		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	writeKernelsToFile = false;
 
@@ -171,7 +171,6 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 
 	delete compiledScene;
 	delete photonGICache;
-	delete[] pixelFilterDistribution;
 	delete oclSampler;
 	delete oclPixelFilter;
 }
@@ -202,9 +201,8 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 	std::unique_ptr<Filter> pixelFilter(renderConfig.AllocPixelFilter());
 
 	// Compile sample distribution
-	delete[] pixelFilterDistribution;
 	const FilterDistribution filterDistribution(pixelFilter, 64);
-	auto [pixelFilterDistribution, pixelFilterDistributionSize] =
+	std::tie(pixelFilterDistribution, pixelFilterDistributionSize) =
 		CompiledScene::CompileDistribution2D(*filterDistribution.GetDistribution2D()
 	);
 }
@@ -428,8 +426,6 @@ void PathOCLBaseRenderEngine::StopLockLess() {
 	compiledScene = nullptr;
 	delete photonGICache;
 	photonGICache = nullptr;
-	delete[] pixelFilterDistribution;
-	pixelFilterDistribution = nullptr;
 }
 
 void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {

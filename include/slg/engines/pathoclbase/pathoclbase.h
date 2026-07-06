@@ -92,7 +92,7 @@ protected:
 	bool writeKernelsToFile;
 
 	// Pixel filter related variables
-	float *pixelFilterDistribution;
+	std::vector<float> pixelFilterDistribution;
 	u_int pixelFilterDistributionSize;
 
 	slg::ocl::Sampler *oclSampler;
