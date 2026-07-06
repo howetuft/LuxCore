@@ -320,7 +320,6 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 	assert (!kernel->IsNull());
 
 	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
-	assert (cudaDeviceKernel);
 
 	if (index >= cudaDeviceKernel.args.size())
 		cudaDeviceKernel.args.resize(index + 1, nullptr);
@@ -398,7 +397,6 @@ void CUDADevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 	assert (!kernel->IsNull());
 
 	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
-	assert (cudaDeviceKernel);
 
 	u_int blockX, blockY, blockZ;
 	u_int threadX, threadY, threadZ;

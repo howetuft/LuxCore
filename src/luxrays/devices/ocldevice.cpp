@@ -288,7 +288,6 @@ void OpenCLDevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 	assert (!kernel->IsNull());
 
 	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
-	assert (oclDeviceKernel);
 
 	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel.oclKernel, index, size, arg));
 }
@@ -299,7 +298,6 @@ void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 	assert (!kernel->IsNull());
 
 	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
-	assert (oclDeviceKernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 
@@ -333,7 +331,6 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 	assert (!kernel->IsNull());
 
 	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
-	assert (oclDeviceKernel);
 
 	size_t globalSizeArray[3];
 	ConvertHardwareRange(globalSize, globalSizeArray);
