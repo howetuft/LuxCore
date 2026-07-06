@@ -80,15 +80,10 @@ MetropolisSampler::MetropolisSampler(
 		sharedData(dynamic_pointer_cast<MetropolisSamplerSharedData>(samplerSharedData)),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
 		addOnlyCuastics(addOnlyCstcs),
-		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		largeMutationCount(0) {
 }
 
 MetropolisSampler::~MetropolisSampler() {
-	delete[] samples;
-	delete[] sampleStamps;
-	delete[] currentSamples;
-	delete[] currentSampleStamps;
 }
 
 // Mutate a value in the range [0-1]
@@ -169,16 +164,22 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 void MetropolisSampler::RequestSamples(const SampleType smplType, const u_int size) {
 	Sampler::RequestSamples(smplType, size);
 
-	samples = new float[requestedSamples];
-	sampleStamps = new u_int[requestedSamples];
-	currentSamples = new float[requestedSamples];
-	currentSampleStamps = new u_int[requestedSamples];
+	samples.clear();
+	samples.resize(requestedSamples);
+
+	sampleStamps.clear();
+	sampleStamps.resize(requestedSamples);
+
+	currentSamples.clear();
+	currentSamples.resize(requestedSamples);
+
+	currentSampleStamps.clear();
+	currentSampleStamps.resize(requestedSamples, 0);
 
 	isLargeMutation = true;
 	weight = 0.f;
 	consecRejects = 0;
 	currentLuminance = 0.f;
-	fill(sampleStamps, sampleStamps + requestedSamples, 0);
 	stamp = 1;
 	currentStamp = 1;
 	currentSampleResults.resize(0);
@@ -342,8 +343,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		weight = newWeight;
 		currentStamp = stamp;
 		currentLuminance = newLuminance;
-		copy(samples, samples + requestedSamples, currentSamples);
-		copy(sampleStamps, sampleStamps + requestedSamples, currentSampleStamps);
+		std::copy_n(samples.begin(), requestedSamples, currentSamples.begin());
+		std::copy_n(sampleStamps.begin(), requestedSamples, currentSampleStamps.begin());
 		currentSampleResults = sampleResults;
 
 		consecRejects = 0;
@@ -374,8 +375,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 		// Restart from previous reference
 		stamp = currentStamp;
-		copy(currentSamples, currentSamples + requestedSamples, samples);
-		copy(currentSampleStamps, currentSampleStamps + requestedSamples, sampleStamps);
+		std::copy_n(currentSamples.begin(), requestedSamples, samples.begin());
+		std::copy_n(currentSampleStamps.begin(), requestedSamples, sampleStamps.begin());
 
 		++consecRejects;
 	}
@@ -432,7 +433,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 	if (isLargeMutation) {
 		stamp = 1;
-		fill(sampleStamps, sampleStamps + requestedSamples, 0);
+		std::fill_n(sampleStamps.begin(), requestedSamples, 0);
 		
 		++largeMutationCount;
 	} else
