@@ -60,7 +60,7 @@ public:
 
 	// Compiled Camera
 	slg::ocl::Camera camera;
-	float *cameraBokehDistribution;
+	std::vector<float> cameraBokehDistribution;
 	u_int cameraBokehDistributionSize;
 
 	// Compiled Scene Meshes
