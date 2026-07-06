@@ -651,7 +651,7 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate GPU pixel filter distribution
 	//--------------------------------------------------------------------------
 
-	intersectionDevice.AllocBufferRO(&pixelFilterBuff, renderEngine->pixelFilterDistribution,
+	intersectionDevice.AllocBufferRO(&pixelFilterBuff, renderEngine->pixelFilterDistribution.data(),
 			renderEngine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 
 	//--------------------------------------------------------------------------
