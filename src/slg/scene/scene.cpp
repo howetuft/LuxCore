@@ -374,13 +374,13 @@ Scene::ReturnType<ExtMotionTriangleMesh> Scene::DefineMesh(
 }
 
 void Scene::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	extMeshCache.SetMeshVertexAOV(meshName, index, data, size);
+		const unsigned int index, std::span<float> data) {
+	extMeshCache.SetMeshVertexAOV(meshName, index, data);
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	extMeshCache.SetMeshTriangleAOV(meshName, index, data, size);
+		const unsigned int index, std::span<float> data) {
+	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
 }
 
 Scene::ReturnType<ExtTriangleMesh>

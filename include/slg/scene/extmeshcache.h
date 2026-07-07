@@ -45,9 +45,9 @@ public:
 	// This method can be safely called only from Scene::DefineMesh()
 	std::tuple<ExtMesh&, ExtMeshUPtr> DefineExtMesh(ExtMeshUPtr&& mesh);
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t dataSize);
+		const unsigned int index, std::span<float> data);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t dataSize);
+		const unsigned int index, std::span<float> data);
 
 	bool IsExtMeshDefined(const std::string &meshName) const;
 

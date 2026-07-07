@@ -1017,20 +1017,32 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	API_END();
 }
 
+// Old API, deprecated
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
+		const unsigned int index, float * data, size_t dataSize) {
+	SetMeshVertexAOV(meshName, index, std::span<float>(data, dataSize));
+}
 
-	GetSlgScene().SetMeshVertexAOV(meshName, index, data, size);
+void SceneImpl::SetMeshTriangleAOV(const string &meshName,
+		const unsigned int index, float * data, size_t dataSize) {
+	SetMeshTriangleAOV(meshName, index, std::span<float>(data, dataSize));
+}
+
+// New API
+void SceneImpl::SetMeshVertexAOV(const string &meshName,
+		const unsigned int index, std::span<float> data) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
+
+	GetSlgScene().SetMeshVertexAOV(meshName, index, data);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
+		const unsigned int index, std::span<float> data) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
 
-	GetSlgScene().SetMeshTriangleAOV(meshName, index, data, size);
+	GetSlgScene().SetMeshTriangleAOV(meshName, index, data);
 
 	API_END();
 }

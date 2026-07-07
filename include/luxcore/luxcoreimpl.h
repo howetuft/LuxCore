@@ -352,6 +352,11 @@ public:
 	void SetMeshTriangleAOV(const std::string &meshName,
 		const unsigned int index, float *data, size_t size) override;
 
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, std::span<float> data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, std::span<float> data);
+
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(
 		const std::string &shapeName,

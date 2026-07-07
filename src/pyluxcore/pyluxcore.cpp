@@ -1539,29 +1539,26 @@ static void Scene_DefineMeshExt3(
 
 }
 
-static void Scene_SetMeshVertexAOV(const SceneImplPtr & scene, const std::string &meshName,
-    const size_t index, const py::object &data) {
-  std::vector<float> v;
-  GetArray<float>(data, v);
+static void Scene_SetMeshVertexAOV(
+	const SceneImplPtr & scene, const std::string &meshName,
+    const size_t index, const py::object &data
+) {
+	std::vector<float> v;
+	GetArray<float>(data, v);
 
-  float *vcpy = new float[v.size()];
-  copy(v.begin(), v.end(), vcpy);
-
-  scene->SetMeshVertexAOV(meshName, index, vcpy, v.size());
+	scene->SetMeshVertexAOV(meshName, index, v);
 }
 
 static void Scene_SetMeshTriangleAOV(
     const SceneImplPtr & scene,
     const std::string &meshName,
     const size_t index,
-    const py::object &data) {
+    const py::object &data
+) {
   std::vector<float> t;
   GetArray<float>(data, t);
 
-  float *tcpy = new float[t.size()];
-  copy(t.begin(), t.end(), tcpy);
-
-  scene->SetMeshTriangleAOV(meshName, index, tcpy, t.size());
+  scene->SetMeshTriangleAOV(meshName, index, t);
 }
 
 static void Scene_SetMeshAppliedTransformation(

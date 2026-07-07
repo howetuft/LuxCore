@@ -192,9 +192,9 @@ public:
 	);
 
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t size);
+		const unsigned int index, std::span<float> data);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t size);
+		const unsigned int index, std::span<float> data);
 
 	// Strands shape
 	Scene::ReturnType<ExtTriangleMesh> DefineStrands(
