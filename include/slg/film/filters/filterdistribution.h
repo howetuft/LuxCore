@@ -50,14 +50,11 @@ private:
 class FilterLUT {
 public:
 	FilterLUT(const Filter &filter, const float offsetX, const float offsetY);
-	~FilterLUT() {
-		delete[] lut;
-	}
 
 	const unsigned int GetWidth() const { return lutWidth; }
 	const unsigned int GetHeight() const { return lutHeight; }
 
-	const float *GetLUT() const {
+	const std::span<const float> GetLUT() const {
 		return lut;
 	}
 
@@ -65,7 +62,7 @@ public:
 
 private:
 	unsigned int lutWidth, lutHeight;
-	float *lut;
+	std::vector<float> lut;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {

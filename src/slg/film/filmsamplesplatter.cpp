@@ -74,7 +74,7 @@ void FilmSampleSplatter::AtomicSplatSample(FilmConstRef film, const SampleResult
 		const float dImageX = sampleResult.filmX - .5f;
 		const float dImageY = sampleResult.filmY - .5f;
 		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
-		const float *lut = filterLUT->GetLUT();
+		auto lut = filterLUT->GetLUT().cbegin();
 
 		const int x0 = Floor2Int(dImageX - filter->xWidth * .5f + .5f);
 		const int x1 = x0 + filterLUT->GetWidth();

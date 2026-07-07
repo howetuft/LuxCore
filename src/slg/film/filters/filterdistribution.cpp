@@ -74,7 +74,7 @@ FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offs
 	const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth * .5f + .5f);
 	lutWidth = x1 - x0 + 1;
 	lutHeight = y1 - y0 + 1;
-	lut = new float[lutWidth * lutHeight];
+	lut.resize(lutWidth * lutHeight);
 
 	float filterNorm = 0.f;
 	unsigned int index = 0;
