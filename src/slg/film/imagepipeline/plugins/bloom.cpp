@@ -35,7 +35,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BloomFilterPlugin)
 
 BloomFilterPlugin::BloomFilterPlugin(const float r, const float w) :
 		radius(r), weight(w), bloomBuffer(nullptr), bloomBufferTmp(nullptr),
-		bloomBufferSize(0), bloomFilter(nullptr), bloomFilterSize(0) {
+		bloomBufferSize(0), bloomFilterSize(0) {
 	hardwareDevice = nullptr;
 	hwBloomBuffer = nullptr;
 	hwBloomBufferTmp = nullptr;
@@ -49,7 +49,6 @@ BloomFilterPlugin::BloomFilterPlugin(const float r, const float w) :
 BloomFilterPlugin::BloomFilterPlugin() {
 	bloomBuffer = nullptr;
 	bloomBufferTmp = nullptr;
-	bloomFilter = nullptr;
 
 	hardwareDevice = nullptr;
 	hwBloomBuffer = nullptr;
@@ -64,7 +63,6 @@ BloomFilterPlugin::BloomFilterPlugin() {
 BloomFilterPlugin::~BloomFilterPlugin() {
 	delete[] bloomBuffer;
 	delete[] bloomBufferTmp;
-	delete[] bloomFilter;
 
 	if (hardwareDevice) {
 		hardwareDevice->FreeBuffer(&hwBloomBuffer);
@@ -85,10 +83,9 @@ void BloomFilterPlugin::InitFilterTable(const Film &film) {
 	const u_int bloomSupport = Float2UInt(radius * Max(width, height));
 	bloomWidth = bloomSupport / 2;
 
-	// Initialize bloom filter table
-	delete[] bloomFilter;
 	bloomFilterSize = 2 * bloomWidth * bloomWidth + 1;
-	bloomFilter = new float[bloomFilterSize];
+	bloomFilter.clear();
+	bloomFilter.resize(bloomFilterSize);
 	for (u_int i = 0; i < bloomFilterSize; ++i)
 		bloomFilter[i] = 0.f;
 
@@ -261,7 +258,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
-	if ((!bloomFilter) || (width * height != bloomBufferSize)) {
+	if ((bloomFilter.empty()) || (width * height != bloomBufferSize)) {
 		bloomBufferSize = width * height;
 		InitFilterTable(film);
 	}
@@ -274,7 +271,7 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRW(&hwBloomBuffer, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
 		hardwareDevice->AllocBufferRW(&hwBloomBufferTmp, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
-		hardwareDevice->AllocBufferRO(&hwBloomFilter, bloomFilter, bloomFilterSize * sizeof(float), "Bloom filter table");
+		hardwareDevice->AllocBufferRO(&hwBloomFilter, bloomFilter.data(), bloomFilterSize * sizeof(float), "Bloom filter table");
 
 		// Compile sources
 		const double tStart = WallClockTime();

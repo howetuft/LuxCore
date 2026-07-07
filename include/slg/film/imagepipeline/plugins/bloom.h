@@ -70,7 +70,7 @@ private:
 	luxrays::Spectrum *bloomBufferTmp;
 	size_t bloomBufferSize;
 
-	float *bloomFilter;
+	std::vector<float> bloomFilter;
 	size_t bloomFilterSize;
 
 	u_int bloomWidth;
