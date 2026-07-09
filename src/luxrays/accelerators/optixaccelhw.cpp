@@ -589,7 +589,7 @@ private:
 
 		// Allocate CUDA vertices buffer
 		HardwareDeviceBuffer *vertsBuff = nullptr;
-		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices(), sizeof(Point) * mesh.GetTotalVertexCount());
+		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices().data(), sizeof(Point) * mesh.GetTotalVertexCount());
 
 		// Allocate CUDA triangle vertices indices buffer
 		HardwareDeviceBuffer *trisBuff = nullptr;

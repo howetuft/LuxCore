@@ -16,7 +16,9 @@
  * limitations under the License.                      *
  ***************************************************************************/
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/properties.h"
+#include <iterator>
 #include <pybind11/detail/common.h>
 #include <pybind11/detail/using_smart_holder.h>
 #include <string_view>
@@ -1140,13 +1142,13 @@ static void Scene_DefineMesh1(
 
   // Translate all vertices
   long plyNbVerts;
-  luxrays::Point *points = NULL;
+  luxrays::VertexBuffer points;
   if (py::isinstance<py::list>(p)) {
     const py::list &l = py::cast<py::list>(p);
     const py::ssize_t size = len(l);
     plyNbVerts = size;
 
-    points = (luxrays::Point *)luxcore::detail::SceneImpl::AllocVerticesBuffer(size);
+    points.Allocate(size);
     for (py::ssize_t i = 0; i < size; ++i) {
       if (py::isinstance<py::tuple>(l[i])) {
         const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1216,7 +1218,7 @@ static void Scene_DefineMesh1(
 
 
   auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-  	plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as
+  	plyNbTris, std::move(points), tris, normals, uvs, colors, as
   );
 
   // Apply the transformation if required
@@ -1251,13 +1253,13 @@ static void Scene_DefineMeshExt1(
 
   // Translate all vertices
   long plyNbVerts;
-  luxrays::Point *points = NULL;
+  luxrays::VertexBuffer points;
   if(py::isinstance<py::list>(p)) {
     const py::list &l = py::cast<py::list>(p);
     const py::ssize_t size = len(l);
     plyNbVerts = size;
 
-    points = (luxrays::Point *)luxcore::detail::SceneImpl::AllocVerticesBuffer(size);
+    points.Allocate(size);
     for (py::ssize_t i = 0; i < size; ++i) {
       if(py::isinstance<py::tuple>(l[i])) {
         const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1324,7 +1326,7 @@ static void Scene_DefineMeshExt1(
   auto as = translateProp<float, 1>(alphas, "alphas");
 
 	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as
+		plyNbTris, std::move(points), tris, normals, uvs, colors, as
 	);
 
 	// Apply the transformation if required
@@ -1408,6 +1410,44 @@ std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
 	return std::tuple(std::move(dest), count);
 }
 
+// Variant of dataCopy for vertex buffer
+template<
+	typename S,  // Source type
+	size_t stride=3
+>
+luxrays::VertexBuffer dataCopyBuffer(
+	py::array_t<S, py::array::c_style> src,
+	const std::string& meshName,
+	const std::string& propertyName
+) {
+	auto src_stride = src.shape(1);
+
+	using this_array_t = py::array_t< S, py::array::c_style | py::array::forcecast >;
+	auto direct_src = src.template unchecked<2>();
+
+	// Check
+	if (src_stride != stride) {
+		std::string errorMsg = std::string("Scene.DefineMeshExt: Error - ")
+			+ "Mesh '" + meshName + "' / "
+			+ "Property '" + std::string(propertyName) + "' - "
+			+ "Shape must be [N,"
+			+ std::to_string(stride)
+			+ "]";
+		throw std::runtime_error(errorMsg);
+	}
+
+	// Allocate & copy
+	if (!src.shape(0)) return luxrays::VertexBuffer();
+
+	auto count = direct_src.nbytes() / sizeof(S);
+	assert(not direct_src.nbytes() % sizeof(S));
+	auto in_span = std::span<const S>(direct_src.data(0, 0), count);
+	luxrays::VertexBuffer buf(in_span);
+
+	return buf;
+}
+
+
 // Variant of DataCopy for optional arguments
 template<
 	typename S,  // Source type
@@ -1483,12 +1523,7 @@ static void Scene_DefineMeshExt3(
 	// TODO Release GIL when possible
 
 	// Points
-	auto [points, numPoints] = dataCopy<
-		float,
-		luxrays::Point,
-		&luxcore::detail::SceneImpl::AllocVerticesBuffer,
-		3
-	> (p, meshName, "Points");
+	auto points = dataCopyBuffer< float, 3 > (p, meshName, "Points");
 
 	// Triangles
 	auto [triangles, numTriangles] = dataCopy<
@@ -1510,15 +1545,14 @@ static void Scene_DefineMeshExt3(
 	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
 	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
 	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
-	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == numPoints);
-	assert(not bool(meshCols) or meshCols->GetLayerSize() == numPoints);
-	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == numPoints);
+	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == points.GetVertCount());
+	assert(not bool(meshCols) or meshCols->GetLayerSize() == points.GetVertCount());
+	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == points.GetVertCount());
 
 	// Create Mesh
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		u_int(numPoints),
 		u_int(numTriangles),
-		points.release(),
+		std::move(points),
 		triangles.release(),
 		normals.release(),
 		meshUVs,

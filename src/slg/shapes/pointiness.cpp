@@ -85,7 +85,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int dest
 	const u_int originalVertCount = srcMesh.GetTotalVertexCount();
 	const u_int triCount = srcMesh.GetTotalTriangleCount();
 
-	const Point *originalVertices = srcMesh.GetVertices();
+	const Points originalVertices = srcMesh.GetVertices();
 
 	// Find duplicate vertices
 	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
@@ -183,7 +183,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int dest
 	if (destAOVIndex == NULL_INDEX) {
 		// Make a copy of the original mesh and overwrite vertex color information
 		mesh = srcMesh.Copy(
-			nullptr,
+			std::nullopt,
 			nullptr,
 			nullptr,
 			std::nullopt,

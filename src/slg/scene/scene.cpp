@@ -32,8 +32,10 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/namedobjectvector.h"
 #include "luxrays/core/randomgen.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
@@ -278,16 +280,17 @@ Scene::DefineMesh(ExtMotionTriangleMeshUPtr&& mesh) {
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
-	const long plyNbVerts,
 	const long plyNbTris,
-	Point *p,
+	VertexBuffer&& p,
 	Triangle *vi,
 	Normal *n,
 	ExtMeshProp<UV>::Layer uvs,
 	ExtMeshProp<Spectrum>::Layer cols,
 	ExtMeshProp<float>::Layer alphas
 ) {
-	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
+	const long plyNbVerts = p.GetVertCount();
+
+	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbTris, std::move(p), vi, n,
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -296,16 +299,15 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
-	const long plyNbVerts,
 	const long plyNbTris,
-	Point *p,
+	VertexBuffer&& p,
 	Triangle *vi,
 	Normal *n,
 	std::span<UV> uvs,
 	std::span<Spectrum> cols,
 	std::span<float> alphas
 ) {
-	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
+	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbTris, std::move(p), vi, n,
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -314,15 +316,16 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	const string &shapeName,
-	const long plyNbVerts,
 	const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n,
+	VertexBuffer&& p,
+	Triangle *vi,
+	Normal *n,
 	std::optional<ExtMeshProp<UV>> uvs,
 	std::optional<ExtMeshProp<Spectrum>> cols,
 	std::optional<ExtMeshProp<float>> alphas
 ) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(
-			plyNbVerts, plyNbTris, p, vi, n,
+			plyNbTris, std::move(p), vi, n,
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);

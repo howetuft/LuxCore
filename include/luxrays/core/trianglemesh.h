@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <deque>
+#include <span>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/usings.h"
@@ -46,6 +47,71 @@ typedef enum {
 } MeshType;
 
 
+// A container for vertices
+class VertexBuffer {
+
+public:
+
+	// Constructors
+	inline VertexBuffer() = default;
+	explicit VertexBuffer(size_t);
+	explicit VertexBuffer(std::span<const Point> points);
+	explicit VertexBuffer(std::span<const float> floats);
+
+	// Move is ok
+	inline VertexBuffer(VertexBuffer&&) = default;
+	inline VertexBuffer& operator=(VertexBuffer&&) = default;
+
+	// No copy allowed
+	VertexBuffer(VertexBuffer&) = delete;
+	VertexBuffer& operator=(VertexBuffer&) = delete;
+
+	// Allocate internal container
+	void Allocate(size_t);
+
+	// Data access
+	Points AsPoints() const;
+	Floats AsFloats() const;
+	Bytes AsBytes() const;
+
+	// Subset
+	Points Subset(std::size_t offset, std::size_t count = std::dynamic_extent) {
+		return AsPoints().subspan(offset, count);
+	}
+
+	// Indexation
+	Point& operator[](size_t index) {
+		return AsPoints()[index];
+	}
+	const Point& operator[](size_t index) const {
+		return AsPoints()[index];
+	}
+
+	// Implicit conversion operator
+	operator std::span<Point>() const {
+		return AsPoints();
+	}
+
+	// Element count
+	size_t GetVertCount() const {
+		return AsPoints().size();
+	}
+
+	// Set (copy 'from' into 'this')
+	void Set(const VertexBuffer& from) {
+		auto from_bytes = from.AsBytes();
+		auto dest_bytes = AsBytes();
+
+		std::copy(from_bytes.begin(), from_bytes.end(), dest_bytes.begin());
+	}
+
+private:
+	std::unique_ptr<std::byte[]> data;
+	size_t byte_size = 0;
+};
+
+
+
 class Mesh {
 public:
 	Mesh() { }
@@ -65,7 +131,7 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const = 0;
 	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 
-	virtual Point *GetVertices() const = 0;
+	virtual std::span<Point> GetVertices() const = 0;
 	virtual Triangle *GetTriangles() const = 0;
 	virtual u_int GetTotalVertexCount() const = 0;
 	virtual u_int GetTotalTriangleCount() const = 0;
@@ -88,12 +154,11 @@ private:
 class TriangleMesh : virtual public Mesh {
 public:
 	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(const u_int meshVertCount,
-		const u_int meshTriCount, Point *meshVertices,
+	TriangleMesh(
+		const u_int meshTriCount, VertexBuffer&& meshVertices,
 		Triangle *meshTris);
 	virtual ~TriangleMesh() { };
 	void Delete() {
-		delete[] vertices;
 		delete[] tris;
 	}
 
@@ -103,9 +168,10 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
 		local2World = appliedTrans;
 	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices[vertIndex]; }
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices.AsPoints()[vertIndex]; }
 
-	virtual Point *GetVertices() const { return vertices; }
+	virtual std::span<Point> GetVertices() const { return vertices.AsPoints(); }
+	virtual std::span<float> GetVerticesAsFloats() const { return vertices.AsFloats(); }
 	virtual Triangle *GetTriangles() const { return tris; }
 	virtual u_int GetTotalVertexCount() const { return vertCount; }
 	virtual u_int GetTotalTriangleCount() const { return triCount; }
@@ -155,7 +221,7 @@ protected:
 
 	u_int vertCount;
 	u_int triCount;
-	Point *vertices;
+	VertexBuffer vertices;
 	Triangle *tris;
 	float area;
 	
@@ -180,7 +246,7 @@ private:
 
 		ar & vertCount;
 		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices[i];
+			ar & vertices.AsPoints()[i];
 
 		ar & triCount;
 		for (u_int i = 0; i < triCount; ++i)
@@ -193,9 +259,10 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
 		ar & vertCount;
-		vertices = new Point[vertCount];
+		//vertices = new Point[vertCount];  TODO
+		vertices.Allocate(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices[i];
+			ar & vertices.AsPoints()[i];
 
 		ar & triCount;
 		tris = new Triangle[triCount];
@@ -224,7 +291,7 @@ public:
 		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
+	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
 	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
@@ -329,7 +396,7 @@ public:
 		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
+	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
 	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }

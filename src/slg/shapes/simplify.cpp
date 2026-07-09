@@ -24,6 +24,7 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
@@ -141,7 +142,7 @@ public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const u_int vertCount = srcMesh.GetTotalVertexCount();
 		const u_int triCount = srcMesh.GetTotalTriangleCount();
-		const Point *verts = srcMesh.GetVertices();
+		const VertexBuffer verts(srcMesh.GetVertices());
 		const Triangle *tris = srcMesh.GetTriangles();
 
 		vertices.resize(vertCount);
@@ -199,7 +200,7 @@ public:
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		VertexBuffer newVertices(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
 
@@ -244,9 +245,8 @@ public:
 		}
 
 		return std::make_unique<ExtTriangleMesh>(
-			vertCount,
 			triCount,
-			newVertices,
+			std::move(newVertices),
 			newTris,
 			newNorms,
 			newUVs,

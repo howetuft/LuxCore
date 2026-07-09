@@ -296,8 +296,12 @@ void CompiledScene::CompileGeometry() {
 			// Compile baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Point *v = baseMesh.get().GetVertices();
-			verts.insert(verts.end(), v, v + baseMesh.get().GetTotalVertexCount());
+			const Points v = baseMesh.get().GetVertices();
+			verts.insert(
+				verts.end(),
+				v.begin(),
+				v.begin() + baseMesh.get().GetTotalVertexCount()
+			);
 
 			//------------------------------------------------------------------
 			// Compile baseMesh triangle indices

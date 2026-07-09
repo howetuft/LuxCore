@@ -27,6 +27,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/strutils.h"
@@ -124,9 +125,8 @@ struct is_virtual_base_of<luxrays::TriangleMesh, luxrays::ExtTriangleMesh>: publ
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshVertCount,
 	const u_int meshTriCount,
-	Point *meshVertices,
+	VertexBuffer&& meshVertices,
 	Triangle *meshTris,
 	Normal *meshNormals,
 	std::shared_ptr<UV[]> mUVs,
@@ -134,7 +134,7 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::shared_ptr<float[]> mAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris),
+	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -149,9 +149,8 @@ ExtTriangleMesh::ExtTriangleMesh(
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshVertCount,
 	const u_int meshTriCount,
-	Point *meshVertices,
+	VertexBuffer&& meshVertices,
 	Triangle *meshTris,
 	Normal *meshNormals,
 	std::optional<std::span<UV>> mUVs,
@@ -159,7 +158,7 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::optional<std::span<float>> mAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris),
+	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -184,9 +183,8 @@ ExtTriangleMesh::ExtTriangleMesh(
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshVertCount,
 	const u_int meshTriCount,
-	Point *meshVertices,
+	VertexBuffer&& meshVertices,
 	Triangle *meshTris,
 	Normal *meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
@@ -194,7 +192,7 @@ ExtTriangleMesh::ExtTriangleMesh(
 	std::optional<ExtMeshProp<float>> meshAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris),
+	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -254,7 +252,6 @@ void ExtTriangleMesh::Preprocess() {
 }
 
 void ExtTriangleMesh::Delete() {
-	delete[] vertices;
 	delete[] tris;
 
 	delete[] normals;
@@ -336,7 +333,7 @@ void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
 }
 
 ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
-	Point *meshVertices,
+	std::optional<VertexBuffer> meshVertices,
 	Triangle *meshTris,
 	Normal *meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
@@ -344,11 +341,22 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	std::optional<ExtMeshProp<float>> meshAlphas,
 	const float bRadius) const
 {
-	Point *vs = meshVertices;
-	if (!vs) {
-		vs = AllocVerticesBuffer(vertCount);
-		std::copy(vertices, vertices + vertCount, vs);
+	VertexBuffer vs;
+	if (meshVertices.has_value()) {
+		vs = std::move(meshVertices.value());
+	} else {
+		vs.Allocate(vertCount);
+		vs.Set(vertices);
 	}
+
+
+
+	//TODO
+	//Point *vs = meshVertices;
+	//if (!vs) {
+		//vs = AllocVerticesBuffer(vertCount);
+		//std::copy(vertices, vertices + vertCount, vs);
+	//}
 
 	Triangle *ts = meshTris;
 	if (!ts) {
@@ -382,8 +390,8 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 		}
 	}
 
-	auto m =  std::make_unique<ExtTriangleMesh>(vertCount, triCount,
-			vs, ts, ns, us, cs, as, bRadius);
+	auto m =  std::make_unique<ExtTriangleMesh>(triCount,
+			std::move(vs), ts, ns, us, cs, as, bRadius);
 
 	m->SetLocal2World(appliedTrans);
 
@@ -394,7 +402,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 }
 
 ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
-	Point *meshVertices,
+	std::optional<VertexBuffer> meshVertices,
 	Triangle *meshTris,
 	Normal *meshNormals,
 	std::optional<std::span<UV>> mUVs,
@@ -415,7 +423,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
 		meshAlphas.SetLayer(0, *mAlphas);
 
 	return CopyExt(
-		meshVertices,
+		std::move(meshVertices),
 		meshTris,
 		meshNormals,
 		mUVs ? std::optional(meshUVs) : std::nullopt,
@@ -441,7 +449,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
 
-	Point *meshVertices = AllocVerticesBuffer(totalVertexCount);
+	VertexBuffer meshVertices(totalVertexCount);
 	Triangle *meshTris = AllocTrianglesBuffer(totalTriangleCount);
 
 	Normal *meshNormals = nullptr;
@@ -560,8 +568,8 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 	}
 
 	auto newMesh = std::make_unique<ExtTriangleMesh>(
-		totalVertexCount, totalTriangleCount,
-		meshVertices, meshTris, meshNormals, meshUVs, meshCols, meshAlphas
+		totalTriangleCount,
+		std::move(meshVertices), meshTris, meshNormals, meshUVs, meshCols, meshAlphas
 	);
 
 	for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {

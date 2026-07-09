@@ -33,10 +33,10 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 	const double startTime = WallClockTime();
 
 	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Point *vertices = srcMesh.GetVertices();
+	const auto vertices = srcMesh.GetVertices();
 	const Triangle *tris = srcMesh.GetTriangles();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(triCount * 3);
+	VertexBuffer newVertices(triCount * 3);
 	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 	auto newVertCols = std::make_shared<Spectrum[]>(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
@@ -59,9 +59,8 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 	}
 
 	mesh = std::make_unique<ExtTriangleMesh>(
-		triCount * 3,
 		triCount,
-		newVertices,
+		std::move(newVertices),
 		newTris,
 		nullptr,  // Normals
 		nullptr,  // UVs

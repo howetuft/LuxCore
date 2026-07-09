@@ -26,6 +26,7 @@
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -957,9 +958,11 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
 	};
 
+	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+
 	GetSlgScene().DefineMesh(
-		meshName, plyNbVerts, plyNbTris,
-		(Point *)p,
+		meshName, plyNbTris,
+		std::move(vbuf),
 		(Triangle *)vi,
 		(Normal *)n,
 		toSpan.template operator()<UV>(uvs),
@@ -1010,14 +1013,21 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	auto slgCols = initProp.template operator()<Spectrum>(cols);
 	auto slgAlphas = initProp.template operator()<float>(alphas);
 
-	GetSlgScene().DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
+	auto toSpan = [plyNbVerts]<typename T>(float * data) {
+		if (!plyNbVerts || !data) return std::span<T>();
+		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
+	};
+
+	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+
+	GetSlgScene().DefineMeshExt(
+			meshName, plyNbTris, std::move(vbuf),
 			(Triangle *)vi, (Normal *)n,
 			slgUVs, slgCols, slgAlphas);
 
 	API_END();
 }
 
-// Old API, deprecated
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
 		const unsigned int index, float * data, size_t dataSize) {
 	SetMeshVertexAOV(meshName, index, std::span<float>(data, dataSize));
@@ -1028,7 +1038,6 @@ void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 	SetMeshTriangleAOV(meshName, index, std::span<float>(data, dataSize));
 }
 
-// New API
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
 		const unsigned int index, std::span<float> data) {
 	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());

@@ -57,9 +57,16 @@ void EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, MeshConstRef me
 	const RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_TRIANGLE);
 
 	// Share with Embree the mesh vertices
-	Point *meshVerts = mesh.GetVertices();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, meshVerts,
-			0, sizeof(Point), mesh.GetTotalVertexCount());
+	auto meshVerts = mesh.GetVertices();
+	rtcSetSharedGeometryBuffer(
+		geom,
+		RTC_BUFFER_TYPE_VERTEX,
+		0,
+		RTC_FORMAT_FLOAT3,
+		meshVerts.data(),
+		0,
+		sizeof(Point),
+		mesh.GetTotalVertexCount());
 
 
 	// Share with Embree the mesh triangles

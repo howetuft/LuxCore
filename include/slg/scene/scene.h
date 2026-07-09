@@ -145,9 +145,8 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMesh(
 		const std::string &shapeName,
-		const long plyNbVerts,
 		const long plyNbTris,
-		luxrays::Point *p,
+		luxrays::VertexBuffer&& p,
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
 		luxrays::ExtMeshProp<luxrays::UV>::Layer uvs,
@@ -157,9 +156,8 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMesh(
 		const std::string &shapeName,
-		const long plyNbVerts,
 		const long plyNbTris,
-		luxrays::Point *p,
+		luxrays::VertexBuffer&& p,
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
 		std::span<luxrays::UV> uvs,
@@ -169,9 +167,8 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMeshExt(
 		const std::string &shapeName,
-		const long plyNbVerts,
 		const long plyNbTris,
-		luxrays::Point *p,
+		luxrays::VertexBuffer&& p,
 		luxrays::Triangle *vi,
 		luxrays::Normal *n,
 		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,

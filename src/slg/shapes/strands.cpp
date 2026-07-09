@@ -394,8 +394,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		SLG_LOG("Strands mesh: " << meshTris.size() << " triangles");
 
 		// Create the mesh
-		Point *newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
-		copy(meshVerts.begin(), meshVerts.end(), newMeshVerts);
+		VertexBuffer newMeshVerts(meshVerts);
 
 		Triangle *newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
 		copy(meshTris.begin(), meshTris.end(), newMeshTris);
@@ -441,9 +440,8 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		}
 
 		mesh = std::make_unique<ExtTriangleMesh>(
-			meshVerts.size(),
 			meshTris.size(),
-			newMeshVerts,
+			std::move(newMeshVerts),
 			newMeshTris,
 			newMeshNorms,
 			newMeshUVs,

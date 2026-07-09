@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/trianglemesh.h"
 #include <unordered_map>
 #include <format>
 
@@ -231,7 +232,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	// Vertices
 	auto vertsBuffer = BuildBuffer<3>(
 		stencilTable,
-		(const float *)srcMesh.GetVertices(),
+		srcMesh.GetVerticesAsFloats().data(),
 		nCoarseVerts,
 		nRefinedVerts
 	);
@@ -317,9 +318,9 @@ nRefinedVerts
 	}
 
 	// New vertices
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(nRefinedVerts);
+	VertexBuffer newVerts(nRefinedVerts);
 	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, &newVerts->x);
+	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, newVerts.AsPoints().begin());
 
 	// New normals
 	Normal *newNorms = nullptr;
@@ -380,8 +381,8 @@ nRefinedVerts
 
 	// Allocate the new mesh
 	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		nRefinedVerts, nRefinedFaces,
-		newVerts, newTris, newNorms,
+		nRefinedFaces,
+		std::move(newVerts), newTris, newNorms,
 		newUVs, newCols, newAlphas
 	);
 
@@ -595,7 +596,7 @@ struct EdgeInfo {
 
 // Calculate face normal for a triangle
 Vector calculateTriangleNormal(const ExtTriangleMesh &mesh, const Triangle &tri) {
-	auto vertices = std::span<Point>(mesh.GetVertices(), mesh.GetTotalVertexCount());
+	auto vertices = mesh.GetVertices();
     const Point &p0 = vertices[tri.v[0]];
     const Point &p1 = vertices[tri.v[1]];
     const Point &p2 = vertices[tri.v[2]];
@@ -630,7 +631,7 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                              float sharpnessThresholdRadians) {
 
 	auto triangles = std::span<Triangle>(mesh.GetTriangles(), mesh.GetTotalTriangleCount());
-	auto vertices = std::span<Point>(mesh.GetVertices(), mesh.GetTotalVertexCount());
+	auto vertices = mesh.GetVertices();
 
     // Clear any existing edge information
     edgeMap.clear();
@@ -1094,8 +1095,8 @@ struct Surface {
 
 
 	template <typename T>
-	InterpolatedValues Interpolate(const T* baseValues, int numBaseValues) const {
-
+	InterpolatedValues Interpolate(std::span<T> baseValues) const {
+		int numBaseValues = baseValues.size();
 		assert(numBaseValues == refiner->GetLevel(0).GetNumVertices());
 
 		// Set dimensions
@@ -1171,7 +1172,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated positions
 	///	and a smart pointer to a buffer containing the evaluated normals
 	///
-	std::tuple<PointArrayPtr, NormalArrayPtr>
+	std::tuple<VertexBuffer, NormalArrayPtr>
 	EvaluatePositions(
 		const InterpolatedValues& interpolatedPositions,
 		const CoordVector& tessCoords
@@ -1180,7 +1181,7 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessPositions = PointArrayPtr(TriangleMesh::AllocVerticesBuffer(numCoords));
+		VertexBuffer tessPositions(numCoords);
 		auto tessNormals = NormalArrayPtr(new Normal[numCoords]);
 
 		const auto& topology = refiner->GetLevel(0);
@@ -1234,7 +1235,7 @@ struct Surface {
 				dv.AddWithWeight(position, dvWeights[cv]);
 			}
 
-			// Update output (position and normal)
+			// Update normal
 			tessNormals[vertex] = Normal(Cross(du, dv));
 
 			// Check validity of normal and normalize if ok
@@ -1408,9 +1409,10 @@ struct MultiLayerDataEvaluator{
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-			DATA_IN* layerData = getLayerData(layer);
-			if (layerData) {
-				auto interpolatedData = surface.Interpolate(layerData, layerSize);
+			auto* layerDataPtr = getLayerData(layer);
+			if (layerDataPtr) {
+				std::span<DATA_IN> layerDataSpan(layerDataPtr, layerSize);
+				auto interpolatedData = surface.Interpolate(layerDataSpan);
 				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
 			}
 		}
@@ -1462,12 +1464,12 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	u_int numMeshVertex = srcMesh.GetTotalVertexCount();
 
 	// Evaluate positions and normals
-	PointArrayPtr tessPoints;
+	VertexBuffer tessPoints;
 	NormalArrayPtr tessNormals;
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
-			surface.Interpolate(srcMesh.GetVertices(), numMeshVertex);
+			surface.Interpolate(srcMesh.GetVertices());
 
 		// Evaluate refined (interpolated) positions
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
@@ -1505,9 +1507,8 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	);
 
 	auto newMesh =  std::make_unique<ExtTriangleMesh>(
-		u_int(numPoints),
 		u_int(numTriangles),
-		tessPoints.release(),
+		std::move(tessPoints),
 		tessTriangles.release(),
 		tessNormals.release(),
 		tessUVs.releaseLayers(),
@@ -1636,7 +1637,7 @@ SubdivShape::SubdivShape(
 
 float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef srcMesh) {
 	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Point *verts = srcMesh.GetVertices();
+	const Points verts = srcMesh.GetVertices();
 	const Triangle *tris = srcMesh.GetTriangles();
 
 	// Note VisualStudio doesn't support:

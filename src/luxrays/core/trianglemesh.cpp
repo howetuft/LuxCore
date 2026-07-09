@@ -28,6 +28,58 @@ using namespace std;
 using namespace luxrays;
 
 //------------------------------------------------------------------------------
+// VertexBuffer
+//------------------------------------------------------------------------------
+
+VertexBuffer::VertexBuffer(size_t size) {
+	Allocate(size);
+}
+
+VertexBuffer::VertexBuffer(std::span<const Point> points) {
+
+	Allocate(points.size());
+	std::copy(points.begin(), points.end(), AsPoints().begin());
+}
+
+void VertexBuffer::Allocate(size_t meshVertCount) {
+
+	// Embree requires a float padding field at the end
+	byte_size = sizeof(Point) * meshVertCount + sizeof(float);
+	data = std::make_unique<std::byte[]>(byte_size);
+
+	// This is a trick so I can check if the buffer has been really allocated
+	// with AllocVerticesBuffer() or not. It is useful for debugging LuxCore
+	// applications.
+	AsFloats().back() = 1234.1234f;
+}
+
+std::span<float> VertexBuffer::AsFloats() const {
+	// Compute size
+	assert(byte_size % sizeof(float) == 0);
+	size_t size = byte_size / sizeof(float);
+
+	// Make span
+	auto * ptr = reinterpret_cast<float*>(data.get());
+	return std::span<float>(ptr, size);
+}
+
+std::span<Point> VertexBuffer::AsPoints() const {
+	static_assert(sizeof(Point) == 3 * sizeof(float), "Point must be exactly 3 floats");
+	// Compute size
+	assert(byte_size % sizeof(Point) == sizeof(float));  // Padded
+	size_t size = byte_size / sizeof(Point);
+
+	// Make span
+	auto * ptr = reinterpret_cast<Point*>(data.get());
+	return std::span<Point>(ptr, size);
+}
+
+std::span<std::byte> VertexBuffer::AsBytes() const {
+	return std::span<std::byte>(data.get(), byte_size);
+}
+
+
+//------------------------------------------------------------------------------
 // TriangleMesh
 //------------------------------------------------------------------------------
 
@@ -39,24 +91,26 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
 
-TriangleMesh::TriangleMesh(const u_int meshVertCount,
-		const u_int meshTriCount, Point *meshVertices,
+TriangleMesh::TriangleMesh(
+		const u_int meshTriCount, VertexBuffer&& meshVertices,
 		Triangle *meshTris) {
+	const u_int meshVertCount = meshVertices.GetVertCount();
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
-	assert (meshVertices != NULL);
 	assert (meshTris != NULL);
 
 	appliedTransSwapsHandedness = false;
 
 	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
-	const float *vertBuff = (float *)meshVertices;
-	if (vertBuff[3 * meshVertCount] != 1234.1234f)
-		throw runtime_error("luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
+	auto vertBuff = meshVertices.AsFloats();
+	if (vertBuff.back() != 1234.1234f) {
+		throw runtime_error(
+			"luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
+	}
 
 	vertCount = meshVertCount;
 	triCount = meshTriCount;
-	vertices = meshVertices;
+	vertices = std::move(meshVertices);
 	tris = meshTris;
 
 	Preprocess();
@@ -113,7 +167,7 @@ TriangleMeshUPtr TriangleMesh::Merge(
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
 
-	Point *v = AllocVerticesBuffer(totalVertexCount);
+	VertexBuffer v(totalVertexCount);
 	Triangle *i = AllocTrianglesBuffer(totalTriangleCount);
 
 	if (preprocessedMeshIDs)
@@ -124,9 +178,12 @@ TriangleMeshUPtr TriangleMesh::Merge(
 	u_int vIndex = 0;
 	u_int iIndex = 0;
 	TriangleMeshID currentID = 0;
-	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (auto m = meshes.cbegin(); m != meshes.cend(); ++m) {
 		// Copy the mesh vertices
-		memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
+		//memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
+		auto dest = v.Subset(vIndex);
+		auto orig = (*m)->GetVertices();
+		std::copy(orig.begin(), orig.end(), dest.begin());
 
 		const Triangle *tris = (*m)->GetTriangles();
 
@@ -151,7 +208,7 @@ TriangleMeshUPtr TriangleMesh::Merge(
 		}
 	}
 
-	return std::make_unique<TriangleMesh>(totalVertexCount, totalTriangleCount, v, i);
+	return std::make_unique<TriangleMesh>(totalTriangleCount, std::move(v), i);
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(

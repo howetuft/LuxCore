@@ -23,6 +23,7 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
 
@@ -272,7 +273,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	Point *p;
+	VertexBuffer p;
 	const long plyNbVerts = ply_set_read_cb(plyfile, "vertex", "x", VertexCB, &p, 0);
 	ply_set_read_cb(plyfile, "vertex", "y", VertexCB, &p, 1);
 	ply_set_read_cb(plyfile, "vertex", "z", VertexCB, &p, 2);
@@ -282,7 +283,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	vector<Triangle> vi;
+	std::vector<Triangle> vi;
 	const long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
 	if (plyNbFaces <= 0) {
 		stringstream ss;
@@ -371,7 +372,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	}
 
 	// Allocate buffers
-	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
+	p.Allocate(plyNbVerts);
 	if (plyNbNormals == 0)
 		n = nullptr;
 	else
@@ -398,7 +399,6 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		stringstream ss;
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
-		delete[] p;
 		delete[] n;
 
 		throw runtime_error(ss.str());
@@ -410,7 +410,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
 	copy(vi.begin(), vi.end(), tris);
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, vi.size(), p, tris, n, uvs, cols, alphas);
+	auto mesh = std::make_unique<ExtTriangleMesh>(vi.size(), std::move(p), tris, n, uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		//mesh->SetVertexAOV(i, vertexAOVs[i], plyNbVerts);  TODO
 		mesh->SetTriAOV(i, TriAOVs[i], vi.size());
@@ -511,12 +511,12 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		throw runtime_error("Unable to write PLY header to: " + fileName);
 
 	// Write all vertex data
-	for (u_int i = 0; i < vertCount; ++i) {
-		plyFile.write((char *)&vertices[i], sizeof(Point));
+	for (size_t i = 0; i < vertCount; ++i) {
+		plyFile.write((char *)&vertices.AsPoints()[i], sizeof(Point));
 		if (HasNormals())
 			plyFile.write((char *)&normals[i], sizeof(Normal));
 
-		for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+		for (size_t j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
 			if (HasUVs(j))
 				plyFile.write((char *)&uvs[j][i], sizeof(UV));
 			if (HasColors(j))

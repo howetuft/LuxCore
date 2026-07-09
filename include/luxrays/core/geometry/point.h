@@ -166,6 +166,10 @@ private:
 	}
 };
 
+using Points = std::span<Point>;
+using Floats = std::span<float>;
+using Bytes = std::span<std::byte>;
+
 inline Vector::Vector(const Point &p)
 	: x(p.x), y(p.y), z(p.z) {
 }

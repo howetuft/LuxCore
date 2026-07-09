@@ -52,6 +52,8 @@ namespace ocl {
 class Ray;
 class RayHit;
 
+// ExtMeshProp: a container for a property of Extended Mesh (uv, colors, alphas...)
+//
 // We use shared pointer, as it allows shallow copy (can be useful for such
 // large data sets)
 // All methods run on a per layer basis, except those suffixed by 'All', which
@@ -276,9 +278,8 @@ private:
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(
-		const u_int meshVertCount,
 		const u_int meshTriCount,
-		Point *meshVertices,
+		VertexBuffer&& meshVertices,
 		Triangle *meshTris,
 		Normal *meshNormals = nullptr,
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
@@ -287,9 +288,8 @@ public:
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshVertCount,
 		const u_int meshTriCount,
-		Point *meshVertices,
+		VertexBuffer&& meshVertices,
 		Triangle *meshTris,
 		Normal *meshNormals,
 		std::optional<std::span<UV>> meshUVs,
@@ -298,9 +298,8 @@ public:
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshVertCount,
 		const u_int meshTriCount,
-		Point *meshVertices,
+		VertexBuffer&& meshVertices,
 		Triangle *meshTris,
 		Normal *meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
@@ -482,7 +481,7 @@ public:
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
 
 	ExtTriangleMeshUPtr CopyExt(
-		Point *meshVertices,
+		std::optional<VertexBuffer> meshVertices,
 		Triangle *meshTris,
 		Normal *meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
@@ -492,7 +491,7 @@ public:
 	) const;
 
 	ExtTriangleMeshUPtr Copy(
-		Point *meshVertices,
+		std::optional<VertexBuffer> meshVertices,
 		Triangle *meshTris,
 		Normal *meshNormals,
 		std::optional<std::span<UV>> mUVs,
@@ -503,7 +502,7 @@ public:
 
 	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
 		return CopyExt(
-			nullptr, nullptr, nullptr, std::nullopt, std::nullopt, std::nullopt, bRadius
+			std::nullopt, nullptr, nullptr, std::nullopt, std::nullopt, std::nullopt, bRadius
 		);
 	}
 
