@@ -41,7 +41,7 @@ static void CreateBox(
 	const bool enableUV,
 	const BBox &bbox
 ) {
-	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
+	VertexBuffer p = Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -96,7 +96,7 @@ static void CreateBox(
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene.DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
+		scene.DefineMesh(meshName, 24, 12, p.GetSubObjects().data(), (unsigned int *)vi, NULL, NULL, NULL, NULL);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -131,7 +131,7 @@ static void CreateBox(
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene.DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
+		scene.DefineMesh(meshName, 24, 12, p.GetSubObjects().data(), (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
 	}
 
 	// Add the object to the scene

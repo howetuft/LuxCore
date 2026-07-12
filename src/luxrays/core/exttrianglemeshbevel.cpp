@@ -334,7 +334,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 					if (AbsDot(tri0Normal, tri1Normal) < 1.f -  DEFAULT_EPSILON_STATIC) {
 						// It is a candidate. Check if it is a convex edge.
-						auto points = vertices.AsPoints();
+						auto points = vertices.GetObjects();
 
 						// Pick the vertex, not part of the edge, of the first triangle
 						const Point &tri0Vertex = points[tris[e0.tri].v[(e0.edge + 2) % 3]];

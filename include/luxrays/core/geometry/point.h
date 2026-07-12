@@ -23,6 +23,7 @@
 
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/buffer.h"
 
 namespace luxrays {
 
@@ -190,6 +191,8 @@ inline float Distance(const Point &p1, const Point &p2) {
 inline float DistanceSquared(const Point &p1, const Point &p2) {
 	return (p1 - p2).LengthSquared();
 }
+
+
 
 }
 

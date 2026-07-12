@@ -320,7 +320,7 @@ nRefinedVerts
 	// New vertices
 	VertexBuffer newVerts(nRefinedVerts);
 	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, newVerts.AsPoints().begin());
+	newVerts.Set(std::span<const float>(refinedVerts, size_t(3 * nRefinedVerts)));
 
 	// New normals
 	Normal *newNorms = nullptr;

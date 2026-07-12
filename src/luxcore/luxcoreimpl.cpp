@@ -1484,12 +1484,12 @@ void SceneImpl::Save(const std::string &fileName) {
 	API_END();
 }
 
-Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
+VertexBuffer SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-auto result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+	VertexBuffer result(meshVertCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 
 	return result;
 }

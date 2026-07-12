@@ -467,12 +467,12 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 	API_END();
 }
 
-float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
+VertexBuffer Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-	float *result = (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
+	VertexBuffer result = luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 
 	return result;
 }

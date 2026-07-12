@@ -19,6 +19,7 @@
 #ifndef _LUXCOREIMPL_H
 #define	_LUXCOREIMPL_H
 
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/serializationutils.h"
 #include <format>
 
@@ -437,7 +438,7 @@ public:
 	// Note: this method is not part of LuxCore API and it is used only internally
 	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh);
 
-	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
+	static luxrays::VertexBuffer AllocVerticesBuffer(const unsigned int meshVertCount);
 	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 

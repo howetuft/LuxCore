@@ -512,7 +512,7 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 
 	// Write all vertex data
 	for (size_t i = 0; i < vertCount; ++i) {
-		plyFile.write((char *)&vertices.AsPoints()[i], sizeof(Point));
+		plyFile.write((char *)&vertices[i], sizeof(Point));
 		if (HasNormals())
 			plyFile.write((char *)&normals[i], sizeof(Normal));
 

@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <deque>
 #include <span>
+#include <string>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/usings.h"
@@ -30,6 +31,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/buffer.h"
 
 namespace luxrays {
 
@@ -45,71 +47,6 @@ typedef enum {
 	TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE, TYPE_TRIANGLE_MOTION,
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
 } MeshType;
-
-
-// A container for vertices
-class VertexBuffer {
-
-public:
-
-	// Constructors
-	inline VertexBuffer() = default;
-	explicit VertexBuffer(size_t);
-	explicit VertexBuffer(std::span<const Point> points);
-	explicit VertexBuffer(std::span<const float> floats);
-
-	// Move is ok
-	inline VertexBuffer(VertexBuffer&&) = default;
-	inline VertexBuffer& operator=(VertexBuffer&&) = default;
-
-	// No copy allowed
-	VertexBuffer(VertexBuffer&) = delete;
-	VertexBuffer& operator=(VertexBuffer&) = delete;
-
-	// Allocate internal container
-	void Allocate(size_t);
-
-	// Data access
-	Points AsPoints() const;
-	Floats AsFloats() const;
-	Bytes AsBytes() const;
-
-	// Subset
-	Points Subset(std::size_t offset, std::size_t count = std::dynamic_extent) {
-		return AsPoints().subspan(offset, count);
-	}
-
-	// Indexation
-	Point& operator[](size_t index) {
-		return AsPoints()[index];
-	}
-	const Point& operator[](size_t index) const {
-		return AsPoints()[index];
-	}
-
-	// Implicit conversion operator
-	operator std::span<Point>() const {
-		return AsPoints();
-	}
-
-	// Element count
-	size_t GetVertCount() const {
-		return AsPoints().size();
-	}
-
-	// Set (copy 'from' into 'this')
-	void Set(const VertexBuffer& from) {
-		auto from_bytes = from.AsBytes();
-		auto dest_bytes = AsBytes();
-
-		std::copy(from_bytes.begin(), from_bytes.end(), dest_bytes.begin());
-	}
-
-private:
-	std::unique_ptr<std::byte[]> data;
-	size_t byte_size = 0;
-};
-
 
 
 class Mesh {
@@ -168,10 +105,10 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
 		local2World = appliedTrans;
 	}
-	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices.AsPoints()[vertIndex]; }
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices[vertIndex]; }
 
-	virtual std::span<Point> GetVertices() const { return vertices.AsPoints(); }
-	virtual std::span<float> GetVerticesAsFloats() const { return vertices.AsFloats(); }
+	virtual std::span<Point> GetVertices() const { return vertices.GetObjects(); }
+	virtual std::span<float> GetVerticesAsFloats() const { return vertices.GetSubObjects(); }
 	virtual Triangle *GetTriangles() const { return tris; }
 	virtual u_int GetTotalVertexCount() const { return vertCount; }
 	virtual u_int GetTotalTriangleCount() const { return triCount; }
@@ -196,17 +133,6 @@ public:
 			bool (*CompareVertices)(const TriangleMesh &mesh,
 				const u_int vertIndex1, const u_int vertIndex2)) const;
 
-	static Point *AllocVerticesBuffer(const u_int meshVertCount) {
-		// Embree requires a float padding field at the end
-		float *buffer = new float[3 * meshVertCount + 1];
-
-		// This is a trick so I can check if the buffer has been really allocated
-		// with AllocVerticesBuffer() or not. It is useful for debugging LuxCore
-		// applications.
-		buffer[3 * meshVertCount] = 1234.1234f;
-		
-		return (Point *)buffer;
-	}
 	static Triangle *AllocTrianglesBuffer(const u_int meshTriCount) {
 		return new Triangle[meshTriCount];
 	}
@@ -246,7 +172,7 @@ private:
 
 		ar & vertCount;
 		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices.AsPoints()[i];
+			ar & vertices[i];
 
 		ar & triCount;
 		for (u_int i = 0; i < triCount; ++i)
@@ -262,7 +188,7 @@ private:
 		//vertices = new Point[vertCount];  TODO
 		vertices.Allocate(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
-			ar & vertices.AsPoints()[i];
+			ar & vertices[i];
 
 		ar & triCount;
 		tris = new Triangle[triCount];

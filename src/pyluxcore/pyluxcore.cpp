@@ -1545,9 +1545,9 @@ static void Scene_DefineMeshExt3(
 	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
 	auto meshCols = propCopy<luxrays::Spectrum, 3>(color_layers, "colors", meshName);
 	auto meshAlphas = propCopy<float, 1>(alpha_layers, "alphas", meshName);
-	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == points.GetVertCount());
-	assert(not bool(meshCols) or meshCols->GetLayerSize() == points.GetVertCount());
-	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == points.GetVertCount());
+	assert(not bool(meshUVs) or meshUVs->GetLayerSize() == points.Count());
+	assert(not bool(meshCols) or meshCols->GetLayerSize() == points.Count());
+	assert(not bool(meshAlphas) or meshAlphas->GetLayerSize() == points.Count());
 
 	// Create Mesh
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(

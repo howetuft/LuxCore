@@ -1,0 +1,116 @@
+/***************************************************************************
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
+ *                                                                         *
+ *   This file is part of LuxCoreRender.                                   *
+ *                                                                         *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
+ *                                                                         *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *                                                                         *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
+ ***************************************************************************/
+
+#pragma once
+
+
+#include <array>
+#include <span>
+#include <memory>
+
+namespace luxrays {
+
+// A container for mesh components: points, normals etc.
+// Can be end-padded, for the sake of embree or integrity check
+//
+// To spare compile time, the template is delibaretely intended not to
+// be implicitely instantiable.
+// Definition and instantiations are in cpp file
+template< typename TYPE, typename SUBTYPE, std::array PAD >
+class Buffer {
+
+public:
+
+	// Constructors
+	inline Buffer() = default;
+	explicit Buffer(std::size_t);
+	explicit Buffer(std::span<const TYPE>);
+	explicit Buffer(std::span<const SUBTYPE>);
+
+	// Move is ok
+	inline Buffer(Buffer&&) = default;
+	inline Buffer& operator=(Buffer&&) = default;
+
+	// No copy allowed
+	Buffer(Buffer&) = delete;
+	Buffer& operator=(Buffer&) = delete;
+
+	// Allocate internal container for count objects of type TYPE
+	void Allocate(std::size_t count);
+
+	// Getters
+	std::span<TYPE> GetObjects() const;
+	std::span<SUBTYPE> GetSubObjects() const;
+	std::span<std::byte> GetBytes(bool withPad=false) const;
+
+	// Get pad value
+	// Pad is directly read in buffer, so as it allows to check integrity
+	std::span<const std::byte> GetPad() const;
+
+	// Setters
+	void Set(const Buffer<TYPE, SUBTYPE, PAD>& from);
+	void Set(std::span<const SUBTYPE> from);
+
+	// Subset
+	std::span<TYPE> Subset(std::size_t offset, std::size_t count = std::dynamic_extent);
+
+	// Indexation
+	TYPE& operator[](size_t index);
+	const TYPE& operator[](size_t index) const;
+
+	// Implicit conversion operator
+	operator std::span<TYPE>() const;
+
+	// Element count
+	size_t Count() const;
+
+
+private:
+	// Underlying storage
+	std::unique_ptr<std::byte[]> data;
+	static constexpr std::array pad{PAD};
+
+	// Sizes
+	size_t totalSize = 0;
+	size_t effectiveSize = 0;
+	static constexpr size_t padSize = std::size(PAD);
+
+	// Spans
+	std::span<TYPE> asType;
+	std::span<SUBTYPE> asSubType;
+
+};
+
+
+// To compute padding for Buffer
+template <typename T>
+constexpr std::array<std::byte, sizeof(T)> to_bytes(const T& value) {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "to_bytes requires a trivially copyable type");
+    return std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+}
+inline constexpr auto VERTEXPAD = to_bytes(1234.1234f);
+
+// Container for point
+class Point;
+using VertexBuffer = Buffer<Point, float, VERTEXPAD>;
+
+
+}  // Namespace luxrays
+
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4

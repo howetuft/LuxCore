@@ -288,7 +288,7 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	ExtMeshProp<Spectrum>::Layer cols,
 	ExtMeshProp<float>::Layer alphas
 ) {
-	const long plyNbVerts = p.GetVertCount();
+	const long plyNbVerts = p.Count();
 
 	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbTris, std::move(p), vi, n,
 			uvs, cols, alphas);

@@ -60,6 +60,8 @@
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>
 #include <luxrays/utils/properties.h>
+#include <luxrays/utils/buffer.h>
+#include <luxrays/core/geometry/point.h>
 #include <luxrays/utils/cyhair/cyHairFile.h>
 
 /*! \mainpage LuxCore
@@ -74,6 +76,8 @@
  *
  * \brief The LuxCore classes are defined within this namespace.
  */
+
+
 namespace luxcore {
 
 class Scene;
@@ -100,6 +104,7 @@ using FilmUPtr = std::unique_ptr<Film>;
 using FilmConstUPtr = std::unique_ptr<const Film>;
 using FilmRef = Film &;
 using FilmConstRef = const Film &;
+
 
 #define LC_MESH_MAX_DATA_COUNT 8
 
@@ -1238,7 +1243,7 @@ public:
 	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
-	static float *AllocVerticesBuffer(const unsigned int meshVertCount);
+	static luxrays::VertexBuffer AllocVerticesBuffer(const unsigned int meshVertCount);
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
