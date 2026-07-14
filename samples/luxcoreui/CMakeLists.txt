@@ -62,6 +62,7 @@ target_link_libraries(luxcoreui PRIVATE
   imguifiledialog::imguifiledialog
   glfw
 )
+
 set_target_properties(luxcoreui PROPERTIES
   INSTALL_RPATH "\$ORIGIN/../lib"
 )

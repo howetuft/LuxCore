@@ -39,6 +39,12 @@ target_link_libraries(pyluxcore PRIVATE
     openimageio::openimageio
     embree::embree
 )
+if(LINUX)
+  target_link_options(pyluxcore PRIVATE
+    "LINKER:--disable-new-dtags"
+    "LINKER:-Bsymbolic"
+  )
+endif()
 
 if(APPLE)
   target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP)

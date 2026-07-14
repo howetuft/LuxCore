@@ -77,6 +77,12 @@ include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 add_library(luxcore SHARED ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 
+if(LINUX)
+  target_link_options(luxcore PRIVATE
+    "LINKER:--disable-new-dtags"
+    "LINKER:-Bsymbolic"
+  )
+endif()
 target_link_libraries(luxcore PRIVATE
     slg-core
     slg-film
