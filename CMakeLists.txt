@@ -163,6 +163,11 @@ include(GNUInstallDirs)
 # Set path to modules (keep it after project declaration)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/build-system/cmake")
 
+# Visibility
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
+
+
 ################################################################################
 #
 # Include necessary dependencies
