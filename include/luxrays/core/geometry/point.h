@@ -19,8 +19,6 @@
 #ifndef _LUXRAYS_POINT_H
 #define _LUXRAYS_POINT_H
 
-#include <iostream>
-
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/utils/serializationutils.h"
 

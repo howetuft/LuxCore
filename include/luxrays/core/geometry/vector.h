@@ -20,7 +20,6 @@
 #define _LUXRAYS_VECTOR_H
 
 #include <cmath>
-#include <iostream>
 #include <functional>
 #include <limits>
 #include <algorithm>

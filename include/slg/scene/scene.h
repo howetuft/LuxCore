@@ -20,7 +20,6 @@
 #define	_SLG_SCENE_H
 
 #include <string>
-#include <iostream>
 #include <fstream>
 
 #include "luxrays/core/exttrianglemesh.h"
