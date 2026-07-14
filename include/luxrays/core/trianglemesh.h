@@ -69,9 +69,9 @@ public:
 	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 
 	virtual std::span<Point> GetVertices() const = 0;
-	virtual Triangle *GetTriangles() const = 0;
-	virtual u_int GetTotalVertexCount() const = 0;
-	virtual u_int GetTotalTriangleCount() const = 0;
+	virtual std::span<Triangle> GetTriangles() const = 0;
+	virtual size_t GetTotalVertexCount() const = 0;
+	virtual size_t GetTotalTriangleCount() const = 0;
 
 	// This can be a very expansive function to run
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const = 0;
@@ -90,14 +90,8 @@ private:
 
 class TriangleMesh : virtual public Mesh {
 public:
-	// NOTE: deleting meshVertices and meshIndices is up to the application
-	TriangleMesh(
-		const u_int meshTriCount, VertexBuffer&& meshVertices,
-		Triangle *meshTris);
+	TriangleMesh(VertexBuffer&& meshVertices, TriangleBuffer&& meshTris);
 	virtual ~TriangleMesh() { };
-	void Delete() {
-		delete[] tris;
-	}
 
 	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
 
@@ -109,9 +103,10 @@ public:
 
 	virtual std::span<Point> GetVertices() const { return vertices.GetObjects(); }
 	virtual std::span<float> GetVerticesAsFloats() const { return vertices.GetSubObjects(); }
-	virtual Triangle *GetTriangles() const { return tris; }
-	virtual u_int GetTotalVertexCount() const { return vertCount; }
-	virtual u_int GetTotalTriangleCount() const { return triCount; }
+	virtual std::span<Triangle> GetTriangles() const { return tris; }
+	virtual std::span<Triangle::subtype_t> GetTrianglesAsInts() const { return tris.GetSubObjects(); }
+	virtual size_t GetTotalVertexCount() const { return vertices.Count(); }
+	virtual size_t GetTotalTriangleCount() const { return tris.Count(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		return area;
@@ -133,10 +128,6 @@ public:
 			bool (*CompareVertices)(const TriangleMesh &mesh,
 				const u_int vertIndex1, const u_int vertIndex2)) const;
 
-	static Triangle *AllocTrianglesBuffer(const u_int meshTriCount) {
-		return new Triangle[meshTriCount];
-	}
-
 	static TriangleMeshUPtr Merge(
 		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
@@ -145,12 +136,10 @@ public:
 protected:
 	void Preprocess();
 
-	u_int vertCount;
-	u_int triCount;
 	VertexBuffer vertices;
-	Triangle *tris;
+	TriangleBuffer tris;
 	float area;
-	
+
 	// The transformation that was applied to the vertices
 	// (needed e.g. for LocalMapping3D evaluation)
 	Transform appliedTrans;
@@ -170,6 +159,9 @@ private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
+		auto vertCount = vertices.Count();
+		auto triCount = vertices.Count();
+
 		ar & vertCount;
 		for (u_int i = 0; i < vertCount; ++i)
 			ar & vertices[i];
@@ -184,14 +176,16 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
+
 		ar & vertCount;
-		//vertices = new Point[vertCount];  TODO
 		vertices.Allocate(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			ar & vertices[i];
 
 		ar & triCount;
-		tris = new Triangle[triCount];
+		tris.Allocate(triCount);
 		for (u_int i = 0; i < triCount; ++i)
 			ar & tris[i];
 
@@ -218,9 +212,9 @@ public:
 	}
 
 	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
-	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+	virtual std::span<Triangle> GetTriangles() const { return mesh->GetTriangles(); }
+	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
+	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {
@@ -323,9 +317,9 @@ public:
 	}
 
 	virtual std::span<Point> GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
-	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+	virtual std::span<Triangle> GetTriangles() const { return mesh->GetTriangles(); }
+	virtual size_t GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
+	virtual size_t GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
 	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
 		if (cachedArea < 0.f) {

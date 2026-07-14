@@ -879,10 +879,8 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	const u_int numTriangles = srcMesh.GetTotalTriangleCount();
 	SDL_LOG("Number of triangles " << numTriangles);
 	auto oldTriangles = srcMesh.GetTriangles();
-	auto newTriangles = std::unique_ptr<luxrays::Triangle>(
-		luxrays::ExtTriangleMesh::AllocTrianglesBuffer(numTriangles)
-	);
-	auto newTrianglesPtr = newTriangles.get();
+	luxrays::TriangleBuffer newTriangles(numTriangles);
+	//auto newTrianglesPtr = newTriangles.get();
 	tbb::parallel_for(
 		tbb::blocked_range<u_int>(0, numTriangles),
 		[&](const tbb::blocked_range<u_int>& r) {
@@ -893,7 +891,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 					pointMap[oldTriangle.v[1]],
 					pointMap[oldTriangle.v[2]]
 				);
-				newTrianglesPtr[i] = newTriangle;
+				newTriangles[i] = newTriangle;
 			}
 		}
 	);
@@ -926,9 +924,8 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 
 	// Create new mesh
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		numTriangles,
 		std::move(newPoints),
-		newTriangles.release(),
+		std::move(newTriangles),
 		importNormals ? newNormals.release() : nullptr,
 		newUVs,
 		newColors,

@@ -98,8 +98,8 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	u_int meshIndex = 0;
 	u_int bvListIndex = 0;
 	for(auto& mesh: meshes) {
-		const Triangle *p = mesh->GetTriangles();
-		const u_int triangleCount = mesh->GetTotalTriangleCount();
+		const auto p = mesh->GetTriangles();
+		const auto triangleCount = mesh->GetTotalTriangleCount();
 
 		#pragma omp parallel for
 		for (

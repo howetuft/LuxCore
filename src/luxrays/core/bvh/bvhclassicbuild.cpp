@@ -195,11 +195,11 @@ u_int BuildBVHArray(const deque<const Mesh *> *meshes, BVHTreeNode *node,
 			// It is a leaf
 			if (meshes) {
 				// It is a BVH of triangles
-				const Triangle *triangles = (*meshes)[node->triangleLeaf.meshIndex]->GetTriangles();
-				const Triangle *triangle = &triangles[node->triangleLeaf.triangleIndex];
-				arrayNode->triangleLeaf.v[0] = triangle->v[0];
-				arrayNode->triangleLeaf.v[1] = triangle->v[1];
-				arrayNode->triangleLeaf.v[2] = triangle->v[2];
+				auto triangles = (*meshes)[node->triangleLeaf.meshIndex]->GetTriangles();
+				const Triangle& triangle = triangles[node->triangleLeaf.triangleIndex];
+				arrayNode->triangleLeaf.v[0] = triangle.v[0];
+				arrayNode->triangleLeaf.v[1] = triangle.v[1];
+				arrayNode->triangleLeaf.v[2] = triangle.v[2];
 				arrayNode->triangleLeaf.meshIndex = node->triangleLeaf.meshIndex;
 				arrayNode->triangleLeaf.triangleIndex = node->triangleLeaf.triangleIndex;
 			} else {

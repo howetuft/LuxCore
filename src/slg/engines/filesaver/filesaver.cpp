@@ -264,10 +264,12 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		//----------------------------------------------------------------------
 		// Add triangle indices buffer
 
-		const auto tris = std::span(
-			triMesh.GetTriangles(),
-			triMesh.GetTotalTriangleCount()
-		);
+		// TODO
+		//const auto tris = std::span(
+			//triMesh.GetTriangles(),
+			//triMesh.GetTotalTriangleCount()
+		//);
+		const auto tris = triMesh.GetTriangles();
 		const auto bytes = std::as_bytes(tris);
 		const string encodedTriangles = Base64Encode(bytes);
 

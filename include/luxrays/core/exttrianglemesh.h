@@ -278,9 +278,8 @@ private:
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(
-		const u_int meshTriCount,
 		VertexBuffer&& meshVertices,
-		Triangle *meshTris,
+		TriangleBuffer&& meshTris,
 		Normal *meshNormals = nullptr,
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
 		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
@@ -288,9 +287,8 @@ public:
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshTriCount,
 		VertexBuffer&& meshVertices,
-		Triangle *meshTris,
+		TriangleBuffer&& meshTris,
 		Normal *meshNormals,
 		std::optional<std::span<UV>> meshUVs,
 		std::optional<std::span<Spectrum>> meshCols,
@@ -298,9 +296,8 @@ public:
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshTriCount,
 		VertexBuffer&& meshVertices,
-		Triangle *meshTris,
+		TriangleBuffer&& meshTris,
 		Normal *meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
@@ -482,7 +479,7 @@ public:
 
 	ExtTriangleMeshUPtr CopyExt(
 		std::optional<VertexBuffer> meshVertices,
-		Triangle *meshTris,
+		std::optional<TriangleBuffer> meshTris,
 		Normal *meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
@@ -492,7 +489,7 @@ public:
 
 	ExtTriangleMeshUPtr Copy(
 		std::optional<VertexBuffer> meshVertices,
-		Triangle *meshTris,
+		std::optional<TriangleBuffer> meshTris,
 		Normal *meshNormals,
 		std::optional<std::span<UV>> mUVs,
 		std::optional<std::span<Spectrum>> mCols,
@@ -502,7 +499,13 @@ public:
 
 	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
 		return CopyExt(
-			std::nullopt, nullptr, nullptr, std::nullopt, std::nullopt, std::nullopt, bRadius
+			std::nullopt,
+			std::nullopt,
+			nullptr,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			bRadius
 		);
 	}
 
@@ -583,6 +586,8 @@ public:
 
 		const bool hasNormals = HasNormals();
 		ar & hasNormals;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		if (HasNormals())
 			for (u_int i = 0; i < vertCount; ++i)
 				ar & normals[i];
@@ -602,6 +607,8 @@ public:
 
 		bool hasNormals;
 		ar & hasNormals;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		if (hasNormals) {
 			normals = new Normal[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)

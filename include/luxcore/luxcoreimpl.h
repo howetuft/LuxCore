@@ -439,7 +439,7 @@ public:
 	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh);
 
 	static luxrays::VertexBuffer AllocVerticesBuffer(const unsigned int meshVertCount);
-	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static luxrays::TriangleBuffer AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 
 	//friend class CameraImpl;

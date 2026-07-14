@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/triangle.h"
 #include "luxrays/utils/buffer.h"
 
 #include <span>
@@ -150,18 +151,21 @@ Buffer<TYPE, SUBTYPE, PAD>::operator std::span<TYPE>() const {
         return asType;
 }
 
-
-
 // Element count
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 size_t Buffer<TYPE, SUBTYPE, PAD>::Count() const {
 	return asType.size();
 }
 
-
+// Underlying structure
+template< typename TYPE, typename SUBTYPE, std::array PAD >
+void * Buffer<TYPE, SUBTYPE, PAD>::Data() const {
+	return data.get();
+}
 
 
 // Instanciations
 template class luxrays::Buffer<luxrays::Point, float, VERTEXPAD>;
+template class luxrays::Buffer<luxrays::Triangle, Triangle::subtype_t, NOPAD>;
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

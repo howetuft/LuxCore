@@ -941,10 +941,17 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 	API_END();
 }
 
+// TODO stop passing pointers (and copying their contents...)
 void SceneImpl::DefineMesh(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		float *uvs, float *cols, float *alphas) {
+	const long plyNbVerts,
+	const long plyNbTris,
+	float *p,
+	Triangle::subtype_t *vi,
+	float *n,
+	float *uvs,
+	float *cols,
+	float *alphas
+) {
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
 			plyNbVerts, plyNbTris,
 			(void *)p, (void *)vi, (void *)n,
@@ -953,17 +960,23 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
-	auto toSpan = [plyNbVerts]<typename T>(float * data) {
-		if (!plyNbVerts || !data) return std::span<T>();
-		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
+	auto toSpan = [plyNbVerts]<typename T, typename S>(
+		S * data,
+		std::optional<size_t> opt_n = std::nullopt
+	) {
+		size_t n = opt_n.has_value() ? opt_n.value() : plyNbVerts;
+		if (!n || !data) return std::span<T>();
+		return std::span<T>(reinterpret_cast<T*>(data), n);
 	};
 
 	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
+
 
 	GetSlgScene().DefineMesh(
-		meshName, plyNbTris,
+		meshName,
 		std::move(vbuf),
-		(Triangle *)vi,
+		std::move(tbuf),
 		(Normal *)n,
 		toSpan.template operator()<UV>(uvs),
 		toSpan.template operator()<Spectrum>(cols),
@@ -975,7 +988,7 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 
 void SceneImpl::DefineMeshExt(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
+		float *p, Triangle::subtype_t *vi, float *n,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
@@ -1013,16 +1026,21 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	auto slgCols = initProp.template operator()<Spectrum>(cols);
 	auto slgAlphas = initProp.template operator()<float>(alphas);
 
-	auto toSpan = [plyNbVerts]<typename T>(float * data) {
-		if (!plyNbVerts || !data) return std::span<T>();
-		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
+	auto toSpan = [plyNbVerts]<typename T, typename S>(
+		S * data,
+		std::optional<size_t> opt_n = std::nullopt
+	) {
+		size_t n = opt_n.has_value() ? opt_n.value() : plyNbVerts;
+		if (!n || !data) return std::span<T>();
+		return std::span<T>(reinterpret_cast<T*>(data), n);
 	};
 
 	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
 
 	GetSlgScene().DefineMeshExt(
-			meshName, plyNbTris, std::move(vbuf),
-			(Triangle *)vi, (Normal *)n,
+			meshName, std::move(vbuf),
+			std::move(tbuf), (Normal *)n,
 			slgUVs, slgCols, slgAlphas);
 
 	API_END();
@@ -1494,12 +1512,12 @@ VertexBuffer SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	return result;
 }
 
-Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+TriangleBuffer SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+	TriangleBuffer result(meshTriCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 	
 	return result;
 }

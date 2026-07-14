@@ -1247,7 +1247,7 @@ public:
 	/*!
 	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
-	static unsigned int *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static luxrays::TriangleBuffer AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 protected:
 	Scene() = default;

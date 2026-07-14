@@ -39,13 +39,11 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Mesh)
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
 
-TriangleMesh::TriangleMesh(
-		const u_int meshTriCount, VertexBuffer&& meshVertices,
-		Triangle *meshTris) {
-	const u_int meshVertCount = meshVertices.Count();
+TriangleMesh::TriangleMesh(VertexBuffer&& meshVertices, TriangleBuffer&& meshTris) {
+	const auto meshVertCount = meshVertices.Count();
+	const auto meshTriCount = meshTris.Count();
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
-	assert (meshTris != NULL);
 
 	appliedTransSwapsHandedness = false;
 
@@ -57,10 +55,8 @@ TriangleMesh::TriangleMesh(
 		throw runtime_error(msg);
 	}
 
-	vertCount = meshVertCount;
-	triCount = meshTriCount;
 	vertices = std::move(meshVertices);
-	tris = meshTris;
+	tris = std::move(meshTris);
 
 	Preprocess();
 }
@@ -70,7 +66,7 @@ void TriangleMesh::Preprocess() {
 	float local_area = 0.f;
 
 	#pragma omp parallel for reduction(+:local_area)
-	for (int i = 0; i < static_cast<int>(triCount); ++i)
+	for (int i = 0; i < static_cast<int>(tris.Count()); ++i)
 		local_area += tris[i].Area(vertices);
 
 	area = local_area;
@@ -80,7 +76,7 @@ void TriangleMesh::Preprocess() {
 BBox TriangleMesh::GetBBox() const {
 	if (!cachedBBoxValid) {
 		BBox bbox;
-		for (u_int i = 0; i < vertCount; ++i)
+		for (u_int i = 0; i < vertices.Count(); ++i)
 			bbox = Union(bbox, vertices[i]);
 		cachedBBox = bbox;
 		
@@ -94,7 +90,7 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 	appliedTrans = appliedTrans * trans;
 	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
 
-	for (u_int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertices.Count(); ++i)
 		vertices[i] *= trans;
 
 	Preprocess();
@@ -117,7 +113,7 @@ TriangleMeshUPtr TriangleMesh::Merge(
 	assert (meshes.size() > 0);
 
 	VertexBuffer v(totalVertexCount);
-	Triangle *i = AllocTrianglesBuffer(totalTriangleCount);
+	TriangleBuffer i(totalTriangleCount);
 
 	if (preprocessedMeshIDs)
 		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];
@@ -134,7 +130,7 @@ TriangleMeshUPtr TriangleMesh::Merge(
 		auto orig = (*m)->GetVertices();
 		std::copy(orig.begin(), orig.end(), dest.begin());
 
-		const Triangle *tris = (*m)->GetTriangles();
+		auto tris = (*m)->GetTriangles();
 
 		// Translate mesh indices
 		for (u_int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
@@ -157,7 +153,7 @@ TriangleMeshUPtr TriangleMesh::Merge(
 		}
 	}
 
-	return std::make_unique<TriangleMesh>(totalTriangleCount, std::move(v), i);
+	return std::make_unique<TriangleMesh>(std::move(v), std::move(i));
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(

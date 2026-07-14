@@ -289,6 +289,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 		//----------------------------------------------------------------------
 
 		vector<Edge> edges;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		for (u_int i = 0; i < triCount; ++i) {
 			edges.push_back(Edge(i, 0, uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
 			edges.push_back(Edge(i, 1, uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
@@ -317,7 +319,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 					(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0));
 		};
 
-		vector<Corner> corners(vertCount);
+		std::vector<Corner> corners(vertCount);
 		for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
 			Edge &e0 = edges[edge0Index];
 			e0.alreadyFound = true;

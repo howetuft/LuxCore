@@ -22,6 +22,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/pointiness.h"
+#include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 #include "slg/shapes/merge_on_distance.h"
 
@@ -102,7 +103,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int dest
 	const u_int uniqueVertCount = srcMesh.GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount);
 
-	const Triangle *tris = srcMesh.GetTriangles();
+	const TriangleBuffer tris(srcMesh.GetTriangles());
 
 	// Build the edge information
 	std::set<Edge> edges;
@@ -184,7 +185,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int dest
 		// Make a copy of the original mesh and overwrite vertex color information
 		mesh = srcMesh.Copy(
 			std::nullopt,
-			nullptr,
+			std::nullopt,
 			nullptr,
 			std::nullopt,
 			std::nullopt,

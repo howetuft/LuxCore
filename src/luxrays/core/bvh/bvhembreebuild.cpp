@@ -136,8 +136,8 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 
 			if (meshes) {
 				// It is a BVH of triangles
-				const Triangle *triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
-				const Triangle *triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
+				const auto triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
+				const auto triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
 				arrayNode->triangleLeaf.v[0] = triangle->v[0];
 				arrayNode->triangleLeaf.v[1] = triangle->v[1];
 				arrayNode->triangleLeaf.v[2] = triangle->v[2];

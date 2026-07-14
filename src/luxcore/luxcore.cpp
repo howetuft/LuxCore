@@ -467,6 +467,7 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 	API_END();
 }
 
+// TODO Should be a std::unique<float[]>?
 VertexBuffer Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
@@ -477,13 +478,14 @@ VertexBuffer Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	return result;
 }
 
-unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+// TODO Should be a std::unique<size_t[]>?
+TriangleBuffer Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-	unsigned int *result =  (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
+	TriangleBuffer result = luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)result.GetBytes().data());
+
 	return result;
 }
 

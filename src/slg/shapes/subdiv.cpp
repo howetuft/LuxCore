@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/trianglemesh.h"
+#include "luxrays/utils/buffer.h"
 #include <unordered_map>
 #include <format>
 
@@ -309,7 +310,7 @@ nRefinedVerts
 	//--------------------------------------------------------------------------
 
 	// New triangles
-	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(nRefinedFaces);
+	TriangleBuffer newTris(nRefinedFaces);
 	for (int face = 0; face < nRefinedFaces; ++face) {
 		Vtr::ConstIndexArray faceVerts = refLastLevel.GetFaceVertices(face);
 		for (u_int vertex = 0; vertex < 3; ++vertex) {
@@ -381,8 +382,7 @@ nRefinedVerts
 
 	// Allocate the new mesh
 	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		nRefinedFaces,
-		std::move(newVerts), newTris, newNorms,
+		std::move(newVerts), std::move(newTris), newNorms,
 		newUVs, newCols, newAlphas
 	);
 
@@ -401,12 +401,13 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef sr
 	desc.numFaces = srcMesh.GetTotalTriangleCount();
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
+	//desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
+	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data());
 
 	// Look for mesh boundary edges
 	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
+	const TriangleBuffer tris(srcMesh.GetTriangles());
 
 	// Count how many times an edge is shared
 	for (u_int i = 0; i < triCount; ++i) {
@@ -630,7 +631,7 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                              std::map<std::pair<int, int>, EdgeInfo> &edgeMap,
                              float sharpnessThresholdRadians) {
 
-	auto triangles = std::span<Triangle>(mesh.GetTriangles(), mesh.GetTotalTriangleCount());
+	auto triangles = mesh.GetTriangles();
 	auto vertices = mesh.GetVertices();
 
     // Clear any existing edge information
@@ -833,7 +834,7 @@ struct Surface {
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh.GetTriangles()),
+				reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data()),
 				srcMesh.GetTotalVertexCount(),
 				srcMesh.GetTotalTriangleCount(),
 				edgeMap,
@@ -905,7 +906,7 @@ struct Surface {
 	/// @param N Tessellation rate: each edge will be subdivided into N
 	/// sub-edges
 	///
-	std::tuple<CoordVector, TriangleArrayPtr, int, int>
+	std::tuple<CoordVector, TriangleBuffer, int, int>
 	Tessellate (const size_t N) {
 		// This is triforce tessellation.
 
@@ -913,7 +914,7 @@ struct Surface {
 		CoordVector tessCoords;
 		int numTriangles = getTesselTriangleCount(N);
 		int numPoints = getTesselPosCount(N);
-		auto tessTris = TriangleArrayPtr(TriangleMesh::AllocTrianglesBuffer(numTriangles));
+		TriangleBuffer tessTris(numTriangles);
 
 		// Some constants
 		const auto& topology = refiner->GetLevel(0);
@@ -1089,7 +1090,7 @@ struct Surface {
 
 		}  // ~for face
 
-		return std::make_tuple(tessCoords, std::move(tessTris), numPoints, numTriangles);
+		return std::make_tuple(std::move(tessCoords), std::move(tessTris), numPoints, numTriangles);
 
 	}  // ~Tessellate
 
@@ -1454,7 +1455,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 	// Tessellate
 	CoordVector tessCoords;
-	TriangleArrayPtr tessTriangles;
+	TriangleBuffer tessTriangles;
 	int numPoints, numTriangles;
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
@@ -1507,9 +1508,8 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	);
 
 	auto newMesh =  std::make_unique<ExtTriangleMesh>(
-		u_int(numTriangles),
 		std::move(tessPoints),
-		tessTriangles.release(),
+		std::move(tessTriangles),
 		tessNormals.release(),
 		tessUVs.releaseLayers(),
 		tessCols.releaseLayers(),
@@ -1638,7 +1638,7 @@ SubdivShape::SubdivShape(
 float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef srcMesh) {
 	const u_int triCount = srcMesh.GetTotalTriangleCount();
 	const Points verts = srcMesh.GetVertices();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const TriangleBuffer tris(srcMesh.GetTriangles());
 
 	// Note VisualStudio doesn't support:
 	//#pragma omp parallel for reduction(max:maxEdgeSize)

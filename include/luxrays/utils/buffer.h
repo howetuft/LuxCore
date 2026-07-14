@@ -25,13 +25,16 @@
 
 namespace luxrays {
 
+
+inline constexpr auto NOPAD = std::array<std::byte,0>();
+
 // A container for mesh components: points, normals etc.
 // Can be end-padded, for the sake of embree or integrity check
 //
 // To spare compile time, the template is delibaretely intended not to
 // be implicitely instantiable.
 // Definition and instantiations are in cpp file
-template< typename TYPE, typename SUBTYPE, std::array PAD >
+template< typename TYPE, typename SUBTYPE, std::array PAD=NOPAD >
 class Buffer {
 
 public:
@@ -79,6 +82,9 @@ public:
 	// Element count
 	size_t Count() const;
 
+	// Underlying structure (const)
+	void * Data() const;
+
 
 private:
 	// Underlying storage
@@ -106,9 +112,12 @@ constexpr std::array<std::byte, sizeof(T)> to_bytes(const T& value) {
 }
 inline constexpr auto VERTEXPAD = to_bytes(1234.1234f);
 
-// Container for point
+// Containers for points and triangles
 class Point;
 using VertexBuffer = Buffer<Point, float, VERTEXPAD>;
+class Triangle;
+using TriangleBuffer = Buffer<Triangle, unsigned int, NOPAD>;
+
 
 
 }  // Namespace luxrays

@@ -18,6 +18,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/strands.h"
+#include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"
 #include <memory>
@@ -396,8 +397,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		// Create the mesh
 		VertexBuffer newMeshVerts(meshVerts);
 
-		Triangle *newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
-		copy(meshTris.begin(), meshTris.end(), newMeshTris);
+		TriangleBuffer newMeshTris(meshTris);
 
 		Normal *newMeshNorms = new Normal[meshNorms.size()];
 		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
@@ -440,9 +440,8 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		}
 
 		mesh = std::make_unique<ExtTriangleMesh>(
-			meshTris.size(),
 			std::move(newMeshVerts),
-			newMeshTris,
+			std::move(newMeshTris),
 			newMeshNorms,
 			newMeshUVs,
 			newMeshCols,

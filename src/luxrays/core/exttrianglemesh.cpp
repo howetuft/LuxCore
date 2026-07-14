@@ -125,16 +125,15 @@ struct is_virtual_base_of<luxrays::TriangleMesh, luxrays::ExtTriangleMesh>: publ
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshTriCount,
 	VertexBuffer&& meshVertices,
-	Triangle *meshTris,
+	TriangleBuffer&& meshTris,
 	Normal *meshNormals,
 	std::shared_ptr<UV[]> mUVs,
 	std::shared_ptr<Spectrum[]> mCols,
 	std::shared_ptr<float[]> mAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
+	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -149,16 +148,15 @@ ExtTriangleMesh::ExtTriangleMesh(
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshTriCount,
 	VertexBuffer&& meshVertices,
-	Triangle *meshTris,
+	TriangleBuffer&& meshTris,
 	Normal *meshNormals,
 	std::optional<std::span<UV>> mUVs,
 	std::optional<std::span<Spectrum>> mCols,
 	std::optional<std::span<float>> mAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
+	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -183,16 +181,15 @@ ExtTriangleMesh::ExtTriangleMesh(
 }
 
 ExtTriangleMesh::ExtTriangleMesh(
-	const u_int meshTriCount,
 	VertexBuffer&& meshVertices,
-	Triangle *meshTris,
+	TriangleBuffer&& meshTris,
 	Normal *meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
 	std::optional<ExtMeshProp<float>> meshAlphas,
 	const float bRadius
 ) :
-	TriangleMesh(meshTriCount, std::move(meshVertices), meshTris),
+	TriangleMesh(std::move(meshVertices), std::move(meshTris)),
 	ExtMesh(bRadius),
 	bevelCylinders(nullptr),
 	bevelBoundingCylinders(nullptr),
@@ -230,7 +227,7 @@ void ExtTriangleMesh::Init(
 	}
 
 	normals = meshNormals;
-	triNormals = new Normal[triCount];
+	triNormals = new Normal[tris.Count()];
 
 	if (meshUVs)
 		uvs = *meshUVs;
@@ -245,14 +242,13 @@ void ExtTriangleMesh::Init(
 void ExtTriangleMesh::Preprocess() {
 	// Compute all triangle normals
 	#pragma omp parallel for
-	for (long long i = 0; i < triCount; ++i)
+	for (long long i = 0; i < tris.Count(); ++i)
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
 
 	PreprocessBevel();
 }
 
 void ExtTriangleMesh::Delete() {
-	delete[] tris;
 
 	delete[] normals;
 	delete[] triNormals;
@@ -272,13 +268,13 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	bool allocated;
 	if (!normals) {
 		allocated = true;
-		normals = new Normal[vertCount];
+		normals = new Normal[vertices.Count()];
 	} else
 		allocated = false;
 
-	for (u_int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertices.Count(); ++i)
 		normals[i] = Normal(0.f, 0.f, 0.f);
-	for (u_int i = 0; i < triCount; ++i) {
+	for (u_int i = 0; i < tris.Count(); ++i) {
 		const Vector e1 = vertices[tris[i].v[1]] - vertices[tris[i].v[0]];
 		const Vector e2 = vertices[tris[i].v[2]] - vertices[tris[i].v[0]];
 		const Normal N = Normal(Normalize(Cross(e1, e2)));
@@ -287,7 +283,7 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 		normals[tris[i].v[2]] += N;
 	}
 	//int printedWarning = 0;
-	for (u_int i = 0; i < vertCount; ++i) {
+	for (u_int i = 0; i < vertices.Count(); ++i) {
 		normals[i] = Normalize(normals[i]);
 		// Check for degenerate triangles/normals, they can freeze the GPU
 		if (isnan(normals[i].x) || isnan(normals[i].y) || isnan(normals[i].z)) {
@@ -309,7 +305,7 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	TriangleMesh::ApplyTransform(trans);
 
 	if (normals) {
-		for (u_int i = 0; i < vertCount; ++i) {
+		for (u_int i = 0; i < vertices.Count(); ++i) {
 			normals[i] *= trans;
 			normals[i] = Normalize(normals[i]);
 		}
@@ -334,7 +330,7 @@ void ExtTriangleMesh::CopyAOV(ExtTriangleMeshRef destMesh) const {
 
 ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	std::optional<VertexBuffer> meshVertices,
-	Triangle *meshTris,
+	std::optional<TriangleBuffer> meshTris,
 	Normal *meshNormals,
 	std::optional<ExtMeshProp<UV>> meshUVs,
 	std::optional<ExtMeshProp<Spectrum>> meshCols,
@@ -345,29 +341,22 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 	if (meshVertices.has_value()) {
 		vs = std::move(meshVertices.value());
 	} else {
-		vs.Allocate(vertCount);
+		vs.Allocate(vertices.Count());
 		vs.Set(vertices);
 	}
 
-
-
-	//TODO
-	//Point *vs = meshVertices;
-	//if (!vs) {
-		//vs = AllocVerticesBuffer(vertCount);
-		//std::copy(vertices, vertices + vertCount, vs);
-	//}
-
-	Triangle *ts = meshTris;
-	if (!ts) {
-		ts = AllocTrianglesBuffer(triCount);
-		std::copy(tris, tris + triCount, ts);
+	TriangleBuffer ts;
+	if (meshTris.has_value()) {
+		ts = std::move(meshTris.value());
+	} else {
+		ts.Allocate(tris.Count());
+		ts.Set(tris);
 	}
 
 	Normal *ns = meshNormals;
 	if (!ns && HasNormals()) {
-		ns = new Normal[vertCount];
-		std::copy(normals, normals + vertCount, ns);
+		ns = new Normal[vertices.Count()];
+		std::copy(normals, normals + vertices.Count(), ns);
 	}
 
 
@@ -390,8 +379,8 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 		}
 	}
 
-	auto m =  std::make_unique<ExtTriangleMesh>(triCount,
-			std::move(vs), ts, ns, us, cs, as, bRadius);
+	auto m =  std::make_unique<ExtTriangleMesh>(
+		std::move(vs), std::move(ts), ns, us, cs, as, bRadius);
 
 	m->SetLocal2World(appliedTrans);
 
@@ -403,7 +392,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::CopyExt(
 
 ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
 	std::optional<VertexBuffer> meshVertices,
-	Triangle *meshTris,
+	std::optional<TriangleBuffer> meshTris,
 	Normal *meshNormals,
 	std::optional<std::span<UV>> mUVs,
 	std::optional<std::span<Spectrum>> mCols,
@@ -424,7 +413,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Copy(
 
 	return CopyExt(
 		std::move(meshVertices),
-		meshTris,
+		std::move(meshTris),
 		meshNormals,
 		mUVs ? std::optional(meshUVs) : std::nullopt,
 		mCols ? std::optional(meshCols) : std::nullopt,
@@ -450,7 +439,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 	assert (meshes.size() > 0);
 
 	VertexBuffer meshVertices(totalVertexCount);
-	Triangle *meshTris = AllocTrianglesBuffer(totalTriangleCount);
+	TriangleBuffer meshTris(totalTriangleCount);
 
 	Normal *meshNormals = nullptr;
 	ExtMeshProp<UV> meshUVs;
@@ -554,7 +543,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 		}
 
 		// Translate mesh indices
-		const Triangle *tris = mesh.GetTriangles();
+		const auto tris(mesh.GetTriangles());
 		for (u_int j = 0; j < mesh.GetTotalTriangleCount(); j++) {
 			meshTris[iIndex].v[0] = tris[j].v[0] + vIndex;
 			meshTris[iIndex].v[1] = tris[j].v[1] + vIndex;
@@ -568,8 +557,12 @@ ExtTriangleMeshUPtr ExtTriangleMesh::Merge(
 	}
 
 	auto newMesh = std::make_unique<ExtTriangleMesh>(
-		totalTriangleCount,
-		std::move(meshVertices), meshTris, meshNormals, meshUVs, meshCols, meshAlphas
+		std::move(meshVertices),
+		std::move(meshTris),
+		meshNormals,
+		meshUVs,
+		meshCols,
+		meshAlphas
 	);
 
 	for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {

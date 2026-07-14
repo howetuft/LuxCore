@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/buffer.h"
 #include <functional>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -307,8 +308,8 @@ void CompiledScene::CompileGeometry() {
 			// Compile baseMesh triangle indices
 			//------------------------------------------------------------------
 
-			const Triangle *t = baseMesh.get().GetTriangles();
-			tris.insert(tris.end(), t, t + baseMesh.get().GetTotalTriangleCount());
+			const auto t = baseMesh.get().GetTriangles();
+			tris.insert(tris.end(), t.begin(), t.begin() + baseMesh.get().GetTotalTriangleCount());
 		}
 
 		meshDescs.push_back(currentMeshDesc);

@@ -33,10 +33,10 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 	const u_int triCount = mesh.GetTotalTriangleCount();
 
 	const auto vertices = mesh.GetVertices();
-	const Triangle *triangles = mesh.GetTriangles();
+	const auto triangles = mesh.GetTriangles();
 
 	VertexBuffer newVertices(vertCount);
-	for (u_int i = 0; i < vertCount; ++i) {
+	for (auto i = 0; i < vertCount; ++i) {
 		const Point &oldVertex = vertices[i];
 
 		Point newVertex;
@@ -51,10 +51,9 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 		newVertices[i] = newVertex;
 	}
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles, triangles + triCount, newTris);
+	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(triCount, std::move(newVertices), newTris);
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris));
 }
 
 //------------------------------------------------------------------------------
@@ -62,14 +61,10 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 //------------------------------------------------------------------------------
 
 ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
-	const u_int vertCount = vertices.size();
-	const u_int triCount = triangles.size();
 
 	VertexBuffer newVertices(vertices);
+	TriangleBuffer newTris(triangles);
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles.begin(), triangles.end(), newTris);
-
-	return new ExtTriangleMesh(triCount, std::move(newVertices), newTris);
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris));
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

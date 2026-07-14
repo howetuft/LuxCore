@@ -37,8 +37,10 @@ namespace ocl {
 
 class Triangle {
 public:
+	using subtype_t = unsigned int;
+
 	Triangle() { }
-	Triangle(const unsigned int v0, const unsigned int v1, const unsigned int v2) {
+	Triangle(subtype_t v0, subtype_t v1, subtype_t v2) {
 		v[0] = v0;
 		v[1] = v1;
 		v[2] = v2;
@@ -186,8 +188,7 @@ public:
 		return (area / a) * 2.f;
 	}
 
-
-	unsigned int v[3];
+	subtype_t v[3];
 
 	friend class boost::serialization::access;
 

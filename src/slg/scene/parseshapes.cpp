@@ -90,16 +90,16 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 		throw runtime_error("Missing shape vertex list: " + shapeName);
 
 	u_int trisSize;
-	Triangle *tris;
+	TriangleBuffer tris;
 	if (props.IsDefined(propName + ".faces")) {
 		Property prop = props.Get(propName + ".faces");
 		if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
 			throw runtime_error("Wrong shape face list length: " + shapeName);
 
 		trisSize = prop.GetSize() / 3;
-		tris = TriangleMesh::AllocTrianglesBuffer(trisSize);
-		for (u_int i = 0; i < trisSize; ++i) {
-			const u_int index = i * 3;
+		tris.Allocate(trisSize);
+		for (size_t i = 0; i < trisSize; ++i) {
+			const size_t index = i * 3;
 			tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));
 		}
 	} else {
@@ -132,7 +132,9 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 		}
 	}
 
-	return std::make_unique<ExtTriangleMesh>(trisSize, std::move(points), tris, normals, uvs);
+	return std::make_unique<ExtTriangleMesh>(
+		std::move(points), std::move(tris), normals, uvs
+	);
 }
 
 ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties &props) {

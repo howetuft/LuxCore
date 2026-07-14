@@ -73,7 +73,7 @@ static void CreateBox(
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
 	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
-	Triangle *vi = (Triangle *)Scene::AllocTrianglesBuffer(12);
+	TriangleBuffer vi(12);
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
@@ -96,7 +96,17 @@ static void CreateBox(
 	// Define the Mesh
 	if (!enableUV) {
 		// Define the object
-		scene.DefineMesh(meshName, 24, 12, p.GetSubObjects().data(), (unsigned int *)vi, NULL, NULL, NULL, NULL);
+		scene.DefineMesh(
+			meshName,
+			24,
+			12,
+			p.GetSubObjects().data(),
+			vi.GetSubObjects().data(),
+			NULL,
+			NULL,
+			NULL,
+			NULL
+		);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -131,7 +141,17 @@ static void CreateBox(
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene.DefineMesh(meshName, 24, 12, p.GetSubObjects().data(), (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
+		scene.DefineMesh(
+			meshName,
+			24,
+			12,
+			p.GetSubObjects().data(),
+			vi.GetSubObjects().data(),
+			NULL,
+			(float *)uv,
+			NULL,
+			NULL
+		);
 	}
 
 	// Add the object to the scene

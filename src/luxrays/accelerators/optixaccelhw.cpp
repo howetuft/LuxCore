@@ -593,7 +593,7 @@ private:
 
 		// Allocate CUDA triangle vertices indices buffer
 		HardwareDeviceBuffer *trisBuff = nullptr;
-		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
+		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles().data(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
 
 		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
 

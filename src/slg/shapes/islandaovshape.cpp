@@ -34,9 +34,9 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMeshRef srcMesh, const u_int dataIndex
 
 	const double startTime = WallClockTime();
 
-	const u_int vertexCount = srcMesh.GetTotalVertexCount();
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const auto vertexCount = srcMesh.GetTotalVertexCount();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
+	const auto tris = srcMesh.GetTriangles();
 	SDL_LOG("IslandAOV shape vertex count: " << vertexCount);
 	SDL_LOG("IslandAOV shape triangle count: " << triCount);
 

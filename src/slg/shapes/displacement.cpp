@@ -56,8 +56,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	// Go trough the faces and save the information
 	vector<bool> doneVerts(vertCount, false);
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
+	const auto tris(srcMesh.GetTriangles());
 	for (u_int i = 0; i < triCount; ++i) {
 		const Triangle &tri = tris[i];
 
@@ -160,7 +160,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	// Make a copy of the original mesh and overwrite vertex information
 	mesh = srcMesh.Copy(
 		std::move(newVertices),
-		nullptr,
+		std::nullopt,
 		nullptr,
 		std::nullopt,
 		std::nullopt,

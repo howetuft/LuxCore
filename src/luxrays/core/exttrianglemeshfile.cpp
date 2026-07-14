@@ -407,10 +407,10 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
-	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
-	copy(vi.begin(), vi.end(), tris);
+	auto tris = TriangleBuffer(vi);
+	//copy(vi.begin(), vi.end(), tris);
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(vi.size(), std::move(p), tris, n, uvs, cols, alphas);
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(tris), n, uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		//mesh->SetVertexAOV(i, vertexAOVs[i], plyNbVerts);  TODO
 		mesh->SetTriAOV(i, TriAOVs[i], vi.size());
@@ -458,7 +458,10 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		throw runtime_error("Unable to open: " + fileName);
 
 	plyFile.imbue(cLocale);
-	
+	auto vertCount = vertices.Count();
+	auto triCount = tris.Count();
+
+
 	// Write the PLY header
 	plyFile << "ply\n"
 			"format " + string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
