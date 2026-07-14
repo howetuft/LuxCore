@@ -26,7 +26,6 @@
 #include "luxcoreapp.h"
 #include "fileext.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
@@ -165,8 +164,8 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	statsWindow.Close();
 }
 
-void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config->ToProperties()->Get("renderengine.type").Get<string>()) {
+void LuxCoreApp::SetRenderingEngineType(const std::string &engineType) {
+	if (engineType != config->ToProperties()->Get("renderengine.type").Get<std::string>()) {
 		Properties props;
 		if (engineType == "RTPATHCPU") {
 			props <<
@@ -204,8 +203,8 @@ void LuxCoreApp::RenderConfigParse(PropertiesRPtr props) {
 	// Change the configuration
 	try {
 		config->Parse(props);
-	} catch(exception &ex) {
-		LA_LOG("RenderConfig fatal parse error: " << endl << ex.what());
+	} catch(std::exception &ex) {
+		LA_LOG("RenderConfig fatal parse error: " << std::endl << ex.what());
 		// I can not recover from a RenderConfig parse error: I would have to create
 		// a new RenderConfig
 		exit(EXIT_FAILURE);
@@ -217,8 +216,8 @@ void LuxCoreApp::RenderConfigParse(PropertiesRPtr props) {
 void LuxCoreApp::RenderSessionParse(const std::unique_ptr<Properties> & props) {
 	try {
 		session->Parse(props);
-	} catch(exception &ex) {
-		LA_LOG("RenderSession parse error: " << endl << ex.what());
+	} catch(std::exception &ex) {
+		LA_LOG("RenderSession parse error: " << std::endl << ex.what());
 
 		session.reset();
 		session = nullptr;
@@ -264,7 +263,7 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 	luxcore::AddFileNameResolverPath(path.parent_path().generic_string());
 
 	try {
-		const string ext = GetFileNameExt(fileName);
+		const std::string ext = GetFileNameExt(fileName);
 		if (ext == ".lxs") {
 			// It is a LuxRender SDL file
 			LA_LOG("Parsing LuxRender SDL file...");
@@ -301,9 +300,9 @@ void LuxCoreApp::LoadRenderConfig(const std::string &fileName, const std::string
 
 			StartRendering(startState, startFilm);
 		} else
-			throw runtime_error("Unknown file extension: " + fileName);
-	} catch(exception &ex) {
-		LA_LOG("RenderConfig loading error: " << endl << ex.what());
+			throw std::runtime_error("Unknown file extension: " + fileName);
+	} catch(std::exception &ex) {
+		LA_LOG("RenderConfig loading error: " << std::endl << ex.what());
 
 		session.reset();
 		session = nullptr;
@@ -323,7 +322,7 @@ void LuxCoreApp::StartRendering(
 		session.reset();
 	}
 
-	const string engineType = config->ToProperties()->Get("renderengine.type").Get<string>();
+	const std::string engineType = config->ToProperties()->Get("renderengine.type").Get<std::string>();
 	if (engineType.starts_with("RT")) {
 		if (config->ToProperties()->Get("screen.refresh.interval").Get<unsigned int>() > 25)
 			SetRefreshInterval(25);
@@ -334,7 +333,7 @@ void LuxCoreApp::StartRendering(
 	} else
 		optRealTimeMode = false;
 
-	const string toolTypeStr = config->ToProperties()->Get("screen.tool.type").Get<string>();
+	const std::string toolTypeStr = config->ToProperties()->Get("screen.tool.type").Get<std::string>();
 	if (toolTypeStr == "OBJECT_SELECTION")
 		currentTool = TOOL_OBJECT_SELECTION;
 	else if (toolTypeStr == "IMAGE_VIEW")
@@ -380,8 +379,8 @@ void LuxCoreApp::StartRendering(
 
 		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
 			userImportancePaintWindow.Init();
-	//} catch(exception &ex) {
-		//LA_LOG("RenderSession starting error: " << endl << ex.what());
+	//} catch(std::exception &ex) {
+		//LA_LOG("RenderSession starting error: " << std::endl << ex.what());
 
 		//session.reset();
 		//session = NULL;
@@ -400,7 +399,7 @@ void LuxCoreApp::DeleteRendering() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::LogHandler(const char *msg) {
-	cout << msg << endl;
+	std::cout << msg << std::endl;
 
 	if (currentLogWindow)
 		currentLogWindow->AddMsg(msg);
