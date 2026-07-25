@@ -34,10 +34,6 @@ public:
 	virtual ~RGBIllumSPD() {}
 
 protected:
-	void AddWeighted(float w, const float *c) {
-		for(u_int i = 0; i < nSamples; ++i)
-			samples[i] += c[i] * w;
-	}
 
 	void init(const RGBColor &s);
 };

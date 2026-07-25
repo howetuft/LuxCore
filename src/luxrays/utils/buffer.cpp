@@ -28,17 +28,26 @@ using namespace luxrays;
 // Buffer
 //------------------------------------------------------------------------------
 
+
+// Constructors
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 Buffer<TYPE, SUBTYPE, PAD>::Buffer(size_t size) {
 	Allocate(size);
 }
 
 template< typename TYPE, typename SUBTYPE, std::array PAD >
-Buffer<TYPE, SUBTYPE, PAD>::Buffer(std::span<const TYPE> objs) {
+Buffer<TYPE, SUBTYPE, PAD>::Buffer(std::span<TYPE const> objs) {
 	Allocate(objs.size());
 	std::copy(objs.begin(), objs.end(), asType.begin());
 }
 
+template< typename TYPE, typename SUBTYPE, std::array PAD >
+Buffer<TYPE, SUBTYPE, PAD>::Buffer(std::span<SUBTYPE const> subobjs) {
+	Allocate(subobjs.size() * sizeof(SUBTYPE) / sizeof(TYPE) );
+	std::copy(subobjs.begin(), subobjs.end(), asSubType.begin());
+}
+
+// Allocator
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 void Buffer<TYPE, SUBTYPE, PAD>::Allocate(size_t count) {
 
@@ -68,6 +77,8 @@ void Buffer<TYPE, SUBTYPE, PAD>::Allocate(size_t count) {
 
 }
 
+
+// Getters
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 std::span<TYPE> Buffer<TYPE, SUBTYPE, PAD>::GetObjects() const {
 	// Compute size (without padding)

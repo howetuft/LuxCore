@@ -33,7 +33,7 @@ void EqualSPD::init(float p) {
 
 	// Fill sample with power value
 	for(int i=0; i<EQ_CACHE_SAMPLES; i++) {
-		samples[i] = power;
+		samples()[i] = power;
 	}
 
 	Clamp();

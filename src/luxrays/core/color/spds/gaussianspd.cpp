@@ -39,7 +39,7 @@ void GaussianSPD::init(float mean, float width, float refl) {
 	for(int i=0; i<GAUSS_CACHE_SAMPLES; i++) {
 		const float w = (GAUSS_CACHE_START + (delta*i));
 		const float x = w - mu;
-		samples[i] = refl * expf(x * x * scale2);
+		samples()[i] = refl * expf(x * x * scale2);
 	}
 
 	Clamp();

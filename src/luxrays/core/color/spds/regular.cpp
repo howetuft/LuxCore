@@ -30,7 +30,6 @@ void RegularSPD::init(float lMin, float lMax, const float* const s, u_int n) {
 	AllocateSamples(n);
 
 	// Copy samples
-	for (u_int i = 0; i < n; ++i)
-		samples[i] = s[i];
+	std::ranges::copy(std::span(s, nSamples), samples().begin());
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

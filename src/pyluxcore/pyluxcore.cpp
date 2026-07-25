@@ -1443,7 +1443,7 @@ OUT dataCopyBuffer(
 	if (!src.shape(0)) return OUT();
 
 	auto count = direct_src.nbytes() / sizeof(S);
-	assert(not direct_src.nbytes() % sizeof(S));
+	assert(direct_src.nbytes() % sizeof(S) == 0);
 	auto in_span = std::span<const S>(direct_src.data(0, 0), count);
 	OUT buf(in_span);
 

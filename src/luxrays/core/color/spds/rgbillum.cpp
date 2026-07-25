@@ -32,8 +32,7 @@ void RGBIllumSPD::init(const RGBColor &s) {
 	AllocateSamples(n);
 
 	// Zero out
-	for (u_int i = 0; i < n; ++i)
-		samples[i] = 0.f;
+	std::ranges::fill(samples(), 0.f);
 
 	float r = s.c[0];
 	float g = s.c[1];

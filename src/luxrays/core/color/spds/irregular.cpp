@@ -102,7 +102,7 @@ void IrregularSPD::init(float lMin, float lMax, const float* const s, u_int n) {
 
 	// Copy samples
 	for (u_int i = 0; i < n; ++i)
-		samples[i] = s[i];
+		samples()[i] = s[i];
 
 }
 
