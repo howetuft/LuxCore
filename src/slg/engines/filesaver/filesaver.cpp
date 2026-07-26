@@ -19,6 +19,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <span>
 
 #include <filesystem>
 #include <boost/format.hpp>

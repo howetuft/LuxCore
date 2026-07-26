@@ -1413,12 +1413,9 @@ std::tuple<std::unique_ptr<D[]>, u_int> dataCopy(
 }
 
 // Variant of dataCopy for vertex buffer
-template<
-	typename S,  // Source underlying type
-	size_t stride,
-	typename OUT  // Output type type
->
-OUT dataCopyBuffer(
+// S: Source underlying type; OUT: Output type type
+template< typename S,  size_t stride, typename O > 
+O dataCopyBuffer(
 	py::array_t<S, py::array::c_style> src,
 	const std::string& meshName,
 	const std::string& propertyName
@@ -1440,12 +1437,12 @@ OUT dataCopyBuffer(
 	}
 
 	// Allocate & copy
-	if (!src.shape(0)) return OUT();
+	if (!src.shape(0)) return O();
 
 	auto count = direct_src.nbytes() / sizeof(S);
 	assert(direct_src.nbytes() % sizeof(S) == 0);
 	auto in_span = std::span<const S>(direct_src.data(0, 0), count);
-	OUT buf(in_span);
+	O buf(in_span);
 
 	return buf;
 }

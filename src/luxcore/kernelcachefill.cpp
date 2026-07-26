@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <bit>
 #include <boost/algorithm/string.hpp>
 
 #include "luxcore/luxcorelogger.h"

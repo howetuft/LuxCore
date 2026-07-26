@@ -21,6 +21,7 @@
 
 #include <array>
 #include <span>
+#include <bit>
 #include <memory>
 
 namespace luxrays {

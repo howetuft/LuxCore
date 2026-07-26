@@ -304,7 +304,7 @@ HardwareDeviceKernelUPtr CUDADevice::GetKernel(
 
 	cudaDeviceKernel.Set(function);
 
-	return kernel;
+	return std::move(kernel);
 }
 
 u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {

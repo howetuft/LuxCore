@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cstring>
+#include <span>
 
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/serializationutils.h"
@@ -404,18 +405,18 @@ public:
 	 *
 	 * @return The index of the given position.
 	 */
-	std::tuple<int, float>
+	std::tuple<size_t, float>
 	IndexOf(const float x) const {
 		if (x <= xFunc[0]) {
-			return std::tuple<int, float>(0, 0.f);
+			return std::tuple<size_t, float>(0, 0.f);
 		}
 
 		if (x >= xFunc[xFunc.size() - 1]) {
-			return std::tuple<int, float>(xFunc.size() - 1, 0.f);
+			return std::tuple<size_t, float>(xFunc.size() - 1, 0.f);
 		}
 
 		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
-		int offset = std::distance(xFunc.begin(), upper) - 1;
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
 		return std::make_tuple(offset, d);

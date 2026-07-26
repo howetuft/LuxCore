@@ -244,7 +244,7 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 
 	oclDeviceProgram.Set(oclProgram);
 
-	return program;
+	return std::move(program);
 }
 
 HardwareDeviceKernelUPtr OpenCLDevice::GetKernel(
@@ -262,7 +262,7 @@ HardwareDeviceKernelUPtr OpenCLDevice::GetKernel(
 
 	oclDeviceKernel.Set(k);
 
-	return kernel;
+	return std::move(kernel);
 }
 
 u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
