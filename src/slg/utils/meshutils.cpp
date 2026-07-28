@@ -53,7 +53,7 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 
 	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris));
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 
 //------------------------------------------------------------------------------
@@ -65,6 +65,6 @@ ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
 	VertexBuffer newVertices(vertices);
 	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris));
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

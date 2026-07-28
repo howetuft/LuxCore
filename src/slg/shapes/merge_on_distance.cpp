@@ -713,12 +713,11 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	//auto newPointsPtr = newPoints.get();
 
 	// Normals
-	std::unique_ptr<luxrays::Normal> newNormals;
-	const auto srcNormals = srcMesh.GetNormals();
-	if (srcMesh.HasNormals()) {
-		newNormals.reset(new luxrays::Normal[numNewPoints]);
+	luxrays::NormalBuffer newNormals;
+	const auto& srcNormals = srcMesh.GetNormals();
+	if (importNormals && srcMesh.HasNormals()) {
+		newNormals.Allocate(numNewPoints);
 	}
-	auto newNormalsPtr = importNormals ? newNormals.get() : nullptr;
 
 	// UV
 	luxrays::ExtMeshProp<luxrays::UV> newUVs;
@@ -801,7 +800,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 					if (newNormalLength) {
 						newNormal /= newNormalLength;
 					}
-					newNormalsPtr[newIdx] = newNormal;
+					newNormals[newIdx] = newNormal;
 				}
 
 				// Compute merged uv
@@ -926,7 +925,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
 		std::move(newPoints),
 		std::move(newTriangles),
-		importNormals ? newNormals.release() : nullptr,
+		std::move(newNormals),
 		newUVs,
 		newColors,
 		newAlphas,

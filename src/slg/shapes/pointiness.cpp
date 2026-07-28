@@ -186,7 +186,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef rawSrcMesh, const u_int dest
 		mesh = srcMesh.Copy(
 			std::nullopt,
 			std::nullopt,
-			nullptr,
+			std::nullopt,
 			std::nullopt,
 			std::nullopt,
 			curvatureSpan

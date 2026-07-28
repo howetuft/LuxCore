@@ -147,7 +147,7 @@ public:
 		const std::string &shapeName,
 		luxrays::VertexBuffer&& p,
 		luxrays::TriangleBuffer&& vi,
-		luxrays::Normal *n,
+		luxrays::NormalBuffer&& n,
 		luxrays::ExtMeshProp<luxrays::UV>::Layer uvs,
 		luxrays::ExtMeshProp<luxrays::Spectrum>::Layer cols,
 		luxrays::ExtMeshProp<float>::Layer alphas
@@ -157,7 +157,7 @@ public:
 		const std::string &shapeName,
 		luxrays::VertexBuffer&& p,
 		luxrays::TriangleBuffer&& vi,
-		luxrays::Normal *n,
+		luxrays::NormalBuffer&& n,
 		std::span<luxrays::UV> uvs,
 		std::span<luxrays::Spectrum> cols,
 		std::span<float> alphas
@@ -167,7 +167,7 @@ public:
 		const std::string &shapeName,
 		luxrays::VertexBuffer&& p,
 		luxrays::TriangleBuffer&& vi,
-		luxrays::Normal *n,
+		luxrays::NormalBuffer&& n,
 		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,
 		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols,
 		std::optional<luxrays::ExtMeshProp<float>> alphas

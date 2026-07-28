@@ -235,16 +235,20 @@ void CompiledScene::CompileGeometry() {
 			//------------------------------------------------------------------
 
 			if (baseMesh.get().HasNormals()) {
-				const Normal *n = baseMesh.get().GetNormals();
-				normals.insert(normals.end(), n, n + baseMesh.get().GetTotalVertexCount());
+				const auto& n = baseMesh.get().GetNormals().GetObjects();
+				normals.insert(normals.end(), n.begin(), n.begin() + baseMesh.get().GetTotalVertexCount());
 			}
 
 			//------------------------------------------------------------------
 			// Compile mesh triangle normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Normal *tn = baseMesh.get().GetTriNormals();
-			triNormals.insert(triNormals.end(), tn, tn + baseMesh.get().GetTotalTriangleCount());
+			const auto& tn = baseMesh.get().GetTriNormals().GetObjects();
+			triNormals.insert(
+				triNormals.end(),
+				tn.begin(),
+				tn.begin() + baseMesh.get().GetTotalTriangleCount()
+			);
 
 			for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
 				//--------------------------------------------------------------

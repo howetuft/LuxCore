@@ -280,7 +280,7 @@ public:
 	ExtTriangleMesh(
 		VertexBuffer&& meshVertices,
 		TriangleBuffer&& meshTris,
-		Normal *meshNormals = nullptr,
+		NormalBuffer&& meshNormals,
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
 		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
 		ExtMeshProp<float>::Layer meshAlphas = nullptr,
@@ -289,7 +289,7 @@ public:
 	ExtTriangleMesh(
 		VertexBuffer&& meshVertices,
 		TriangleBuffer&& meshTris,
-		Normal *meshNormals,
+		NormalBuffer&& meshNormals,
 		std::optional<std::span<UV>> meshUVs,
 		std::optional<std::span<Spectrum>> meshCols,
 		std::optional<std::span<float>> meshAlphas,
@@ -298,7 +298,7 @@ public:
 	ExtTriangleMesh(
 		VertexBuffer&& meshVertices,
 		TriangleBuffer&& meshTris,
-		Normal *meshNormals,
+		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas,
@@ -307,8 +307,8 @@ public:
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
-	Normal *GetNormals() const { return normals; }
-	Normal *GetTriNormals() const { return triNormals; }
+	const NormalBuffer& GetNormals() const { return normals; }
+	const NormalBuffer& GetTriNormals() const { return triNormals; }
 
 	// AOV
 	void SetVertexAOV(
@@ -377,11 +377,11 @@ public:
 	const auto& GetAllAlphas() const { return alphas; }
 
 
-	Normal *ComputeNormals();
+	NormalBuffer ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
-	virtual bool HasNormals() const { return normals != nullptr; }
+	virtual bool HasNormals() const { return bool(normals); }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
 		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
@@ -426,7 +426,7 @@ public:
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
 			const float b1, const float b2) const {
-		if (!normals)
+		if (not bool(normals))
 			return GetGeometryNormal(local2World, triIndex);
 		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
@@ -480,7 +480,7 @@ public:
 	ExtTriangleMeshUPtr CopyExt(
 		std::optional<VertexBuffer> meshVertices,
 		std::optional<TriangleBuffer> meshTris,
-		Normal *meshNormals,
+		std::optional<NormalBuffer> meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas,
@@ -490,7 +490,7 @@ public:
 	ExtTriangleMeshUPtr Copy(
 		std::optional<VertexBuffer> meshVertices,
 		std::optional<TriangleBuffer> meshTris,
-		Normal *meshNormals,
+		std::optional<NormalBuffer> meshNormals,
 		std::optional<std::span<UV>> mUVs,
 		std::optional<std::span<Spectrum>> mCols,
 		std::optional<std::span<float>> mAlphas,
@@ -501,7 +501,7 @@ public:
 		return CopyExt(
 			std::nullopt,
 			std::nullopt,
-			nullptr,
+			std::nullopt,
 			std::nullopt,
 			std::nullopt,
 			std::nullopt,
@@ -568,7 +568,7 @@ public:
 	}
 
 	void Init(
-		Normal *meshNormals,
+		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas
@@ -610,12 +610,12 @@ public:
 		auto vertCount = vertices.Count();
 		auto triCount = tris.Count();
 		if (hasNormals) {
-			normals = new Normal[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
+			normals.Allocate(vertCount);
+			for (auto i = 0; i < vertCount; ++i)
 				ar & normals[i];
 		} else
-			normals = nullptr;
-		triNormals = new Normal[triCount];
+			normals = NormalBuffer();
+		triNormals.Allocate(triCount);
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			uvs.Deserialize(i, ar, vertCount);
@@ -633,8 +633,8 @@ public:
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	Normal *normals; // Vertices normals
-	Normal *triNormals; // Triangle normals
+	NormalBuffer normals; // Vertices normals
+	NormalBuffer triNormals; // Triangle normals
 
 	ExtMeshProp<UV> uvs; // Vertex uvs
 	ExtMeshProp<Spectrum> cols; // Vertex colors

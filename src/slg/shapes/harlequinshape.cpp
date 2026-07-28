@@ -61,7 +61,7 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMeshRef srcMesh) {
 	mesh = std::make_unique<ExtTriangleMesh>(
 		std::move(newVertices),
 		std::move(newTris),
-		nullptr,  // Normals
+		NormalBuffer(),  // Normals (empty)
 		nullptr,  // UVs
 		newVertCols
 	);

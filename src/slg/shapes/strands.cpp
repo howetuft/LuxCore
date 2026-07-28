@@ -399,8 +399,8 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 
 		TriangleBuffer newMeshTris(meshTris);
 
-		Normal *newMeshNorms = new Normal[meshNorms.size()];
-		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
+		NormalBuffer newMeshNorms(meshNorms.size());
+		newMeshNorms.Set(std::span<const luxrays::Normal>(meshNorms));
 
 		auto newMeshUVs = std::make_shared<UV[]>(meshUVs.size());
 		std::copy(meshUVs.begin(), meshUVs.end(), newMeshUVs.get());
@@ -442,7 +442,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		mesh = std::make_unique<ExtTriangleMesh>(
 			std::move(newMeshVerts),
 			std::move(newMeshTris),
-			newMeshNorms,
+			std::move(newMeshNorms),
 			newMeshUVs,
 			newMeshCols,
 			newMeshTransps

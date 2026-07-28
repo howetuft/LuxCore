@@ -32,9 +32,19 @@ inline constexpr auto NOPAD = std::array<std::byte,0>();
 // A container for mesh components: points, normals etc.
 // Can be end-padded, for the sake of embree or integrity check
 //
+// The container can be accessed via 3 levels:
+// - Main objects, known as TYPE: points, triangles etc.
+// - Underlying objects of main objects, known as SUBTYPE: float, size_t etc.
+// - bytes 
+//
 // To spare compile time, the template is delibaretely intended not to
 // be implicitely instantiable.
 // Definition and instantiations are in cpp file
+//
+// As a convention:
+// "size" is in bytes
+// "count" is in TYPE elements
+// "subcount" is in SUBTYPE elements
 template< typename TYPE, typename SUBTYPE, std::array PAD=NOPAD >
 class Buffer {
 
@@ -68,6 +78,7 @@ public:
 
 	// Setters
 	void Set(const Buffer<TYPE, SUBTYPE, PAD>& from);
+	void Set(std::span<const TYPE> from);
 	void Set(std::span<const SUBTYPE> from);
 
 	// Subset
@@ -80,11 +91,14 @@ public:
 	// Implicit conversion operator
 	operator std::span<TYPE>() const;
 
-	// Element count
+	// Element count (in TYPE elements)
 	size_t Count() const;
 
 	// Underlying structure (const)
 	void * Data() const;
+
+	// Emptiness
+	explicit operator bool() const noexcept;
 
 
 private:
@@ -92,7 +106,7 @@ private:
 	std::unique_ptr<std::byte[]> data;
 	static constexpr std::array pad{PAD};
 
-	// Sizes
+	// Sizes (in bytes)
 	size_t totalSize = 0;
 	size_t effectiveSize = 0;
 	static constexpr size_t padSize = std::size(PAD);
@@ -118,6 +132,8 @@ class Point;
 using VertexBuffer = Buffer<Point, float, VERTEXPAD>;
 class Triangle;
 using TriangleBuffer = Buffer<Triangle, unsigned int, NOPAD>;
+class Normal;
+using NormalBuffer = Buffer<Normal, float, NOPAD>;
 
 
 

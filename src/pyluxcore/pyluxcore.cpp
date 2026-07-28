@@ -1189,13 +1189,13 @@ static void Scene_DefineMesh1(
   }
 
   // Translate all normals
-  luxrays::Normal *normals = NULL;
+  luxrays::NormalBuffer normals;
   if (!n.is_none()) {
     if(py::isinstance<py::list>(n)) {
       const py::list &l = py::cast<py::list>(n);
       const py::ssize_t size = len(l);
 
-      normals = new luxrays::Normal[size];
+      normals.Allocate(size);
       for (py::ssize_t i = 0; i < size; ++i) {
         if(py::isinstance<py::tuple>(l[i])) {
           const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1220,7 +1220,7 @@ static void Scene_DefineMesh1(
 
 
   auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-  	std::move(points), std::move(tris), normals, uvs, colors, as
+  	std::move(points), std::move(tris), std::move(normals), uvs, colors, as
   );
 
   // Apply the transformation if required
@@ -1300,13 +1300,13 @@ static void Scene_DefineMeshExt1(
   }
 
   // Translate all normals
-  luxrays::Normal *normals = NULL;
+  luxrays::NormalBuffer normals;
   if (!n.is_none()) {
     if(py::isinstance<py::list>(n)) {
       const py::list &l = py::cast<py::list>(n);
       const py::ssize_t size = len(l);
 
-      normals = new luxrays::Normal[size];
+      normals.Allocate(size);
       for (py::ssize_t i = 0; i < size; ++i) {
         if(py::isinstance<py::tuple>(l[i])) {
           const py::tuple &t = py::cast<py::tuple>(l[i]);
@@ -1328,7 +1328,7 @@ static void Scene_DefineMeshExt1(
   auto as = translateProp<float, 1>(alphas, "alphas");
 
 	auto mesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		std::move(points), std::move(tris), normals, uvs, colors, as
+		std::move(points), std::move(tris), std::move(normals), uvs, colors, as
 	);
 
 	// Apply the transformation if required
@@ -1510,10 +1510,10 @@ static std::optional<luxrays::ExtMeshProp<T>> propCopy(
 
 // Define Mesh from Numpy arrays
 static void Scene_DefineMeshExt3(
-	const SceneImplPtr & scene,
-	const std::string &meshName,
+	  const SceneImplPtr & scene,
+	  const std::string &meshName,
     const py_float_array p,
-	const py::array_t<triangle_underlying_type, py::array::c_style > tri,
+	  const py::array_t<triangle_underlying_type, py::array::c_style > tri,
     const std::optional<py_float_array> n,
     const std::optional<std::vector<py_float_array>> uv_layers,
     const std::optional<std::vector<py_float_array>> color_layers,
@@ -1532,13 +1532,11 @@ static void Scene_DefineMeshExt3(
 		tri, meshName, "Triangles"
 	);
 
-	// Normals
-	auto [normals, numNormals] = dataCopyOptional<
-		float,
-		luxrays::Normal,
-		&AllocNormalsBuffer,
-		3
-	> (n, meshName, "Normals");
+  // Normals
+  auto normals = n ? 
+    dataCopyBuffer< float, 3, luxrays::NormalBuffer > (n.value(), meshName, "Normals") :
+    luxrays::NormalBuffer();
+
 
 	// UV, colors and alphas
 	auto meshUVs = propCopy<luxrays::UV, 2>(uv_layers, "UVs", meshName);
@@ -1552,7 +1550,7 @@ static void Scene_DefineMeshExt3(
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
 		std::move(points),
 		std::move(triangles),
-		normals.release(),
+		std::move(normals),
 		meshUVs,
 		meshCols,
 		meshAlphas

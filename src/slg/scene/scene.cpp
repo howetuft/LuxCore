@@ -282,14 +282,14 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
 	VertexBuffer&& p,
 	TriangleBuffer&& vi,
-	Normal *n,
+	NormalBuffer&& n,
 	ExtMeshProp<UV>::Layer uvs,
 	ExtMeshProp<Spectrum>::Layer cols,
 	ExtMeshProp<float>::Layer alphas
 ) {
 	const long plyNbVerts = p.Count();
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), n,
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -300,12 +300,12 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
 	VertexBuffer&& p,
 	TriangleBuffer&& vi,
-	Normal *n,
+	NormalBuffer&& n,
 	std::span<UV> uvs,
 	std::span<Spectrum> cols,
 	std::span<float> alphas
 ) {
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), n,
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -316,13 +316,13 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	const string &shapeName,
 	VertexBuffer&& p,
 	TriangleBuffer&& vi,
-	Normal *n,
+	NormalBuffer&& n,
 	std::optional<ExtMeshProp<UV>> uvs,
 	std::optional<ExtMeshProp<Spectrum>> cols,
 	std::optional<ExtMeshProp<float>> alphas
 ) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(
-			std::move(p), std::move(vi), n,
+			std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);

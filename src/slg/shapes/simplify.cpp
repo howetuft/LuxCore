@@ -151,8 +151,8 @@ public:
 			vertices[i].p = verts[i];
 		
 		if (srcMesh.HasNormals()) {
-			const Normal *norms = srcMesh.GetNormals();
-			for (u_int i = 0; i < vertCount; ++i)
+			const auto& norms = srcMesh.GetNormals();
+			for (auto i = 0; i < vertCount; ++i)
 				vertices[i].norm = norms[i];
 
 			hasNormals = true;
@@ -205,10 +205,10 @@ public:
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
 
-		Normal *newNorms = nullptr;
+		NormalBuffer newNorms;
 		if (hasNormals) {
-			newNorms = new Normal[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
+			newNorms.Allocate(vertCount);
+			for (auto i = 0; i < vertCount; ++i)
 				newNorms[i] = vertices[i].norm;
 		}
 
@@ -248,7 +248,7 @@ public:
 		return std::make_unique<ExtTriangleMesh>(
 			std::move(newVertices),
 			std::move(newTris),
-			newNorms,
+			std::move(newNorms),
 			newUVs,
 			newCols,
 			newAlphas

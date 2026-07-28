@@ -306,7 +306,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	}
 
 	// Check if the file includes normal information
-	Normal *n;
+	NormalBuffer n;
 	const long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
@@ -374,9 +374,9 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	// Allocate buffers
 	p.Allocate(plyNbVerts);
 	if (plyNbNormals == 0)
-		n = nullptr;
+		n = NormalBuffer();
 	else
-		n = new Normal[plyNbNormals];
+		n.Allocate(plyNbNormals);
 
 	// Helper
 	auto allocProp = [&]<typename V, typename N>(V& values, const N& numbers, u_int i) {
@@ -399,8 +399,6 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 		stringstream ss;
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
-		delete[] n;
-
 		throw runtime_error(ss.str());
 	}
 
@@ -410,7 +408,7 @@ ExtTriangleMeshUPtr ExtTriangleMesh::LoadPly(const string &fileName) {
 	auto tris = TriangleBuffer(vi);
 	//copy(vi.begin(), vi.end(), tris);
 
-	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(tris), n, uvs, cols, alphas);
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(tris), std::move(n), uvs, cols, alphas);
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		//mesh->SetVertexAOV(i, vertexAOVs[i], plyNbVerts);  TODO
 		mesh->SetTriAOV(i, TriAOVs[i], vi.size());

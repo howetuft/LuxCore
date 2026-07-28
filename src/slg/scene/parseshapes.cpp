@@ -106,15 +106,15 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 		throw runtime_error("Missing shape face list: " + shapeName);
 	}
 
-	Normal *normals = NULL;
+	NormalBuffer normals;
 	if (props.IsDefined(propName + ".normals")) {
 		Property prop = props.Get(propName + ".normals");
 		if ((prop.GetSize() == 0) || (prop.GetSize() / 3 != pointsSize))
 			throw runtime_error("Wrong shape normal list length: " + shapeName);
 
-		normals = new Normal[pointsSize];
-		for (u_int i = 0; i < pointsSize; ++i) {
-			const u_int index = i * 3;
+		normals.Allocate(pointsSize);
+		for (auto i = 0; i < pointsSize; ++i) {
+			const auto index = i * 3;
 			normals[i] = Normal(prop.Get<double>(index), prop.Get<double>(index + 1), prop.Get<double>(index + 2));
 		}
 	}
@@ -133,7 +133,7 @@ ExtTriangleMeshUPtr Scene::CreateInlinedMesh(const string &shapeName, const stri
 	}
 
 	return std::make_unique<ExtTriangleMesh>(
-		std::move(points), std::move(tris), normals, uvs
+		std::move(points), std::move(tris), std::move(normals), uvs
 	);
 }
 

@@ -971,13 +971,14 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 
 	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
 	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
+	NormalBuffer nbuf = n ? NormalBuffer(toSpan.template operator()<Normal>(n)) : NormalBuffer(); 
 
 
 	GetSlgScene().DefineMesh(
 		meshName,
 		std::move(vbuf),
 		std::move(tbuf),
-		(Normal *)n,
+		std::move(nbuf),
 		toSpan.template operator()<UV>(uvs),
 		toSpan.template operator()<Spectrum>(cols),
 		toSpan.template operator()<float>(alphas)
@@ -1037,10 +1038,11 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 
 	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
 	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
+	NormalBuffer nbuf = n ? NormalBuffer(toSpan.template operator()<Normal>(n)) : NormalBuffer();
 
 	GetSlgScene().DefineMeshExt(
 			meshName, std::move(vbuf),
-			std::move(tbuf), (Normal *)n,
+			std::move(tbuf), std::move(nbuf),
 			slgUVs, slgCols, slgAlphas);
 
 	API_END();

@@ -161,7 +161,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	mesh = srcMesh.Copy(
 		std::move(newVertices),
 		std::nullopt,
-		nullptr,
+		std::nullopt,
 		std::nullopt,
 		std::nullopt,
 		std::nullopt

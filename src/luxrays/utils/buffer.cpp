@@ -117,7 +117,7 @@ std::span<TYPE> Buffer<TYPE, SUBTYPE, PAD>::Subset(std::size_t offset, std::size
 	return asType.subspan(offset, count);
 }
 
-// Copy 'from' into 'this'
+// Set: Copy 'from' into 'this'
 // Realloc if needed
 template< typename TYPE, typename SUBTYPE, std::array PAD >
 void Buffer<TYPE, SUBTYPE, PAD>::Set(const Buffer<TYPE, SUBTYPE, PAD>& from) {
@@ -134,10 +134,25 @@ void Buffer<TYPE, SUBTYPE, PAD>::Set(const Buffer<TYPE, SUBTYPE, PAD>& from) {
 }
 
 template< typename TYPE, typename SUBTYPE, std::array PAD >
+void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const TYPE> from) {
+	// Check memory and adapt if necessary
+	const size_t from_count = from.size();
+	if (Count() != from_count) {
+		Allocate(from_count);
+	}
+
+	// Copy
+	std::copy(from.begin(), from.end(), asType.begin());
+}
+
+template< typename TYPE, typename SUBTYPE, std::array PAD >
 void Buffer<TYPE, SUBTYPE, PAD>::Set(std::span<const SUBTYPE> from) {
 	// Check memory and adapt if necessary
-	if (effectiveSize != from.size()) {
-		Allocate(from.size());
+	const size_t from_size = from.size() * sizeof(SUBTYPE);  // from_size in bytes
+	assert(from_size % sizeof(TYPE) == 0);
+	if (effectiveSize != from_size) {
+		const size_t count = from_size / sizeof(TYPE);
+		Allocate(count);
 	}
 
 	// Copy
@@ -174,9 +189,16 @@ void * Buffer<TYPE, SUBTYPE, PAD>::Data() const {
 	return data.get();
 }
 
+// Emptiness
+template< typename TYPE, typename SUBTYPE, std::array PAD >
+Buffer<TYPE, SUBTYPE, PAD>::operator bool() const noexcept {
+	return not asType.empty();
+}
+
 
 // Instanciations
 template class luxrays::Buffer<luxrays::Point, float, VERTEXPAD>;
 template class luxrays::Buffer<luxrays::Triangle, Triangle::subtype_t, NOPAD>;
+template class luxrays::Buffer<luxrays::Normal, float, NOPAD>;
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

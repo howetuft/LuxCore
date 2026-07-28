@@ -243,7 +243,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	if (srcMesh.HasNormals()) {
         normsBuffer = BuildBuffer<3>(
 			stencilTable,
-			(const float *)srcMesh.GetNormals(),
+			reinterpret_cast<float *>(srcMesh.GetNormals().Data()),
 			nCoarseVerts,
 			nRefinedVerts
 		);
@@ -324,11 +324,15 @@ nRefinedVerts
 	newVerts.Set(std::span<const float>(refinedVerts, size_t(3 * nRefinedVerts)));
 
 	// New normals
-	Normal *newNorms = nullptr;
+	NormalBuffer newNorms;
 	if (srcMesh.HasNormals()) {
-		newNorms = new Normal[nRefinedVerts];
+		newNorms.Allocate(nRefinedVerts);
 		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-		std::copy(refinedNorms, refinedNorms + 3 * nRefinedVerts, &newNorms->x);
+		std::copy_n(
+			refinedNorms,
+			3 * nRefinedVerts,
+			newNorms.GetSubObjects().begin()
+		);
 	}
 
 	// New UVs
@@ -382,7 +386,7 @@ nRefinedVerts
 
 	// Allocate the new mesh
 	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		std::move(newVerts), std::move(newTris), newNorms,
+		std::move(newVerts), std::move(newTris), std::move(newNorms),
 		newUVs, newCols, newAlphas
 	);
 
@@ -1173,7 +1177,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated positions
 	///	and a smart pointer to a buffer containing the evaluated normals
 	///
-	std::tuple<VertexBuffer, NormalArrayPtr>
+	std::tuple<VertexBuffer, NormalBuffer>
 	EvaluatePositions(
 		const InterpolatedValues& interpolatedPositions,
 		const CoordVector& tessCoords
@@ -1183,7 +1187,7 @@ struct Surface {
 
 		// Allocate output structure
 		VertexBuffer tessPositions(numCoords);
-		auto tessNormals = NormalArrayPtr(new Normal[numCoords]);
+		NormalBuffer tessNormals(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1466,7 +1470,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 	// Evaluate positions and normals
 	VertexBuffer tessPoints;
-	NormalArrayPtr tessNormals;
+	NormalBuffer tessNormals;
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
@@ -1510,7 +1514,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	auto newMesh =  std::make_unique<ExtTriangleMesh>(
 		std::move(tessPoints),
 		std::move(tessTriangles),
-		tessNormals.release(),
+		std::move(tessNormals),
 		tessUVs.releaseLayers(),
 		tessCols.releaseLayers(),
 		tessAlphas.releaseLayers()
