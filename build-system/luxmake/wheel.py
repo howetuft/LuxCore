@@ -15,6 +15,9 @@ import shlex
 import itertools
 import re
 import sysconfig
+import logging
+import sys
+import runpy
 from pathlib import Path
 
 from .constants import PARAMS
@@ -66,7 +69,8 @@ def _compute_platform_tag():
     """
     system, machine = platform.system(), platform.machine()
     if system == "Linux":
-        return "linux_x86_64"
+        # return "linux_x86_64"
+        return "manylinux_2_38_x86_64"
     if system == "Windows":
         if machine.lower() == "arm64":
             return "win_arm64"
@@ -234,9 +238,8 @@ def make_wheel(args):
         wheel_lib_dir = PARAMS.INSTALL_DIR / "lib"
         logger.info("Repairing wheel")
         input_path = raw_wheel_dir / wheelname
-        cmd = [
-            sys.executable,
-            "-m",
+        logging.basicConfig(level=logging.DEBUG)
+        args = [
             "repairwheel",
             "-l",
             wheel_lib_dir,
@@ -245,11 +248,8 @@ def make_wheel(args):
             PARAMS.WHEELHOUSE_DIR,
             input_path,
         ]
-        try:
-            result = subprocess.check_output(cmd, text=True)
-        except subprocess.CalledProcessError as err:
-            fail(err)
-        logger.info(result)
+        sys.argv = [str(l) for l in args]
+        runpy.run_module("repairwheel", run_name="__main__")
 
         # And, for Windows, recompose
         if platform.system() == "Windows":
