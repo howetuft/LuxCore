@@ -16,8 +16,8 @@ import itertools
 import re
 import sysconfig
 import logging
-import sys
 import runpy
+import zlib
 from pathlib import Path
 
 from .constants import PARAMS
@@ -69,8 +69,7 @@ def _compute_platform_tag():
     """
     system, machine = platform.system(), platform.machine()
     if system == "Linux":
-        # return "linux_x86_64"
-        return "manylinux_2_38_x86_64"
+        return "linux_x86_64"
     if system == "Windows":
         if machine.lower() == "arm64":
             return "win_arm64"
@@ -84,15 +83,104 @@ def _compute_platform_tag():
     return fail("Unknown platform/system: '%s' / '%s'", platform, machine)
 
 
-def _get_lib_paths():
+def _get_lib_paths(use_sep=True):
     """Get library paths for dependencies."""
     base = PARAMS.BINARY_DIR / "dependencies" / "full_deploy" / "host"
     paths_bin = (str(p.absolute()) for p in base.rglob("**/bin"))
     paths_lib = (str(p.absolute()) for p in base.rglob("**/lib"))
     paths = itertools.chain(paths_bin, paths_lib)
-    result = [ ["-l", Path(p)] for p in paths ]
+    result = (
+        [["-l", Path(p)] for p in paths]
+        if use_sep
+        else [[Path(p)] for p in paths]
+    )
     result = list(itertools.chain.from_iterable(result))
     return result
+
+
+def linux_repair(wheel_file, output_dir, lib_path):
+    """Repair Linux wheel.
+
+    We use auditwheel rather than repairwheel, to get more fine-grained
+    control, especially on excluded libs.
+    """
+    try:
+        import auditwheel
+    except ModuleNotFoundError:
+        logger.error(
+            f"{Colors.FAIL}"
+            "Cannot find `auditwheel`. "
+            "Did you install it (pip install auditwheel) ?\n"
+            "(abortion)"
+            f"{Colors.ENDC}"
+        )
+        return
+    # pylint: disable=import-outside-toplevel
+    from auditwheel.libc import Libc
+    from auditwheel.architecture import Architecture
+    from auditwheel.error import InvalidLibcError, NonPlatformWheelError
+    from auditwheel.repair import repair_wheel
+    from auditwheel.wheel_abi import analyze_wheel_abi
+    from auditwheel.patcher import ElfPatcher
+
+    os.environ["AUDITWHEEL_LD_LIBRARY_PATH"] = ":".join(
+        str(l) for l in lib_path
+    )
+    libc = Libc.GLIBC
+    arch = Architecture("x86_64")
+
+    try:
+        winfo = analyze_wheel_abi(
+            libc,
+            arch,
+            wheel_file,
+            frozenset(),
+            disable_isa_ext_check=False,
+            allow_graft=True,
+        )
+    except NonPlatformWheelError as err:
+        logger.info(err.message)
+        return
+    except InvalidLibcError:
+        logger.warning(
+            'Could not detect libc for wheel "%s". '
+            "Extensions may be statically linked. "
+            "Skipping repair.",
+            wheel_file.name,
+        )
+
+    policies = winfo.policies
+    if winfo.overall_policy == policies.linux:
+        target_policy = policies.lowest
+    else:
+        target_policy = winfo.overall_policy
+
+    abis = [target_policy.name, *target_policy.aliases]
+
+    logger.info(
+        'Wheel "%s" is consistent with policy "%s". Repairing to "%s".',
+        wheel_file.name,
+        winfo.overall_policy.name,
+        target_policy.name,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    out_wheel = repair_wheel(
+        winfo,
+        wheel_file,
+        abis=abis,
+        lib_sdir=".libs",
+        out_dir=output_dir,
+        update_tags=True,
+        patcher=ElfPatcher.get_patcher("patchelf", "x86_64"),
+        strip=False,
+        zip_compression_level=zlib.Z_DEFAULT_COMPRESSION,
+    )
+
+    if out_wheel is not None:
+        logger.info("Fixed-up wheel written to %s", out_wheel)
+        return
 
 
 def make_wheel(args):
@@ -148,7 +236,8 @@ def make_wheel(args):
         # Check Python version in extension
         extension_path = PARAMS.INSTALL_DIR / "pyluxcore"
         extensions = [
-            f.name for f in extension_path.iterdir()
+            f.name
+            for f in extension_path.iterdir()
             if f.is_file() and f.name.startswith("pyluxcore")
         ]
         for extension in extensions:
@@ -156,9 +245,10 @@ def make_wheel(args):
         else:
             raise RuntimeError(f"No extension in {extension_path}")
         try:
-            ext_version = re.search(r'\.[^.]*?(\d+)', extension).group(1)
+            ext_version = re.search(r"\.[^.]*?(\d+)", extension).group(1)
         except AttributeError:
-            logger.warn(
+            # pylint: disable=logging-fstring-interpolation
+            logger.warning(
                 f"{Colors.WARNING2}"
                 "Could not get version tag from extension name "
                 f"('{extension}'). "
@@ -168,7 +258,7 @@ def make_wheel(args):
             )
 
         soabi = sysconfig.get_config_var("SOABI")
-        abi_version = re.search(r'(\d+)', soabi).group(1)
+        abi_version = re.search(r"(\d+)", soabi).group(1)
 
         if ext_version != abi_version:
             raise RuntimeError(
@@ -238,20 +328,29 @@ def make_wheel(args):
         wheel_lib_dir = PARAMS.INSTALL_DIR / "lib"
         logger.info("Repairing wheel")
         input_path = raw_wheel_dir / wheelname
-        logging.basicConfig(level=logging.DEBUG)
-        args = [
-            "repairwheel",
-            "-l",
-            wheel_lib_dir,
-            *_get_lib_paths(),
-            "-o",
-            PARAMS.WHEELHOUSE_DIR,
-            input_path,
-        ]
-        sys.argv = [str(l) for l in args]
-        runpy.run_module("repairwheel", run_name="__main__")
 
-        # And, for Windows, recompose
+        lib_paths = [wheel_lib_dir] + list(_get_lib_paths(False))
+
+        logging.basicConfig(level=logging.DEBUG)
+
+        if platform.system() == "Linux":
+            # For Linux, use auditwheel
+            linux_repair(input_path, PARAMS.WHEELHOUSE_DIR, lib_paths)
+        else:
+            # For others, use repairwheel
+            args = [
+                "repairwheel",
+                "-l",
+                wheel_lib_dir,
+                *_get_lib_paths(),
+                "-o",
+                PARAMS.WHEELHOUSE_DIR,
+                input_path,
+            ]
+            sys.argv = [str(l) for l in args]
+            runpy.run_module("repairwheel", run_name="__main__")
+
+        # For Windows, recompose
         if platform.system() == "Windows":
             args.wheel = PARAMS.WHEELHOUSE_DIR / wheelname
             win_recompose(args)
