@@ -104,83 +104,30 @@ def linux_repair(wheel_file, output_dir, lib_path):
     We use auditwheel rather than repairwheel, to get more fine-grained
     control, especially on excluded libs.
     """
-    try:
-        import auditwheel
-    except ModuleNotFoundError:
-        logger.error(
-            f"{Colors.FAIL}"
-            "Cannot find `auditwheel`. "
-            "Did you install it (pip install auditwheel) ?\n"
-            "(abortion)"
-            f"{Colors.ENDC}"
-        )
-        return
-    # pylint: disable=import-outside-toplevel
-    from auditwheel.libc import Libc
-    from auditwheel.architecture import Architecture
-    from auditwheel.error import InvalidLibcError, NonPlatformWheelError
-    from auditwheel.repair import repair_wheel
-    from auditwheel.wheel_abi import analyze_wheel_abi
-    from auditwheel.patcher import ElfPatcher
 
     os.environ["AUDITWHEEL_LD_LIBRARY_PATH"] = ":".join(
         str(l) for l in lib_path
     )
-    libc = Libc.GLIBC
-    arch = Architecture("x86_64")
-
-    try:
-        winfo = analyze_wheel_abi(
-            libc,
-            arch,
-            wheel_file,
-            frozenset(),
-            disable_isa_ext_check=False,
-            allow_graft=True,
-        )
-    except NonPlatformWheelError as err:
-        logger.info(err.message)
-        return
-    except InvalidLibcError:
-        logger.warning(
-            'Could not detect libc for wheel "%s". '
-            "Extensions may be statically linked. "
-            "Skipping repair.",
-            wheel_file.name,
-        )
-
-    policies = winfo.policies
-    if winfo.overall_policy == policies.linux:
-        target_policy = policies.lowest
-    else:
-        target_policy = winfo.overall_policy
-
-    abis = [target_policy.name, *target_policy.aliases]
-
-    logger.info(
-        'Wheel "%s" is consistent with policy "%s". Repairing to "%s".',
-        wheel_file.name,
-        winfo.overall_policy.name,
-        target_policy.name,
-    )
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    out_wheel = repair_wheel(
-        winfo,
+    args = [
+        "pipx",
+        "run",
+        "auditwheel",
+        "repair",
+        "-z",
+        "0",
+        "--plat",
+        "manylinux_2_43_x86_64",
+        "--lib-sdir",
+        ".libs",
+        "--wheel-dir",
+        PARAMS.WHEELHOUSE_DIR,
         wheel_file,
-        abis=abis,
-        lib_sdir=".libs",
-        out_dir=output_dir,
-        update_tags=True,
-        patcher=ElfPatcher.get_patcher("patchelf", "x86_64"),
-        strip=False,
-        zip_compression_level=zlib.Z_DEFAULT_COMPRESSION,
-    )
-
-    if out_wheel is not None:
-        logger.info("Fixed-up wheel written to %s", out_wheel)
-        return
+    ]
+    sys.argv = [str(l) for l in args]
+    runpy.run_module("pipx", run_name="__main__")
 
 
 def make_wheel(args):
