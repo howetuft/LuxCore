@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <oneapi/tbb/global_control.h>
 #include <string>
 #include <limits>
 
@@ -168,6 +169,7 @@ void EmbreeAccel::Init(
 					// Create a new RTCScene
 					instScene = rtcNewScene(embreeDevice);
 					ExportTriangleMesh(instScene, instancedMesh);
+					LR_LOG(ctx, "TBB max_allowed_parallelism: " << tbb::detail::d1::global_control::active_value(tbb::detail::d1::global_control::max_allowed_parallelism));
 					rtcCommitScene(instScene);
 
 					uniqueRTCSceneByMesh[&instancedMesh] = instScene;
