@@ -7,7 +7,7 @@
   },
   "Dependencies": {
     "user": "howetuft",
-    "release": "2.2.2"
+    "release": "2.2.3-dev0"
   },
   "Build": {
     "gcc": "14",
