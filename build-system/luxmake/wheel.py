@@ -69,8 +69,7 @@ def _compute_platform_tag():
     """
     system, machine = platform.system(), platform.machine()
     if system == "Linux":
-        # return "linux_x86_64"
-        return "manylinux_2_38_x86_64"
+        return "linux_x86_64"
     if system == "Windows":
         if machine.lower() == "arm64":
             return "win_arm64"
