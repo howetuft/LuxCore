@@ -21,7 +21,7 @@ import runpy
 from pathlib import Path
 
 from .constants import PARAMS
-from .utils import logger, pack, fail, Colors, get_dep_version
+from .utils import logger, pack, fail, Colors, get_dep_version, run_module
 from .build import build_and_install
 from .config import config
 from .windows import win_recompose
@@ -250,7 +250,6 @@ def make_wheel(args):
         input_path = raw_wheel_dir / wheelname
         logging.basicConfig(level=logging.DEBUG)
         args = [
-            "repairwheel",
             "-l",
             wheel_lib_dir,
             *_get_lib_paths(),
@@ -258,8 +257,7 @@ def make_wheel(args):
             PARAMS.WHEELHOUSE_DIR,
             input_path,
         ]
-        sys.argv = [str(l) for l in args]
-        runpy.run_module("repairwheel", run_name="__main__")
+        run_module("repairwheel", args)
 
         # And, for Windows, recompose
         if platform.system() == "Windows":
