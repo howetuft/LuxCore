@@ -90,13 +90,24 @@ def _get_lib_paths():
     paths_bin = (str(p.absolute()) for p in base.rglob("**/bin"))
     paths_lib = (str(p.absolute()) for p in base.rglob("**/lib"))
     paths = itertools.chain(paths_bin, paths_lib)
-    result = [ ["-l", Path(p)] for p in paths ]
+    result = [["-l", Path(p)] for p in paths]
     result = list(itertools.chain.from_iterable(result))
     return result
 
 
+def _check_repairwheel():
+    output = run_module("repairwheel", ["-V"])
+    logger.info("repairwheel version: %s", output)
+    version = output.split(".")
+    if version < ["0", "7", "0"]:
+        fail("repairwheel >= 0.7.0 is required")
+
+
 def make_wheel(args):
     """Build a wheel."""
+    # Check repairwheel
+    _check_repairwheel()
+
     # Set default build type to debug
     PARAMS.DEFAULT_BUILD_TYPE = "Debug"
 
