@@ -158,7 +158,8 @@ def make_wheel(args):
         # Check Python version in extension
         extension_path = PARAMS.INSTALL_DIR / "pyluxcore"
         extensions = [
-            f.name for f in extension_path.iterdir()
+            f.name
+            for f in extension_path.iterdir()
             if f.is_file() and f.name.startswith("pyluxcore")
         ]
         for extension in extensions:
@@ -166,7 +167,7 @@ def make_wheel(args):
         else:
             raise RuntimeError(f"No extension in {extension_path}")
         try:
-            ext_version = re.search(r'\.[^.]*?(\d+)', extension).group(1)
+            ext_version = re.search(r"\.[^.]*?(\d+)", extension).group(1)
         except AttributeError:
             logger.warn(
                 f"{Colors.WARNING2}"
@@ -178,7 +179,7 @@ def make_wheel(args):
             )
 
         soabi = sysconfig.get_config_var("SOABI")
-        abi_version = re.search(r'(\d+)', soabi).group(1)
+        abi_version = re.search(r"(\d+)", soabi).group(1)
 
         if ext_version != abi_version:
             raise RuntimeError(
