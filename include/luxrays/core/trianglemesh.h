@@ -130,8 +130,9 @@ public:
 
 	static TriangleMeshUPtr Merge(
 		const std::deque<const Mesh *> &meshes,
-		TriangleMeshID **preprocessedMeshIDs = NULL,
-		TriangleID **preprocessedMeshTriangleIDs = NULL);
+		std::unique_ptr<TriangleMeshID[]> *preprocessedMeshIDs = nullptr,
+		std::unique_ptr<TriangleID[]> *preprocessedMeshTriangleIDs = nullptr
+	);
 
 protected:
 	void Preprocess();

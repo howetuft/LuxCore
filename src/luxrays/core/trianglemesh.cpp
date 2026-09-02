@@ -98,8 +98,9 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 
 TriangleMeshUPtr TriangleMesh::Merge(
 	const deque<const Mesh *> &meshes,
-	TriangleMeshID **preprocessedMeshIDs,
-	TriangleID **preprocessedMeshTriangleIDs) {
+	std::unique_ptr<TriangleMeshID[]> *preprocessedMeshIDs,
+	std::unique_ptr<TriangleID[]> *preprocessedMeshTriangleIDs
+) {
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
@@ -116,9 +117,9 @@ TriangleMeshUPtr TriangleMesh::Merge(
 	TriangleBuffer i(totalTriangleCount);
 
 	if (preprocessedMeshIDs)
-		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];
+		*preprocessedMeshIDs = std::make_unique<TriangleMeshID[]>(totalTriangleCount);
 	if (preprocessedMeshTriangleIDs)
-		*preprocessedMeshTriangleIDs = new TriangleID[totalTriangleCount];
+		*preprocessedMeshTriangleIDs = std::make_unique<TriangleID[]>(totalTriangleCount);
 
 	u_int vIndex = 0;
 	u_int iIndex = 0;
