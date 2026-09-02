@@ -61,7 +61,8 @@ public:
 			const u_int totalVertCount = bvh.totalVertexCount;
 
 			// Allocate the temporary vertex buffer
-			Point *tmpVerts = new Point[Min<size_t>(totalVertCount, maxVertCount)];
+			auto tmpVertsCount = std::min<size_t>(totalVertCount, maxVertCount);
+			auto tmpVerts = std::make_unique<Point[]>(tmpVertsCount);
 			deque<const Mesh * >::const_iterator mesh = bvh.meshes.begin();
 
 			u_int vertsCopied = 0;
@@ -71,7 +72,7 @@ public:
 			meshVertexOffsets.push_back(0);
 			do {
 				const u_int leftVertCount = totalVertCount - vertsCopied;
-				const u_int pageVertCount = Min<size_t>(leftVertCount, maxVertCount);
+				const u_int pageVertCount = std::min<size_t>(leftVertCount, maxVertCount);
 
 				// Fill the temporary vertex buffer
 				u_int meshVertCount = (*mesh)->GetTotalVertexCount();
@@ -98,11 +99,10 @@ public:
 					throw runtime_error("Too many vertex pages required in BVHKernels()");
 
 				device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
-						tmpVerts, sizeof(Point) * pageVertCount,
+						tmpVerts.get(), sizeof(Point) * pageVertCount,
 						"BVH mesh vertices");
 				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
-			delete[] tmpVerts;
 
 			//------------------------------------------------------------------
 			// Allocate BVH node buffers
@@ -113,7 +113,9 @@ public:
 			const u_int totalNodeCount = bvh.nNodes;
 			const luxrays::ocl::BVHArrayNode *nodes = bvh.bvhTree;
 			// Allocate a temporary buffer for the copy of the BVH nodes
-			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[Min<size_t>(bvh.nNodes, maxNodeCount)];
+			auto tmpNodes = std::make_unique<luxrays::ocl::BVHArrayNode[]>(
+				std::min<size_t>(bvh.nNodes, maxNodeCount)
+			);
 			u_int nodeIndex = 0;
 
 			do {
@@ -121,7 +123,7 @@ public:
 				const u_int pageNodeCount = Min<size_t>(leftNodeCount, maxNodeCount);
 
 				// Make a copy of the nodes
-				memcpy(tmpNodes, &nodes[nodeIndex], sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount);
+				memcpy(tmpNodes.get(), &nodes[nodeIndex], sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount);
 
 				// Update the vertex and node references
 				for (u_int i = 0; i < pageNodeCount; ++i) {
@@ -151,13 +153,12 @@ public:
 					throw runtime_error("Too many node pages required in BVHKernels()");
 
 				device.AllocBuffer(&nodeBuffs.back(), memTypeFlags,
-						tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+						tmpNodes.get(), sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
 						"BVH nodes");
 				device.FinishQueue();
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
-			delete[] tmpNodes;
 		}
 
 		//----------------------------------------------------------------------
