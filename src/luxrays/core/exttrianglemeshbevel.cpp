@@ -434,13 +434,11 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 		//cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
 
-		delete[] bevelCylinders;
-		bevelCylinders = new BevelCylinder[bevelCyls.size()];
-		copy(bevelCyls.begin(), bevelCyls.end(), bevelCylinders);
+		auto bevelCylinders = std::make_unique<BevelCylinder[]>(bevelCyls.size());
+		std::copy(bevelCyls.begin(), bevelCyls.end(), bevelCylinders.get());
 
-		delete[] bevelBoundingCylinders;
-		bevelBoundingCylinders = new BevelBoundingCylinder[boundingCyls.size()];
-		copy(boundingCyls.begin(), boundingCyls.end(), bevelBoundingCylinders);
+		auto bevelBoundingCylinders = std::make_unique<BevelBoundingCylinder[]>(boundingCyls.size());
+		copy(boundingCyls.begin(), boundingCyls.end(), bevelBoundingCylinders.get());
 
 		//----------------------------------------------------------------------
 		// Build the bounding cylinder accelerator
