@@ -221,14 +221,17 @@ u_int BuildBVHArray(const deque<const Mesh *> *meshes, BVHTreeNode *node,
 	return offset;
 }
 
-luxrays::ocl::BVHArrayNode *BuildBVH(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
+std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildBVH(
+	const BVHParams &params,
+	u_int *nNodes,
+	const std::deque<const Mesh *> *meshes,
+	std::vector<BVHTreeNode *> &leafList
+) {
 	*nNodes = 0;
 	BVHTreeNode *rootNode = BuildBVH(nNodes, params, leafList);
-	
-	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
-	BuildBVHArray(meshes, rootNode, 0, bvhArrayTree);
+
+	auto bvhArrayTree = std::make_unique<luxrays::ocl::BVHArrayNode[]>(*nNodes);
+	BuildBVHArray(meshes, rootNode, 0, bvhArrayTree.get());
 	FreeBVH(rootNode);
 
 	return bvhArrayTree;

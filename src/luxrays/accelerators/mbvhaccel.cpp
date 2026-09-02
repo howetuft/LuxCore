@@ -46,7 +46,6 @@ MBVHAccel::~MBVHAccel() {
 	if (initialized) {
 		for(const BVHAccel *bvh: uniqueLeafs)
 			delete bvh;
-		delete[] bvhRootTree;
 	}
 }
 
@@ -221,8 +220,7 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 }
 
 void MBVHAccel::UpdateRootBVH() {
-	delete bvhRootTree;
-	bvhRootTree = NULL;
+
 
 	const string builderType = ctx.GetConfig().Get(Property("accelerator.bvh.builder.type")(
 		"EMBREE_BINNED_SAH"
@@ -268,7 +266,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
 	u_int currentMeshOffset = 0;
-	luxrays::ocl::BVHArrayNode *currentTree = bvhRootTree;
+	std::reference_wrapper currentTree = bvhRootTree;
 
 	Ray currentRay(*ray);
 
@@ -292,7 +290,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			}
 		}
 
-		const luxrays::ocl::BVHArrayNode &node = currentTree[currentNode];
+		const luxrays::ocl::BVHArrayNode &node = currentTree.get()[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {
@@ -339,7 +337,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 
 				currentRootNode = currentNode + 1;
 				currentNode = 0;
-				currentStopNode = BVHNodeData_GetSkipIndex(currentTree[0].nodeData);
+				currentStopNode = BVHNodeData_GetSkipIndex(currentTree.get()[0].nodeData);
 
 				// Now, I'm inside a leaf tree
 				insideLeafTree = true;

@@ -334,12 +334,12 @@ void MBVHKernel::UpdateBVHNodes() {
 
 	u_int currentNodeIndex = 0;
 	u_int currentLeafIndex = 0;
-	const luxrays::ocl::BVHArrayNode *currentNodes = mbvh.bvhRootTree;
+	std::reference_wrapper currentNodes = mbvh.bvhRootTree;
 	u_int currentNodesCount = mbvh.nRootNodes;
 
 	while (currentLeafIndex < mbvh.uniqueLeafs.size()) {
 		const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
-		const bool isRootTree = (currentNodes == mbvh.bvhRootTree);
+		const bool isRootTree = (currentNodes.get() == mbvh.bvhRootTree);
 		const u_int leafIndex = currentLeafIndex;
 
 		// Check if there is enough space in the temporary buffer for all nodes
@@ -347,7 +347,7 @@ void MBVHKernel::UpdateBVHNodes() {
 		const u_int toCopy = currentNodesCount - currentNodeIndex;
 		if (tmpLeftNodeCount >= toCopy) {
 			// There is enough space for all nodes
-			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
+			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes.get()[currentNodeIndex],
 					sizeof(luxrays::ocl::BVHArrayNode) * toCopy);
 			copiedIndexStart = tmpNodeIndex;
 			copiedIndexEnd = tmpNodeIndex + toCopy;
@@ -367,7 +367,7 @@ void MBVHKernel::UpdateBVHNodes() {
 			}
 		} else {
 			// There isn't enough space for all mesh vertices. Fill the current buffer.
-			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
+			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes.get()[currentNodeIndex],
 					sizeof(luxrays::ocl::BVHArrayNode) * tmpLeftNodeCount);
 			copiedIndexStart = tmpNodeIndex;
 			copiedIndexEnd = tmpNodeIndex + tmpLeftNodeCount;

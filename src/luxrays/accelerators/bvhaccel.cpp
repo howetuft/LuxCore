@@ -41,11 +41,6 @@ BVHAccel::BVHAccel(const Context & context) : ctx(context) {
 	initialized = false;
 }
 
-BVHAccel::~BVHAccel() {
-	if (initialized)
-		delete[] bvhTree;
-}
-
 BVHParams BVHAccel::ToBVHParams(const Properties &props) {
 	// Tree type to generate (2 = binary, 4 = quad, 8 = octree)
 	const int treeType = props.Get(Property("accelerator.bvh.treetype")(4)).Get<int>();

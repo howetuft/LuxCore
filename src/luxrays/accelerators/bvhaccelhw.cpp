@@ -111,7 +111,7 @@ public:
 			// Check how many pages I have to allocate
 			maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
 			const u_int totalNodeCount = bvh.nNodes;
-			const luxrays::ocl::BVHArrayNode *nodes = bvh.bvhTree;
+			const auto& nodes = bvh.bvhTree;
 			// Allocate a temporary buffer for the copy of the BVH nodes
 			auto tmpNodes = std::make_unique<luxrays::ocl::BVHArrayNode[]>(
 				std::min<size_t>(bvh.nNodes, maxNodeCount)

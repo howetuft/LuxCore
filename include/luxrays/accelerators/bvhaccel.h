@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_BVHACCEL_H
 #define	_LUXRAYS_BVHACCEL_H
 
+#include <memory>
 #include <vector>
 
 #include "luxrays/luxrays.h"
@@ -34,7 +35,7 @@ class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
 	BVHAccel(const Context & context);
-	virtual ~BVHAccel();
+	virtual ~BVHAccel() = default;
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
 
@@ -61,7 +62,7 @@ private:
 	BVHParams params;
 
 	u_int nNodes;
-	luxrays::ocl::BVHArrayNode *bvhTree;
+	std::unique_ptr<luxrays::ocl::BVHArrayNode[]> bvhTree;
 
 	const Context & ctx;
 	std::deque<const Mesh *> meshes;
