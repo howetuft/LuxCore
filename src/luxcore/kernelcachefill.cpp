@@ -22,6 +22,7 @@
 #include "luxcore/luxcorelogger.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
+#include "luxrays/utils/buffer.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,14 +36,14 @@ using namespace luxcore::detail;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 static void CreateBox(
-	auto& scene,
+	luxcore::Scene& scene,
 	const string &objName,
 	const string &meshName,
 	const string &matName,
 	const bool enableUV,
 	const BBox &bbox
 ) {
-	VertexBuffer p = Scene::AllocVerticesBuffer(24);
+	VertexBuffer p = luxcore::Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -103,43 +104,44 @@ static void CreateBox(
 			12,
 			p.GetSubObjects().data(),
 			vi.GetSubObjects().data(),
-			NULL,
-			NULL,
-			NULL,
-			NULL
+			nullptr,  // No normals
+			nullptr,  // No UV
+			nullptr,
+			nullptr
 		);
 	} else {
-		UV *uv = new UV[24];
+	std::array<UV, 24> uv{
 		// Bottom face
-		uv[0] = UV(0.f, 0.f);
-		uv[1] = UV(1.f, 0.f);
-		uv[2] = UV(1.f, 1.f);
-		uv[3] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
 		// Top face
-		uv[4] = UV(0.f, 0.f);
-		uv[5] = UV(1.f, 0.f);
-		uv[6] = UV(1.f, 1.f);
-		uv[7] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
 		// Side left
-		uv[8] = UV(0.f, 0.f);
-		uv[9] = UV(1.f, 0.f);
-		uv[10] = UV(1.f, 1.f);
-		uv[11] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
 		// Side right
-		uv[12] = UV(0.f, 0.f);
-		uv[13] = UV(1.f, 0.f);
-		uv[14] = UV(1.f, 1.f);
-		uv[15] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
 		// Side back
-		uv[16] = UV(0.f, 0.f);
-		uv[17] = UV(1.f, 0.f);
-		uv[18] = UV(1.f, 1.f);
-		uv[19] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
 		// Side front
-		uv[20] = UV(0.f, 0.f);
-		uv[21] = UV(1.f, 0.f);
-		uv[22] = UV(1.f, 1.f);
-		uv[23] = UV(0.f, 1.f);
+		UV(0.f, 0.f),
+		UV(1.f, 0.f),
+		UV(1.f, 1.f),
+		UV(0.f, 1.f),
+		};
 
 		// Define the object
 		scene.DefineMesh(
@@ -148,10 +150,10 @@ static void CreateBox(
 			12,
 			p.GetSubObjects().data(),
 			vi.GetSubObjects().data(),
-			NULL,
-			(float *)uv,
-			NULL,
-			NULL
+			nullptr,
+			reinterpret_cast<float *>(uv.data()),
+			nullptr,
+			nullptr
 		);
 	}
 
