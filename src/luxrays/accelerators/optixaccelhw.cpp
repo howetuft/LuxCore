@@ -367,7 +367,7 @@ public:
 				luxrays::ocl::KernelSource_optixaccel;
 		kernelSource = cudaDevice->GetKernelSource(kernelSource);
 		
-		char *ptx;
+		std::unique_ptr<char[]> ptx;
 		size_t ptxSize;
 		bool cached;
 		string ptxError;
@@ -405,13 +405,12 @@ public:
 				optixContext,
 				&moduleCompileOptions,
 				&pipelineCompileOptions,
-				ptx,
+				ptx.get(),
 				ptxSize,
 				optixErrLog,
 				&optixErrLogSize,
 				&optixModule);
 
-		delete[] ptx;
 
 		if (optixErr != OPTIX_SUCCESS) {
 			LR_LOG(device.GetContext(), "Optix optixModuleCreateFromPTX() error: " << endl << optixErrLog);

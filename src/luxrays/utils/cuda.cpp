@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <iostream>
@@ -64,8 +65,10 @@ static string GetCuda10Architecture() {
 // cudaKernelCache
 //------------------------------------------------------------------------------
 
-bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, const string &kernelSource,
-		 const string &programName, char **ptx, size_t *ptxSize, string *error) {
+bool cudaKernelCache::ForcedCompilePTX(
+	const vector<string> &kernelsParameters, const string &kernelSource,
+	const string &programName, std::unique_ptr<char[]> * ptx, size_t *ptxSize, string *error
+) {
 	if (error)
 		*error = "";
 
@@ -131,8 +134,8 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 
 	// Obtain PTX from the program.
 	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, ptxSize));
-	*ptx = new char[*ptxSize];
-	CHECK_NVRTC_ERROR(nvrtcGetPTX(prog, *ptx));
+	*ptx = std::make_unique<char[]>(*ptxSize);
+	CHECK_NVRTC_ERROR(nvrtcGetPTX(prog, ptx->get()));
 
 	CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&prog));
 
@@ -159,7 +162,7 @@ cudaKernelPersistentCache::~cudaKernelPersistentCache() {
 
 bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParameters,
 		const string &kernelSource, const string &programName,
-		char **ptx, size_t *ptxSize, bool *cached, string *error) {
+		std::unique_ptr<char[]> *ptx, size_t *ptxSize, bool *cached, string *error) {
 	if (error)
 		*error = "";
 
@@ -191,10 +194,10 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 					std::ofstream::trunc);
 
 			// Write the binary hash
-			const u_int hashBin = oclKernelPersistentCache::HashBin(*ptx, *ptxSize);
+			const u_int hashBin = oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize);
 			file.write((char *)&hashBin, sizeof(int));
 
-			file.write(*ptx, *ptxSize);
+			file.write(ptx->get(), *ptxSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -213,7 +216,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 		if (fileSize > 4) {
 			*ptxSize = fileSize - 4;
 
-			*ptx = new char[*ptxSize];
+			*ptx = std::make_unique<char[]>(*ptxSize);
 
 			// The use of std::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
@@ -224,7 +227,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 			u_int hashBin;
 			file.read((char *)&hashBin, sizeof(int));
 
-			file.read(*ptx, *ptxSize);
+			file.read(ptx->get(), *ptxSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -235,7 +238,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 			file.close();
 
 			// Check the binary hash
-			if (hashBin != oclKernelPersistentCache::HashBin(*ptx, *ptxSize)) {
+			if (hashBin != oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
 				// Something wrong in the file, remove the file and retry
 				std::filesystem::remove(filePath);
 				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
@@ -255,13 +258,11 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
 		const string &kernelSource, const string &programName,
 		bool *cached, string *error) {
-	char *ptx;
+	std::unique_ptr<char[]> ptx;
 	size_t ptxSize;
 	if (CompilePTX(kernelsParameters, kernelSource, programName, &ptx, &ptxSize, cached, error)) {
 		CUmodule module;
-		CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
-
-		delete[] ptx;
+		CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx.get(), 0, 0, 0));
 
 		return module;
 	} else
