@@ -33,35 +33,31 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 template <class T>
-IndexKdTree<T>::IndexKdTree() : arrayNodes(nullptr) {
+IndexKdTree<T>::IndexKdTree() : arrayNodes() {
 }
 
 template <class T>
-IndexKdTree<T>::IndexKdTree(const vector<T> *entries) : allEntries(entries),
-		arrayNodes(nullptr) {
+IndexKdTree<T>::IndexKdTree(const vector<T> *entries) :
+	allEntries(entries),
+	arrayNodes(allEntries->size())
+{
 	assert (allEntries->size() > 0);
 
-	arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
-
-	vector<u_int> buildNodes(allEntries->size());
+	std::vector<u_int> buildNodes(allEntries->size());
 	for (u_int i = 0; i < allEntries->size(); ++i)
 		buildNodes[i] = i;
 
 	// Build the KdTree
 	nextFreeNode = 1;
-	Build(0, 0, allEntries->size(), &buildNodes[0]);
-}
-
-template <class T>
-IndexKdTree<T>::~IndexKdTree() {
-	delete arrayNodes;
+	Build(0, 0, allEntries->size(), buildNodes);
 }
 
 template <class T>
 struct CompareNode {
-	CompareNode(const vector<T> *entries, u_int a) : allEntries(entries),
-		axis(a) {
-	}
+	CompareNode(const vector<T> *entries, u_int a) :
+		allEntries(entries),
+		axis(a)
+	{ }
 
 	const std::vector<T> *allEntries;
 	u_int axis;
@@ -73,13 +69,17 @@ struct CompareNode {
 };
 
 template <class T> void
-IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
-		u_int *buildNodes) {
+IndexKdTree<T>::Build(
+	const u_int nodeIndex,
+	const u_int start,
+	const u_int end,
+	std::vector<u_int>& buildNodes
+) {
 	// Check if we are done
 	if (start + 1 == end) {
 		arrayNodes[nodeIndex].index = buildNodes[start];
 		KdTreeNodeData_SetLeaf(arrayNodes[nodeIndex].nodeData);
-		
+
 		assert (KdTreeNodeData_IsLeaf(arrayNodes[nodeIndex].nodeData));
 	} else {
 		// Compute the bounding box of all nodes
@@ -89,11 +89,20 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 
 		// Compute the split axis and position
 		const u_int splitAxis = bb.MaximumExtent();
-		const u_int splitPos = (start + end) / 2;
+		auto splitPos = (start + end) / 2;
+
+		auto beginIt = buildNodes.begin();
+		auto startIt = beginIt + start;
+		auto endIt = beginIt + end;
+		auto splitIt = beginIt + splitPos;
 
 		// Sort the nodes around the split plane
-		nth_element(&buildNodes[start], &buildNodes[splitPos],
-				&buildNodes[end], CompareNode<T>(allEntries, splitAxis));
+		nth_element(
+			startIt,
+			endIt,
+			splitIt,
+			CompareNode<T>(allEntries, splitAxis)
+		);
 
 		// Set up the KdTree node
 		KdTreeNodeData_SetAxis(arrayNodes[nodeIndex].nodeData, splitAxis);
@@ -102,7 +111,7 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 
 		if (start < splitPos) {
 			KdTreeNodeData_SetHasLeftChild(arrayNodes[nodeIndex].nodeData, 1);
-			
+
 			assert (KdTreeNodeData_HasLeftChild(arrayNodes[nodeIndex].nodeData));
 
 			const u_int leftChildIndex = nextFreeNode++;
@@ -122,7 +131,7 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 			Build(rightChildIndex, splitPos + 1, end, buildNodes);
 		} else {
 			KdTreeNodeData_SetRightChild(arrayNodes[nodeIndex].nodeData, KdTreeNodeData_NULL_INDEX);
-			
+
 			assert (KdTreeNodeData_GetRightChild(arrayNodes[nodeIndex].nodeData) == KdTreeNodeData_NULL_INDEX);
 		}
 	}
@@ -131,8 +140,6 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 //------------------------------------------------------------------------------
 // Explicit instantiations
 //------------------------------------------------------------------------------
-
-// C++ can be quite horrible...
 
 namespace slg {
 template class IndexKdTree<PGICVisibilityParticle>;

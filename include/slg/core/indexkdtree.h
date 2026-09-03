@@ -50,7 +50,7 @@ typedef struct IndexKdTreeArrayNode_t {
 	// 29 bit => if it has a left child
 	// [0, 28] bits => the index of right child
 	unsigned int nodeData;
-	
+
 	friend class boost::serialization::access;
 
 private:
@@ -65,7 +65,7 @@ template <class T>
 class IndexKdTree {
 public:
 	IndexKdTree(const std::vector<T> *entries);
-	virtual ~IndexKdTree();
+	virtual ~IndexKdTree() = default;
 
 	size_t GetMemoryUsage() const { return allEntries->size() * sizeof(IndexKdTreeArrayNode); }
 
@@ -75,25 +75,29 @@ protected:
 	// Used by serialization
 	IndexKdTree();
 
-	void Build(const u_int nodeIndex, const u_int start, const u_int end, u_int *buildNodes);
+	void Build(
+		const u_int nodeIndex,
+		const u_int start,
+		const u_int end,
+		std::vector<u_int>& buildNodes
+	);
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & allEntries;
 
-		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
+		ar & arrayNodes;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & allEntries;
 
-		arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
-		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
+		ar & arrayNodes;
 	}
-	
+
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	const std::vector<T> *allEntries;
-	IndexKdTreeArrayNode *arrayNodes;
+	std::vector<IndexKdTreeArrayNode> arrayNodes;
 
 	u_int nextFreeNode;
 };
