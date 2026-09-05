@@ -141,8 +141,6 @@ PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 		Stop();
 
 	FreeThreadFilms();
-
-	delete[] gpuTaskStats;
 }
 
 void PathOCLBaseOCLRenderThread::Start() {

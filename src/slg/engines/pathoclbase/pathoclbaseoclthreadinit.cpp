@@ -406,7 +406,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 
 		intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
-		char *buffer = new char[size];
+		auto _buffer = std::make_unique<char[]>(size);
+		auto buffer = _buffer.get();
 
 		// Initialize SobolSamplerSharedData fields
 		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer;
@@ -429,20 +430,19 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		// Write the data
 		intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, buffer);
 		
-		delete[] buffer;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		// TilePathSamplerSharedData is updated in PathOCLBaseOCLRenderThread::UpdateSamplerData()
 		
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL: {
-				char *buffer = new char[size];
+				auto _buffer = std::make_unique<char[]>(size);
+				auto buffer = _buffer.get();
 
 				// Initialize the Sobol directions array values
 				u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
 				SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
 				intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &buffer[0]);
-				delete [] buffer;
 				break;
 			}
 			case RTPATHOCL:
@@ -587,8 +587,9 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	const u_int taskCount = renderEngine->taskCount;
 
 	// In case renderEngine->taskCount has changed
-	delete[] gpuTaskStats;
-	gpuTaskStats = new slg::ocl::pathoclbase::GPUTaskStats[taskCount];
+	gpuTaskStats = std::move(
+		std::make_unique<slg::ocl::pathoclbase::GPUTaskStats[]>(taskCount)
+	);
 	for (u_int i = 0; i < taskCount; ++i)
 		gpuTaskStats[i].sampleCount = 0;
 

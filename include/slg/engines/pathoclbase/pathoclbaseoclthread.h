@@ -288,7 +288,7 @@ protected:
 	luxrays::HardwareDeviceKernelUPtr advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 
-	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;
+	std::unique_ptr<slg::ocl::pathoclbase::GPUTaskStats[]> gpuTaskStats;
 
 	bool started, editMode, threadDone;
 };

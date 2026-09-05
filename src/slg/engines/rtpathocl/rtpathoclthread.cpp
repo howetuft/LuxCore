@@ -220,7 +220,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                                 taskStatsBuff,
                                 CL_FALSE,
                                 sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-                                gpuTaskStats);
+                                gpuTaskStats.get());
                         intersectionDevice.FinishQueue();
 
                         engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, threadFilms[0]->GetFilm());

@@ -193,7 +193,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                         taskStatsBuff,
                         CL_FALSE,
                         sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-                        gpuTaskStats);
+                        gpuTaskStats.get());
 
                 intersectionDevice.FinishQueue();
 
