@@ -23,7 +23,8 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/film/filters/filter.h"
+#include "slg/usings.h"
+//#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -85,20 +86,19 @@ inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
 
 class FilterLUTs {
 public:
-	FilterLUTs(const Filter &filter, const unsigned int size);
-	~FilterLUTs() ;
+	FilterLUTs(const Filter &filter, const size_t size);
 
 	const FilterLUT *GetLUT(const float x, const float y) const {
 		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));
 		const int iy = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (y + 0.5f)), lutsSize - 1));
 
-		return luts[ix + iy * lutsSize];
+		return luts[ix + iy * lutsSize].get();
 	}
 
 private:
-	unsigned int lutsSize;
+	size_t lutsSize;
 	float step;
-	FilterLUT **luts;
+	std::vector<FilterLUTUPtr> luts;
 };
 
 }

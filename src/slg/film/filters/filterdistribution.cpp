@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/filterdistribution.h"
+#include "slg/film/filters/filter.h"
 
 using namespace std;
 using namespace luxrays;
@@ -99,18 +100,18 @@ FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offs
 // FilterLUTs
 //------------------------------------------------------------------------------
 
-FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
+FilterLUTs::FilterLUTs(const Filter &filter, const size_t size) {
 	lutsSize = size + 1;
 	step = 1.f / float(size);
 
-	luts = new FilterLUT*[lutsSize * lutsSize];
+	luts.resize(lutsSize * lutsSize);
 
-	for (unsigned int iy = 0; iy < lutsSize; ++iy) {
-		for (unsigned int ix = 0; ix < lutsSize; ++ix) {
+	for (size_t iy = 0; iy < lutsSize; ++iy) {
+		for (size_t ix = 0; ix < lutsSize; ++ix) {
 			const float x = (ix + .5f) * step - 0.5f;
 			const float y = (iy + .5f) * step - 0.5f;
 
-			luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
+			luts[ix + iy * lutsSize] = std::make_unique<FilterLUT>(filter, x, y);
 			/*cout << "===============================================\n";
 			cout << ix << "," << iy << "\n";
 			cout << x << "," << y << "\n";
@@ -120,11 +121,4 @@ FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
 	}
 }
 
-FilterLUTs::~FilterLUTs() {
-	for (unsigned int iy = 0; iy < lutsSize; ++iy)
-		for (unsigned int ix = 0; ix < lutsSize; ++ix)
-			delete luts[ix + iy * lutsSize];
-
-	delete[] luts;
-}
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
