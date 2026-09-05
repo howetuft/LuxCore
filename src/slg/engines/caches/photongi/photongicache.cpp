@@ -307,13 +307,14 @@ void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<SpectrumGroup
 			int index = 0; index < visibilityParticles.size(); ++index) {
 		// Look for all near particles
 
-		vector<u_int> nearParticleIndices;
+		std::vector<size_t> nearParticleIndices;
 		const PGICVisibilityParticle &vp = visibilityParticles[index];
 		// I can use visibilityParticlesKdTree to get radiance photons indices
 		// because there is a one on one correspondence 
-		visibilityParticlesKdTree->GetAllNearEntries(nearParticleIndices,
-				vp.p, vp.n, vp.isVolume,
-				lookUpRadius2, lookUpCosNormalAngle);
+		visibilityParticlesKdTree->GetAllNearEntries(
+			nearParticleIndices,
+			vp.p, vp.n, vp.isVolume,
+			lookUpRadius2, lookUpCosNormalAngle);
 
 		if (nearParticleIndices.size() > 0) {
 			SpectrumGroup &filtered = filteredRadianceValues[index];

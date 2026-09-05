@@ -115,7 +115,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 	newIndirectPhotons.clear();
 	newCausticPhotons.clear();
-	vector<u_int> allNearEntryIndices;
+	std::vector<size_t> allNearEntryIndices;
 
 	SceneConstRef scene = *pgic.scene;
 	auto& camera = scene.GetCamera();
@@ -180,7 +180,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 						// Check if the point is visible
 						allNearEntryIndices.clear();
-						pgic.visibilityParticlesKdTree->GetAllNearEntries(allNearEntryIndices,
+						pgic.visibilityParticlesKdTree->GetAllNearEntries(
+								allNearEntryIndices,
 								bsdf.hitPoint.p, landingSurfaceNormal, bsdf.IsVolume(),
 								pgic.params.visibility.lookUpRadius2,
 								pgic.params.visibility.lookUpNormalCosAngle);

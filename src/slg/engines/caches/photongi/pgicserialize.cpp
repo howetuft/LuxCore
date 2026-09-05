@@ -96,7 +96,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::RadiancePhoton)
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICacheParams)
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICache)
 
-template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int version) {
+template<class Archive>
+void PhotonGICache::serialize(Archive &ar, const u_int version) {
 	ar & params;
 	ar & threadCount;
 	ar & lastUpdateSpp;
@@ -109,7 +110,7 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & radiancePhotonsBVH;
 	ar & indirectPhotonTracedCount;
 
-	ar & causticPhotons;	
+	ar & causticPhotons;
 	ar & causticPhotonsBVH;
 	ar & causticPhotonTracedCount;
 	ar & causticPhotonPass;
