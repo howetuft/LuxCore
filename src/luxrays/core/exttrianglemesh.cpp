@@ -258,7 +258,6 @@ void ExtTriangleMesh::Delete() {
 
 	delete[] bevelCylinders;
 	delete[] bevelBoundingCylinders;
-	delete[] bevelBVHArrayNodes;
 }
 
 NormalBuffer ExtTriangleMesh::ComputeNormals() {

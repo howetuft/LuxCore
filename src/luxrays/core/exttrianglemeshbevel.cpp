@@ -478,8 +478,6 @@ void ExtTriangleMesh::PreprocessBevel() {
 		bevelCylinders = nullptr;
 		delete[] bevelBoundingCylinders;
 		bevelBoundingCylinders = nullptr;
-		delete[] bevelBVHArrayNodes;
-		bevelBVHArrayNodes = nullptr;
 	}
 	
 	//const double endTotal = WallClockTime();

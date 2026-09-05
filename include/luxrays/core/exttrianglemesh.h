@@ -645,7 +645,7 @@ public:
 
 	BevelCylinder *bevelCylinders;
 	BevelBoundingCylinder *bevelBoundingCylinders;
-	luxrays::ocl::IndexBVHArrayNode *bevelBVHArrayNodes;
+	std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> bevelBVHArrayNodes;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
