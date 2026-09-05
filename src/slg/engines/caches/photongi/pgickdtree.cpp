@@ -63,7 +63,7 @@ size_t PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 
 				const size_t rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -71,7 +71,7 @@ size_t PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 			} else {
 				const size_t rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -79,14 +79,14 @@ size_t PGICKdTree::GetNearestEntry(
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 
 				if ((distance2 < nearestMaxDistance2) && KdTreeNodeData_HasLeftChild(node.nodeData)) {
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 			}
 		}
@@ -133,7 +133,7 @@ void PGICKdTree::GetAllNearEntries(std::vector<size_t> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -141,7 +141,7 @@ void PGICKdTree::GetAllNearEntries(std::vector<size_t> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 			} else {
 				const u_int rightChildIndex = KdTreeNodeData_GetRightChild(node.nodeData);
@@ -149,14 +149,14 @@ void PGICKdTree::GetAllNearEntries(std::vector<size_t> &allNearEntryIndices,
 					nodeIndexStack[++stackCurrentIndex] = rightChildIndex;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 
 				if ((distance2 < radius2) && KdTreeNodeData_HasLeftChild(node.nodeData)) {
 					nodeIndexStack[++stackCurrentIndex] = currentNodeIndex + 1;
 
 					assert (stackCurrentIndex < stackSize);
-					assert (nodeIndexStack[stackCurrentIndex] < allEntries->size());
+					assert (nodeIndexStack[stackCurrentIndex] < allEntries.size());
 				}
 			}
 		}
