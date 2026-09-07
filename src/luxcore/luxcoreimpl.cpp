@@ -16,11 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
+//#include <boost/format.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/unique_ptr.hpp>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 #include <typeinfo>
 
 #include "luxcore/luxcorelogger.h"
@@ -44,6 +45,7 @@
 #include "luxcore/luxcore.h"
 #include "slg/usings.h"
 #include "luxcore/luxcoreimpl.h"
+#include "fmt/format.h"
 
 using namespace std;
 using namespace luxrays;
@@ -2174,18 +2176,40 @@ void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
 }
 
 
-auto std::formatter<luxcore::Camera::CameraType>::format(
-    luxcore::Camera::CameraType cam,
-    std::format_context& ctx
-) const -> format_context::iterator {
-
-  string_view name = "UNKNOWN";
-  switch (cam) {
-    case luxcore::Camera::CameraType::PERSPECTIVE: name = "PERSPECTIVE"; break;
-    case luxcore::Camera::CameraType::ORTHOGRAPHIC: name = "ORTHOGRAPHIC"; break;
-    case luxcore::Camera::CameraType::STEREO: name = "STEREO"; break;
-    case luxcore::Camera::CameraType::ENVIRONMENT: name = "ENVIRONMENT"; break;
-  }
-    return formatter<string_view>::format(name, ctx);
+namespace {
+constexpr std::string_view cam_name(luxcore::Camera::CameraType cam) {
+	switch (cam) {
+		case luxcore::Camera::CameraType::PERSPECTIVE: return "PERSPECTIVE";
+		case luxcore::Camera::CameraType::ORTHOGRAPHIC: return "ORTHOGRAPHIC";
+		case luxcore::Camera::CameraType::STEREO: return "STEREO";
+		case luxcore::Camera::CameraType::ENVIRONMENT: return "ENVIRONMENT";
+		default: return "UNKNOWN";
+	}
 }
+}
+
+#ifdef SPDLOG_USE_STD_FORMAT
+
+auto std::formatter<luxcore::Camera::CameraType>::format(
+	luxcore::Camera::CameraType cam,
+	std::format_context& ctx
+) const -> std::format_context::iterator {
+    return std::formatter<std::string_view>::format(cam_name(cam), ctx);
+}
+
+#else
+
+
+auto fmt::formatter<luxcore::Camera::CameraType>::format(
+	luxcore::Camera::CameraType cam,
+	fmt::format_context& ctx
+) const
+	-> fmt::format_context::iterator {
+	return fmt::formatter<fmt::string_view>::format(cam_name(cam), ctx);
+}
+
+#endif
+
+
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

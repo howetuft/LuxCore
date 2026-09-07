@@ -247,10 +247,14 @@ INCLUDE(KernelPreprocess)
 ################################################################################
 
 if(LINUX)
+  message(STATUS "Building for Linux")
   set(OpenGL_GL_PREFERENCE "LEGACY")
 endif(LINUX)
 
 if(MSVC)
+
+  message(STATUS "Building for Windows")
+
   # Minimizes Windows header files
   #ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
   # Do not define MIN and MAX macros
@@ -282,7 +286,18 @@ if(APPLE)
   add_compile_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
   add_link_options("$<$<CONFIG:Debug,RelWithDebInfo>:-gfull>")
 
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    message(STATUS "Building for macOS Intel (x86_64)")
+
+    # std::format is not supported for macos < 13.3
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_FMT_EXTERNAL -DFMT_HEADER_ONLY -USPDLOG_USE_STD_FORMAT")
+  else()
+    message(STATUS "Building for macOS arm64")
+  endif()
+
 endif(APPLE)
+
+
 
 set(INSTALL_EXCLUDE_REGEXES
   [[.*nvrtc.*\.alt\..*]]

@@ -20,8 +20,9 @@
 #define	_LUXCORE_SINKS_H
 
 #include <mutex>
-
+#include "spdlog/sinks/base_sink.h"
 #include "spdlog/sinks/rotating_file_sink.h"
+#include "fmt/format.h"
 
 //------------------------------------------------------------------------------
 // Our SpdLog sink for LuxCore call back handler
@@ -41,7 +42,7 @@ namespace sinks {
 				memory_buf_t formatted;
 				base_sink<Mutex>::formatter_->format(msg, formatted);
 
-				logHandler(formatted.c_str());
+				logHandler(fmt::to_string(formatted).c_str());
 			}
 		}
 		

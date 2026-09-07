@@ -559,14 +559,17 @@ void DirectLightSamplingCache::Build(SceneConstRef scn) {
 
 Distribution1DRPtr DirectLightSamplingCache::GetLightDistribution(const luxrays::Point &p,
 		const luxrays::Normal &n, const bool isVolume) const {
+
+	static constexpr std::unique_ptr<Distribution1D> _null{nullptr};
+
 	if (cacheEntriesBVH) {
 		const DLSCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n, isVolume);
 
 		if (entry)
 			return entry->lightsDistribution;
 	}
-	
-	return Distribution1D::NullPtr;
+
+	return _null;
 }
 
 void DirectLightSamplingCache::DebugExport(const string &fileName, const float sphereRadius) const {

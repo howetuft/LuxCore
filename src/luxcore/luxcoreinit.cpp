@@ -16,9 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <iostream>
-#include <boost/format.hpp>
-
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/null_sink.h"
@@ -66,17 +63,17 @@ static void DefaultDebugHandler(const char *msg) {
 
 static void LuxRaysDebugHandler(const char *msg) {
 	if (logLuxRaysEnabled)
-		luxcoreLogger->info((boost::format("[LuxRays][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str());
+		luxcoreLogger->info(fmt::format("[LuxRays][%.3f] {}", (WallClockTime() - lcInitTime), msg));
 }
 
 static void SDLDebugHandler(const char *msg) {
 	if (logSDLEnabled)
-		luxcoreLogger->info((boost::format("[SDL][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str());
+		luxcoreLogger->info(fmt::format("[SDL][%.3f] {}", (WallClockTime() - lcInitTime), msg));
 }
 
 static void SLGDebugHandler(const char *msg) {
 	if (logSDLEnabled)
-		luxcoreLogger->info((boost::format("[LuxCore][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str());
+		luxcoreLogger->info(fmt::format("[LuxCore][%.3f] {}", WallClockTime() - lcInitTime, msg));
 }
 
 static void UpdateLuxCoreLogger() {
