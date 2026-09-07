@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
@@ -514,7 +515,11 @@ void EnvLightVisibilityCache::BuildCacheEntry(
 		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
-	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], tilesXCount, tilesYCount);
+	cacheEntry.visibilityMap = std::make_unique<Distribution2D>(
+		std::span<float>(visibilityMap, tilesXCount * tilesYCount),
+		tilesXCount,
+		tilesYCount
+	);
 	
 	//const double t3 = WallClockTime();
 	//SLG_LOG("Visibility map rendering times: " << int((t2 - t1) * 1000.0) << "ms + " << int((t3 - t2) * 1000.0) << "ms");
@@ -543,7 +548,7 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 
 	const double startTime = WallClockTime();
 	double lastPrintTime = WallClockTime();
-	atomic<u_int> counter(0);
+	std::atomic<u_int> counter(0);
 
 	cacheEntries.resize(visibilityParticles.size());
 	#pragma omp parallel for
@@ -588,7 +593,7 @@ void EnvLightVisibilityCache::BuildTileDistributions() {
 	
 	SLG_LOG("EnvLightVisibilityCache building tile maps: " << tilesCount << " (" << tilesXCount << " x " << tilesYCount << ")");
 	
-	tileDistributions.resize(tilesCount, nullptr);
+	tileDistributions.resize(tilesCount);
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -613,7 +618,7 @@ void EnvLightVisibilityCache::BuildTileDistributions() {
 			}
 		}
 
-		tileDistributions[i] = new Distribution2D(&tileLuminance[0], params.map.tileWidth, params.map.tileHeight);
+		tileDistributions[i] = std::make_unique<Distribution2D>(tileLuminance, params.map.tileWidth, params.map.tileHeight);
 	}
 }
 
@@ -750,7 +755,7 @@ void EnvLightVisibilityCache::Build() {
 // GetVisibilityMap
 //------------------------------------------------------------------------------
 
-const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
+Distribution2DRPtr EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
 	if (cacheEntriesBVH) {
 		const ELVCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
 				bsdf.hitPoint.GetLandingShadeN(), bsdf.IsVolume());
@@ -758,7 +763,7 @@ const Distribution2D *EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf
 			return entry->visibilityMap;
 	}
 
-	return nullptr;
+	return Distribution2D::NullPtr;
 }
 
 //------------------------------------------------------------------------------
@@ -770,7 +775,7 @@ void EnvLightVisibilityCache::Sample(const BSDF &bsdf,
 		float uv[2], float *pdf) const {
 	*pdf = 0.f;
 
-	const Distribution2D *cacheDist = GetVisibilityMap(bsdf);
+	Distribution2DRPtr cacheDist = GetVisibilityMap(bsdf);
 
 	if (cacheDist) {
 		u_int cacheDistXY[2];
@@ -779,7 +784,7 @@ void EnvLightVisibilityCache::Sample(const BSDF &bsdf,
 
 		if (cacheDistPdf > 0.f) {
 			if (tileDistributions.size() > 0) {
-				const Distribution2D *tileDistribution = tileDistributions[cacheDistXY[0] + cacheDistXY[1] * tilesXCount];
+				const auto& tileDistribution = tileDistributions[cacheDistXY[0] + cacheDistXY[1] * tilesXCount];
 
 				float tileXY[2];
 				float tileDistPdf;
@@ -808,7 +813,7 @@ void EnvLightVisibilityCache::Sample(const BSDF &bsdf,
 float EnvLightVisibilityCache::Pdf(const BSDF &bsdf, const float u, const float v) const {
 	float pdf = 0.f;
 
-	const Distribution2D *cacheDist = GetVisibilityMap(bsdf);
+	auto& cacheDist = GetVisibilityMap(bsdf);
 
 	if (cacheDist) {
 		u_int offsetU, offsetV;
@@ -817,7 +822,7 @@ float EnvLightVisibilityCache::Pdf(const BSDF &bsdf, const float u, const float 
 
 		if (cacheDistPdf > 0.f) {
 			if (tileDistributions.size() > 0) {
-				const Distribution2D *tileDistribution = tileDistributions[offsetU + offsetV * tilesXCount];
+				auto& tileDistribution = tileDistributions[offsetU + offsetV * tilesXCount];
 				const float tileDistPdf = tileDistribution->Pdf(du, dv);
 
 				pdf = cacheDistPdf * tileDistPdf;

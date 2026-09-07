@@ -49,14 +49,18 @@ public:
 
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
-	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
-	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
+	static std::tuple<std::vector<float>, size_t>
+	CompileDistribution1D(luxrays::Distribution1DConstRef dist);
+
+
+	static std::tuple<std::vector<float>, size_t>
+	CompileDistribution2D(luxrays::Distribution2DConstRef dist);
 
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
 
 	// Compiled Camera
 	slg::ocl::Camera camera;
-	float *cameraBokehDistribution;
+	std::vector<float> cameraBokehDistribution;
 	u_int cameraBokehDistributionSize;
 
 	// Compiled Scene Meshes
@@ -84,9 +88,9 @@ public:
 	// Env. light Distribution2Ds
 	std::vector<float> envLightDistributions;
 	// Compiled light sampling strategy
-	float *lightsDistribution;
+	std::vector<float> lightsDistribution;
 	u_int lightsDistributionSize;
-	float *infiniteLightSourcesDistribution;
+	std::vector<float> infiniteLightSourcesDistribution;
 	u_int infiniteLightSourcesDistributionSize;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
@@ -172,7 +176,7 @@ private:
 	void CompileLights();
 
 	void CompileDLSC(const LightStrategyDLSCache& dlscLightStrategy);
-	void CompileELVC(EnvLightVisibilityCacheConstPtr visibilityMapCache);
+	void CompileELVC(EnvLightVisibilityCacheRPtr visibilityMapCache);
 	void CompileLightStrategy();
 
 	void CompilePhotonGI();

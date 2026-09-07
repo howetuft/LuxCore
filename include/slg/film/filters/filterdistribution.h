@@ -23,7 +23,8 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/film/filters/filter.h"
+#include "slg/usings.h"
+//#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -34,13 +35,13 @@ public:
 
 	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
 
-	const luxrays::Distribution2D *GetDistribution2D() const { return distrib; }
+	const luxrays::Distribution2DRPtr GetDistribution2D() const { return distrib; }
 
 private:
 	const FilterUPtr & filter;
 	u_int size;
 
-	luxrays::Distribution2D *distrib;
+	luxrays::Distribution2DUPtr distrib;
 };
 
 //------------------------------------------------------------------------------
@@ -50,14 +51,11 @@ private:
 class FilterLUT {
 public:
 	FilterLUT(const Filter &filter, const float offsetX, const float offsetY);
-	~FilterLUT() {
-		delete[] lut;
-	}
 
 	const unsigned int GetWidth() const { return lutWidth; }
 	const unsigned int GetHeight() const { return lutHeight; }
 
-	const float *GetLUT() const {
+	const std::span<const float> GetLUT() const {
 		return lut;
 	}
 
@@ -65,7 +63,7 @@ public:
 
 private:
 	unsigned int lutWidth, lutHeight;
-	float *lut;
+	std::vector<float> lut;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
@@ -88,20 +86,19 @@ inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
 
 class FilterLUTs {
 public:
-	FilterLUTs(const Filter &filter, const unsigned int size);
-	~FilterLUTs() ;
+	FilterLUTs(const Filter &filter, const size_t size);
 
 	const FilterLUT *GetLUT(const float x, const float y) const {
 		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));
 		const int iy = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (y + 0.5f)), lutsSize - 1));
 
-		return luts[ix + iy * lutsSize];
+		return luts[ix + iy * lutsSize].get();
 	}
 
 private:
-	unsigned int lutsSize;
+	size_t lutsSize;
 	float step;
-	FilterLUT **luts;
+	std::vector<FilterLUTUPtr> luts;
 };
 
 }

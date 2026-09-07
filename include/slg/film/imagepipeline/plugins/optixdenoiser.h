@@ -19,6 +19,7 @@
 #ifndef _SLG_OPTIX_DENOISER_H
 #define	_SLG_OPTIX_DENOISER_H
 
+#include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <vector>
@@ -68,7 +69,7 @@ private:
 	u_int minSPP;
 
 	// Used inside the object destructor to free buffers
-	luxrays::CUDADevice *cudaDevice;
+	luxrays::observer_ptr<luxrays::CUDADevice> cudaDevice;
 	OptixDenoiser denoiserHandle;
 	OptixDenoiserSizes denoiserSizes;
 	luxrays::HardwareDeviceBuffer *denoiserStateScratchBuff;
@@ -76,7 +77,7 @@ private:
 	luxrays::HardwareDeviceBuffer *albedoTmpBuff;
 	luxrays::HardwareDeviceBuffer *avgShadingNormalTmpBuff;
 
-	luxrays::HardwareDeviceKernel *bufferSetUpKernel;
+	luxrays::HardwareDeviceKernelUPtr bufferSetUpKernel;
 };
 
 }

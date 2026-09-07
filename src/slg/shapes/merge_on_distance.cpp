@@ -28,6 +28,7 @@
 #include <format>
 #include <execution>
 
+#include "luxrays/core/trianglemesh.h"
 #include "oneapi/tbb.h"
 #include "oneapi/tbb/scalable_allocator.h"
 #include "oneapi/tbb/cache_aligned_allocator.h"
@@ -290,7 +291,9 @@ private:
 
 // Create a grid, ie give an origin point (or midPoint) and cell sizes on X, Y,
 // Z
-Grid ComputeGrid(const Point * points, u_int numPoints) {
+Grid ComputeGrid(const luxrays::Points points) {
+
+	auto numPoints = points.size();
 
 	constexpr float minlimit = std::numeric_limits<float>::min();
 	constexpr float maxlimit = std::numeric_limits<float>::max();
@@ -302,7 +305,7 @@ Grid ComputeGrid(const Point * points, u_int numPoints) {
 	// Compute bounding box
 	auto boundingbox = parallel_reduce(
 		// Range
-		blocked_range<const Point*>(points, points+numPoints, grain),
+		blocked_range<const Point*>(points.data(), points.data() + numPoints, grain),
 
 		// Init
 		std::make_tuple(maxlimit, maxlimit, maxlimit, minlimit, minlimit, minlimit),
@@ -390,8 +393,10 @@ using Partition = std::unordered_map<
 
 // Assign points to grid (do the partitioning)
 Partition AssignPointsToGrid(
-	const Grid& grid, const Point * points, u_int numPoints
+	const Grid& grid, const luxrays::Points points
 ) {
+	auto numPoints = points.size();
+
 	// Avoid tiny sets of data for body
 	constexpr size_t grain = 1024;
 
@@ -647,15 +652,15 @@ ClusterMap CreateClusters(const UnionFind& dsu, u_int numPoints) {
 // - The merged points, in the form of clusters (map of vectors)
 //
 ClusterMap mergePoints(
-	const Point * points, u_int numPoints, u_int tolerance, bool importNormals
+	const luxrays::Points points, u_int numPoints, u_int tolerance, bool importNormals
 ) {
 
 	// Compute grid for spatial partitioning
-	const Grid grid{ComputeGrid(points, numPoints)};
+	const Grid grid{ComputeGrid(points)};
 
 	// Assign points to grids cells (in other words: partition)
 	const Partition partition{
-		AssignPointsToGrid(grid, points, numPoints)
+		AssignPointsToGrid(grid, points)
 	};
 
 	// For each cell, compare points within the cell and adjacent cells
@@ -700,18 +705,19 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 
 	// Allocate mesh data structures
 	// Points
-	std::unique_ptr<Point> newPoints{
-		luxrays::ExtTriangleMesh::AllocVerticesBuffer(numNewPoints)
-	};
-	auto newPointsPtr = newPoints.get();
+	luxrays::VertexBuffer newPoints(numNewPoints);
+	//TODO
+	//std::unique_ptr<Point> newPoints{
+		//luxrays::ExtTriangleMesh::AllocVerticesBuffer(numNewPoints)
+	//};
+	//auto newPointsPtr = newPoints.get();
 
 	// Normals
-	std::unique_ptr<luxrays::Normal> newNormals;
-	const auto srcNormals = srcMesh.GetNormals();
-	if (srcMesh.HasNormals()) {
-		newNormals.reset(new luxrays::Normal[numNewPoints]);
+	luxrays::NormalBuffer newNormals;
+	const auto& srcNormals = srcMesh.GetNormals();
+	if (importNormals && srcMesh.HasNormals()) {
+		newNormals.Allocate(numNewPoints);
 	}
-	auto newNormalsPtr = importNormals ? newNormals.get() : nullptr;
 
 	// UV
 	luxrays::ExtMeshProp<luxrays::UV> newUVs;
@@ -777,7 +783,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 					std::plus{},
 					[&srcPoints](auto idx) -> Point { return srcPoints[idx]; }
 				) / cluster_size;
-				newPointsPtr[newIdx] = newPoint;
+				newPoints[newIdx] = newPoint;
 
 				// Compute merged normals
 				if (importNormals && srcMesh.HasNormals()) {
@@ -794,7 +800,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 					if (newNormalLength) {
 						newNormal /= newNormalLength;
 					}
-					newNormalsPtr[newIdx] = newNormal;
+					newNormals[newIdx] = newNormal;
 				}
 
 				// Compute merged uv
@@ -872,10 +878,8 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 	const u_int numTriangles = srcMesh.GetTotalTriangleCount();
 	SDL_LOG("Number of triangles " << numTriangles);
 	auto oldTriangles = srcMesh.GetTriangles();
-	auto newTriangles = std::unique_ptr<luxrays::Triangle>(
-		luxrays::ExtTriangleMesh::AllocTrianglesBuffer(numTriangles)
-	);
-	auto newTrianglesPtr = newTriangles.get();
+	luxrays::TriangleBuffer newTriangles(numTriangles);
+	//auto newTrianglesPtr = newTriangles.get();
 	tbb::parallel_for(
 		tbb::blocked_range<u_int>(0, numTriangles),
 		[&](const tbb::blocked_range<u_int>& r) {
@@ -886,7 +890,7 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 					pointMap[oldTriangle.v[1]],
 					pointMap[oldTriangle.v[2]]
 				);
-				newTrianglesPtr[i] = newTriangle;
+				newTriangles[i] = newTriangle;
 			}
 		}
 	);
@@ -919,11 +923,9 @@ luxrays::ExtTriangleMeshUPtr RecreateMesh(
 
 	// Create new mesh
 	auto newMesh = std::make_unique<luxrays::ExtTriangleMesh>(
-		numNewPoints,
-		numTriangles,
-		newPoints.release(),
-		newTriangles.release(),
-		importNormals ? newNormals.release() : nullptr,
+		std::move(newPoints),
+		std::move(newTriangles),
+		std::move(newNormals),
 		newUVs,
 		newColors,
 		newAlphas,

@@ -19,68 +19,54 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spd.h"
 #include "luxrays/core/color/spds/data/xyzbasis.h"
-#include "luxrays/utils/memory.h"
+#include <numeric>
 
 using namespace std;
 using namespace luxrays;
 
 void SPD::AllocateSamples(u_int n) {
 	 // Allocate memory for samples
-	samples = AllocAligned<float>(n);
+	_samples.resize(n);
 }
 
-void SPD::FreeSamples() {
-	 // Free Allocate memory for samples
-	if (samples)
-		FreeAligned(samples);
-}
 
 void SPD::Normalize() {
-	float max = 0.f;
-
-	for (u_int i = 0; i < nSamples; ++i)
-		if(samples[i] > max)
-			max = samples[i];
+	float max = std::ranges::max(samples());
 
 	const float scale = 1.f / max;
 
-	for (u_int i = 0; i < nSamples; ++i)
-		samples[i] *= scale;
+	Scale(scale);
 }
 
 void SPD::Clamp() {
-	for (u_int i = 0; i < nSamples; ++i) {
-		if (!(samples[i] > 0.f))
-			samples[i] = 0.f;
-	}
+	std::ranges::for_each(samples(), [](float& x) { if (x <= 0.f) x = 0.f; });
 }
 
-void SPD::Scale(float s) {
-	for (u_int i = 0; i < nSamples; ++i)
-		samples[i] *= s;
+void SPD::Scale(float scale) {
+	std::ranges::for_each(samples(), [scale](float& x) { x*= scale; });
 }
 
 void SPD::Whitepoint(float temp) {
-	vector<float> bbvals;
+
+	std::vector<float> bbvals(nSamples);
+
+	const float w0 = lambdaMin * 1e-9f;  // starting wavelength, captured before the loop
 
 	// Fill bbvals with BB curve
-	float w = lambdaMin * 1e-9f;
-	for (u_int i = 0; i < nSamples; ++i) {
-		// Compute blackbody power for wavelength w and temperature temp
-		bbvals.push_back(4e-9f * (3.74183e-16f * powf(w, -5.f))
-				/ (expf(1.4388e-2f / (w * temp)) - 1.f));
-		w += 1e-9f * delta;
+	for (unsigned i = 0; i < nSamples; ++i) {
+		const float wi = w0 + static_cast<float>(i) * (1e-9f * delta);
+		bbvals[i] = 4e-9f * (3.74183e-16f * std::pow(wi, -5.f))
+				  / (std::exp(1.4388e-2f / (wi * temp)) - 1.f);
 	}
 
-	// Normalize
-	float max = 0.f;
-	for (u_int i = 0; i < nSamples; ++i)
-		if (bbvals[i] > max)
-			max = bbvals[i];
+	// Get scale
+	float max = std::ranges::max(bbvals);
 	const float scale = 1.f / max;
-	// Multiply
-	for (u_int i = 0; i < nSamples; ++i)
-		samples[i] *= bbvals[i] * scale;
+
+	// Apply bbval to this
+	std::ranges::transform(samples(), bbvals, samples().begin(), std::multiplies<>{});
+
+	Scale(scale);
 }
 
 float SPD::Y() const
@@ -90,12 +76,11 @@ float SPD::Y() const
 		y += Sample(i + CIEstart) * CIE_Y[i];
 	return y * 683.f;
 }
+
 float SPD::Filter() const
 {
-	float y = 0.f;
-	for (u_int i = 0; i < nSamples; ++i)
-		y += samples[i];
-	return y / nSamples;
+    const float sum = std::accumulate(samples().begin(), samples().end(), 0.f);
+    return sum / static_cast<float>(nSamples);
 }
 
 XYZColor SPD::ToXYZ() const {
@@ -122,4 +107,15 @@ XYZColor SPD::ToNormalizedXYZ() const {
 	}
 	return c / yint;
 }
+
+
+
+void SPD::AddWeighted(float w, const float *c) {
+	std::span<float> samps = samples();
+	std::span<const float> cs{c, nSamples};
+
+	std::ranges::transform(samps, cs, samps.begin(),
+		[w](float s, float ci) { return s + ci * w; });
+}
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

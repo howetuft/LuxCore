@@ -52,6 +52,8 @@ namespace ocl {
 class Ray;
 class RayHit;
 
+// ExtMeshProp: a container for a property of Extended Mesh (uv, colors, alphas...)
+//
 // We use shared pointer, as it allows shallow copy (can be useful for such
 // large data sets)
 // All methods run on a per layer basis, except those suffixed by 'All', which
@@ -276,33 +278,27 @@ private:
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(
-		const u_int meshVertCount,
-		const u_int meshTriCount,
-		Point *meshVertices,
-		Triangle *meshTris,
-		Normal *meshNormals = nullptr,
+		VertexBuffer&& meshVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
 		ExtMeshProp<UV>::Layer meshUVs = nullptr,
 		ExtMeshProp<Spectrum>::Layer meshCols = nullptr,
 		ExtMeshProp<float>::Layer meshAlphas = nullptr,
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshVertCount,
-		const u_int meshTriCount,
-		Point *meshVertices,
-		Triangle *meshTris,
-		Normal *meshNormals,
+		VertexBuffer&& meshVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
 		std::optional<std::span<UV>> meshUVs,
 		std::optional<std::span<Spectrum>> meshCols,
 		std::optional<std::span<float>> meshAlphas,
 		const float bRadius = 0.f
 	);
 	ExtTriangleMesh(
-		const u_int meshVertCount,
-		const u_int meshTriCount,
-		Point *meshVertices,
-		Triangle *meshTris,
-		Normal *meshNormals,
+		VertexBuffer&& meshVertices,
+		TriangleBuffer&& meshTris,
+		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas,
@@ -311,8 +307,8 @@ public:
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
-	Normal *GetNormals() const { return normals; }
-	Normal *GetTriNormals() const { return triNormals; }
+	const NormalBuffer& GetNormals() const { return normals; }
+	const NormalBuffer& GetTriNormals() const { return triNormals; }
 
 	// AOV
 	void SetVertexAOV(
@@ -381,11 +377,11 @@ public:
 	const auto& GetAllAlphas() const { return alphas; }
 
 
-	Normal *ComputeNormals();
+	NormalBuffer ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
-	virtual bool HasNormals() const { return normals != nullptr; }
+	virtual bool HasNormals() const { return bool(normals); }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
 		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
@@ -430,7 +426,7 @@ public:
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex,
 			const float b1, const float b2) const {
-		if (!normals)
+		if (not bool(normals))
 			return GetGeometryNormal(local2World, triIndex);
 		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
@@ -482,9 +478,9 @@ public:
 	void CopyAOV(ExtTriangleMeshRef destMesh) const;
 
 	ExtTriangleMeshUPtr CopyExt(
-		Point *meshVertices,
-		Triangle *meshTris,
-		Normal *meshNormals,
+		std::optional<VertexBuffer> meshVertices,
+		std::optional<TriangleBuffer> meshTris,
+		std::optional<NormalBuffer> meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas,
@@ -492,9 +488,9 @@ public:
 	) const;
 
 	ExtTriangleMeshUPtr Copy(
-		Point *meshVertices,
-		Triangle *meshTris,
-		Normal *meshNormals,
+		std::optional<VertexBuffer> meshVertices,
+		std::optional<TriangleBuffer> meshTris,
+		std::optional<NormalBuffer> meshNormals,
 		std::optional<std::span<UV>> mUVs,
 		std::optional<std::span<Spectrum>> mCols,
 		std::optional<std::span<float>> mAlphas,
@@ -503,7 +499,13 @@ public:
 
 	ExtTriangleMeshUPtr Copy(const float bRadius = 0.f) const {
 		return CopyExt(
-			nullptr, nullptr, nullptr, std::nullopt, std::nullopt, std::nullopt, bRadius
+			std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			std::nullopt,
+			bRadius
 		);
 	}
 
@@ -566,7 +568,7 @@ public:
 	}
 
 	void Init(
-		Normal *meshNormals,
+		NormalBuffer&& meshNormals,
 		std::optional<ExtMeshProp<UV>> meshUVs,
 		std::optional<ExtMeshProp<Spectrum>> meshCols,
 		std::optional<ExtMeshProp<float>> meshAlphas
@@ -584,6 +586,8 @@ public:
 
 		const bool hasNormals = HasNormals();
 		ar & hasNormals;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		if (HasNormals())
 			for (u_int i = 0; i < vertCount; ++i)
 				ar & normals[i];
@@ -603,13 +607,15 @@ public:
 
 		bool hasNormals;
 		ar & hasNormals;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		if (hasNormals) {
-			normals = new Normal[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
+			normals.Allocate(vertCount);
+			for (auto i = 0; i < vertCount; ++i)
 				ar & normals[i];
 		} else
-			normals = nullptr;
-		triNormals = new Normal[triCount];
+			normals = NormalBuffer();
+		triNormals.Allocate(triCount);
 
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
 			uvs.Deserialize(i, ar, vertCount);
@@ -627,8 +633,8 @@ public:
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	Normal *normals; // Vertices normals
-	Normal *triNormals; // Triangle normals
+	NormalBuffer normals; // Vertices normals
+	NormalBuffer triNormals; // Triangle normals
 
 	ExtMeshProp<UV> uvs; // Vertex uvs
 	ExtMeshProp<Spectrum> cols; // Vertex colors
@@ -639,7 +645,7 @@ public:
 
 	BevelCylinder *bevelCylinders;
 	BevelBoundingCylinder *bevelBoundingCylinders;
-	luxrays::ocl::IndexBVHArrayNode *bevelBVHArrayNodes;
+	std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> bevelBVHArrayNodes;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {

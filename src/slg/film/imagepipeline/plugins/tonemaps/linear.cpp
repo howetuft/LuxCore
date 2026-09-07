@@ -46,7 +46,6 @@ LinearToneMap::LinearToneMap(const float s) {
 }
 
 LinearToneMap::~LinearToneMap() {
-	delete applyKernel;
 }
 
 //------------------------------------------------------------------------------
@@ -93,17 +92,14 @@ void LinearToneMap::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				slg::ocl::KernelSource_tonemap_linear_funcs,
 				"LinearToneMap");
 
 		SLG_LOG("[AutoLinearToneMap] Compiling LinearToneMap_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "LinearToneMap_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "LinearToneMap_Apply");
 
-		delete program;
-		
 		// Set kernel arguments
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());

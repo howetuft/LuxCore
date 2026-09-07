@@ -18,6 +18,7 @@
 
 #include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
+#include "slg/usings.h"
 #include "slg/lights/constantinfinitelight.h"
 
 using namespace std;
@@ -32,12 +33,10 @@ ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityMapCache(
 }
 
 ConstantInfiniteLight::~ConstantInfiniteLight() {
-	delete visibilityMapCache;
 }
 
-void ConstantInfiniteLight::GetPreprocessedData(const EnvLightVisibilityCache **elvc) const {
-	if (elvc)
-		*elvc = visibilityMapCache;
+EnvLightVisibilityCacheRPtr ConstantInfiniteLight::GetPreprocessedData() const {
+	return visibilityMapCache;
 }
 
 float ConstantInfiniteLight::GetPower(SceneConstRef scene) const {
@@ -168,19 +167,19 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 	UV uv;
 	const Vector w = -dir;
 	ToLatLongMapping(w, &uv.u, &uv.v);
-	
+
 	return uv;
 }
 
 void ConstantInfiniteLight::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
-	delete visibilityMapCache;
-	visibilityMapCache = nullptr;
-	
+	visibilityMapCache.reset();
+
 	if (useRTMode)
 		return;
 
 	if (useVisibilityMapCache) {
-		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
+		visibilityMapCache = std::make_unique<EnvLightVisibilityCache>(
+				scene, this,
 				EnvLightVisibilityCache::defaultLuminanceMapWidth,
 				EnvLightVisibilityCache::defaultLuminanceMapHeight,
 				visibilityMapCacheParams);		

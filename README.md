@@ -31,6 +31,7 @@ the PATH:
 - Python 3
 - Conan (`pip install conan`)
 - CMake
+- patchelf (for Linux and MacOS)
 
 [Optional, but recommended] In addition, you may install the following
 software:

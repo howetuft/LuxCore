@@ -40,7 +40,6 @@ BackgroundImgPlugin::BackgroundImgPlugin(ImageMapUPtr&& map) : imgMap(std::move(
 	hwFilmImageMapDesc = nullptr;
 	hwFilmImageMap = nullptr;
 
-	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::BackgroundImgPlugin() {
@@ -49,11 +48,9 @@ BackgroundImgPlugin::BackgroundImgPlugin() {
 	hwFilmImageMapDesc = nullptr;
 	hwFilmImageMap = nullptr;
 
-	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::~BackgroundImgPlugin() {
-	delete applyKernel;
 
 	if (hardwareDevice) {
 		hardwareDevice->FreeBuffer(&hwFilmImageMapDesc);
@@ -169,8 +166,7 @@ void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_luxrays_types +
 				luxrays::ocl::KernelSource_utils_funcs +
@@ -186,7 +182,7 @@ void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BackgroundImgPlugin] Compiling BackgroundImgPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "BackgroundImgPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "BackgroundImgPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -198,8 +194,6 @@ void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwFilmImageMap);
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		// Because imgMapDesc is a local variable
 		hardwareDevice->FinishQueue();

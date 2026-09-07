@@ -45,7 +45,12 @@ const vector<string> &HardwareDevice::GetAdditionalCompileOpts() {
 }
 
 template <>
-void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferRPtr &buff) {
+void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(
+	HardwareDeviceKernelRPtr kernel,
+	const u_int index,
+	const HardwareDeviceBufferRPtr &buff
+) {
 	SetKernelArgBuffer(kernel, index, buff);
 }
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

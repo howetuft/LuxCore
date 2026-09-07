@@ -43,7 +43,6 @@ ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin() {
 }
 
 ObjectIDMaskFilterPlugin::~ObjectIDMaskFilterPlugin() {
-	delete applyKernel;
 }
 
 ImagePipelinePlugin *ObjectIDMaskFilterPlugin::Copy() const {
@@ -103,7 +102,7 @@ void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
-		
+
 		// Compile sources
 		const double tStart = WallClockTime();
 
@@ -111,8 +110,7 @@ void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				slg::ocl::KernelSource_plugin_objectidmask_funcs,
 				"ObjectIDMaskFilterPlugin");
@@ -122,7 +120,7 @@ void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ObjectIDMaskFilterPlugin] Compiling ObjectIDMaskFilterPlugin_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "ObjectIDMaskFilterPlugin_Apply");
+		applyKernel = hardwareDevice->GetKernel(*program, "ObjectIDMaskFilterPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -133,8 +131,6 @@ void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, objectID);
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[ObjectIDMaskFilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

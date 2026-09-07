@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <algorithm>
+#include <cstddef>
 
 #include "luxrays/core/geometry/bbox.h"
 #include "slg/core/indexkdtree.h"
@@ -28,81 +29,100 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+namespace {
+// Helper for ordered operations
+// NB: could be simplified into a lambda
+template <class T>
+struct CompareNode {
+	CompareNode(const vector<T> & entries, u_int a) :
+		allEntries(entries),
+		axis(a)
+	{ }
+
+	const std::vector<T> & allEntries;
+	u_int axis;
+
+	bool operator()(const u_int i1, const u_int i2) const {
+		return (allEntries[i1].p[axis] == allEntries[i2].p[axis]) ?
+			(i1 < i2) :	(allEntries[i1].p[axis] < allEntries[i2].p[axis]);
+	}
+};
+}
+
 //------------------------------------------------------------------------------
 // IndexKdTree
 //------------------------------------------------------------------------------
 
 template <class T>
-IndexKdTree<T>::IndexKdTree() : arrayNodes(nullptr) {
-}
+IndexKdTree<T>::IndexKdTree(const vector<T> & entries) :
+	allEntries(entries),
+	arrayNodes(allEntries.size())
+{
+	assert (allEntries.size() > 0);
 
-template <class T>
-IndexKdTree<T>::IndexKdTree(const vector<T> *entries) : allEntries(entries),
-		arrayNodes(nullptr) {
-	assert (allEntries->size() > 0);
-
-	arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
-
-	vector<u_int> buildNodes(allEntries->size());
-	for (u_int i = 0; i < allEntries->size(); ++i)
+	std::vector<size_t> buildNodes(allEntries.size());
+	for (size_t i = 0; i < allEntries.size(); ++i)
 		buildNodes[i] = i;
 
 	// Build the KdTree
 	nextFreeNode = 1;
-	Build(0, 0, allEntries->size(), &buildNodes[0]);
+	Build(0, 0, allEntries.size(), buildNodes);
 }
 
 template <class T>
-IndexKdTree<T>::~IndexKdTree() {
-	delete arrayNodes;
+size_t IndexKdTree<T>::GetMemoryUsage() const {
+	return allEntries.size() * sizeof(IndexKdTreeArrayNode);
 }
 
 template <class T>
-struct CompareNode {
-	CompareNode(const vector<T> *entries, u_int a) : allEntries(entries),
-		axis(a) {
-	}
+const std::vector<T> & IndexKdTree<T>::GetAllEntries() const {
+	return allEntries;
+}
 
-	const std::vector<T> *allEntries;
-	u_int axis;
-
-	bool operator()(const u_int i1, const u_int i2) const {
-		return ((*allEntries)[i1].p[axis] == (*allEntries)[i2].p[axis]) ?
-			(i1 < i2) :	((*allEntries)[i1].p[axis] < (*allEntries)[i2].p[axis]);
-	}
-};
-
-template <class T> void
-IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
-		u_int *buildNodes) {
+template <class T>
+void IndexKdTree<T>::Build(
+	const size_t nodeIndex,
+	const size_t start,
+	const size_t end,
+	std::vector<size_t>& buildNodes
+) {
 	// Check if we are done
 	if (start + 1 == end) {
 		arrayNodes[nodeIndex].index = buildNodes[start];
 		KdTreeNodeData_SetLeaf(arrayNodes[nodeIndex].nodeData);
-		
+
 		assert (KdTreeNodeData_IsLeaf(arrayNodes[nodeIndex].nodeData));
 	} else {
 		// Compute the bounding box of all nodes
 		BBox bb;
 		for (u_int i = start; i < end; ++i)
-			bb = Union(bb, (*allEntries)[buildNodes[i]].p);
+			bb = Union(bb, allEntries[buildNodes[i]].p);
 
 		// Compute the split axis and position
 		const u_int splitAxis = bb.MaximumExtent();
-		const u_int splitPos = (start + end) / 2;
+		auto splitPos = (start + end) / 2;
+
+		auto beginIt = buildNodes.begin();
+		auto startIt = beginIt + start;
+		auto endIt = beginIt + end;
+		auto splitIt = beginIt + splitPos;
 
 		// Sort the nodes around the split plane
-		nth_element(&buildNodes[start], &buildNodes[splitPos],
-				&buildNodes[end], CompareNode<T>(allEntries, splitAxis));
+		nth_element(
+			startIt,
+			endIt,
+			splitIt,
+			CompareNode<T>(allEntries, splitAxis)
+		);
 
 		// Set up the KdTree node
 		KdTreeNodeData_SetAxis(arrayNodes[nodeIndex].nodeData, splitAxis);
-		arrayNodes[nodeIndex].splitPos = (*allEntries)[buildNodes[splitPos]].p[splitAxis];
+		arrayNodes[nodeIndex].splitPos = allEntries[buildNodes[splitPos]].p[splitAxis];
 		arrayNodes[nodeIndex].index = buildNodes[splitPos];
 
 		if (start < splitPos) {
 			KdTreeNodeData_SetHasLeftChild(arrayNodes[nodeIndex].nodeData, 1);
-			
+
 			assert (KdTreeNodeData_HasLeftChild(arrayNodes[nodeIndex].nodeData));
 
 			const u_int leftChildIndex = nextFreeNode++;
@@ -122,21 +142,54 @@ IndexKdTree<T>::Build(const u_int nodeIndex, const u_int start, const u_int end,
 			Build(rightChildIndex, splitPos + 1, end, buildNodes);
 		} else {
 			KdTreeNodeData_SetRightChild(arrayNodes[nodeIndex].nodeData, KdTreeNodeData_NULL_INDEX);
-			
+
 			assert (KdTreeNodeData_GetRightChild(arrayNodes[nodeIndex].nodeData) == KdTreeNodeData_NULL_INDEX);
 		}
 	}
 }
 
+
+// Serialization
+
+template<class T>
+template<class Archive>
+void slg::IndexKdTree<T>::serialize(Archive &ar, const unsigned int file_version) {
+	// Nothing to add to load_construct_data / save_construct_data
+}
+
+namespace boost { namespace serialization {
+
+template<class T, class Archive>
+void load_construct_data(
+	Archive & ar, slg::IndexKdTree<T> * t, const unsigned int file_version
+){
+	// create and load data through pointer to object
+	// tracking handles issues of duplicates.
+	std::vector<T> * allEntriesPtr;
+	ar >> allEntriesPtr;
+	// invoke inplace constructor to initialize instance of my_class
+	::new(t)slg::IndexKdTree<T>(*allEntriesPtr);
+}
+
+template<class T, class Archive>
+void save_construct_data(
+	Archive & ar, const slg::IndexKdTree<T> * t, const unsigned int file_version
+){
+	ar << & t->allEntries;
+}
+
+}  // Namespace serialization
+}  // Namespace boost
+
+
 //------------------------------------------------------------------------------
 // Explicit instantiations
 //------------------------------------------------------------------------------
-
-// C++ can be quite horrible...
 
 namespace slg {
 template class IndexKdTree<PGICVisibilityParticle>;
 }
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::IndexKdTree<PGICVisibilityParticle>)
+BOOST_CLASS_EXPORT(slg::IndexKdTreeArrayNode)
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

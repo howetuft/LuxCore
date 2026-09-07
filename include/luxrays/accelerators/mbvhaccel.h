@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_MBVHACCEL_H
 #define	_LUXRAYS_MBVHACCEL_H
 
+#include <memory>
 #include <vector>
 
 #include "luxrays/luxrays.h"
@@ -42,7 +43,7 @@ public:
 	virtual bool HasNativeSupport(const IntersectionDevice &device) const;
 	virtual bool HasHWSupport(const IntersectionDevice &device) const;
 
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
+	virtual HardwareIntersectionKernelUPtr NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const override;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
@@ -67,12 +68,12 @@ private:
 
 	// The root BVH tree
 	unsigned int nRootNodes;
-	luxrays::ocl::BVHArrayNode *bvhRootTree;
+	std::unique_ptr<luxrays::ocl::BVHArrayNode[]> bvhRootTree;
 
 	std::vector<const BVHAccel *> uniqueLeafs;
 	std::vector<const Transform *> uniqueLeafsTransform;
 	std::vector<const MotionSystem *> uniqueLeafsMotionSystem;
-	
+
 	const Context & ctx;
 	std::deque<const Mesh * > meshes;
 

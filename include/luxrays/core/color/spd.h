@@ -21,6 +21,8 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"
+#include <vector>
+#include <span>
 
 namespace luxrays {
 
@@ -28,12 +30,19 @@ class XYZColor;
 
 class SPD {
 public:
-	SPD() { 
-		nSamples = 0U; 
+	SPD() {
+		nSamples = 0U;
 		lambdaMin = lambdaMax = delta = invDelta = 0.f;
-		samples = NULL;
 	}
-	virtual ~SPD() { FreeSamples(); }
+	virtual ~SPD() {}
+
+	// Access to samples in a span
+	std::span<const float> samples() const {
+		return std::span<const float>(_samples.data(), nSamples);
+	}
+	std::span<float> samples() {
+		return std::span<float>(_samples.data(), nSamples);
+	}
 
 	// samples the SPD by performing a linear interpolation on the data
 	inline float Sample(const float lambda) const {
@@ -42,10 +51,11 @@ public:
 
 		// interpolate the two closest samples linearly
 		const float x = (lambda - lambdaMin) * invDelta;
-		const u_int b0 = Floor2UInt(x);
-		const u_int b1 = Min(b0 + 1, nSamples - 1);
+
+		const auto b0 = static_cast<size_t>(std::floor(std::max(x, 0.f)));
+		const auto b1 = std::min(b0 + 1, nSamples - 1);
 		const float dx = x - b0;
-		return Lerp(dx, samples[b0], samples[b1]);
+		return std::lerp(samples()[b0], samples()[b1], dx);
 	}
 
 	inline void Sample(u_int n, const float lambda[], float *p) const {
@@ -58,10 +68,10 @@ public:
 
 			// interpolate the two closest samples linearly
 			const float x = (lambda[i] - lambdaMin) * invDelta;
-			const u_int b0 = Floor2UInt(x);
-			const u_int b1 = Min(b0 + 1, nSamples - 1);
+			const auto b0 = static_cast<size_t>(std::floor(std::max(x, 0.f)));
+			const auto b1 = std::min(b0 + 1, nSamples - 1);
 			const float dx = x - b0;
-			p[i] = Lerp(dx, samples[b0], samples[b1]);
+			p[i] = std::lerp(samples()[b0], samples()[b1], dx);
 		}
 	}
 
@@ -87,7 +97,7 @@ public:
 				p[i] = 0.f;
 				continue;
 			}
-			p[i] = Lerp(offsets[i], samples[bins[i]], samples[bins[i] + 1]);
+			p[i] = std::lerp(samples()[bins[i]], samples()[bins[i] + 1], offsets[i]);
 		}
 	}
 
@@ -96,17 +106,22 @@ public:
 	XYZColor ToXYZ() const;
 	XYZColor ToNormalizedXYZ() const;
 	void AllocateSamples(u_int n);
-	void FreeSamples();
 	void Normalize();
 	void Clamp();
 	void Scale(float s);
 	void Whitepoint(float temp);
 
+
+
+
 protected:
-	u_int nSamples;
+	void AddWeighted(float w, const float *c);
+
+	// Data
+	size_t nSamples;
 	float lambdaMin, lambdaMax;
 	float delta, invDelta;
-	float *samples;
+	std::vector<float> _samples;
 
 };
 

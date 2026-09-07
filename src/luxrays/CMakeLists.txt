@@ -159,6 +159,7 @@ set(LUXRAYS_SRCS
   ${PROJECT_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxrays/utils/buffer.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/config.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/cuda.cpp
   ${PROJECT_SOURCE_DIR}/src/luxrays/utils/mc.cpp

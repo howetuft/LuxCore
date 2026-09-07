@@ -61,9 +61,9 @@ public:
 
 protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::HardwareIntersectionDevice *device) = 0;
+			luxrays::HardwareIntersectionDeviceRef device) = 0;
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeIntersectionDevice *device) {
+			luxrays::NativeIntersectionDeviceRef device) {
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
 	}
 
@@ -92,7 +92,7 @@ protected:
 	bool writeKernelsToFile;
 
 	// Pixel filter related variables
-	float *pixelFilterDistribution;
+	std::vector<float> pixelFilterDistribution;
 	u_int pixelFilterDistributionSize;
 
 	slg::ocl::Sampler *oclSampler;

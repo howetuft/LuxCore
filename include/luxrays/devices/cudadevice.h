@@ -47,7 +47,7 @@ public:
 	virtual size_t GetMaxMemoryAllocSize() const;
 	virtual bool HasOutOfCoreMemorySupport() const;
 
-	CUdevice GetCUDADevice() { return cudaDevice; }
+	CUdevice GetCUDADevice() const { return cudaDevice; }
 	int GetCUDAComputeCapabilityMajor() const;
 	int GetCUDAComputeCapabilityMinor() const;
 	void SetCUDAUseOptix(const bool v) { useOptix = v; }
@@ -57,7 +57,7 @@ public:
 	friend class CUDADevice;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	static void AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions);
 
 	size_t cudaDeviceIndex;
 	CUdevice cudaDevice;
@@ -164,10 +164,10 @@ protected:
 class CUDADevice : virtual public HardwareDevice {
 public:
 	CUDADevice(const Context & context,
-		CUDADeviceDescription *desc, const size_t devIndex);
+		CUDADeviceDescriptionConstRef desc, const size_t devIndex);
 	virtual ~CUDADevice();
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual const DeviceDescription& GetDeviceDesc() const { return deviceDesc; }
 
 	virtual void PushThreadCurrentDevice();
 	virtual void PopThreadCurrentDevice();
@@ -176,26 +176,29 @@ public:
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::vector<std::string> &programParameters, const std::string &programSource,
-			const std::string &programName);
+	virtual HardwareDeviceProgramUPtr CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+	) override;
 
-	virtual void GetKernel(HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			const std::string &kernelName);
-	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
-	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
-			const u_int index, const size_t size, const void *arg);
+	virtual HardwareDeviceKernelUPtr GetKernel(
+		HardwareDeviceProgramRef program,
+		const std::string &kernelName
+	) override;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
+	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
+			const u_int index, const size_t size, const void *arg) override;
 
-	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize);
+			const HardwareDeviceRange &workGroupSize) override;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr);
+			const bool blocking, const size_t size, void *ptr) override;
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr);
-	virtual void FlushQueue();
-	virtual void FinishQueue();
+			const bool blocking, const size_t size, const void *ptr) override;
+	virtual void FlushQueue() override;
+	virtual void FinishQueue() override;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
@@ -210,7 +213,10 @@ public:
 	//--------------------------------------------------------------------------
 
 	CUcontext GetCUDAContext() { return cudaContext; }
-	luxrays::cudaKernelPersistentCache *GetCUDAKernelCache() { return kernelCache; }
+
+	const std::unique_ptr<luxrays::cudaKernelPersistentCache>&
+	GetCUDAKernelCache() { return kernelCache; }
+
 	OptixDeviceContext GetOptixContext() { return optixContext; }
 
 	std::vector<std::string> AddKernelOpts(const std::vector<std::string> &programParameters);
@@ -219,18 +225,20 @@ public:
 	friend class Context;
 
 protected:
-	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
-		const u_int index, const HardwareDeviceBuffer *buff);
+	virtual void SetKernelArgBuffer(
+		HardwareDeviceKernelRPtr kernel,
+		const u_int index, const HardwareDeviceBuffer *buff
+	) override;
 
 	void AllocBuffer(CUdeviceptr *buff,
 			void *src, const size_t size, const std::string &desc = "");
 
-	CUDADeviceDescription *deviceDesc;
+	CUDADeviceDescriptionConstRef deviceDesc;
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
-	
-	luxrays::cudaKernelPersistentCache *kernelCache;
-	
+
+	std::unique_ptr<luxrays::cudaKernelPersistentCache> kernelCache;
+
 	OptixDeviceContext optixContext;
 };
 

@@ -37,8 +37,10 @@ namespace ocl {
 
 class Triangle {
 public:
+	using subtype_t = unsigned int;
+
 	Triangle() { }
-	Triangle(const unsigned int v0, const unsigned int v1, const unsigned int v2) {
+	Triangle(subtype_t v0, subtype_t v1, subtype_t v2) {
 		v[0] = v0;
 		v[1] = v1;
 		v[2] = v2;
@@ -104,7 +106,15 @@ public:
 		return Area(p0, p1, p2);
 	}
 
-	Normal GetGeometryNormal(const Point *verts) const {
+	float Area(const std::span<Point> verts) const {
+		const Point &p0 = verts[v[0]];
+		const Point &p1 = verts[v[1]];
+		const Point &p2 = verts[v[2]];
+
+		return Area(p0, p1, p2);
+	}
+
+	Normal GetGeometryNormal(const Points verts) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -112,7 +122,7 @@ public:
 		return Normal(Normalize(Cross(p1 - p0, p2 - p0)));
 	}
 
-	void Sample(const Point *verts, const float u0,
+	void Sample(const std::span<Point> verts, const float u0,
 		const float u1, Point *p, float *b0, float *b1, float *b2) const {
 		// Old triangle uniform sampling
 		// UniformSampleTriangle(u0, u1, b0, b1);
@@ -128,7 +138,7 @@ public:
 		*p = (*b0) * p0 + (*b1) * p1 + (*b2) * p2;
 	}
 
-	bool GetBaryCoords(const Point *verts, const Point &hitPoint, float *b1, float *b2) const {
+	bool GetBaryCoords(const Points verts, const Point &hitPoint, float *b1, float *b2) const {
 		const Point &p0 = verts[v[0]];
 		const Point &p1 = verts[v[1]];
 		const Point &p2 = verts[v[2]];
@@ -178,8 +188,7 @@ public:
 		return (area / a) * 2.f;
 	}
 
-
-	unsigned int v[3];
+	subtype_t v[3];
 
 	friend class boost::serialization::access;
 

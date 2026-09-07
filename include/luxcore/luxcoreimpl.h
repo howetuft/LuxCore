@@ -19,6 +19,7 @@
 #ifndef _LUXCOREIMPL_H
 #define	_LUXCOREIMPL_H
 
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/serializationutils.h"
 #include <format>
 
@@ -352,6 +353,11 @@ public:
 	void SetMeshTriangleAOV(const std::string &meshName,
 		const unsigned int index, float *data, size_t size) override;
 
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, std::span<float> data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, std::span<float> data);
+
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(
 		const std::string &shapeName,
@@ -432,8 +438,8 @@ public:
 	// Note: this method is not part of LuxCore API and it is used only internally
 	void DefineMesh(luxrays::ExtTriangleMeshUPtr&& mesh);
 
-	static luxrays::Point *AllocVerticesBuffer(const unsigned int meshVertCount);
-	static luxrays::Triangle *AllocTrianglesBuffer(const unsigned int meshTriCount);
+	static luxrays::VertexBuffer AllocVerticesBuffer(const unsigned int meshVertCount);
+	static luxrays::TriangleBuffer AllocTrianglesBuffer(const unsigned int meshTriCount);
 
 
 	//friend class CameraImpl;

@@ -32,7 +32,6 @@ using namespace slg;
 void LightStrategyLogPower::Preprocess(SceneConstRef scene, const LightStrategyTask taskType,
 			const bool useRTMode) {
 	// Delete old lightsDistribution
-	delete lightsDistribution;
 	lightsDistribution = nullptr;
 
 	DistributionLightStrategy::Preprocess(scene, taskType);
@@ -73,7 +72,7 @@ void LightStrategyLogPower::Preprocess(SceneConstRef scene, const LightStrategyT
 	}
 
 	// Build the data to power based light sampling
-	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+	lightsDistribution = std::make_unique<Distribution1D>(lightPower);
 }
 
 // Static methods used by LightStrategyRegistry

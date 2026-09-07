@@ -36,7 +36,8 @@ using namespace slg;
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT, class T> static luxrays::ocl::IndexBVHArrayNode *BuildEmbreeBVH(
+template<u_int CHILDREN_COUNT, class T>
+static std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> BuildEmbreeBVH(
 		RTCBuildQuality quality, const vector<T> *allEntries,
 		const float entryRadius, u_int *nNodes) {
 	//const double t1 = WallClockTime();
@@ -78,10 +79,6 @@ IndexBvh<T>::IndexBvh(const vector<T> *entries, const float radius) :
 	arrayNodes = BuildEmbreeBVH<4, T>(RTC_BUILD_QUALITY_HIGH, allEntries, entryRadius, &nNodes);
 }
 
-template <class T>
-IndexBvh<T>::~IndexBvh() {
-	delete [] arrayNodes;
-}
 
 //------------------------------------------------------------------------------
 // Explicit instantiations

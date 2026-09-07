@@ -98,10 +98,7 @@ BakeCPURenderEngine::BakeCPURenderEngine(RenderConfigRef rcfg) :
 }
 
 BakeCPURenderEngine::~BakeCPURenderEngine() {
-	for (auto dist : currentSceneObjDist)
-		delete dist;
 	currentSceneObjDist.clear();
-	delete currentSceneObjsDist;
 	delete photonGICache;
 	delete threadsSyncBarrier;
 }
@@ -273,12 +270,9 @@ void BakeCPURenderEngine::StartLockLess() {
 void BakeCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
-	for (auto dist : currentSceneObjDist)
-		delete dist;
 	currentSceneObjDist.clear();
 
-	delete currentSceneObjsDist;
-	currentSceneObjsDist = nullptr;
+	currentSceneObjsDist.reset();
 	
 	pathTracer.DeletePixelFilterDistribution();
 

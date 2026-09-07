@@ -26,6 +26,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/utils/strutils.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 
 namespace luxrays {
 
@@ -56,14 +57,21 @@ void EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, MeshConstRef me
 	const RTCGeometry geom = rtcNewGeometry(embreeDevice, RTC_GEOMETRY_TYPE_TRIANGLE);
 
 	// Share with Embree the mesh vertices
-	Point *meshVerts = mesh.GetVertices();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, meshVerts,
-			0, sizeof(Point), mesh.GetTotalVertexCount());
+	auto meshVerts = mesh.GetVertices();
+	rtcSetSharedGeometryBuffer(
+		geom,
+		RTC_BUFFER_TYPE_VERTEX,
+		0,
+		RTC_FORMAT_FLOAT3,
+		meshVerts.data(),
+		0,
+		sizeof(Point),
+		mesh.GetTotalVertexCount());
 
 
 	// Share with Embree the mesh triangles
-	Triangle *meshTris = mesh.GetTriangles();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, meshTris,
+	auto meshTris = mesh.GetTriangles();
+	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, meshTris.data(),
 			0, sizeof(Triangle), mesh.GetTotalTriangleCount());
 
 	rtcCommitGeometry(geom);
@@ -97,8 +105,8 @@ void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const Mot
 	}
 
 	// Share the mesh triangles
-	Triangle *meshTris = mtm.GetTriangles();
-	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, (RTCBuffer)meshTris,
+	auto meshTris = mtm.GetTriangles();
+	rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, (RTCBuffer)meshTris.data(),
 			0, sizeof(Triangle), mtm.GetTotalTriangleCount());
 
 	rtcCommitGeometry(geom);
@@ -273,6 +281,12 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	} else {
 		return false;
 	}
+}
+
+HardwareIntersectionKernelUPtr EmbreeAccel::NewHardwareIntersectionKernel(
+	HardwareIntersectionDevice &device
+) const {
+	return HardwareIntersectionKernelUPtr(nullptr);
 }
 
 }

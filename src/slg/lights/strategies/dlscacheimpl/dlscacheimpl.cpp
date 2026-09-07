@@ -189,7 +189,8 @@ void DirectLightSamplingCache::TraceVisibilityParticles(SceneConstRef scene) {
 //------------------------------------------------------------------------------
 
 void DirectLightSamplingCache::InitCacheEntry(const u_int entryIndex) {
-	cacheEntries[entryIndex] = DLSCacheEntry(visibilityParticles[entryIndex].bsdfList[0]);
+	cacheEntries[entryIndex] =
+		DLSCacheEntry(visibilityParticles[entryIndex].bsdfList[0]);
 }
 
 float DirectLightSamplingCache::SampleLight(
@@ -360,7 +361,9 @@ void DirectLightSamplingCache::BuildCacheEntryLightDistribution(const u_int entr
 		for (auto &l : entryReceivedLuminance)
 			l = Max(l * invMaxLuminanceValue , .025f);
 
-		cacheEntries[entryIndex].lightsDistribution = new Distribution1D(&entryReceivedLuminance[0], entryReceivedLuminance.size());
+		cacheEntries[entryIndex].lightsDistribution = std::make_unique<Distribution1D>(
+			entryReceivedLuminance
+		);
 	}
 }
 
@@ -554,7 +557,7 @@ void DirectLightSamplingCache::Build(SceneConstRef scn) {
 	//DebugExport("entries-point.scn", entryRadius * .05f);
 }
 
-const Distribution1D *DirectLightSamplingCache::GetLightDistribution(const luxrays::Point &p,
+Distribution1DRPtr DirectLightSamplingCache::GetLightDistribution(const luxrays::Point &p,
 		const luxrays::Normal &n, const bool isVolume) const {
 	if (cacheEntriesBVH) {
 		const DLSCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n, isVolume);
@@ -563,7 +566,7 @@ const Distribution1D *DirectLightSamplingCache::GetLightDistribution(const luxra
 			return entry->lightsDistribution;
 	}
 	
-	return nullptr;
+	return Distribution1D::NullPtr;
 }
 
 void DirectLightSamplingCache::DebugExport(const string &fileName, const float sphereRadius) const {

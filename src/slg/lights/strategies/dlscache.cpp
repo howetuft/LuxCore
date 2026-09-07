@@ -54,7 +54,7 @@ LightSourcePtr LightStrategyDLSCache::SampleLights(
 	) const {
 	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
-		const Distribution1D *lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
+		const auto& lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
 
 		if (lightsDistribution) {
 			const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
@@ -73,7 +73,7 @@ float LightStrategyDLSCache::SampleLightPdf(LightSourceConstRef light,
 		const Point &p, const Normal &n, const bool isVolume) const {
 	if ((taskType == TASK_ILLUMINATE) && !useRTMode) {
 		// Check if a cache entry is available for this point
-		const Distribution1D *lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
+		const auto& lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
 
 		if (lightsDistribution)
 			return lightsDistribution->PdfDiscrete(light.lightSceneIndex);

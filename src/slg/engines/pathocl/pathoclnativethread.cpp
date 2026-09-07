@@ -47,7 +47,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
-	NativeIntersectionDevice *device, PathOCLRenderEngine *re) :
+	NativeIntersectionDeviceRef device, PathOCLRenderEngine *re) :
 	PathOCLBaseNativeRenderThread(index, device, re)
 {}
 
@@ -146,10 +146,14 @@ void PathOCLNativeRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 	// Setup PathTracer thread state
-	PathTracerThreadState pathTracerThreadState(intersectionDevice,
-			eyeSampler, lightSampler,
-			engine->renderConfig.GetScene(), *film,
-			&varianceClamping);
+	PathTracerThreadState pathTracerThreadState(
+		intersectionDevice,
+		eyeSampler,
+		lightSampler,
+		engine->renderConfig.GetScene(),
+		*film,
+		&varianceClamping
+	);
 
 	//--------------------------------------------------------------------------
 	// Trace paths

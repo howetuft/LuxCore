@@ -59,7 +59,7 @@ private:
 		ar & scale;
 	}
 
-	luxrays::HardwareDeviceKernel *applyKernel;
+	luxrays::HardwareDeviceKernelUPtr applyKernel;
 };
 
 }

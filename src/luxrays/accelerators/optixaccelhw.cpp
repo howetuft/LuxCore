@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include "luxrays/core/context.h"
@@ -53,7 +55,7 @@ public:
 
 		// Safety checks
 		if (!cudaDevice)
-			throw runtime_error("Used a no CUDA device in OptixKernel::OptixKernel(): " + DeviceDescription::GetDeviceType(dev.GetDeviceDesc()->GetType()));
+			throw runtime_error("Used a no CUDA device in OptixKernel::OptixKernel(): " + DeviceDescription::GetDeviceType(dev.GetDeviceDesc().GetType()));
 		if (!cudaDevice->GetOptixContext())
 			throw runtime_error("No Optix context in OptixKernel::OptixKernel()");
 
@@ -89,21 +91,18 @@ public:
 				luxrays::ocl::KernelSource_ray_funcs <<
 				luxrays::ocl::KernelSource_optixemptyaccel;
 
-			HardwareDeviceProgram *program = nullptr;
-			device.CompileProgram(&program,
+			auto program = device.CompileProgram(
 					opts,
 					code.str(),
 					"OptixEmptyAccelKernel");
 
 			// Setup the kernel
-			device.GetKernel(program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
+			optixEmptyAccelKernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
-			if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+			if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 			else
 				optixEmptyAccelWorkGroupSize = device.GetKernelWorkGroupSize(optixEmptyAccelKernel); 
-
-			delete program;
 
 			return;
 		} else
@@ -368,7 +367,7 @@ public:
 				luxrays::ocl::KernelSource_optixaccel;
 		kernelSource = cudaDevice->GetKernelSource(kernelSource);
 		
-		char *ptx;
+		std::unique_ptr<char[]> ptx;
 		size_t ptxSize;
 		bool cached;
 		string ptxError;
@@ -406,13 +405,12 @@ public:
 				optixContext,
 				&moduleCompileOptions,
 				&pipelineCompileOptions,
-				ptx,
+				ptx.get(),
 				ptxSize,
 				optixErrLog,
 				&optixErrLogSize,
 				&optixModule);
 
-		delete[] ptx;
 
 		if (optixErr != OPTIX_SUCCESS) {
 			LR_LOG(device.GetContext(), "Optix optixModuleCreateFromPTX() error: " << endl << optixErrLog);
@@ -553,8 +551,6 @@ public:
 	virtual ~OptixKernel() {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
-		delete optixEmptyAccelKernel;
-
 		if (optixPipeline) {
 			CHECK_OPTIX_ERROR(optixPipelineDestroy(optixPipeline));
 		}
@@ -592,11 +588,11 @@ private:
 
 		// Allocate CUDA vertices buffer
 		HardwareDeviceBuffer *vertsBuff = nullptr;
-		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices(), sizeof(Point) * mesh.GetTotalVertexCount());
+		cudaDevice->AllocBufferRO(&vertsBuff, mesh.GetVertices().data(), sizeof(Point) * mesh.GetTotalVertexCount());
 
 		// Allocate CUDA triangle vertices indices buffer
 		HardwareDeviceBuffer *trisBuff = nullptr;
-		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
+		cudaDevice->AllocBufferRO(&trisBuff, mesh.GetTriangles().data(), sizeof(Triangle) * mesh.GetTotalTriangleCount());
 
 		const u_int triangleInputFlags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
 
@@ -715,7 +711,7 @@ private:
 	HardwareDeviceBuffer *optixHitSbtBuff;
 
 	// For the empty dataset case
-	HardwareDeviceKernel *optixEmptyAccelKernel;
+	HardwareDeviceKernelUPtr optixEmptyAccelKernel;
 	u_int optixEmptyAccelWorkGroupSize;
 	bool emptyDataSet;
 };
@@ -756,9 +752,10 @@ bool OptixAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *OptixAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr OptixAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new OptixKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, OptixKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

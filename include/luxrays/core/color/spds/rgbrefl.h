@@ -35,9 +35,11 @@ public:
 
 protected:
 	void AddWeighted(float w, const float *c) {
-		for (u_int i = 0; i < nSamples; ++i) {
-			samples[i] += c[i] * w;
-		}
+		std::span<float> samps = samples();
+		std::span<const float> cs{c, nSamples};
+
+		std::ranges::transform(samps, cs, samps.begin(),
+			[w](float s, float ci) { return s + ci * w; });
 	}
 
 	void init(const RGBColor &s);

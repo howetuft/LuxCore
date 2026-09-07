@@ -29,11 +29,12 @@ namespace luxrays {
 //------------------------------------------------------------------------------
 
 CUDAIntersectionDevice::CUDAIntersectionDevice(
-		const Context & context,
-		CUDADeviceDescription *desc,
-		const size_t devIndex) :
-		Device(context, devIndex), CUDADevice(context, desc, devIndex),
-		HardwareIntersectionDevice(), kernel(nullptr) {
+	const Context & context,
+	CUDADeviceDescriptionConstRef desc,
+	const size_t devIndex
+) :
+	Device(context, devIndex), CUDADevice(context, desc, devIndex),
+	HardwareIntersectionDevice(), kernel(nullptr) {
 }
 
 CUDAIntersectionDevice::~CUDAIntersectionDevice() {
@@ -71,8 +72,7 @@ void CUDAIntersectionDevice::Start() {
 }
 
 void CUDAIntersectionDevice::Stop() {
-	delete kernel;
-	kernel = nullptr;
+	kernel.reset();
 
 	CUDADevice::Stop();
 }

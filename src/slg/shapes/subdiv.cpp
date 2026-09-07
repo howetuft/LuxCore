@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/trianglemesh.h"
+#include "luxrays/utils/buffer.h"
 #include <unordered_map>
 #include <format>
 
@@ -231,7 +233,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	// Vertices
 	auto vertsBuffer = BuildBuffer<3>(
 		stencilTable,
-		(const float *)srcMesh.GetVertices(),
+		srcMesh.GetVerticesAsFloats().data(),
 		nCoarseVerts,
 		nRefinedVerts
 	);
@@ -241,7 +243,7 @@ ExtTriangleMeshUPtr ApplySubdiv(ExtTriangleMeshRef srcMesh, const u_int maxLevel
 	if (srcMesh.HasNormals()) {
         normsBuffer = BuildBuffer<3>(
 			stencilTable,
-			(const float *)srcMesh.GetNormals(),
+			reinterpret_cast<float *>(srcMesh.GetNormals().Data()),
 			nCoarseVerts,
 			nRefinedVerts
 		);
@@ -308,7 +310,7 @@ nRefinedVerts
 	//--------------------------------------------------------------------------
 
 	// New triangles
-	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(nRefinedFaces);
+	TriangleBuffer newTris(nRefinedFaces);
 	for (int face = 0; face < nRefinedFaces; ++face) {
 		Vtr::ConstIndexArray faceVerts = refLastLevel.GetFaceVertices(face);
 		for (u_int vertex = 0; vertex < 3; ++vertex) {
@@ -317,16 +319,20 @@ nRefinedVerts
 	}
 
 	// New vertices
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(nRefinedVerts);
+	VertexBuffer newVerts(nRefinedVerts);
 	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-	std::copy(refinedVerts, refinedVerts + 3 * nRefinedVerts, &newVerts->x);
+	newVerts.Set(std::span<const float>(refinedVerts, size_t(3 * nRefinedVerts)));
 
 	// New normals
-	Normal *newNorms = nullptr;
+	NormalBuffer newNorms;
 	if (srcMesh.HasNormals()) {
-		newNorms = new Normal[nRefinedVerts];
+		newNorms.Allocate(nRefinedVerts);
 		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * nCoarseVerts;
-		std::copy(refinedNorms, refinedNorms + 3 * nRefinedVerts, &newNorms->x);
+		std::copy_n(
+			refinedNorms,
+			3 * nRefinedVerts,
+			newNorms.GetSubObjects().begin()
+		);
 	}
 
 	// New UVs
@@ -380,8 +386,7 @@ nRefinedVerts
 
 	// Allocate the new mesh
 	ExtTriangleMeshUPtr newMesh = std::make_unique<ExtTriangleMesh>(
-		nRefinedVerts, nRefinedFaces,
-		newVerts, newTris, newNorms,
+		std::move(newVerts), std::move(newTris), std::move(newNorms),
 		newUVs, newCols, newAlphas
 	);
 
@@ -400,12 +405,13 @@ static Far::TopologyRefiner* createFarTopologyRefiner(ExtTriangleMeshConstRef sr
 	desc.numFaces = srcMesh.GetTotalTriangleCount();
 	std::vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
-	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
+	//desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTriangles());
+	desc.vertIndicesPerFace = reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data());
 
 	// Look for mesh boundary edges
 	std::unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
+	const TriangleBuffer tris(srcMesh.GetTriangles());
 
 	// Count how many times an edge is shared
 	for (u_int i = 0; i < triCount; ++i) {
@@ -595,7 +601,7 @@ struct EdgeInfo {
 
 // Calculate face normal for a triangle
 Vector calculateTriangleNormal(const ExtTriangleMesh &mesh, const Triangle &tri) {
-	auto vertices = std::span<Point>(mesh.GetVertices(), mesh.GetTotalVertexCount());
+	auto vertices = mesh.GetVertices();
     const Point &p0 = vertices[tri.v[0]];
     const Point &p1 = vertices[tri.v[1]];
     const Point &p2 = vertices[tri.v[2]];
@@ -629,8 +635,8 @@ void processEdgesForSharpness(const ExtTriangleMesh &mesh,
                              std::map<std::pair<int, int>, EdgeInfo> &edgeMap,
                              float sharpnessThresholdRadians) {
 
-	auto triangles = std::span<Triangle>(mesh.GetTriangles(), mesh.GetTotalTriangleCount());
-	auto vertices = std::span<Point>(mesh.GetVertices(), mesh.GetTotalVertexCount());
+	auto triangles = mesh.GetTriangles();
+	auto vertices = mesh.GetVertices();
 
     // Clear any existing edge information
     edgeMap.clear();
@@ -832,7 +838,7 @@ struct Surface {
 		// Construct refiner
 		refiner = std::move(
 			createTopologyAdaptiveRefiner(
-				reinterpret_cast<const int *>(srcMesh.GetTriangles()),
+				reinterpret_cast<const int *>(srcMesh.GetTrianglesAsInts().data()),
 				srcMesh.GetTotalVertexCount(),
 				srcMesh.GetTotalTriangleCount(),
 				edgeMap,
@@ -904,7 +910,7 @@ struct Surface {
 	/// @param N Tessellation rate: each edge will be subdivided into N
 	/// sub-edges
 	///
-	std::tuple<CoordVector, TriangleArrayPtr, int, int>
+	std::tuple<CoordVector, TriangleBuffer, int, int>
 	Tessellate (const size_t N) {
 		// This is triforce tessellation.
 
@@ -912,7 +918,7 @@ struct Surface {
 		CoordVector tessCoords;
 		int numTriangles = getTesselTriangleCount(N);
 		int numPoints = getTesselPosCount(N);
-		auto tessTris = TriangleArrayPtr(TriangleMesh::AllocTrianglesBuffer(numTriangles));
+		TriangleBuffer tessTris(numTriangles);
 
 		// Some constants
 		const auto& topology = refiner->GetLevel(0);
@@ -1088,14 +1094,14 @@ struct Surface {
 
 		}  // ~for face
 
-		return std::make_tuple(tessCoords, std::move(tessTris), numPoints, numTriangles);
+		return std::make_tuple(std::move(tessCoords), std::move(tessTris), numPoints, numTriangles);
 
 	}  // ~Tessellate
 
 
 	template <typename T>
-	InterpolatedValues Interpolate(const T* baseValues, int numBaseValues) const {
-
+	InterpolatedValues Interpolate(std::span<T> baseValues) const {
+		int numBaseValues = baseValues.size();
 		assert(numBaseValues == refiner->GetLevel(0).GetNumVertices());
 
 		// Set dimensions
@@ -1171,7 +1177,7 @@ struct Surface {
 	///	@return A smart pointer to a buffer containing the evaluated positions
 	///	and a smart pointer to a buffer containing the evaluated normals
 	///
-	std::tuple<PointArrayPtr, NormalArrayPtr>
+	std::tuple<VertexBuffer, NormalBuffer>
 	EvaluatePositions(
 		const InterpolatedValues& interpolatedPositions,
 		const CoordVector& tessCoords
@@ -1180,8 +1186,8 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessPositions = PointArrayPtr(TriangleMesh::AllocVerticesBuffer(numCoords));
-		auto tessNormals = NormalArrayPtr(new Normal[numCoords]);
+		VertexBuffer tessPositions(numCoords);
+		NormalBuffer tessNormals(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
@@ -1234,7 +1240,7 @@ struct Surface {
 				dv.AddWithWeight(position, dvWeights[cv]);
 			}
 
-			// Update output (position and normal)
+			// Update normal
 			tessNormals[vertex] = Normal(Cross(du, dv));
 
 			// Check validity of normal and normalize if ok
@@ -1408,9 +1414,10 @@ struct MultiLayerDataEvaluator{
 
 		// Treatment
 		for (size_t layer = 0; layer < EXTMESH_MAX_DATA_COUNT; ++layer) {
-			DATA_IN* layerData = getLayerData(layer);
-			if (layerData) {
-				auto interpolatedData = surface.Interpolate(layerData, layerSize);
+			auto* layerDataPtr = getLayerData(layer);
+			if (layerDataPtr) {
+				std::span<DATA_IN> layerDataSpan(layerDataPtr, layerSize);
+				auto interpolatedData = surface.Interpolate(layerDataSpan);
 				res[layer] = surface.Evaluate<DATA_IN>(interpolatedData, coords);
 			}
 		}
@@ -1452,7 +1459,7 @@ ExtTriangleMeshUPtr ApplySubdiv(
 
 	// Tessellate
 	CoordVector tessCoords;
-	TriangleArrayPtr tessTriangles;
+	TriangleBuffer tessTriangles;
 	int numPoints, numTriangles;
 
 	tie(tessCoords, tessTriangles, numPoints, numTriangles) =
@@ -1462,12 +1469,12 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	u_int numMeshVertex = srcMesh.GetTotalVertexCount();
 
 	// Evaluate positions and normals
-	PointArrayPtr tessPoints;
-	NormalArrayPtr tessNormals;
+	VertexBuffer tessPoints;
+	NormalBuffer tessNormals;
 	{
 		// Interpolate positions on subdivided surface
 		auto interpolatedPositions =
-			surface.Interpolate(srcMesh.GetVertices(), numMeshVertex);
+			surface.Interpolate(srcMesh.GetVertices());
 
 		// Evaluate refined (interpolated) positions
 		SDL_LOG("Subdivision (enhanced) - Evaluating positions and normals");
@@ -1505,11 +1512,9 @@ ExtTriangleMeshUPtr ApplySubdiv(
 	);
 
 	auto newMesh =  std::make_unique<ExtTriangleMesh>(
-		u_int(numPoints),
-		u_int(numTriangles),
-		tessPoints.release(),
-		tessTriangles.release(),
-		tessNormals.release(),
+		std::move(tessPoints),
+		std::move(tessTriangles),
+		std::move(tessNormals),
 		tessUVs.releaseLayers(),
 		tessCols.releaseLayers(),
 		tessAlphas.releaseLayers()
@@ -1636,8 +1641,8 @@ SubdivShape::SubdivShape(
 
 float SubdivShape::MaxEdgeScreenSize(CameraConstRef camera, ExtTriangleMeshRef srcMesh) {
 	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Point *verts = srcMesh.GetVertices();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const Points verts = srcMesh.GetVertices();
+	const TriangleBuffer tris(srcMesh.GetTriangles());
 
 	// Note VisualStudio doesn't support:
 	//#pragma omp parallel for reduction(max:maxEdgeSize)

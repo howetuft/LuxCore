@@ -27,9 +27,11 @@
 
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/accelerators/mbvhaccel.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/strutils.h"
 
 using namespace std;
@@ -53,7 +55,7 @@ public:
 		u_int pageNodeCount = 0;
 		if (mbvh.nRootNodes) {
 			// Check the max. number of vertices I can store in a single page
-			const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+			const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 
 			//------------------------------------------------------------------
 			// Allocate vertex buffers
@@ -245,32 +247,28 @@ public:
 			luxrays::ocl::KernelSource_bvhbuild_types <<
 			luxrays::ocl::KernelSource_mbvh;
 
-		HardwareDeviceProgram *program = nullptr;
-		device.CompileProgram(&program,
-				opts,
-				code.str(),
-				"MBVHKernel");
+		auto program = device.CompileProgram(
+			opts,
+			code.str(),
+			"MBVHKernel"
+		);
 
 		// Setup the kernel
-		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
+		kernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
-		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0)
+			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
 		else {
-			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			workGroupSize = device.GetKernelWorkGroupSize(kernel);
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
 			//	"] BVH kernel work group size: " << workGroupSize);
 		}
 
 		// Set kernel arguments
 		SetIntersectionKernelArgs();
-
-		delete program;
 	}
 
 	virtual ~MBVHKernel() {
-		delete kernel;
-
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device.FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
@@ -299,7 +297,7 @@ public:
 	// Used to update BVH node buffers
 	vector<vector<u_int> > vertOffsetPerLeafMesh;
 
-	HardwareDeviceKernel *kernel;
+	HardwareDeviceKernelUPtr kernel;
 	u_int workGroupSize;
 };
 
@@ -308,8 +306,8 @@ void MBVHKernel::UpdateBVHNodes() {
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
 		device.FreeBuffer(&nodeBuffs[i]);
 	nodeBuffs.resize(0);
-	
-	const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+
+	const size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 	const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 
 	// Check how many pages I have to allocate
@@ -336,12 +334,12 @@ void MBVHKernel::UpdateBVHNodes() {
 
 	u_int currentNodeIndex = 0;
 	u_int currentLeafIndex = 0;
-	const luxrays::ocl::BVHArrayNode *currentNodes = mbvh.bvhRootTree;
+	std::reference_wrapper currentNodes = mbvh.bvhRootTree;
 	u_int currentNodesCount = mbvh.nRootNodes;
 
 	while (currentLeafIndex < mbvh.uniqueLeafs.size()) {
 		const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
-		const bool isRootTree = (currentNodes == mbvh.bvhRootTree);
+		const bool isRootTree = (currentNodes.get() == mbvh.bvhRootTree);
 		const u_int leafIndex = currentLeafIndex;
 
 		// Check if there is enough space in the temporary buffer for all nodes
@@ -349,7 +347,7 @@ void MBVHKernel::UpdateBVHNodes() {
 		const u_int toCopy = currentNodesCount - currentNodeIndex;
 		if (tmpLeftNodeCount >= toCopy) {
 			// There is enough space for all nodes
-			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
+			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes.get()[currentNodeIndex],
 					sizeof(luxrays::ocl::BVHArrayNode) * toCopy);
 			copiedIndexStart = tmpNodeIndex;
 			copiedIndexEnd = tmpNodeIndex + toCopy;
@@ -369,7 +367,7 @@ void MBVHKernel::UpdateBVHNodes() {
 			}
 		} else {
 			// There isn't enough space for all mesh vertices. Fill the current buffer.
-			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes[currentNodeIndex],
+			memcpy(&tmpNodes[tmpNodeIndex], &currentNodes.get()[currentNodeIndex],
 					sizeof(luxrays::ocl::BVHArrayNode) * tmpLeftNodeCount);
 			copiedIndexStart = tmpNodeIndex;
 			copiedIndexEnd = tmpNodeIndex + tmpLeftNodeCount;
@@ -504,9 +502,10 @@ bool MBVHAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new MBVHKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, MBVHKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

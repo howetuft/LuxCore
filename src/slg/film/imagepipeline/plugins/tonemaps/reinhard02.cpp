@@ -61,10 +61,6 @@ Reinhard02ToneMap::Reinhard02ToneMap(const float preS, const float postS, const 
 }
 
 Reinhard02ToneMap::~Reinhard02ToneMap() {
-	delete opRGBValuesReduceKernel;
-	delete opRGBValueAccumulateKernel;
-	delete applyKernel;
-
 	if (hardwareDevice)
 		hardwareDevice->FreeBuffer(&hwAccumBuffer);
 }
@@ -144,8 +140,7 @@ void Reinhard02ToneMap::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_luxrays_types +
 				luxrays::ocl::KernelSource_color_types +
@@ -155,13 +150,11 @@ void Reinhard02ToneMap::ApplyHW(Film &film, const u_int index) {
 				"Reinhard02ToneMap");
 
 		SLG_LOG("[Reinhard02ToneMap] Compiling OpRGBValuesReduce Kernel");
-		hardwareDevice->GetKernel(program, &opRGBValuesReduceKernel, "OpRGBValuesReduce");
+		opRGBValuesReduceKernel = hardwareDevice->GetKernel(*program, "OpRGBValuesReduce");
 		SLG_LOG("[Reinhard02ToneMap] Compiling OpRGBValueAccumulate Kernel");
-		hardwareDevice->GetKernel(program, &opRGBValueAccumulateKernel, "OpRGBValueAccumulate");
+		opRGBValueAccumulateKernel = hardwareDevice->GetKernel(*program, "OpRGBValueAccumulate");
 		SLG_LOG("[Reinhard02ToneMap] Compiling AutoLinearToneMap_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "Reinhard02ToneMap_Apply");
-
-		delete program;
+		applyKernel = hardwareDevice->GetKernel(*program, "Reinhard02ToneMap_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

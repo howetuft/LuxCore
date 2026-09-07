@@ -466,7 +466,7 @@ public:
 
 	luxrays::ContextUPtr ctx;
 	luxrays::DataSetSPtr dataSet;
-	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDevicePtr hardwareDevice;
 
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
 	luxrays::HardwareDeviceBuffer *hw_ALPHA;
@@ -476,10 +476,10 @@ public:
 
 	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
 
-	luxrays::HardwareDeviceKernel *mergeInitializeKernel;
-	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
-	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
+	luxrays::HardwareDeviceKernelUPtr mergeInitializeKernel;
+	luxrays::HardwareDeviceKernelUPtr mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernelUPtr mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernelUPtr mergeFinalizeKernel;
 
 	static FilmUPtr LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, FilmRef film);

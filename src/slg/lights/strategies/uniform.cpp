@@ -65,8 +65,7 @@ void LightStrategyUniform::Preprocess(SceneConstRef scene, const LightStrategyTa
 		}
 	}
 
-	delete lightsDistribution;
-	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+	lightsDistribution = std::make_unique<Distribution1D>(lightPower);
 }
 
 // Static methods used by LightStrategyRegistry

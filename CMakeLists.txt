@@ -103,7 +103,7 @@ ENDIF()
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs

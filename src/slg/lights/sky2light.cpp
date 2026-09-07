@@ -150,8 +150,6 @@ SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
 }
 
 SkyLight2::~SkyLight2() {
-	delete skyDistribution;
-	delete visibilityMapCache;
 }
 
 Spectrum SkyLight2::ComputeSkyRadiance(const Vector &w) const {
@@ -219,16 +217,16 @@ void SkyLight2::Preprocess() {
 		}
 	}
 
-	skyDistribution = new Distribution2D(&data[0], distributionWidth, distributionHeight);
+	skyDistribution = std::make_unique<Distribution2D>(data, distributionWidth, distributionHeight);
 }
 
-void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
+std::tuple<luxrays::Distribution2DRef, EnvLightVisibilityCacheRPtr>
+SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
 		float *scaledGroundColorData, int *isGroundBlackData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
-		float *iTermData, float *radianceTermData,
-		const Distribution2D **skyDistributionData,
-		const EnvLightVisibilityCache **elvc) const {
+		float *iTermData, float *radianceTermData
+) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
@@ -246,7 +244,7 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		scaledGroundColorData[1] = scaledGroundColor.c[1];
 		scaledGroundColorData[2] = scaledGroundColor.c[2];
 	}
-	
+
 	if (isGroundBlackData)
 		*isGroundBlackData = isGroundBlack;
 
@@ -309,11 +307,10 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		radianceTermData[1] = radianceTerm.c[1];
 		radianceTermData[2] = radianceTerm.c[2];
 	}
-	
-	if (skyDistributionData)
-		*skyDistributionData = skyDistribution;
-	if (elvc)
-		*elvc = visibilityMapCache;
+
+	return std::make_tuple(
+		std::ref(*skyDistribution), std::ref(visibilityMapCache)
+	);
 }
 
 float SkyLight2::GetPower(SceneConstRef scene) const {
@@ -464,15 +461,12 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 void SkyLight2::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
-	delete visibilityMapCache;
-	visibilityMapCache = nullptr;
+	visibilityMapCache.reset();
 
 	if (useRTMode)
 		return;
 
 	if (useVisibilityMapCache) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
 
 		// Build a luminance map of the sky
 		ImageMapUPtr luminanceMapImage(ImageMap::AllocImageMap(1,
@@ -487,7 +481,7 @@ void SkyLight2::UpdateVisibilityMap(SceneConstRef scene, const bool useRTMode) {
 						(x + .5f) / EnvLightVisibilityCache::defaultLuminanceMapWidth)).Y();
 		}
 
-		visibilityMapCache = new EnvLightVisibilityCache(
+		visibilityMapCache = std::make_unique<EnvLightVisibilityCache>(
 			scene, this, std::move(luminanceMapImage), visibilityMapCacheParams
 		);
 		visibilityMapCache->Build();

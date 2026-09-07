@@ -70,12 +70,14 @@ protected:
 };
 
 struct PGICVisibilityParticle : GenericPhoton {
-	PGICVisibilityParticle(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum& bsdfEvalTotal, const bool isVol) :
-			GenericPhoton(pt, isVol), n(nm),
-			bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
-			hitsCount(0) {
-	}
+	PGICVisibilityParticle(
+		const luxrays::Point &pt, const luxrays::Normal &nm,
+		const luxrays::Spectrum& bsdfEvalTotal, const bool isVol
+	) :
+		GenericPhoton(pt, isVol), n(nm),
+		bsdfEvaluateTotal(bsdfEvalTotal), hitsAccumulatedDistance(0.f),
+		hitsCount(0)
+	{}
 
 	luxrays::SpectrumGroup ComputeRadiance(const float radius2, const float photonTraced) const {
 		if (hitsCount > 0) {

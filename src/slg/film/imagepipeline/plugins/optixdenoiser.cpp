@@ -48,7 +48,6 @@ OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 		if (denoiserHandle)
 			CHECK_OPTIX_ERROR(optixDenoiserDestroy(denoiserHandle));
 
-		delete bufferSetUpKernel;
 		cudaDevice->FreeBuffer(&denoiserStateScratchBuff);
 		cudaDevice->FreeBuffer(&denoiserTmpBuff);
 		cudaDevice->FreeBuffer(&albedoTmpBuff);
@@ -92,7 +91,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		if (!film.hardwareDevice)
 			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is not enabled");
 
-		cudaDevice = dynamic_cast<CUDADevice *>(film.hardwareDevice);
+		cudaDevice = dynamic_observer_cast<luxrays::CUDADevice>(film.hardwareDevice);
 		if (!cudaDevice)
 			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
 
@@ -121,7 +120,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 				"Optix denoiser state and scratch buffer");
 		cudaDevice->AllocBufferRW(&denoiserTmpBuff, nullptr,
 				3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
-				"Optix denoiser temporary buffer");		
+				"Optix denoiser temporary buffer");
 		if (film.HasChannel(Film::ALBEDO)) {
 			// Allocate ALBEDO and AVG_SHADING_NORMAL temporary buffers
 
@@ -132,24 +131,22 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 				cudaDevice->AllocBufferRW(&avgShadingNormalTmpBuff, nullptr,
 						3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
 						"Optix denoiser normal temporary buffer");
-			
+
 			// Compile buffer setup kernel
 
 			vector<string> opts;
 			opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 			opts.push_back("-D SLG_OPENCL_KERNEL");
 
-			HardwareDeviceProgram *program = nullptr;
-			cudaDevice->CompileProgram(&program,
+			auto program = cudaDevice->CompileProgram(
 					opts,
 					luxrays::ocl::KernelSource_utils_funcs +
 					slg::ocl::KernelSource_plugin_optixdenoiser_funcs,
 					"OptixDenoiserPlugin");
 
 			SLG_LOG("[OptixDenoiserPlugin] Compiling OptixDenoiserPlugin_BufferSetUp Kernel");
-			cudaDevice->GetKernel(program, &bufferSetUpKernel, "OptixDenoiserPlugin_BufferSetUp");
+			bufferSetUpKernel = cudaDevice->GetKernel(*program, "OptixDenoiserPlugin_BufferSetUp");
 
-			delete program;
 		}
 
 		CHECK_OPTIX_ERROR(optixDenoiserSetup(denoiserHandle,

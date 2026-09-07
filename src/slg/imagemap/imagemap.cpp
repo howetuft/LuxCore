@@ -1454,9 +1454,9 @@ void ImageMap::WriteImage(const string &fileName) const {
 				// 3 channels as temporary workaround
 				const u_int size = pixelStorage->GetWidth() * pixelStorage->GetHeight();
 				const float *srcBuffer = (float *)pixelStorage->GetPixelsData();
-				float *tmpBuffer = new float[size * 3];
+				std::vector<float> tmpBuffer(size * 3);
 
-				float *tmpBufferPtr = tmpBuffer;
+				auto tmpBufferPtr = tmpBuffer.begin();
 				for (u_int i = 0; i < size; ++i) {
 					const float v = srcBuffer[i];
 					*tmpBufferPtr++ = v;
@@ -1468,10 +1468,9 @@ void ImageMap::WriteImage(const string &fileName) const {
 					pixelStorage->GetWidth(), pixelStorage->GetHeight(), 3, TypeDesc::FLOAT
 				);
 				out->open(fileName, spec);
-				out->write_image(TypeDesc::FLOAT, tmpBuffer);
+				out->write_image(OIIO::make_cspan(tmpBuffer));
 				out->close();
 
-				delete[] tmpBuffer;
 			} else {
 				ImageSpec spec(
 					pixelStorage->GetWidth(),

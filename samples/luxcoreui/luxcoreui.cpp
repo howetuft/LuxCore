@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
     //luxcore::SetEnableLogSubSystem(luxcore::LOG_API, true);
     //luxcore::SetFileLog("luxcore.log", 1000 * 1024, 3);
 
+
     LA_LOG("LuxCoreUI v" LUXCORE_VERSION " (http://www.luxcorerender.org)");
 
     //ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
@@ -242,3 +243,4 @@ int main(int argc, char *argv[]) {
 
   return EXIT_SUCCESS;
 }
+// vim: autoindent noexpandtab tabstop=4 shiftwidth=4

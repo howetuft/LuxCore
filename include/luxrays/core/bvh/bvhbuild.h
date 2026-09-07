@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_BVHBUILD_H
 #define	_LUXRAYS_BVHBUILD_H
 
+#include <memory>
 #include <vector>
 #include <ostream>
 
@@ -69,25 +70,30 @@ extern BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 	std::vector<BVHTreeNode *> &leafList);
 extern u_int BuildBVHArray(const std::deque<const Mesh *> *meshes, BVHTreeNode *node,
 		u_int offset, luxrays::ocl::BVHArrayNode *bvhArrayTree);
-extern luxrays::ocl::BVHArrayNode *BuildBVH(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList);
+extern std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildBVH(
+	const BVHParams &params,
+	u_int *nNodes,
+	const std::deque<const Mesh *> *meshes,
+	std::vector<BVHTreeNode *> &leafList
+);
 
 // Embree BVH build
-extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(
+extern std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildEmbreeBVHBinnedSAH(
 	const BVHParams &params,
 	u_int *nNodes,
 	const std::deque<const Mesh * > *meshes,
 	std::vector<BVHTreeNode *> &leafList);
-extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(
+extern std::unique_ptr<luxrays::ocl::BVHArrayNode[]> *BuildEmbreeBVHMorton(
 	const BVHParams &params,
 	u_int *nNodes,
 	const std::deque<const Mesh * > meshes,
 	std::vector<BVHTreeNode *> &leafList
 );
-extern luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh * > *meshes,
-		std::vector<BVHTreeNode *> &leafList);
+extern std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildEmbreeBVHMorton(
+	const BVHParams &params,
+	u_int *nNodes, const std::deque<const Mesh * > *meshes,
+	std::vector<BVHTreeNode *> &leafList
+);
 
 // Common functions
 extern void FreeBVH(BVHTreeNode *node);
@@ -168,9 +174,12 @@ inline void CopyBBox(const float *src, float *dst) {
 	*dst = *src;
 }
 
-template<u_int CHILDREN_COUNT> inline u_int BuildEmbreeBVHArray(
-		const EmbreeBVHNode<CHILDREN_COUNT> *node,
-		u_int offset, luxrays::ocl::IndexBVHArrayNode *bvhArrayTree) {
+template<u_int CHILDREN_COUNT>
+inline u_int BuildEmbreeBVHArray(
+	const EmbreeBVHNode<CHILDREN_COUNT> *node,
+	u_int offset,
+	const std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]>& bvhArrayTree
+) {
 	if (node) {
 		luxrays::ocl::IndexBVHArrayNode *arrayNode = &bvhArrayTree[offset];
 
@@ -264,7 +273,8 @@ template<u_int CHILDREN_COUNT> inline void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> inline luxrays::ocl::IndexBVHArrayNode *BuildEmbreeBVH(
+template<u_int CHILDREN_COUNT>
+inline std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> BuildEmbreeBVH(
 		const RTCBuildQuality quality, std::vector<RTCBuildPrimitive> &prims, u_int *nNodes) {
 	RTCBuildArguments buildArgs = rtcDefaultBuildArguments();
 	buildArgs.buildQuality = quality;
@@ -291,7 +301,7 @@ template<u_int CHILDREN_COUNT> inline luxrays::ocl::IndexBVHArrayNode *BuildEmbr
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	luxrays::ocl::IndexBVHArrayNode *bvhArrayTree = new luxrays::ocl::IndexBVHArrayNode[*nNodes];
+	auto bvhArrayTree = std::make_unique<luxrays::ocl::IndexBVHArrayNode[]>(*nNodes);
 	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(root, 0, bvhArrayTree);
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))

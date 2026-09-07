@@ -34,7 +34,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 TilePathCPURenderThread::TilePathCPURenderThread(TilePathCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		CPUTileRenderThread(engine, index, device) {
 }
 

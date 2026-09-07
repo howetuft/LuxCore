@@ -19,6 +19,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <span>
 
 #include <filesystem>
 #include <boost/format.hpp>
@@ -78,14 +79,15 @@ void FileSaverRenderEngine::SaveScene() {
 		throw runtime_error("Unknown format in FileSaverRenderEngine: " + exportFormat);
 }
 
-static string Base64Encode(const char *data, const size_t size) {
+static string Base64Encode(std::span<const std::byte> bytes) {
+	size_t size = bytes.size();
 	stringstream ss;
 
 	typedef boost::archive::iterators::base64_from_binary<
 			boost::archive::iterators::transform_width<const char *, 6, 8>
 	> base64_t;
 
-	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(ss));
+	copy(base64_t(bytes.data()), base64_t(bytes.data() + size), boost::archive::iterators::ostream_iterator<char>(ss));
 
 	// "===" padding is there as work around to Python base64.b64decode()
 	// behavior. See https://gist.github.com/perrygeo/ee7c65bb1541ff6ac770
@@ -175,8 +177,9 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		// Add vertices buffer
 
 		const size_t encodedVerticesSize = sizeof(Point) * triMesh.GetTotalVertexCount();
-		const string encodedVertices = Base64Encode((const char *)triMesh.GetVertices(),
-				encodedVerticesSize);
+		//const string encodedVertices = Base64Encode((const char *)triMesh.GetVertices(),
+				//encodedVerticesSize);
+		const string encodedVertices = Base64Encode(std::as_bytes(triMesh.GetVertices()));
 
 		j["buffers"].push_back(json::object({
 			{ "uri", "data:application/octet-stream;base64," + encodedVertices },
@@ -212,14 +215,17 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 
 		u_int vertexUVsAccessorIndex = NULL_INDEX;
 		if (scnObj.HasBakeMap(COMBINED) && triMesh.HasUVs(scnObj.GetBakeMapUVIndex())) {
-			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh.GetTotalVertexCount();
-			const string encodedVertexUVs = Base64Encode(
-					(const char *)(triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()].get()),
-					encodedVertexUVsSize);
+
+			const auto uvs = std::span(
+				triMesh.GetAllUVs()[scnObj.GetBakeMapUVIndex()].get(),
+				triMesh.GetTotalVertexCount()
+			);
+			const auto bytes = std::as_bytes(uvs);
+			const string encodedVertexUVs = Base64Encode(bytes);
 
 			j["buffers"].push_back(json::object({
 				{ "uri", "data:application/octet-stream;base64," + encodedVertexUVs },
-				{ "byteLength", encodedVertexUVsSize }
+				{ "byteLength", bytes.size() }
 			}));
 
 			// Add vertex UVs buffer view
@@ -227,7 +233,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 			j["bufferViews"].push_back(json::object({
 				{ "buffer",  j["buffers"].size() - 1 },
 				{ "byteOffset", 0 },
-				{ "byteLength", encodedVertexUVsSize },
+				{ "byteLength", bytes.size() },
 				{ "target", 0x8892 }, // GL_ARRAY_BUFFER
 			}));
 
@@ -259,13 +265,18 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		//----------------------------------------------------------------------
 		// Add triangle indices buffer
 
-		const size_t encodedTrianglesSize = sizeof(Triangle) * triMesh.GetTotalTriangleCount();
-		const string encodedTriangles = Base64Encode((const char *)triMesh.GetTriangles(),
-				encodedTrianglesSize);
+		// TODO
+		//const auto tris = std::span(
+			//triMesh.GetTriangles(),
+			//triMesh.GetTotalTriangleCount()
+		//);
+		const auto tris = triMesh.GetTriangles();
+		const auto bytes = std::as_bytes(tris);
+		const string encodedTriangles = Base64Encode(bytes);
 
 		j["buffers"].push_back(json::object({
 			{ "uri", "data:application/octet-stream;base64," + encodedTriangles },
-			{ "byteLength", encodedTrianglesSize }
+			{ "byteLength", bytes.size() }
 		}));
 
 		// Add triangle indices buffer view
@@ -273,7 +284,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(
 		j["bufferViews"].push_back(json::object({
 			{ "buffer", j["buffers"].size() - 1 },
 			{ "byteOffset", 0 },
-			{ "byteLength", encodedTrianglesSize },
+			{ "byteLength", bytes.size() },
 			{ "target", 0x8893 }, // GL_ELEMENT_ARRAY_BUFFER
 		}));
 

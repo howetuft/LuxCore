@@ -18,6 +18,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/strands.h"
+#include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"
 #include <memory>
@@ -308,14 +309,14 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 	SLG_LOG("Refining " << header.hair_count << " strands");
 	const double start = WallClockTime();
 
-	const float *points = hairFile->GetPointsArray();
-	const float *thickness = hairFile->GetThicknessArray();
-	const u_short *segments = hairFile->GetSegmentsArray();
-	const float *colors = hairFile->GetColorsArray();
-	const float *transparency = hairFile->GetTransparencyArray();
-	const float *uvs = hairFile->GetUVsArray();
+	const auto points = hairFile->GetPointsArray();
+	const auto thickness = hairFile->GetThicknessArray();
+	const auto segments = hairFile->GetSegmentsArray();
+	const auto colors = hairFile->GetColorsArray();
+	const auto transparency = hairFile->GetTransparencyArray();
+	const auto uvs = hairFile->GetUVsArray();
 
-	if (segments || (header.d_segments > 0)) {
+	if (not segments.empty() || (header.d_segments > 0)) {
 		u_int pointIndex = 0;
 
 		vector<Point> hairPoints;
@@ -332,7 +333,7 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		vector<float> meshTransps;
 		for (u_int i = 0; i < header.hair_count; ++i) {
 			// segmentSize must be signed
-			const int segmentSize = segments ? segments[i] : header.d_segments;
+			const auto segmentSize = not segments.empty() ? segments[i] : header.d_segments;
 			if (segmentSize == 0)
 				continue;
 
@@ -344,16 +345,16 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 			hairUVs.clear();
 			for (int j = 0; j <= segmentSize; ++j) {
 				hairPoints.push_back(Point(points[pointIndex * 3], points[pointIndex * 3 + 1], points[pointIndex * 3 + 2]));
-				hairSizes.push_back(((thickness) ? thickness[pointIndex] : header.d_thickness) * .5f);
-				if (colors)
+				hairSizes.push_back(((not thickness.empty()) ? thickness[pointIndex] : header.d_thickness) * .5f);
+				if (not colors.empty())
 					hairCols.push_back(Spectrum(colors[pointIndex * 3], colors[pointIndex * 3 + 1], colors[pointIndex * 3 + 2]));
 				else
 					hairCols.push_back(Spectrum(header.d_color[0], header.d_color[1], header.d_color[2]));
-				if (transparency)
+				if (not transparency.empty())
 					hairTransps.push_back(1.f - transparency[pointIndex]);
 				else
 					hairTransps.push_back(1.f - header.d_transparency);
-				if (uvs)
+				if (not uvs.empty())
 					hairUVs.push_back(UV(uvs[pointIndex * 2], uvs[pointIndex * 2 + 1]));
 				else
 					hairUVs.push_back(UV(0.f, j / (float)segmentSize));
@@ -394,14 +395,12 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		SLG_LOG("Strands mesh: " << meshTris.size() << " triangles");
 
 		// Create the mesh
-		Point *newMeshVerts = TriangleMesh::AllocVerticesBuffer(meshVerts.size());
-		copy(meshVerts.begin(), meshVerts.end(), newMeshVerts);
+		VertexBuffer newMeshVerts(meshVerts);
 
-		Triangle *newMeshTris = TriangleMesh::AllocTrianglesBuffer(meshTris.size());
-		copy(meshTris.begin(), meshTris.end(), newMeshTris);
+		TriangleBuffer newMeshTris(meshTris);
 
-		Normal *newMeshNorms = new Normal[meshNorms.size()];
-		copy(meshNorms.begin(), meshNorms.end(), newMeshNorms);
+		NormalBuffer newMeshNorms(meshNorms.size());
+		newMeshNorms.Set(std::span<const luxrays::Normal>(meshNorms));
 
 		auto newMeshUVs = std::make_shared<UV[]>(meshUVs.size());
 		std::copy(meshUVs.begin(), meshUVs.end(), newMeshUVs.get());
@@ -441,11 +440,9 @@ StrendsShape::StrendsShape(SceneConstRef scene,
 		}
 
 		mesh = std::make_unique<ExtTriangleMesh>(
-			meshVerts.size(),
-			meshTris.size(),
-			newMeshVerts,
-			newMeshTris,
-			newMeshNorms,
+			std::move(newMeshVerts),
+			std::move(newMeshTris),
+			std::move(newMeshNorms),
 			newMeshUVs,
 			newMeshCols,
 			newMeshTransps

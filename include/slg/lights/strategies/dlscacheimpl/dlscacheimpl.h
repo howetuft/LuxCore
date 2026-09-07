@@ -76,8 +76,15 @@ public:
 		lightsDistribution = nullptr;
 	}
 
+	// Move constructors
+	DLSCacheEntry(DLSCacheEntry&& other) = default;
+	DLSCacheEntry& operator=(DLSCacheEntry&& other) = default;
+
+	// Copy constructors are deleted
+	DLSCacheEntry(DLSCacheEntry& other) = delete;
+	DLSCacheEntry& operator=(DLSCacheEntry& other) = delete;
+
 	~DLSCacheEntry() {
-		delete lightsDistribution;
 	}
 
 	// Point information
@@ -86,7 +93,9 @@ public:
 	bool isVolume;
 
 	// Cache information
-	luxrays::Distribution1D *lightsDistribution;
+	luxrays::Distribution1DUPtr lightsDistribution;
+
+	constexpr static auto NullPtr = std::unique_ptr<DLSCacheEntry>(nullptr);
 
 	friend class boost::serialization::access;
 	
@@ -164,7 +173,7 @@ public:
 
 	void Build(SceneConstRef scene);
 	
-	const luxrays::Distribution1D *GetLightDistribution(const luxrays::Point &p, const luxrays::Normal &n,
+	const luxrays::Distribution1DRPtr GetLightDistribution(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 
 	friend class DLSCSceneVisibility;

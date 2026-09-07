@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #include <vector>
 
 #include <embree4/rtcore.h>
@@ -136,8 +137,8 @@ template<u_int CHILDREN_COUNT> static u_int BuildEmbreeBVHArray(const deque<cons
 
 			if (meshes) {
 				// It is a BVH of triangles
-				const Triangle *triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
-				const Triangle *triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
+				const auto triangles = (*meshes)[leafTree->triangleLeaf.meshIndex]->GetTriangles();
+				const auto triangle = &triangles[leafTree->triangleLeaf.triangleIndex];
 				arrayNode->triangleLeaf.v[0] = triangle->v[0];
 				arrayNode->triangleLeaf.v[1] = triangle->v[1];
 				arrayNode->triangleLeaf.v[2] = triangle->v[2];
@@ -213,9 +214,11 @@ template<u_int CHILDREN_COUNT> static void NodeSetChildrensBBoxFunc(void *nodePt
 // BuildEmbreeBVH
 //------------------------------------------------------------------------------
 
-template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
+template<u_int CHILDREN_COUNT>
+static std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildEmbreeBVH(
+	RTCBuildQuality quality, u_int *nNodes, const std::deque<const Mesh *> *meshes,
+	std::vector<BVHTreeNode *> &leafList
+) {
 	//const double t1 = WallClockTime();
 
 	// Initialize RTCPrimRef vector
@@ -263,8 +266,8 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 	//const double t3 = WallClockTime();
 	//cout << "BuildEmbreeBVH rtcBVHBuilderBinnedSAH time: " << int((t3 - t2) * 1000) << "ms\n";
 
-	luxrays::ocl::BVHArrayNode *bvhArrayTree = new luxrays::ocl::BVHArrayNode[*nNodes];
-	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, root, leafList, 0, bvhArrayTree);
+	auto bvhArrayTree = std::make_unique<luxrays::ocl::BVHArrayNode[]>(*nNodes);
+	bvhArrayTree[0].nodeData = BuildEmbreeBVHArray<CHILDREN_COUNT>(meshes, root, leafList, 0, bvhArrayTree.get());
 	// If root was a leaf, mark the node
 	if (dynamic_cast<const EmbreeBVHLeafNode<CHILDREN_COUNT> *>(root))
 		bvhArrayTree[0].nodeData |= 0x80000000u;
@@ -281,9 +284,11 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 // BuildEmbreeBVHBinnedSAH
 //------------------------------------------------------------------------------
 
-luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
+std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildEmbreeBVHBinnedSAH(
+	const BVHParams &params,
+	u_int *nNodes, const std::deque<const Mesh *> *meshes,
+	std::vector<BVHTreeNode *> &leafList
+) {
 	// Performance analysis.
 	//
 	// Version #1:
@@ -319,7 +324,7 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 	//  BuildEmbreeBVH rtcDeleteDevice time: 5ms
 	//  [LuxRays][8.229] BVH build hierarchy time: 5183ms
 
-	luxrays::ocl::BVHArrayNode *bvhArrayTree;
+	std::unique_ptr<luxrays::ocl::BVHArrayNode[]> bvhArrayTree;
 
 	if (params.treeType == 2)
 		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_HIGH, nNodes, meshes, leafList);
@@ -337,10 +342,12 @@ luxrays::ocl::BVHArrayNode *BuildEmbreeBVHBinnedSAH(const BVHParams &params,
 // BuildEmbreeBVHMorton
 //------------------------------------------------------------------------------
 
-luxrays::ocl::BVHArrayNode *BuildEmbreeBVHMorton(const BVHParams &params,
-		u_int *nNodes, const std::deque<const Mesh *> *meshes,
-		std::vector<BVHTreeNode *> &leafList) {
-	luxrays::ocl::BVHArrayNode *bvhArrayTree;
+std::unique_ptr<luxrays::ocl::BVHArrayNode[]> BuildEmbreeBVHMorton(
+	const BVHParams &params,
+	u_int *nNodes, const std::deque<const Mesh *> *meshes,
+	std::vector<BVHTreeNode *> &leafList
+) {
+	std::unique_ptr<luxrays::ocl::BVHArrayNode[]> bvhArrayTree;
 
 	if (params.treeType == 2)
 		bvhArrayTree = BuildEmbreeBVH<2>(RTC_BUILD_QUALITY_LOW, nNodes, meshes, leafList);

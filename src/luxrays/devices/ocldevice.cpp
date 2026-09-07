@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -87,20 +89,36 @@ void OpenCLDeviceDescription::GetPlatformsList(std::vector<cl_platform_id> &plat
 	CHECK_OCL_ERROR(clGetPlatformIDs(platformsCount, &platformsList[0], nullptr));
 }
 
-void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
-	const DeviceType filter, vector<DeviceDescription *> &descriptions) {
+void OpenCLDeviceDescription::AddDeviceDescs(
+	const cl_platform_id oclPlatform,
+	const DeviceType filter,
+	std::vector<DeviceDescriptionUPtr> &descriptions
+) {
 	// Get the list of devices available on the platform
 	cl_uint deviceCount;
-	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceCount));
-	
-	cl_device_id *devices = (cl_device_id *)alloca(deviceCount * sizeof(cl_device_id));
-	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, deviceCount, devices, nullptr));
+	CHECK_OCL_ERROR(
+		clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceCount)
+	);
+
+	auto devices = std::make_unique<cl_device_id[]>(deviceCount);
+	CHECK_OCL_ERROR(
+		clGetDeviceIDs(
+			oclPlatform,
+			CL_DEVICE_TYPE_ALL,
+			deviceCount,
+			devices.get(),
+			nullptr
+		)
+	);
 
 	// Build the descriptions
 	for (size_t i = 0; i < deviceCount; ++i) {
 		DeviceType devType = GetOCLDeviceType(devices[i]);
-		if (filter & devType)
-			descriptions.push_back(new OpenCLDeviceDescription(devices[i], i));
+		if (filter & devType) {
+			descriptions.push_back(
+				std::make_unique<OpenCLDeviceDescription>(devices[i], i)
+			);
+		}
 	}
 }
 
@@ -109,22 +127,28 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
 //------------------------------------------------------------------------------
 
 OpenCLDevice::OpenCLDevice(
-		const Context & context,
-		OpenCLDeviceDescription *desc,
-		const size_t devIndex) :
-		Device(context, devIndex),
-		deviceDesc(desc), oclContext(nullptr), oclQueue(nullptr) {
-	deviceName = (desc->GetName() + " OpenCLIntersect").c_str();
+	const Context & context,
+	OpenCLDeviceDescriptionConstRef desc,
+	const size_t devIndex
+) :
+	Device(context, devIndex),
+	deviceDesc(desc), oclContext(nullptr), oclQueue(nullptr)
+{
+	deviceName = (desc.GetName() + " OpenCLIntersect").c_str();
 
 	// Check if OpenCL 1.1 is available
-	if (!desc->IsOpenCL_1_1()) {
+	if (!desc.IsOpenCL_1_1()) {
 		// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
 		// print a warning instead of throwing an exception
-		LR_LOG(deviceContext, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
+		LR_LOG(
+			deviceContext,
+			"WARNING: OpenCL version 1.1 or better is required. Device "
+			+ deviceName + " may not work."
+		);
 	}
-	
-	// Allocate a context with the selected device	
-	cl_device_id devices[1] = { desc->GetOCLDevice() };
+
+	// Allocate a context with the selected device
+	cl_device_id devices[1] = { desc.GetOCLDevice() };
 	cl_int error;
 	oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
 	CHECK_OCL_ERROR(error);
@@ -133,7 +157,7 @@ OpenCLDevice::OpenCLDevice(
 }
 
 OpenCLDevice::~OpenCLDevice() {
-	
+
 	if (oclQueue)
 		CHECK_OCL_ERROR(clReleaseCommandQueue(oclQueue));
 	if (oclContext)
@@ -145,7 +169,7 @@ void OpenCLDevice::Start() {
 
 	// Create the OpenCL queue
 	cl_int error;
-	oclQueue = clCreateCommandQueue(oclContext, deviceDesc->GetOCLDevice(), 0, &error);
+	oclQueue = clCreateCommandQueue(oclContext, deviceDesc.GetOCLDevice(), 0, &error);
 	CHECK_OCL_ERROR(error);
 }
 
@@ -163,10 +187,11 @@ void OpenCLDevice::Stop() {
 // Kernels handling for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
-		const vector<string> &programParameters, const string &programSource,	
-		const string &programName) {
-	vector <string> oclProgramParameters = programParameters;
+HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
+	const vector<string> &programParameters, const string &programSource,	
+	const string &programName
+) {
+	std::vector <std::string> oclProgramParameters = programParameters;
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
 #if defined (__APPLE__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
@@ -175,14 +200,14 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 #elif defined (__linux__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
-	
+
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache.get())->GetApplicationName()));
-        
+
 
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
@@ -190,7 +215,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 
 	bool cached;
 	string error;
-	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc->GetOCLDevice(),
+	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc.GetOCLDevice(),
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
@@ -205,69 +230,85 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
 	}
 
-	if (!*program)
-		*program = new OpenCLDeviceProgram();
-	
-	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(*program);
-	assert (oclDeviceProgram);
+	//auto program = std::make_unique<OpenCLDeviceProgram>();
+	//auto program = static_cast<HardwareDeviceProgramUPtr>(std::move(program));
 
-	oclDeviceProgram->Set(oclProgram);
+	//auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(*program);
+
+	auto [program, oclDeviceProgram] =
+		CreateUniquePtr<HardwareDeviceProgram, OpenCLDeviceProgram>();
+
+	// Just to be sure...
+	static_assert(std::is_same_v<decltype(oclDeviceProgram), OpenCLDeviceProgramRef>);
+	static_assert(std::is_same_v<decltype(program), HardwareDeviceProgramUPtr>);
+
+	oclDeviceProgram.Set(oclProgram);
+
+	return std::move(program);
 }
 
-void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
-		HardwareDeviceKernel **kernel, const string &kernelName) {
-	if (!*kernel)
-		*kernel = new OpenCLDeviceKernel();
-	
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(*kernel);
-	assert (oclDeviceKernel);
+HardwareDeviceKernelUPtr OpenCLDevice::GetKernel(
+	HardwareDeviceProgramRef program,
+	const string &kernelName
+) {
+	auto [kernel, oclDeviceKernel] =
+		CreateUniquePtr<HardwareDeviceKernel, OpenCLDeviceKernel>();
 
-	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(program);
-	assert (oclDeviceProgram);
+	auto& oclDeviceProgram = dynamic_cast<OpenCLDeviceProgramRef>(program);
 
 	cl_int error;
-	cl_kernel k = clCreateKernel(oclDeviceProgram->Get(), kernelName.c_str(), &error);
+	cl_kernel k = clCreateKernel(oclDeviceProgram.Get(), kernelName.c_str(), &error);
 	CHECK_OCL_ERROR(error);
 
-	oclDeviceKernel->Set(k);
+	oclDeviceKernel.Set(k);
+
+	return std::move(kernel);
 }
 
-u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-	assert (oclDeviceKernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 
 	size_t size;
-	CHECK_OCL_ERROR(clGetKernelWorkGroupInfo(oclDeviceKernel->oclKernel, deviceDesc->GetOCLDevice(),
-			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr));
-	
+	CHECK_OCL_ERROR(
+		clGetKernelWorkGroupInfo(
+			oclDeviceKernel.oclKernel, deviceDesc.GetOCLDevice(),
+			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr
+		)
+	);
+
 	return size;
 }
 
-void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-	assert (oclDeviceKernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 
-	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, size, arg));
+	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel.oclKernel, index, size, arg));
 }
 
-void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-	assert (oclDeviceKernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 
-	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, sizeof(cl_mem), oclDeviceBuff ? &(oclDeviceBuff->oclBuff) : nullptr));
+	CHECK_OCL_ERROR(
+		clSetKernelArg(
+			oclDeviceKernel.oclKernel,
+			index,
+			sizeof(cl_mem),
+			oclDeviceBuff ? &(oclDeviceBuff->oclBuff) : nullptr
+		)
+	);
 }
 
 static void ConvertHardwareRange(const HardwareDeviceRange &range, size_t *globalSizeArray) {
@@ -283,23 +324,22 @@ static void ConvertHardwareRange(const HardwareDeviceRange &range, size_t *globa
 	}
 }
 
-void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+void OpenCLDevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-	assert (oclDeviceKernel);
+	auto& oclDeviceKernel = dynamic_cast<OpenCLDeviceKernelRef>(*kernel);
 
 	size_t globalSizeArray[3];
 	ConvertHardwareRange(globalSize, globalSizeArray);
 	size_t workGroupSizeArray[3];
 	ConvertHardwareRange(workGroupSize, workGroupSizeArray);
 
-	CHECK_OCL_ERROR(clEnqueueNDRangeKernel(oclQueue, oclDeviceKernel->oclKernel,
+	CHECK_OCL_ERROR(clEnqueueNDRangeKernel(oclQueue, oclDeviceKernel.oclKernel,
 			globalSize.dimensions,
-			nullptr, 
+			nullptr,
 			globalSizeArray,
 			workGroupSizeArray,
 			0, nullptr, nullptr));
@@ -348,12 +388,12 @@ void OpenCLDevice::FinishQueue() {
 void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 		void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
-	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
+	if (deviceDesc.GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
 		// CL_DEVICE_MAX_MEM_ALLOC_SIZE is lower than the real limit.
 		LR_LOG(deviceContext, "WARNING: the " << desc << " buffer is too big for " << GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				deviceDesc->GetMaxMemoryAllocSize() << ")");
+				deviceDesc.GetMaxMemoryAllocSize() << ")");
 	}
 
 	// Handle the case of an empty buffer

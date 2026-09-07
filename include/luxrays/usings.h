@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This file is intended to gather all usings (pointers, refs etc.) for
-// luxrays classes
+// This file is intended to gather all usings (pointers, refs etc.) for luxrays
+// classes. It essentially provides forward declarations, so it can be included
+// with low compilation overcost.
+
 
 #pragma once
 
@@ -54,19 +56,36 @@ DECLARE_SUBTYPES(BBox);
 DECLARE_SUBTYPES(Blob);
 DECLARE_SUBTYPES(BSphere);
 DECLARE_SUBTYPES(Context);
+DECLARE_SUBTYPES(CUDADevice);
+DECLARE_SUBTYPES(CUDADeviceKernel);
+DECLARE_SUBTYPES(CUDADeviceProgram);
+DECLARE_SUBTYPES(CUDADeviceDescription);
 DECLARE_SUBTYPES(DataSet);
 DECLARE_SUBTYPES(Device);
 DECLARE_SUBTYPES(DeviceDescription);
-DECLARE_SUBTYPES(HardwareDevice);
-DECLARE_SUBTYPES(IntersectionDevice)
-DECLARE_SUBTYPES(Mesh);
+DECLARE_SUBTYPES(Distribution1D);
+DECLARE_SUBTYPES(Distribution2D);
 DECLARE_SUBTYPES(ExtMesh);
 DECLARE_SUBTYPES(ExtTriangleMesh);
 DECLARE_SUBTYPES(ExtInstanceTriangleMesh);
 DECLARE_SUBTYPES(ExtMotionTriangleMesh);
+DECLARE_SUBTYPES(HardwareDevice);
+DECLARE_SUBTYPES(HardwareDeviceKernel);
+DECLARE_SUBTYPES(HardwareDeviceProgram);
+DECLARE_SUBTYPES(HardwareIntersectionDevice)
+DECLARE_SUBTYPES(HardwareIntersectionKernel)
+DECLARE_SUBTYPES(IntersectionDevice)
+DECLARE_SUBTYPES(IrregularFunction1D);
 DECLARE_SUBTYPES(Matrix4x4);
+DECLARE_SUBTYPES(Mesh);
 DECLARE_SUBTYPES(NamedObject);
+DECLARE_SUBTYPES(NativeIntersectionDevice)
+DECLARE_SUBTYPES(NativeIntersectionDeviceDescription);
 DECLARE_SUBTYPES(Normal);
+DECLARE_SUBTYPES(OpenCLDeviceDescription);
+DECLARE_SUBTYPES(OpenCLDeviceProgram);
+DECLARE_SUBTYPES(OpenCLDeviceKernel);
+DECLARE_SUBTYPES(OpenCLIntersectionDevice);
 DECLARE_SUBTYPES(Point);
 DECLARE_SUBTYPES(Ray);
 DECLARE_SUBTYPES(RayHit);

@@ -70,7 +70,7 @@ private:
 	luxrays::Spectrum *bloomBufferTmp;
 	size_t bloomBufferSize;
 
-	float *bloomFilter;
+	std::vector<float> bloomFilter;
 	size_t bloomFilterSize;
 
 	u_int bloomWidth;
@@ -81,9 +81,9 @@ private:
 	luxrays::HardwareDeviceBuffer *hwBloomBufferTmp;
 	luxrays::HardwareDeviceBuffer *hwBloomFilter;
 
-	luxrays::HardwareDeviceKernel *bloomFilterXKernel;
-	luxrays::HardwareDeviceKernel *bloomFilterYKernel;
-	luxrays::HardwareDeviceKernel *bloomFilterMergeKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterXKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterYKernel;
+	luxrays::HardwareDeviceKernelUPtr bloomFilterMergeKernel;
 };
 
 }

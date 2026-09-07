@@ -238,58 +238,67 @@ void CompiledScene::CompileTextureMapping3D(
 	}
 }
 
-float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *size) {
-	const u_int count = dist->GetCount();
+std::tuple<std::vector<float>, size_t>
+CompiledScene::CompileDistribution1D(
+	Distribution1DConstRef dist  // Argument in
+) {
+	const auto count = dist.GetCount();
 
-	// Here, I assume sizeof(u_int) = sizeof(float)
-	*size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
+	// Here, I assume sizeof(u_int) == sizeof(float)
+	static_assert(sizeof(u_int) == sizeof(float));
+
+	auto size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
 	// Size is expressed in bytes while I'm working with float
-	float *compDist = new float[*size / sizeof(float)];
+	std::vector<float> compDist(size / sizeof(float));
 
-	*((u_int *)&compDist[0]) = count;
-	copy(dist->GetFuncs(), dist->GetFuncs() + count,
-			compDist + 1);
-	copy(dist->GetCDFs(), dist->GetCDFs() + count + 1,
-			compDist + 1 + count);
+	compDist[0] = std::bit_cast<float>(count);
 
-	return compDist;
+	std::copy(dist.GetFuncs(), dist.GetFuncs() + count,
+			compDist.data() + 1);
+	std::copy(dist.GetCDFs(), dist.GetCDFs() + count + 1,
+			compDist.data() + 1 + count);
+
+	return std::make_tuple(compDist, size);  // Return value optimisation - no copy
 }
 
-float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *size) {
-	u_int marginalSize;
-	float *marginalDist = CompileDistribution1D(dist->GetMarginalDistribution(),
-			&marginalSize);
+std::tuple<std::vector<float>, size_t>
+CompiledScene::CompileDistribution2D(Distribution2DConstRef dist) {
+
+	auto [marginalDist, marginalSize] = CompileDistribution1D(
+		*dist.GetMarginalDistribution()
+	);
 
 	u_int condSize;
-	vector<float *> condDists;
-	for (u_int i = 0; i < dist->GetHeight(); ++i) {
-		condDists.push_back(
-			CompileDistribution1D(dist->GetConditionalDistribution(i), &condSize)
-		);
+	std::vector<std::vector<float> > condDists;
+	for (u_int i = 0; i < dist.GetHeight(); ++i) {
+		auto& conditionalDist = dist.GetConditionalDistribution(i);
+		auto [dist1D, sizeDist] = CompileDistribution1D(*conditionalDist);
+		condDists.push_back(dist1D);
+		condSize = sizeDist;
 	}
 
-	// Here, I assume sizeof(u_int) = sizeof(float)
-	*size = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
+	// Here, I assume sizeof(u_int) == sizeof(float)
+	static_assert(sizeof(u_int) == sizeof(float));
+	//
+	auto size = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
 	// Size is expressed in bytes while I'm working with float
-	float *compDist = new float[*size / sizeof(float)];
+	std::vector<float> compDist(size / sizeof(float));
 
-	*((u_int *)&compDist[0]) = dist->GetWidth();
-	*((u_int *)&compDist[1]) = dist->GetHeight();
+	compDist[0] = std::bit_cast<float>(dist.GetWidth());
+	compDist[1] = std::bit_cast<float>(dist.GetHeight());
 
-	float *ptr = &compDist[2];
+	auto ptr = compDist.begin() + 2;
 	const u_int marginalSize4 = marginalSize / sizeof(float);
-	copy(marginalDist, marginalDist + marginalSize4, ptr);
+	std::copy_n(marginalDist.begin(), marginalSize4, ptr);
 	ptr += marginalSize4;
-	delete[] marginalDist;
 
 	const u_int condSize4 = condSize / sizeof(float);
-	for (u_int i = 0; i < dist->GetHeight(); ++i) {
-		copy(condDists[i], condDists[i] + condSize4, ptr);
+	for (u_int i = 0; i < dist.GetHeight(); ++i) {
+		std::copy_n(condDists[i].begin(), condSize4, ptr);
 		ptr += condSize4;
-		delete[] condDists[i];
 	}
 
-	return compDist;
+	return std::make_tuple(compDist, size);
 }
 
 u_int CompiledScene::CompileTextureOpsGenericBumpMap(const u_int texIndex) {

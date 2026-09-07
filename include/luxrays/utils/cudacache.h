@@ -39,7 +39,7 @@ public:
 	
 	static bool ForcedCompilePTX(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,
-		char **ptx, size_t *ptxSize, std::string *error);
+		std::unique_ptr<char[]> * ptx, size_t *ptxSize, std::string *error);
 };
 
 // WARNING: this class is not thread safe !
@@ -50,7 +50,7 @@ public:
 
 	bool CompilePTX(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,
-		char **ptx, size_t *ptxSize, bool *cached, std::string *error);
+		std::unique_ptr<char[]> * ptx, size_t *ptxSize, bool *cached, std::string *error);
 
 	virtual CUmodule Compile(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,

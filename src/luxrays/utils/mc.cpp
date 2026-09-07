@@ -321,18 +321,19 @@ using namespace luxrays;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution1D)
 
-Distribution1D::Distribution1D(const float *f, u_int n) : func(n), cdf(n + 1) {
+Distribution1D::Distribution1D(const std::span<float> data) :
+	func(data.size()), cdf(data.size() + 1) {
 	func.shrink_to_fit();
 	cdf.shrink_to_fit();
 
-	count = n;
+	count = data.size();
 	invCount = 1.f / count;
 
-	copy(f, f + n, func.begin());
+	std::copy(data.begin(), data.end(), func.begin());
 
 	// funcInt is the sum of all f elements divided by the number
 	// of elements, ie the average value of f over [0;1)
-	ComputeStep1dCDF(&func[0], n, &funcInt, &cdf[0]);
+	ComputeStep1dCDF(&func[0], data.size(), &funcInt, &cdf[0]);
 	if (funcInt > 0.f) {
 		const float invFuncInt = 1.f / funcInt;
 		// Normalize func to speed up computations
@@ -432,23 +433,22 @@ float Distribution1D::Pdf(float u, float *du) const {
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution2D)
 
-Distribution2D::Distribution2D(const float *data, u_int nu, u_int nv) {
+Distribution2D::Distribution2D(std::span<float> data,  u_int nu, u_int nv) {
 	pConditionalV.reserve(nv);
 	// Compute conditional sampling distribution for $\tilde{v}$
 	for (u_int v = 0; v < nv; ++v)
-		pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
+		pConditionalV.push_back(
+			std::make_unique<Distribution1D>(data.subspan(v * nu, nu))
+		);
 	// Compute marginal sampling distribution $p[\tilde{v}]$
 	std::vector<float> marginalFunc;
 	marginalFunc.reserve(nv);
 	for (u_int v = 0; v < nv; ++v)
 		marginalFunc.push_back(pConditionalV[v]->Average());
-	pMarginal = new Distribution1D(&marginalFunc[0], nv);
+	pMarginal = std::make_unique<Distribution1D>(marginalFunc);
 }
 
 Distribution2D::~Distribution2D() {
-	delete pMarginal;
-	for (u_int i = 0; i < pConditionalV.size(); ++i)
-		delete pConditionalV[i];
 }
 
 void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],

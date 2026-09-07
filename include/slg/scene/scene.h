@@ -106,7 +106,7 @@ public:
 	);
 	~Scene();
 
-	bool Intersect(luxrays::IntersectionDevice *device, const SceneRayType rayType, PathVolumeInfo *volInfo,
+	bool Intersect(luxrays::IntersectionDevicePtr device, const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = nullptr,
 		SampleResult *sampleResult = nullptr, const bool backTracing = false) const;
@@ -145,11 +145,9 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMesh(
 		const std::string &shapeName,
-		const long plyNbVerts,
-		const long plyNbTris,
-		luxrays::Point *p,
-		luxrays::Triangle *vi,
-		luxrays::Normal *n,
+		luxrays::VertexBuffer&& p,
+		luxrays::TriangleBuffer&& vi,
+		luxrays::NormalBuffer&& n,
 		luxrays::ExtMeshProp<luxrays::UV>::Layer uvs,
 		luxrays::ExtMeshProp<luxrays::Spectrum>::Layer cols,
 		luxrays::ExtMeshProp<float>::Layer alphas
@@ -157,11 +155,9 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMesh(
 		const std::string &shapeName,
-		const long plyNbVerts,
-		const long plyNbTris,
-		luxrays::Point *p,
-		luxrays::Triangle *vi,
-		luxrays::Normal *n,
+		luxrays::VertexBuffer&& p,
+		luxrays::TriangleBuffer&& vi,
+		luxrays::NormalBuffer&& n,
 		std::span<luxrays::UV> uvs,
 		std::span<luxrays::Spectrum> cols,
 		std::span<float> alphas
@@ -169,11 +165,9 @@ public:
 
 	ReturnType<ExtTriangleMesh> DefineMeshExt(
 		const std::string &shapeName,
-		const long plyNbVerts,
-		const long plyNbTris,
-		luxrays::Point *p,
-		luxrays::Triangle *vi,
-		luxrays::Normal *n,
+		luxrays::VertexBuffer&& p,
+		luxrays::TriangleBuffer&& vi,
+		luxrays::NormalBuffer&& n,
 		std::optional<luxrays::ExtMeshProp<luxrays::UV>> uvs,
 		std::optional<luxrays::ExtMeshProp<luxrays::Spectrum>> cols,
 		std::optional<luxrays::ExtMeshProp<float>> alphas
@@ -192,9 +186,9 @@ public:
 	);
 
 	void SetMeshVertexAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t size);
+		const unsigned int index, std::span<float> data);
 	void SetMeshTriangleAOV(const std::string &meshName,
-		const unsigned int index, float *data, size_t size);
+		const unsigned int index, std::span<float> data);
 
 	// Strands shape
 	Scene::ReturnType<ExtTriangleMesh> DefineStrands(

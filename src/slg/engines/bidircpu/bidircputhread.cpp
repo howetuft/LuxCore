@@ -23,6 +23,9 @@
 #include <cassert>
 #include <boost/format.hpp>
 
+#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bidircpu/bidircpu.h"
@@ -50,7 +53,7 @@ const Film::FilmChannels BiDirCPURenderThread::lightSampleResultsChannels({
 }); 
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
-		const u_int index, IntersectionDevice *device) :
+		const u_int index, IntersectionDeviceRef device) :
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
@@ -128,7 +131,7 @@ void BiDirCPURenderThread::AOVWarmUp(
 			// not in any other place)
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device,
+			const bool hit = scene.Intersect(IntersectionDevicePtr(&device),
 					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf,
@@ -293,7 +296,10 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 				lightVertex.bsdf.hitPoint.interiorVolume :
 				lightVertex.bsdf.hitPoint.exteriorVolume
 			);
-			if (!scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY | SHADOW_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
+			if (!scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | INDIRECT_RAY | SHADOW_RAY,
+					&volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -340,10 +346,6 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	auto& scene = engine->renderConfig.GetScene();
 
-	// Test if the point-camera connection is valid
-	float filmX, filmY;
-	bool sampleSuccess;
-	Ray eyeRay;
 	Vector eyeDir;
 	float eyeDistance = 0;
     if (scene.GetCamera().GetType() == Camera::ORTHOGRAPHIC){
@@ -355,90 +357,92 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 		const float D = -eyeDir.x*lensPoint.x - eyeDir.y*lensPoint.y - eyeDir.z*lensPoint.z;
 		eyeDistance = eyeDir.x*p.x + eyeDir.y*p.y + eyeDir.z*p.z + D;
 		eyeDistance = fabsf(eyeDistance);
-		eyeRay = Ray(lightVertex.bsdf.hitPoint.p, eyeDir,
-			0.f,
-			eyeDistance,
-			time);
-		// Do not clamp the ray here because of the check inside ProjectToImage
-		sampleSuccess = scene.GetCamera().ProjectToImage(&eyeRay, &filmX, &filmY);
 	} else {
 		eyeDir = Vector(lightVertex.bsdf.hitPoint.p - lensPoint);
 		eyeDistance = eyeDir.Length();
 		eyeDir /= eyeDistance;
-		eyeRay = Ray(lensPoint, eyeDir,
-			0.f,
-			eyeDistance,
-			time);
-		// Do not clamp the ray here because of the check inside GetSamplePosition
-		sampleSuccess = scene.GetCamera().GetSamplePosition(&eyeRay, &filmX, &filmY);
 	}
 
-	if (!sampleSuccess)
-		return;
-
-	// Test if the bsdf evaluates to black
 	float bsdfPdfW, bsdfRevPdfW;
 	BSDFEvent event;
 	const Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
-	if (bsdfEval.Black())
-		return;
+	if (!bsdfEval.Black()) {
+		float filmX, filmY;
+		bool sampleSuccess;
+		Ray eyeRay;
+		
+		if (scene.GetCamera().GetType() == Camera::ORTHOGRAPHIC){
+			Vector rayDir(lightVertex.bsdf.hitPoint.p - lensPoint);
+			eyeRay = Ray(lightVertex.bsdf.hitPoint.p, rayDir,
+				0.f,
+				eyeDistance,
+				time);
+			sampleSuccess = scene.GetCamera().ProjectToImage(&eyeRay, &filmX, &filmY);
+		} else {
+			eyeRay = Ray(lensPoint, eyeDir,
+				0.f,
+				eyeDistance,
+				time);
+			sampleSuccess = scene.GetCamera().GetSamplePosition(&eyeRay, &filmX, &filmY);
+		}
+		if (sampleSuccess) {
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(lightVertex.bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
+					eyeDistance - eyeRay.maxt,
+					eyeDistance - eyeRay.mint,
+					time);
+			RayHit traceRayHit;
 
-	// Trace a shadow ray
-	scene.GetCamera().ClampRay(&eyeRay); // Clamp the ray here (see comment above)
-	// I have to flip the direction of the traced ray because
-	// the information inside PathVolumeInfo are about the path from
-	// the light toward the camera (i.e. ray.o would be in the wrong
-	// place).
-	Ray traceRay(lightVertex.bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
-			eyeDistance - eyeRay.maxt,
-			eyeDistance - eyeRay.mint,
-			time);
-	traceRay.UpdateMinMaxWithEpsilon();
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
+			if (!scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | CAMERA_RAY,
+					&volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
 
-	RayHit traceRayHit;
-	BSDF bsdfConn;
-	Spectrum connectionThroughput;
-	PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
-	const bool shadowIntersection = scene.Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-			&connectionThroughput);
+				if (lightVertex.depth >= engine->rrDepth) {
+					// Russian Roulette
+					const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
+					bsdfRevPdfW *= prob;
+				}
 
-	if (shadowIntersection)
-		return;
+				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
+				float cameraPdfW, fluxToRadianceFactor;
+				scene.GetCamera().GetPDF(eyeRay, eyeDistance, filmX, filmY, &cameraPdfW, &fluxToRadianceFactor);
+				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
+				// Was:
+				//  const float fluxToRadianceFactor = cameraPdfA;	
+				//	
+				// but now BSDF::Evaluate() follows LuxRender habit to return the	
+				// result multiplied by cosThetaToLight
+				//
+				// However this is not true for volumes (see bug
+				// report http://forums.luxcorerender.org/viewtopic.php?f=4&t=1146&start=10#p13491)
+				fluxToRadianceFactor *= lightVertex.bsdf.IsVolume() ? fabsf(cosToCamera) : 1.f;
 
-	if (lightVertex.depth >= engine->rrDepth) {
-		// Russian Roulette
-		const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
-		bsdfRevPdfW *= prob;
+				const float weightLight = MIS(cameraPdfA) *
+					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
+				const float misWeight = 1.f / (weightLight + 1.f);
+
+				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
+					connectionThroughput * lightVertex.throughput * bsdfEval;
+
+				SampleResult &sampleResult = AddResult(sampleResults, true);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
+				
+				// Add radiance from the light source
+				sampleResult.radiance[lightVertex.lightID] = radiance;
+			}
+		}
 	}
-
-	const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-	float cameraPdfW, fluxToRadianceFactor;
-	scene.GetCamera().GetPDF(eyeRay, eyeDistance, filmX, filmY, &cameraPdfW, &fluxToRadianceFactor);
-	const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-	// Was:
-	//  const float fluxToRadianceFactor = cameraPdfA;
-	//
-	// but now BSDF::Evaluate() follows LuxRender habit to return the
-	// result multiplied by cosThetaToLight
-	//
-	// However this is not true for volumes (see bug
-	// report http://forums.luxcorerender.org/viewtopic.php?f=4&t=1146&start=10#p13491)
-	fluxToRadianceFactor *= lightVertex.bsdf.IsVolume() ? fabsf(cosToCamera) : 1.f;
-
-	const float weightLight = MIS(cameraPdfA) *
-		(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
-	const float misWeight = 1.f / (weightLight + 1.f);
-
-	const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
-		connectionThroughput * lightVertex.throughput * bsdfEval;
-
-	SampleResult &sampleResult = AddResult(sampleResults, true);
-	sampleResult.filmX = filmX;
-	sampleResult.filmY = filmY;
-
-	// Add radiance from the light source
-	sampleResult.radiance[lightVertex.lightID] = radiance;
 }
 
 void BiDirCPURenderThread::DirectLightSampling(const float time,
@@ -479,8 +483,10 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					Spectrum connectionThroughput;
 					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 					// Check if the light source is visible
-					if (!scene.Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4,
-							&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					if (!scene.Intersect(
+						luxrays::make_observer(device),
+						EYE_RAY | SHADOW_RAY, &volInfo, u4,
+						&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 						// I'm ignoring volume emission because it is not sampled in
 						// direct light step.
 
@@ -647,7 +653,9 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene.Intersect(device, LIGHT_RAY | INDIRECT_RAY,
+			const bool hit = scene.Intersect(
+					luxrays::make_observer(device),
+					LIGHT_RAY | INDIRECT_RAY,
 					&lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
 					&connectionThroughput);
@@ -900,7 +908,8 @@ void BiDirCPURenderThread::RenderFunc(std::stop_token stop_token) {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				const bool hit = scene.Intersect(device,
+				const bool hit = scene.Intersect(
+						luxrays::make_observer(device),
 						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,

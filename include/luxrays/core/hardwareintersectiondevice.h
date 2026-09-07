@@ -38,9 +38,14 @@ public:
 	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)
 	//--------------------------------------------------------------------------
 
-	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
-			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
-		throw std::runtime_error("Called EnqueueTraceRayBuffer() on a device without parallel support");
+	virtual void EnqueueTraceRayBuffer(
+		HardwareDeviceBuffer *rayBuff,
+		HardwareDeviceBuffer *rayHitBuff,
+		const unsigned int rayCount
+	) {
+		throw std::runtime_error(
+			"Called EnqueueTraceRayBuffer() on a device without parallel support"
+		);
 	}
 
 	friend class Context;
@@ -58,7 +63,7 @@ protected:
 
 class HardwareIntersectionKernel {
 public:
-	HardwareIntersectionKernel(HardwareIntersectionDevice  &dev) : device(dev) {
+	HardwareIntersectionKernel(HardwareIntersectionDevice &dev) : device(dev) {
 	}
 	virtual ~HardwareIntersectionKernel() {
 	}

@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/buffer.h"
 #include <functional>
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -234,16 +235,20 @@ void CompiledScene::CompileGeometry() {
 			//------------------------------------------------------------------
 
 			if (baseMesh.get().HasNormals()) {
-				const Normal *n = baseMesh.get().GetNormals();
-				normals.insert(normals.end(), n, n + baseMesh.get().GetTotalVertexCount());
+				const auto& n = baseMesh.get().GetNormals().GetObjects();
+				normals.insert(normals.end(), n.begin(), n.begin() + baseMesh.get().GetTotalVertexCount());
 			}
 
 			//------------------------------------------------------------------
 			// Compile mesh triangle normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Normal *tn = baseMesh.get().GetTriNormals();
-			triNormals.insert(triNormals.end(), tn, tn + baseMesh.get().GetTotalTriangleCount());
+			const auto& tn = baseMesh.get().GetTriNormals().GetObjects();
+			triNormals.insert(
+				triNormals.end(),
+				tn.begin(),
+				tn.begin() + baseMesh.get().GetTotalTriangleCount()
+			);
 
 			for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
 				//--------------------------------------------------------------
@@ -296,15 +301,19 @@ void CompiledScene::CompileGeometry() {
 			// Compile baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			const Point *v = baseMesh.get().GetVertices();
-			verts.insert(verts.end(), v, v + baseMesh.get().GetTotalVertexCount());
+			const Points v = baseMesh.get().GetVertices();
+			verts.insert(
+				verts.end(),
+				v.begin(),
+				v.begin() + baseMesh.get().GetTotalVertexCount()
+			);
 
 			//------------------------------------------------------------------
 			// Compile baseMesh triangle indices
 			//------------------------------------------------------------------
 
-			const Triangle *t = baseMesh.get().GetTriangles();
-			tris.insert(tris.end(), t, t + baseMesh.get().GetTotalTriangleCount());
+			const auto t = baseMesh.get().GetTriangles();
+			tris.insert(tris.end(), t.begin(), t.begin() + baseMesh.get().GetTotalTriangleCount());
 		}
 
 		meshDescs.push_back(currentMeshDesc);

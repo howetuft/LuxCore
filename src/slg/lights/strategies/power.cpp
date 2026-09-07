@@ -74,8 +74,7 @@ void LightStrategyPower::Preprocess(SceneConstRef scene, const LightStrategyTask
 	}
 
 	// Build the data to power based light sampling
-	delete lightsDistribution;
-	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+	lightsDistribution = std::make_unique<Distribution1D>(lightPower);
 }
 
 // Static methods used by LightStrategyRegistry

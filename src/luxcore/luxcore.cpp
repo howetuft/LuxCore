@@ -190,54 +190,52 @@ PropertiesUPtr luxcore::GetOpenCLDeviceDescs() {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	Context ctx;
-	std::vector<DeviceDescription *> deviceDescriptions =
-		ctx.GetAvailableDeviceDescriptions();
+	auto deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
 	DeviceDescription::Filter((DeviceType)(DEVICE_TYPE_OPENCL_ALL | DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
 
 	// Add all device information to the list
-	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		DeviceDescription *desc = deviceDescriptions[i];
+	for (int i=0; DeviceDescriptionRef desc : deviceDescriptions) {
 
 		string platformName = "UNKNOWN";
 		string platformVersion = "UNKNOWN";
 		int deviceClock = 0;
 		unsigned long long deviceLocalMem = 0;
 		unsigned long long deviceConstMem = 0;
-		if (desc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-			OpenCLDeviceDescription *oclDesc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+		if (desc.GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			OpenCLDeviceDescription oclDesc = dynamic_cast<OpenCLDeviceDescriptionRef>(desc);
 
-			platformName = oclDesc->GetOpenCLPlatform();
-			platformVersion = oclDesc->GetOpenCLVersion();
-			deviceClock = oclDesc->GetClock();
-			deviceLocalMem = oclDesc->GetLocalMem();
-			deviceConstMem = oclDesc->GetConstMem();
-		} else if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			platformName = oclDesc.GetOpenCLPlatform();
+			platformVersion = oclDesc.GetOpenCLVersion();
+			deviceClock = oclDesc.GetClock();
+			deviceLocalMem = oclDesc.GetLocalMem();
+			deviceConstMem = oclDesc.GetConstMem();
+		} else if (desc.GetType() & DEVICE_TYPE_CUDA_ALL) {
 			platformName = "NVIDIA";
 		}
 
-		const string prefix = "opencl.device." + ToString(i);
+		const string prefix = "opencl.device." + ToString(i++);
 		props <<
 				Property(prefix + ".platform.name")(platformName) <<
 				Property(prefix + ".platform.version")(platformVersion) <<
-				Property(prefix + ".name")(desc->GetName()) <<
-				Property(prefix + ".type")(DeviceDescription::GetDeviceType(desc->GetType())) <<
-				Property(prefix + ".units")(desc->GetComputeUnits()) <<
+				Property(prefix + ".name")(desc.GetName()) <<
+				Property(prefix + ".type")(DeviceDescription::GetDeviceType(desc.GetType())) <<
+				Property(prefix + ".units")(desc.GetComputeUnits()) <<
 				Property(prefix + ".clock")(deviceClock) <<
-				Property(prefix + ".nativevectorwidthfloat")(desc->GetNativeVectorWidthFloat()) <<
-				Property(prefix + ".maxmemory")((unsigned long long)desc->GetMaxMemory()) <<
-				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
+				Property(prefix + ".nativevectorwidthfloat")(desc.GetNativeVectorWidthFloat()) <<
+				Property(prefix + ".maxmemory")((unsigned long long)desc.GetMaxMemory()) <<
+				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc.GetMaxMemoryAllocSize()) <<
 				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
-		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
-			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
+		if (desc.GetType() & DEVICE_TYPE_CUDA_ALL) {
+			const auto& cudaDesc = dynamic_cast<CUDADeviceDescriptionConstRef>(desc);
 
 			props <<
-					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
-					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
+					Property(prefix + ".cuda.compute.major")(cudaDesc.GetCUDAComputeCapabilityMajor()) <<
+					Property(prefix + ".cuda.compute.minor")(cudaDesc.GetCUDAComputeCapabilityMinor());
 		}
 #endif
 	}
@@ -469,23 +467,25 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 	API_END();
 }
 
-float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
+// TODO Should be a std::unique<float[]>?
+VertexBuffer Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-	float *result = (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
+	VertexBuffer result = luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 
 	return result;
 }
 
-unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+// TODO Should be a std::unique<size_t[]>?
+TriangleBuffer Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-	unsigned int *result =  (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
+	TriangleBuffer result = luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
 
-	API_RETURN("{}", (void *)result);
-	
+	API_RETURN("{}", (void *)result.GetBytes().data());
+
 	return result;
 }
 

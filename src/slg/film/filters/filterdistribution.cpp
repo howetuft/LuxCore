@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/film/filters/filterdistribution.h"
+#include "slg/film/filters/filter.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,7 +33,7 @@ FilterDistribution::FilterDistribution(const FilterUPtr& f, const u_int s) :
 	size = s;
 	distrib = NULL;
 
-	float *data = new float[size * size];
+	std::vector<float> data(size * size);
 
 	const float isize = 1.f / (float)size;
 	for (u_int y = 0; y < size; ++y) {
@@ -44,13 +45,11 @@ FilterDistribution::FilterDistribution(const FilterUPtr& f, const u_int s) :
 		}
 	}
 
-	distrib = new Distribution2D(data, size, size);
-	delete[] data;
+	distrib = std::make_unique<Distribution2D>(data, size, size);
 }
 
-FilterDistribution::~FilterDistribution() {
-	delete distrib;
-}
+FilterDistribution::~FilterDistribution() {}
+
 void FilterDistribution::SampleContinuous(const float u0, const float u1, float *su0, float *su1) const {
 	if (filter) {
 		float uv[2];
@@ -76,7 +75,7 @@ FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offs
 	const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth * .5f + .5f);
 	lutWidth = x1 - x0 + 1;
 	lutHeight = y1 - y0 + 1;
-	lut = new float[lutWidth * lutHeight];
+	lut.resize(lutWidth * lutHeight);
 
 	float filterNorm = 0.f;
 	unsigned int index = 0;
@@ -101,18 +100,18 @@ FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offs
 // FilterLUTs
 //------------------------------------------------------------------------------
 
-FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
+FilterLUTs::FilterLUTs(const Filter &filter, const size_t size) {
 	lutsSize = size + 1;
 	step = 1.f / float(size);
 
-	luts = new FilterLUT*[lutsSize * lutsSize];
+	luts.resize(lutsSize * lutsSize);
 
-	for (unsigned int iy = 0; iy < lutsSize; ++iy) {
-		for (unsigned int ix = 0; ix < lutsSize; ++ix) {
+	for (size_t iy = 0; iy < lutsSize; ++iy) {
+		for (size_t ix = 0; ix < lutsSize; ++ix) {
 			const float x = (ix + .5f) * step - 0.5f;
 			const float y = (iy + .5f) * step - 0.5f;
 
-			luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
+			luts[ix + iy * lutsSize] = std::make_unique<FilterLUT>(filter, x, y);
 			/*cout << "===============================================\n";
 			cout << ix << "," << iy << "\n";
 			cout << x << "," << y << "\n";
@@ -122,11 +121,4 @@ FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
 	}
 }
 
-FilterLUTs::~FilterLUTs() {
-	for (unsigned int iy = 0; iy < lutsSize; ++iy)
-		for (unsigned int ix = 0; ix < lutsSize; ++ix)
-			delete luts[ix + iy * lutsSize];
-
-	delete[] luts;
-}
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

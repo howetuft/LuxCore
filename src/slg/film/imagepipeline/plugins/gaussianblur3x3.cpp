@@ -37,24 +37,15 @@ GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin(const float w) : weight
 		tmpBuffer(nullptr), tmpBufferSize(0) {
 	hardwareDevice = nullptr;
 	hwTmpBuffer = nullptr;
-
-	filterXKernel = nullptr;
-	filterYKernel = nullptr;
 }
 
 GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin() : tmpBuffer(nullptr) {
 	hardwareDevice = nullptr;
 	hwTmpBuffer = nullptr;
-
-	filterXKernel = nullptr;
-	filterYKernel = nullptr;
 }
 
 GaussianBlur3x3FilterPlugin::~GaussianBlur3x3FilterPlugin() {
 	delete[] tmpBuffer;
-
-	delete filterXKernel;
-	delete filterYKernel;
 
 	if (hardwareDevice)
 		hardwareDevice->FreeBuffer(&hwTmpBuffer);
@@ -232,8 +223,7 @@ void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				luxrays::ocl::KernelSource_luxrays_types +
 				slg::ocl::KernelSource_plugin_gaussianblur3x3_funcs,
@@ -244,7 +234,7 @@ void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterX Kernel");
-		hardwareDevice->GetKernel(program, &filterXKernel, "GaussianBlur3x3FilterPlugin_FilterX");
+		filterXKernel = hardwareDevice->GetKernel(*program, "GaussianBlur3x3FilterPlugin_FilterX");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
@@ -259,7 +249,7 @@ void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterY Kernel");
-		hardwareDevice->GetKernel(program, &filterYKernel, "GaussianBlur3x3FilterPlugin_FilterY");
+		filterYKernel = hardwareDevice->GetKernel(*program, "GaussianBlur3x3FilterPlugin_FilterY");
 
 		// Set kernel arguments
 		argIndex = 0;
@@ -270,8 +260,6 @@ void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
-
-		delete program;
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

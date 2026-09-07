@@ -25,6 +25,7 @@
 
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
 
@@ -94,7 +95,7 @@ public:
 		return v;
 	}
 
-	cl_device_id GetOCLDevice() { return oclDevice; }
+	cl_device_id GetOCLDevice() const { return oclDevice; }
 
 	std::string GetOpenCLVersion() const {
 		size_t valueSize;
@@ -156,7 +157,7 @@ protected:
 
 	static void GetPlatformsList(std::vector<cl_platform_id> &platformsList);
 	static void AddDeviceDescs(const cl_platform_id oclPlatform, const DeviceType filter,
-			std::vector<DeviceDescription *> &descriptions);
+			std::vector<DeviceDescriptionUPtr> &descriptions);
 
 	size_t deviceIndex;
 
@@ -200,6 +201,7 @@ protected:
 class OpenCLDeviceProgram : public HardwareDeviceProgram {
 public:
 	OpenCLDeviceProgram() : oclProgram(nullptr) { }
+
 	virtual ~OpenCLDeviceProgram() {
 		if (oclProgram)
 			CHECK_OCL_ERROR(clReleaseProgram(oclProgram));
@@ -274,11 +276,16 @@ protected:
 
 class OpenCLDevice : virtual public HardwareDevice {
 public:
-	OpenCLDevice(const Context & context,
-		OpenCLDeviceDescription *desc, const size_t devIndex);
+	OpenCLDevice(
+		ContextConstRef context,
+		OpenCLDeviceDescriptionConstRef desc,
+		const size_t devIndex
+	);
 	virtual ~OpenCLDevice();
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual DeviceDescriptionConstRef GetDeviceDesc() const override {
+		return deviceDesc;
+	}
 
 	virtual void PushThreadCurrentDevice() { }
 	virtual void PopThreadCurrentDevice() { }
@@ -290,26 +297,30 @@ public:
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::vector<std::string> &programParameters, const std::string &programSource,
-			const std::string &programName);
+	virtual HardwareDeviceProgramUPtr CompileProgram(
+			const std::vector<std::string> &programParameters,
+			const std::string &programSource,
+			const std::string &programName
+	) override;
 
-	virtual void GetKernel(HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			const std::string &kernelName);
-	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
-	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
-			const u_int index, const size_t size, const void *arg);
+	virtual HardwareDeviceKernelUPtr GetKernel(
+		HardwareDeviceProgramRef program,
+		const std::string &kernelName
+	) override;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) override;
+	virtual void SetKernelArg(
+			HardwareDeviceKernelRPtr kernel,
+			const u_int index, const size_t size, const void *arg) override;
 
-	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
-			const HardwareDeviceRange &workGroupSize);
+			const HardwareDeviceRange &workGroupSize) override;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, void *ptr);
+			const bool blocking, const size_t size, void *ptr) override;
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
-			const bool blocking, const size_t size, const void *ptr);
-	virtual void FlushQueue();
-	virtual void FinishQueue();
+			const bool blocking, const size_t size, const void *ptr) override;
+	virtual void FlushQueue() override;
+	virtual void FinishQueue() override;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
@@ -323,13 +334,15 @@ public:
 	friend class Context;
 
 protected:
-	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
-		const u_int index, const HardwareDeviceBuffer *buff);
+	virtual void SetKernelArgBuffer(
+		HardwareDeviceKernelRPtr kernel,
+		const u_int index, const HardwareDeviceBuffer *buff
+	) override;
 
 	void AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 			void *src, const size_t size, const std::string &desc = "");
 
-	OpenCLDeviceDescription *deviceDesc;
+	OpenCLDeviceDescriptionConstRef deviceDesc;
 
 	cl_context oclContext;
 	cl_command_queue oclQueue;

@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_BVHACCEL_H
 #define	_LUXRAYS_BVHACCEL_H
 
+#include <memory>
 #include <vector>
 
 #include "luxrays/luxrays.h"
@@ -34,14 +35,14 @@ class BVHAccel : public Accelerator {
 public:
 	// BVHAccel Public Methods
 	BVHAccel(const Context & context);
-	virtual ~BVHAccel();
+	virtual ~BVHAccel() = default;
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
 
 	virtual bool HasNativeSupport(const IntersectionDevice &device) const;
 	virtual bool HasHWSupport(const IntersectionDevice &device) const;
 
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
+	virtual HardwareIntersectionKernelUPtr NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const override;
 
 	virtual void Init(
 		const std::deque<const Mesh *> &meshes,
@@ -61,7 +62,7 @@ private:
 	BVHParams params;
 
 	u_int nNodes;
-	luxrays::ocl::BVHArrayNode *bvhTree;
+	std::unique_ptr<luxrays::ocl::BVHArrayNode[]> bvhTree;
 
 	const Context & ctx;
 	std::deque<const Mesh *> meshes;

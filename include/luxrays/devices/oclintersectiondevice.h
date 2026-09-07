@@ -21,6 +21,7 @@
 
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/core/hardwareintersectiondevice.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
 
@@ -34,8 +35,11 @@ namespace luxrays {
 
 class OpenCLIntersectionDevice : public OpenCLDevice, public HardwareIntersectionDevice {
 public:
-	OpenCLIntersectionDevice(const Context & context,
-		OpenCLDeviceDescription *desc, const size_t devIndex);
+	OpenCLIntersectionDevice(
+		ContextConstRef context,
+		OpenCLDeviceDescriptionConstRef desc,
+		const size_t devIndex
+	);
 	virtual ~OpenCLIntersectionDevice();
 
 	virtual void SetDataSet(DataSetSPtr newDataSet);
@@ -55,7 +59,7 @@ public:
 protected:
 	virtual void Update();
 
-	HardwareIntersectionKernel *kernel;
+	HardwareIntersectionKernelUPtr kernel;
 };
 
 }

@@ -29,7 +29,6 @@ namespace slg {
 
 class DistributionLightStrategy : public LightStrategy {
 public:
-	virtual ~DistributionLightStrategy() { delete lightsDistribution; }
 
 	virtual void Preprocess(SceneConstRef scn, const LightStrategyTask taskType) {
 		scene = &scn;
@@ -56,12 +55,12 @@ public:
 	// Transform the current object in Properties
 	virtual luxrays::PropertiesUPtr ToProperties() const;
 	
-	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+	const luxrays::Distribution1DRPtr GetLightsDistribution() const { return lightsDistribution; }
 	
 protected:
 	DistributionLightStrategy(const LightStrategyType t) : LightStrategy(t), lightsDistribution(nullptr) { }
 
-	luxrays::Distribution1D *lightsDistribution;
+	luxrays::Distribution1DUPtr lightsDistribution;
 };
 
 }

@@ -32,8 +32,10 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/namedobjectvector.h"
 #include "luxrays/core/randomgen.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
@@ -278,16 +280,16 @@ Scene::DefineMesh(ExtMotionTriangleMeshUPtr&& mesh) {
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
-	const long plyNbVerts,
-	const long plyNbTris,
-	Point *p,
-	Triangle *vi,
-	Normal *n,
+	VertexBuffer&& p,
+	TriangleBuffer&& vi,
+	NormalBuffer&& n,
 	ExtMeshProp<UV>::Layer uvs,
 	ExtMeshProp<Spectrum>::Layer cols,
 	ExtMeshProp<float>::Layer alphas
 ) {
-	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
+	const long plyNbVerts = p.Count();
+
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -296,16 +298,14 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	const string &shapeName,
-	const long plyNbVerts,
-	const long plyNbTris,
-	Point *p,
-	Triangle *vi,
-	Normal *n,
+	VertexBuffer&& p,
+	TriangleBuffer&& vi,
+	NormalBuffer&& n,
 	std::span<UV> uvs,
 	std::span<Spectrum> cols,
 	std::span<float> alphas
 ) {
-	auto mesh = std::make_unique<ExtTriangleMesh>(plyNbVerts, plyNbTris, p, vi, n,
+	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 
@@ -314,15 +314,15 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	const string &shapeName,
-	const long plyNbVerts,
-	const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n,
+	VertexBuffer&& p,
+	TriangleBuffer&& vi,
+	NormalBuffer&& n,
 	std::optional<ExtMeshProp<UV>> uvs,
 	std::optional<ExtMeshProp<Spectrum>> cols,
 	std::optional<ExtMeshProp<float>> alphas
 ) {
 	auto mesh = std::make_unique<ExtTriangleMesh>(
-			plyNbVerts, plyNbTris, p, vi, n,
+			std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas
 	);
 	mesh->SetName(shapeName);
@@ -374,13 +374,13 @@ Scene::ReturnType<ExtMotionTriangleMesh> Scene::DefineMesh(
 }
 
 void Scene::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	extMeshCache.SetMeshVertexAOV(meshName, index, data, size);
+		const unsigned int index, std::span<float> data) {
+	extMeshCache.SetMeshVertexAOV(meshName, index, data);
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	extMeshCache.SetMeshTriangleAOV(meshName, index, data, size);
+		const unsigned int index, std::span<float> data) {
+	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
 }
 
 Scene::ReturnType<ExtTriangleMesh>
@@ -683,7 +683,7 @@ void Scene::DeleteLights(std::vector<string> &lightNames) {
 
 //------------------------------------------------------------------------------
 
-bool Scene::Intersect(IntersectionDevice *device,
+bool Scene::Intersect(IntersectionDevicePtr device,
 		const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,

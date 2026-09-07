@@ -128,6 +128,6 @@ void PhotonGICache::TraceVisibilityParticles() {
 
 	// Build the KdTree
 	SLG_LOG("PhotonGI building visibility particles KdTree");
-	visibilityParticlesKdTree = new PGICKdTree(&visibilityParticles);
+	visibilityParticlesKdTree = new PGICKdTree(visibilityParticles);
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

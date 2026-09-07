@@ -53,7 +53,6 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 }
 
 PerspectiveCamera::~PerspectiveCamera() {
-	delete bokehDistributionMap;
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans) {
@@ -86,7 +85,6 @@ void PerspectiveCamera::InitCameraData() {
 	if (bokehDistributionImageMap) {
 		// Initialize bokeh Distribution2D
 
-		delete bokehDistributionMap;
 		bokehDistributionMap = nullptr;
 
 		const u_int distributionWidth = bokehDistributionImageMap->GetWidth();
@@ -100,7 +98,7 @@ void PerspectiveCamera::InitCameraData() {
 			}
 		}
 
-		bokehDistributionMap = new Distribution2D(&data[0], distributionWidth, distributionHeight);
+		bokehDistributionMap = std::make_unique<Distribution2D>(data, distributionWidth, distributionHeight);
 	}
 	
 	// Normalize bokeh scale vector

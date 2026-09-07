@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_DEVICE_H
 #define	_LUXRAYS_DEVICE_H
 
+#include <functional>
 #include <string>
 #include <cstdlib>
 #include <limits>
@@ -33,6 +34,12 @@ namespace luxrays {
 //------------------------------------------------------------------------------
 // DeviceDescription
 //------------------------------------------------------------------------------
+
+// Nota: the following type stores references to descriptions, not the
+// descriptions themselves
+class DeviceDescription;
+using DeviceDescriptions =
+	std::vector<std::reference_wrapper<DeviceDescription>>;
 
 typedef enum {
 	DEVICE_TYPE_NATIVE = 1 << 0,
@@ -70,8 +77,13 @@ public:
 	virtual void SetForceWorkGroupSize(const u_int size) { forceWorkGroupSize = size; }
 
 	static void FilterOne(std::vector<DeviceDescription *> &deviceDescriptions);
-	static void Filter(const DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
+	static void Filter(
+		const DeviceType type,
+		DeviceDescriptions& deviceDescriptions
+	);
 	static std::string GetDeviceType(const DeviceType type);
+
+	std::string ToString();
 
 protected:
 	std::string name;
@@ -79,6 +91,7 @@ protected:
 
 	u_int forceWorkGroupSize;
 };
+
 
 //------------------------------------------------------------------------------
 // Device
@@ -106,7 +119,7 @@ class Device {
 public:
 	const std::string &GetName() const { return deviceName; }
 	const Context & GetContext() const { return deviceContext; }
-	virtual const DeviceDescription *GetDeviceDesc() const = 0;
+	virtual DeviceDescriptionConstRef GetDeviceDesc() const = 0;
 	const size_t GetDeviceIndex() const { return deviceIndex; }
 
 	virtual bool IsRunning() const { return started; };
@@ -118,10 +131,11 @@ public:
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
+	virtual ~Device();
+
 protected:
 	//Device() { }
 	Device(const Context & context, const size_t index);
-	virtual ~Device();
 
 	virtual void Start();
 	virtual void Interrupt();
@@ -135,7 +149,11 @@ protected:
 	std::atomic<bool> started;
 };
 
+std::ostream& operator<< (std::ostream&, const luxrays::DeviceDescriptions&);
+
 }
+
+
 
 #endif	/* _LUXRAYS_DEVICE_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

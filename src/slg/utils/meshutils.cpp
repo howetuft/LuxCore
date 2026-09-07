@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/trianglemesh.h"
 #include "slg/cameras/camera.h"
 #include "slg/utils/meshutils.h"
 
@@ -31,11 +32,11 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 	const u_int vertCount = mesh.GetTotalVertexCount();
 	const u_int triCount = mesh.GetTotalTriangleCount();
 
-	const Point *vertices = mesh.GetVertices();
-	const Triangle *triangles = mesh.GetTriangles();
+	const auto vertices = mesh.GetVertices();
+	const auto triangles = mesh.GetTriangles();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	for (u_int i = 0; i < vertCount; ++i) {
+	VertexBuffer newVertices(vertCount);
+	for (auto i = 0; i < vertCount; ++i) {
 		const Point &oldVertex = vertices[i];
 
 		Point newVertex;
@@ -50,10 +51,9 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 		newVertices[i] = newVertex;
 	}
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles, triangles + triCount, newTris);
+	TriangleBuffer newTris(triangles);
 
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 
 //------------------------------------------------------------------------------
@@ -61,15 +61,10 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 //------------------------------------------------------------------------------
 
 ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
-	const u_int vertCount = vertices.size();
-	const u_int triCount = triangles.size();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	copy(vertices.begin(), vertices.end(), newVertices);
+	VertexBuffer newVertices(vertices);
+	TriangleBuffer newTris(triangles);
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles.begin(), triangles.end(), newTris);
-
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+	return new ExtTriangleMesh(std::move(newVertices), std::move(newTris), NormalBuffer());
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

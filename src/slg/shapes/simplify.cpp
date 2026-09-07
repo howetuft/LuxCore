@@ -24,9 +24,11 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
+#include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
 #include "slg/cameras/camera.h"
@@ -139,18 +141,18 @@ public:
 class Simplify {
 public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
-		const u_int vertCount = srcMesh.GetTotalVertexCount();
-		const u_int triCount = srcMesh.GetTotalTriangleCount();
-		const Point *verts = srcMesh.GetVertices();
-		const Triangle *tris = srcMesh.GetTriangles();
+		const auto vertCount = srcMesh.GetTotalVertexCount();
+		const auto triCount = srcMesh.GetTotalTriangleCount();
+		const VertexBuffer verts(srcMesh.GetVertices());
+		const TriangleBuffer tris(srcMesh.GetTriangles());
 
 		vertices.resize(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			vertices[i].p = verts[i];
 		
 		if (srcMesh.HasNormals()) {
-			const Normal *norms = srcMesh.GetNormals();
-			for (u_int i = 0; i < vertCount; ++i)
+			const auto& norms = srcMesh.GetNormals();
+			for (auto i = 0; i < vertCount; ++i)
 				vertices[i].norm = norms[i];
 
 			hasNormals = true;
@@ -199,14 +201,14 @@ public:
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
 
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+		VertexBuffer newVertices(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
 
-		Normal *newNorms = nullptr;
+		NormalBuffer newNorms;
 		if (hasNormals) {
-			newNorms = new Normal[vertCount];
-			for (u_int i = 0; i < vertCount; ++i)
+			newNorms.Allocate(vertCount);
+			for (auto i = 0; i < vertCount; ++i)
 				newNorms[i] = vertices[i].norm;
 		}
 
@@ -231,7 +233,7 @@ public:
 				newAlphas[i] = vertices[i].alpha;
 		}
 
-		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+		TriangleBuffer newTris(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			assert (triangles[i].v[0] < vertCount);
 			newTris[i].v[0] = triangles[i].v[0];
@@ -244,11 +246,9 @@ public:
 		}
 
 		return std::make_unique<ExtTriangleMesh>(
-			vertCount,
-			triCount,
-			newVertices,
-			newTris,
-			newNorms,
+			std::move(newVertices),
+			std::move(newTris),
+			std::move(newNorms),
 			newUVs,
 			newCols,
 			newAlphas

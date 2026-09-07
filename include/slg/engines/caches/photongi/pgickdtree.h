@@ -16,11 +16,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PGCIKDTREE_H
-#define	_SLG_PGCIKDTREE_H
+#pragma once
 
-#include "slg/slg.h"
 #include "slg/core/indexkdtree.h"
+
+namespace luxrays {
+class Point;
+class Normal;
+}
 
 namespace slg {
 
@@ -28,31 +31,39 @@ class PGICVisibilityParticle;
 
 class PGICKdTree : public IndexKdTree<PGICVisibilityParticle> {
 public:
-	PGICKdTree(const std::vector<PGICVisibilityParticle> *allEntries);
-	virtual ~PGICKdTree();
+	PGICKdTree(const std::vector<PGICVisibilityParticle> & allEntries);
+	virtual ~PGICKdTree() = default;
 
-	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	size_t GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume, const float radius2, const float normalCosAngle) const;
-	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
+	void GetAllNearEntries(std::vector<size_t> &allNearEntryIndices,
 			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
 			const float radius2, const float normalCosAngle) const;
-	
-	friend class boost::serialization::access;
 
 private:
-	// Used by serialization
-	PGICKdTree() { }
+	friend class boost::serialization::access;
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexKdTree);
-	}
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int version);
 };
 
-}
+}  // Namespace slg
+
+// Serialization
+namespace boost { namespace serialization {
+
+template<class Archive>
+void save_construct_data(
+	Archive &, const slg::PGICKdTree *, unsigned int
+);
+
+template<class Archive>
+void load_construct_data(
+	Archive &, slg::PGICKdTree *, unsigned int
+);
+
+}}  // namespaces
 
 BOOST_CLASS_VERSION(slg::PGICKdTree, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::PGICKdTree)
-		
-#endif	/* _SLG_PGCIKDTREE_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

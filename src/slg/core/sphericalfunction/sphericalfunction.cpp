@@ -60,7 +60,7 @@ Spectrum ImageMapSphericalFunction::Evaluate(const float phi, const float theta)
 SampleableSphericalFunction::SampleableSphericalFunction(const SphericalFunction *aFunc,
 		const u_int xRes, const u_int yRes) : func(aFunc) {
 	// Compute scalar-valued image
-	float *img = new float[xRes * yRes];
+	std::vector<float> img(xRes * yRes);
 	average = 0.f;
 	float normalize = 0.f;
 	for (u_int y = 0; y < yRes; ++y) {
@@ -77,12 +77,10 @@ SampleableSphericalFunction::SampleableSphericalFunction(const SphericalFunction
 	average *= 4.f * M_PI / normalize;
 
 	// Initialize sampling PDFs
-	uvDistrib = new Distribution2D(img, xRes, yRes);
-	delete[] img;
+	uvDistrib = std::make_unique<Distribution2D>(img, xRes, yRes);
 }
 
 SampleableSphericalFunction::~SampleableSphericalFunction() {
-	delete uvDistrib;
 	delete func;
 }
 
@@ -220,29 +218,26 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 		   data.BallastFactor * 
 		   data.BallastLampPhotometricFactor;
 	u_int nVFuncs = horizAngles.size();
-	IrregularFunction1D **vFuncs = new IrregularFunction1D*[nVFuncs];
+	std::vector<IrregularFunction1DUPtr> vFuncs(nVFuncs);
 	u_int vFuncLength = vertAngles.size();
-	float *vFuncX = new float[vFuncLength];
-	float *vFuncY = new float[vFuncLength];
-	float *uFuncX = new float[nVFuncs];
-	float *uFuncY = new float[nVFuncs];
+
+	std::vector<float> vFuncX(vFuncLength);
+	std::vector<float> vFuncY(vFuncLength);
+	std::vector<float> uFuncX(nVFuncs);
+	std::vector<float> uFuncY(nVFuncs);
+
 	for (u_int i = 0; i < nVFuncs; ++i) {
 		for (u_int j = 0; j < vFuncLength; ++j) {
 			vFuncX[j] = Clamp(Radians(vertAngles[j]) * INV_PI, 0.f, 1.f);
 			vFuncY[j] = values[i][j] * valueScale;
 		}
 
-		vFuncs[i] = new IrregularFunction1D(vFuncX, vFuncY, vFuncLength);
+		vFuncs[i] = std::make_unique<IrregularFunction1D>(vFuncX, vFuncY);
 
 		uFuncX[i] = Clamp(Radians(horizAngles[i] ) * INV_TWOPI, 0.f, 1.f);
 		uFuncY[i] = i;
 	}
-	delete[] vFuncX;
-	delete[] vFuncY;
-
-	IrregularFunction1D *uFunc = new IrregularFunction1D(uFuncX, uFuncY, nVFuncs);
-	delete[] uFuncX;
-	delete[] uFuncY;
+	auto uFunc = std::make_unique<IrregularFunction1D>(uFuncX, uFuncY);
 
 	// Resample the irregular functions
 	auto imgMap = ImageMap::AllocImageMap(1, xRes, yRes, ImageMapConfig());
@@ -264,10 +259,6 @@ ImageMapUPtr IESSphericalFunction::IES2ImageMap(
 			img[x + tgtY * xRes] = value;
 		}
 	}
-	delete uFunc;
-	for (u_int i = 0; i < nVFuncs; ++i)
-		delete vFuncs[i];
-	delete[] vFuncs;
 
 	imgMap->Preprocess();
 	return imgMap;

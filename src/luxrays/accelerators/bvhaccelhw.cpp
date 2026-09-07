@@ -27,6 +27,7 @@
 
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/core/context.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/strutils.h"
@@ -45,7 +46,7 @@ public:
 		size_t maxNodeCount = 0;
 		if (bvh.nNodes) {
 			// Check the max. number of vertices I can store in a single page
-			size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
+			size_t maxMemAlloc = device.GetDeviceDesc().GetMaxMemoryAllocSize();
 
 			const BufferType memTypeFlags = device.GetContext().GetUseOutOfCoreBuffers() ?
 				((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
@@ -60,7 +61,8 @@ public:
 			const u_int totalVertCount = bvh.totalVertexCount;
 
 			// Allocate the temporary vertex buffer
-			Point *tmpVerts = new Point[Min<size_t>(totalVertCount, maxVertCount)];
+			auto tmpVertsCount = std::min<size_t>(totalVertCount, maxVertCount);
+			auto tmpVerts = std::make_unique<Point[]>(tmpVertsCount);
 			deque<const Mesh * >::const_iterator mesh = bvh.meshes.begin();
 
 			u_int vertsCopied = 0;
@@ -70,7 +72,7 @@ public:
 			meshVertexOffsets.push_back(0);
 			do {
 				const u_int leftVertCount = totalVertCount - vertsCopied;
-				const u_int pageVertCount = Min<size_t>(leftVertCount, maxVertCount);
+				const u_int pageVertCount = std::min<size_t>(leftVertCount, maxVertCount);
 
 				// Fill the temporary vertex buffer
 				u_int meshVertCount = (*mesh)->GetTotalVertexCount();
@@ -97,11 +99,10 @@ public:
 					throw runtime_error("Too many vertex pages required in BVHKernels()");
 
 				device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
-						tmpVerts, sizeof(Point) * pageVertCount,
+						tmpVerts.get(), sizeof(Point) * pageVertCount,
 						"BVH mesh vertices");
 				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
-			delete[] tmpVerts;
 
 			//------------------------------------------------------------------
 			// Allocate BVH node buffers
@@ -110,9 +111,11 @@ public:
 			// Check how many pages I have to allocate
 			maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
 			const u_int totalNodeCount = bvh.nNodes;
-			const luxrays::ocl::BVHArrayNode *nodes = bvh.bvhTree;
+			const auto& nodes = bvh.bvhTree;
 			// Allocate a temporary buffer for the copy of the BVH nodes
-			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[Min<size_t>(bvh.nNodes, maxNodeCount)];
+			auto tmpNodes = std::make_unique<luxrays::ocl::BVHArrayNode[]>(
+				std::min<size_t>(bvh.nNodes, maxNodeCount)
+			);
 			u_int nodeIndex = 0;
 
 			do {
@@ -120,7 +123,7 @@ public:
 				const u_int pageNodeCount = Min<size_t>(leftNodeCount, maxNodeCount);
 
 				// Make a copy of the nodes
-				memcpy(tmpNodes, &nodes[nodeIndex], sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount);
+				memcpy(tmpNodes.get(), &nodes[nodeIndex], sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount);
 
 				// Update the vertex and node references
 				for (u_int i = 0; i < pageNodeCount; ++i) {
@@ -150,13 +153,12 @@ public:
 					throw runtime_error("Too many node pages required in BVHKernels()");
 
 				device.AllocBuffer(&nodeBuffs.back(), memTypeFlags,
-						tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+						tmpNodes.get(), sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
 						"BVH nodes");
 				device.FinishQueue();
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
-			delete[] tmpNodes;
 		}
 
 		//----------------------------------------------------------------------
@@ -200,20 +202,21 @@ public:
 			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_bvhbuild_types <<
 			luxrays::ocl::KernelSource_bvh;
-		
-		HardwareDeviceProgram *program = nullptr;
-		device.CompileProgram(&program,
-				opts,
-				code.str(),
-				"BVHKernel");
+
+		auto program = device.CompileProgram(
+			opts,
+			code.str(),
+			"BVHKernel"
+		);
 
 		// Setup the kernel
-		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
+		kernel = device.GetKernel(*program, "Accelerator_Intersect_RayBuffer");
 
-		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc().GetForceWorkGroupSize() > 0) {
+			workGroupSize = device.GetDeviceDesc().GetForceWorkGroupSize();
+		}
 		else {
-			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			workGroupSize = device.GetKernelWorkGroupSize(kernel);
 			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
 			//	"] BVH kernel work group size: " << workGroupSize);
 		}
@@ -232,11 +235,9 @@ public:
 			else
 				device.SetKernelArg(kernel, argIndex++, nodeBuffs[i]);
 		}
-
-		delete program;
 	}
+
 	virtual ~BVHKernel() {
-		delete kernel;
 
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device.FreeBuffer(&vertsBuffs[i]);
@@ -252,7 +253,7 @@ public:
 	vector<HardwareDeviceBuffer *> vertsBuffs;
 	vector<HardwareDeviceBuffer *> nodeBuffs;
 	
-	HardwareDeviceKernel *kernel;
+	HardwareDeviceKernelUPtr kernel;
 	u_int workGroupSize;
 };
 
@@ -275,9 +276,10 @@ bool BVHAccel::HasHWSupport(const IntersectionDevice &device) const {
 	return device.HasHWSupport();
 }
 
-HardwareIntersectionKernel *BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+HardwareIntersectionKernelUPtr BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new BVHKernel(device, *this);
+	auto [kernel, ref] = CreateUniquePtr<HardwareIntersectionKernel, BVHKernel>(device, *this);
+	return std::move(kernel);
 }
 
 }

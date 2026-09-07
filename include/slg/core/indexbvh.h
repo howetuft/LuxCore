@@ -19,6 +19,7 @@
 #ifndef __SLG_INDEXBVH_H
 #define	__SLG_INDEXBVH_H
 
+#include <memory>
 #include <vector>
 
 #include "luxrays/core/bvh/bvhbuild.h"
@@ -36,7 +37,7 @@ template <class T>
 class IndexBvh {
 public:
 	IndexBvh(const std::vector<T> *entries, const float entryRadius);
-	virtual ~IndexBvh();
+	virtual ~IndexBvh() = default;
 
 	float GetEntryRadius() const { return entryRadius; }
 	size_t GetMemoryUsage() const { return nNodes * sizeof(luxrays::ocl::IndexBVHArrayNode); }
@@ -44,7 +45,7 @@ public:
 	const luxrays::ocl::IndexBVHArrayNode *GetArrayNodes(u_int *count = nullptr) const {
 		if (count)
 			*count = nNodes;
-		return arrayNodes;
+		return arrayNodes.get();
 	}
 
 	friend class boost::serialization::access;
@@ -59,7 +60,7 @@ protected:
 		ar & entryRadius2;
 
 		ar & nNodes;
-		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);		
+		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes.get(), nNodes);
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -68,8 +69,8 @@ protected:
 		ar & entryRadius2;
 
 		ar & nNodes;
-		arrayNodes = new luxrays::ocl::IndexBVHArrayNode[nNodes];
-		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);
+		arrayNodes = std::make_unique<luxrays::ocl::IndexBVHArrayNode[]>(nNodes);
+		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes.get(), nNodes);
 	}
 	
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -77,7 +78,7 @@ protected:
 	const std::vector<T> *allEntries;
 	float entryRadius, entryRadius2;
 
-	luxrays::ocl::IndexBVHArrayNode *arrayNodes;
+	std::unique_ptr<luxrays::ocl::IndexBVHArrayNode[]> arrayNodes;
 	u_int nNodes;
 };
 

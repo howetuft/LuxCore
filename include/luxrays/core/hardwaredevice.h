@@ -20,7 +20,9 @@
 #define	_LUXRAYS_HARDWAREDEVICE_H
 
 #include "luxrays/core/device.h"
+#include "luxrays/usings.h"
 #include "luxrays/utils/ocl.h"
+#include <functional>
 
 namespace luxrays {
 
@@ -60,6 +62,13 @@ public:
 
 class HardwareDeviceKernel {
 public:
+
+	// Prevent copying:
+	// Device kernels contain allocated resources which are not trivially
+	// copyable
+	HardwareDeviceKernel(const HardwareDeviceKernel&) = delete;
+	HardwareDeviceKernel& operator=(const HardwareDeviceKernel&) = delete;
+
 	virtual ~HardwareDeviceKernel() { }
 
 	virtual bool IsNull() const = 0;
@@ -75,6 +84,12 @@ protected:
 
 class HardwareDeviceProgram {
 public:
+    // Prevent copying:
+	// Device programs contain allocated resources which are not trivially
+	// copyable
+    HardwareDeviceProgram(const HardwareDeviceProgram&) = delete;
+    HardwareDeviceProgram& operator=(const HardwareDeviceProgram&) = delete;
+
 	virtual ~HardwareDeviceProgram() { }
 
 	virtual bool IsNull() const = 0;
@@ -82,6 +97,26 @@ public:
 protected:
 	HardwareDeviceProgram() { }
 };
+
+// Create a unique_ptr on a derived type, but with base handler, and
+// provide a reference to the derived managed object
+template <typename Base, typename Derived>
+std::tuple<std::unique_ptr<Base>, Derived&>
+CreateUniquePtr(auto&&... args) {
+
+    static_assert(
+		std::is_base_of<Base, Derived>::value,
+		"Derived must be a subclass of Base"
+	);
+	auto derivedPtr = std::make_unique<Derived>(std::forward<decltype(args)>(args)...);
+	auto derivedRef = std::ref(*derivedPtr);  // We must capture ref before
+														 // derivedProgram is moved...
+	auto basePtr = static_cast<std::unique_ptr<Base>>(std::move(derivedPtr));
+
+	auto res = std::make_tuple(std::move(basePtr), derivedRef);
+	return res;
+}
+
 
 //------------------------------------------------------------------------------
 // HardwareDeviceBuffer: a memory region allocated on an hardware device
@@ -118,28 +153,31 @@ public:
 
 	void SetAdditionalCompileOpts(const std::vector<std::string> &opts);
 	const std::vector<std::string> &GetAdditionalCompileOpts();
-	
-	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::vector<std::string> &programParameters, const std::string &programSource,
-			const std::string &programName) = 0;
 
-	virtual void GetKernel(HardwareDeviceProgram *program,
-			HardwareDeviceKernel **kernel,
-			const std::string &kernelName) = 0;
-	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
+	virtual HardwareDeviceProgramUPtr CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+	) = 0;
 
-	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
+	virtual HardwareDeviceKernelUPtr GetKernel(
+		HardwareDeviceProgramRef program,
+		const std::string &kernelName
+	) = 0;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) = 0;
+
+	virtual void SetKernelArg(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
 protected:
-	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+	virtual void SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 			const u_int index, const HardwareDeviceBuffer *buff) = 0;
 public:
 	template <typename T>
-	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, const T &arg) {
+	void SetKernelArg(HardwareDeviceKernelRPtr kernel, const u_int index, const T &arg) {
 		SetKernelArg(kernel, index, KernelArgumentHandler<T>::Size(arg), KernelArgumentHandler<T>::Ptr(arg));
 	}
-	
-	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+
+	virtual void EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) = 0;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
@@ -166,6 +204,8 @@ public:
 	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
 
+	virtual ~HardwareDevice();
+
 protected:
 	template <typename T> struct KernelArgumentHandler {
 		static ::size_t Size(const T&) { return sizeof(T); }
@@ -173,8 +213,7 @@ protected:
 	};
 
 	HardwareDevice();
-	virtual ~HardwareDevice();
-	
+
 	void AllocMemory(const size_t s) { usedMemory += s; }
 	void FreeMemory(const size_t s) { usedMemory -= s; }
 
@@ -183,7 +222,7 @@ protected:
 };
 
 typedef HardwareDeviceBuffer * HardwareDeviceBufferRPtr;
-template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
+template <> void HardwareDevice::SetKernelArg<HardwareDeviceBufferRPtr>(HardwareDeviceKernelRPtr kernel, const u_int index, const HardwareDeviceBufferRPtr &buff);
 
 }
 

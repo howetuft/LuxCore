@@ -41,11 +41,6 @@ BVHAccel::BVHAccel(const Context & context) : ctx(context) {
 	initialized = false;
 }
 
-BVHAccel::~BVHAccel() {
-	if (initialized)
-		delete[] bvhTree;
-}
-
 BVHParams BVHAccel::ToBVHParams(const Properties &props) {
 	// Tree type to generate (2 = binary, 4 = quad, 8 = octree)
 	const int treeType = props.Get(Property("accelerator.bvh.treetype")(4)).Get<int>();
@@ -98,8 +93,8 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 	u_int meshIndex = 0;
 	u_int bvListIndex = 0;
 	for(auto& mesh: meshes) {
-		const Triangle *p = mesh->GetTriangles();
-		const u_int triangleCount = mesh->GetTotalTriangleCount();
+		const auto p = mesh->GetTriangles();
+		const auto triangleCount = mesh->GetTotalTriangleCount();
 
 		#pragma omp parallel for
 		for (

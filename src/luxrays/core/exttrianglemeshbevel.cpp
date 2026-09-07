@@ -289,6 +289,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 		//----------------------------------------------------------------------
 
 		vector<Edge> edges;
+		auto vertCount = vertices.Count();
+		auto triCount = tris.Count();
 		for (u_int i = 0; i < triCount; ++i) {
 			edges.push_back(Edge(i, 0, uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
 			edges.push_back(Edge(i, 1, uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
@@ -317,7 +319,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 					(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0));
 		};
 
-		vector<Corner> corners(vertCount);
+		std::vector<Corner> corners(vertCount);
 		for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
 			Edge &e0 = edges[edge0Index];
 			e0.alreadyFound = true;
@@ -334,12 +336,13 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 					if (AbsDot(tri0Normal, tri1Normal) < 1.f -  DEFAULT_EPSILON_STATIC) {
 						// It is a candidate. Check if it is a convex edge.
+						auto points = vertices.GetObjects();
 
 						// Pick the vertex, not part of the edge, of the first triangle
-						const Point &tri0Vertex = vertices[tris[e0.tri].v[(e0.edge + 2) % 3]];
+						const Point &tri0Vertex = points[tris[e0.tri].v[(e0.edge + 2) % 3]];
 
 						// Pick the vertex, not part of the edge, of the second triangle
-						const Point &tri1Vertex = vertices[tris[e1.tri].v[(e1.edge + 2) % 3]];
+						const Point &tri1Vertex = points[tris[e1.tri].v[(e1.edge + 2) % 3]];
 
 						// Compare the vector between the vertices not part of the shared edge and
 						// the triangle 0 normal
@@ -431,13 +434,11 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 		//cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
 
-		delete[] bevelCylinders;
-		bevelCylinders = new BevelCylinder[bevelCyls.size()];
-		copy(bevelCyls.begin(), bevelCyls.end(), bevelCylinders);
+		auto bevelCylinders = std::make_unique<BevelCylinder[]>(bevelCyls.size());
+		std::copy(bevelCyls.begin(), bevelCyls.end(), bevelCylinders.get());
 
-		delete[] bevelBoundingCylinders;
-		bevelBoundingCylinders = new BevelBoundingCylinder[boundingCyls.size()];
-		copy(boundingCyls.begin(), boundingCyls.end(), bevelBoundingCylinders);
+		auto bevelBoundingCylinders = std::make_unique<BevelBoundingCylinder[]>(boundingCyls.size());
+		copy(boundingCyls.begin(), boundingCyls.end(), bevelBoundingCylinders.get());
 
 		//----------------------------------------------------------------------
 		// Build the bounding cylinder accelerator
@@ -477,8 +478,6 @@ void ExtTriangleMesh::PreprocessBevel() {
 		bevelCylinders = nullptr;
 		delete[] bevelBoundingCylinders;
 		bevelBoundingCylinders = nullptr;
-		delete[] bevelBVHArrayNodes;
-		bevelBVHArrayNodes = nullptr;
 	}
 	
 	//const double endTotal = WallClockTime();

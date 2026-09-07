@@ -26,6 +26,7 @@
 #include "luxcore/luxcorelogger.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
@@ -940,10 +941,17 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 	API_END();
 }
 
+// TODO stop passing pointers (and copying their contents...)
 void SceneImpl::DefineMesh(const std::string &meshName,
-		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
-		float *uvs, float *cols, float *alphas) {
+	const long plyNbVerts,
+	const long plyNbTris,
+	float *p,
+	Triangle::subtype_t *vi,
+	float *n,
+	float *uvs,
+	float *cols,
+	float *alphas
+) {
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
 			plyNbVerts, plyNbTris,
 			(void *)p, (void *)vi, (void *)n,
@@ -952,16 +960,25 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 	// Invalidate the scene properties cache
 	scenePropertiesCache->Clear();
 
-	auto toSpan = [plyNbVerts]<typename T>(float * data) {
-		if (!plyNbVerts || !data) return std::span<T>();
-		return std::span<T>(reinterpret_cast<T*>(data), plyNbVerts);
+	auto toSpan = [plyNbVerts]<typename T, typename S>(
+		S * data,
+		std::optional<size_t> opt_n = std::nullopt
+	) {
+		size_t n = opt_n.has_value() ? opt_n.value() : plyNbVerts;
+		if (!n || !data) return std::span<T>();
+		return std::span<T>(reinterpret_cast<T*>(data), n);
 	};
 
+	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
+	NormalBuffer nbuf = n ? NormalBuffer(toSpan.template operator()<Normal>(n)) : NormalBuffer(); 
+
+
 	GetSlgScene().DefineMesh(
-		meshName, plyNbVerts, plyNbTris,
-		(Point *)p,
-		(Triangle *)vi,
-		(Normal *)n,
+		meshName,
+		std::move(vbuf),
+		std::move(tbuf),
+		std::move(nbuf),
 		toSpan.template operator()<UV>(uvs),
 		toSpan.template operator()<Spectrum>(cols),
 		toSpan.template operator()<float>(alphas)
@@ -972,7 +989,7 @@ void SceneImpl::DefineMesh(const std::string &meshName,
 
 void SceneImpl::DefineMeshExt(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n,
+		float *p, Triangle::subtype_t *vi, float *n,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
@@ -1010,27 +1027,51 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	auto slgCols = initProp.template operator()<Spectrum>(cols);
 	auto slgAlphas = initProp.template operator()<float>(alphas);
 
-	GetSlgScene().DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n,
+	auto toSpan = [plyNbVerts]<typename T, typename S>(
+		S * data,
+		std::optional<size_t> opt_n = std::nullopt
+	) {
+		size_t n = opt_n.has_value() ? opt_n.value() : plyNbVerts;
+		if (!n || !data) return std::span<T>();
+		return std::span<T>(reinterpret_cast<T*>(data), n);
+	};
+
+	VertexBuffer vbuf(toSpan.template operator()<Point>(p));
+	TriangleBuffer tbuf(toSpan.template operator()<Triangle>(vi, plyNbTris));
+	NormalBuffer nbuf = n ? NormalBuffer(toSpan.template operator()<Normal>(n)) : NormalBuffer();
+
+	GetSlgScene().DefineMeshExt(
+			meshName, std::move(vbuf),
+			std::move(tbuf), std::move(nbuf),
 			slgUVs, slgCols, slgAlphas);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
+		const unsigned int index, float * data, size_t dataSize) {
+	SetMeshVertexAOV(meshName, index, std::span<float>(data, dataSize));
+}
 
-	GetSlgScene().SetMeshVertexAOV(meshName, index, data, size);
+void SceneImpl::SetMeshTriangleAOV(const string &meshName,
+		const unsigned int index, float * data, size_t dataSize) {
+	SetMeshTriangleAOV(meshName, index, std::span<float>(data, dataSize));
+}
+
+void SceneImpl::SetMeshVertexAOV(const string &meshName,
+		const unsigned int index, std::span<float> data) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
+
+	GetSlgScene().SetMeshVertexAOV(meshName, index, data);
 
 	API_END();
 }
 
 void SceneImpl::SetMeshTriangleAOV(const string &meshName,
-		const unsigned int index, float *data, size_t size) {
-	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data, size);
+		const unsigned int index, std::span<float> data) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(meshName), index, (void *)data.data(), data.size());
 
-	GetSlgScene().SetMeshTriangleAOV(meshName, index, data, size);
+	GetSlgScene().SetMeshTriangleAOV(meshName, index, data);
 
 	API_END();
 }
@@ -1463,22 +1504,22 @@ void SceneImpl::Save(const std::string &fileName) {
 	API_END();
 }
 
-Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
+VertexBuffer SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
 	API_BEGIN("{}", meshVertCount);
 
-auto result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+	VertexBuffer result(meshVertCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 
 	return result;
 }
 
-Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
+TriangleBuffer SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 	API_BEGIN("{}", meshTriCount);
 
-auto result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+	TriangleBuffer result(meshTriCount);
 
-	API_RETURN("{}", (void *)result);
+	API_RETURN("{}", (void *)result.GetBytes().data());
 	
 	return result;
 }
@@ -1984,13 +2025,13 @@ void RenderSessionImpl::UpdateStats() {
 	stats->Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
 
 	// Intersection devices statistics
-	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
+	const auto idevices = renderSession->renderEngine->GetIntersectionDevices();
 
 	std::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
-	for(IntersectionDevice *dev: idevices) {
-		const string &devName = dev->GetName();
+	for(IntersectionDeviceRef dev: idevices) {
+		const string &devName = dev.GetName();
 
 		// Append a device index for the case where the same device is used
 		// multiple times
@@ -2000,18 +2041,22 @@ void RenderSessionImpl::UpdateStats() {
 
 		const string prefix = "stats.renderengine.devices." + uniqueName;
 
-		stats->Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev->GetDeviceDesc()->GetType())));
+		stats->Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev.GetDeviceDesc().GetType())));
 
-		totalPerf += dev->GetTotalPerformance();
-		stats->Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
-		stats->Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
-		stats->Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
+		totalPerf += dev.GetTotalPerformance();
+		stats->Set(Property(prefix + ".performance.total")(dev.GetTotalPerformance()));
+		stats->Set(Property(prefix + ".performance.serial")(dev.GetSerialPerformance()));
+		stats->Set(Property(prefix + ".performance.dataparallel")(dev.GetDataParallelPerformance()));
 
-		auto hardDev = dynamic_cast<const HardwareDevice *>(dev);
-		if (hardDev) {
-			stats->Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
-			stats->Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
-		} else {
+		try {
+			auto& hardDev = dynamic_cast<const HardwareDeviceRef>(dev);
+			stats->Set(Property(prefix + ".memory.total")(
+				static_cast<u_longlong>(hardDev.GetDeviceDesc().GetMaxMemory())
+			));
+			stats->Set(Property(prefix + ".memory.used")(
+				static_cast<u_longlong>(hardDev.GetUsedMemory())
+			));
+		} catch (std::bad_cast&) {
 			stats->Set(Property(prefix + ".memory.total")(0ull));
 			stats->Set(Property(prefix + ".memory.used")(0ull));
 		}

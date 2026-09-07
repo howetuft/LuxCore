@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/usings.h"
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 
@@ -120,7 +122,7 @@ bool CUDADeviceDescription::HasOutOfCoreMemorySupport() const {
 	return (v == 1);
 }
 
-void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions) {
+void CUDADeviceDescription::AddDeviceDescs(std::vector<DeviceDescriptionUPtr> &descriptions) {
 	int devCount;
 	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
 
@@ -128,9 +130,8 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 		CUdevice device;
 		CHECK_CUDA_ERROR(cuDeviceGet(&device, i));
 
-		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i);
+		descriptions.push_back(std::make_unique<CUDADeviceDescription>(device, i));
 
-		descriptions.push_back(desc);
 	}
 }
 
@@ -146,21 +147,23 @@ static void OptixLogCB(u_int level, const char* tag, const char *message, void *
 
 CUDADevice::CUDADevice(
 		const Context & context,
-		CUDADeviceDescription *desc,
+		CUDADeviceDescriptionConstRef desc,
 		const size_t devIndex) :
 		Device(context, devIndex),
 		deviceDesc(desc),
 		cudaContext(nullptr), optixContext(nullptr) {
-	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
+	deviceName = (desc.GetName() + " CUDAIntersect").c_str();
 
-	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION);
+	kernelCache = std::make_unique<cudaKernelPersistentCache>("LUXRAYS_" LUXRAYS_VERSION);
 
-	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+	CHECK_CUDA_ERROR(
+		cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc.GetCUDADevice())
+	);
 
 	// I prefer cache over shared memory because I pretty much never use shared memory
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
-	if (isOptixAvilable && desc->useOptix) {
+	if (isOptixAvilable && desc.useOptix) {
 		OptixDeviceContextOptions optixOptions = {};
 		optixOptions.logCallbackFunction = &OptixLogCB;
 		optixOptions.logCallbackData = (void *)&deviceContext;
@@ -198,7 +201,6 @@ CUDADevice::~CUDADevice() {
 		CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
 	}
 
-	delete kernelCache;
 }
 
 void CUDADevice::PushThreadCurrentDevice() {
@@ -239,10 +241,12 @@ string CUDADevice::GetKernelSource(const string &kernelSource) {
 		kernelSource;
 }
 
-void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
-		const vector<string> &programParameters, const string &programSource,	
-		const string &programName) {
-	vector<string> cudaProgramParameters = AddKernelOpts(programParameters);
+HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
+		const std::vector<std::string> &programParameters,
+		const std::string &programSource,
+		const std::string &programName
+) {
+	auto cudaProgramParameters = AddKernelOpts(programParameters);
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
@@ -255,7 +259,7 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	CUmodule module = kernelCache->Compile(cudaProgramParameters, cudaProgramSource, programName, &cached, &error);
 	if (!module) {
 		LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation error: " << endl << error);
-		
+
 		throw runtime_error(programName + " CUDA program compilation error");
 	} else {
 		if (error.length() > 0) {
@@ -268,52 +272,57 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	} else {
 		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
 	}
-	
-	if (!*program)
-		*program = new CUDADeviceProgram();
-	
-	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(*program);
-	assert (cudaDeviceProgram);
+
+	//if (!*program)
+		//*program = new CUDADeviceProgram();
+	auto cudaDeviceProgram = std::make_unique<CUDADeviceProgram>();
 
 	cudaDeviceProgram->Set(module);
-	
+
 	loadedModules.push_back(module);
+
+	return static_cast<HardwareDeviceProgramUPtr>(std::move(cudaDeviceProgram));
 }
 
-void CUDADevice::GetKernel(HardwareDeviceProgram *program,
-		HardwareDeviceKernel **kernel, const string &kernelName) {
-	if (!*kernel)
-		*kernel = new CUDADeviceKernel();
+HardwareDeviceKernelUPtr CUDADevice::GetKernel(
+		HardwareDeviceProgramRef program,
+		const string &kernelName
+) {
+	//if (!*kernel)
+		//*kernel = new CUDADeviceKernel();
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(*kernel);
-	assert (cudaDeviceKernel);
+	auto [kernel, cudaDeviceKernel] =
+		CreateUniquePtr<HardwareDeviceKernel, CUDADeviceKernel>();
 
-	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(program);
-	assert (cudaDeviceProgram);
+	auto& cudaDeviceProgram = dynamic_cast<CUDADeviceProgramRef>(program);
 
 	CUfunction function;
-	CHECK_CUDA_ERROR(cuModuleGetFunction(&function, cudaDeviceProgram->GetModule(), kernelName.c_str()));
-	
-	cudaDeviceKernel->Set(function);
+	CHECK_CUDA_ERROR(
+		cuModuleGetFunction(
+			&function, cudaDeviceProgram.GetModule(), kernelName.c_str())
+		);
+
+	cudaDeviceKernel.Set(function);
+
+	return std::move(kernel);
 }
 
-u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernelRPtr kernel) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
 	return 32;
 }
 
-void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
+void CUDADevice::SetKernelArg(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
-	assert (cudaDeviceKernel);
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
 
-	if (index >= cudaDeviceKernel->args.size())
-		cudaDeviceKernel->args.resize(index + 1, nullptr);
+	if (index >= cudaDeviceKernel.args.size())
+		cudaDeviceKernel.args.resize(index + 1, nullptr);
 
 	void *argCpy;
 	if (arg) {
@@ -326,15 +335,15 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		memcpy(argCpy, &p, sizeof(CUdeviceptr));
 	}
 
-	if (cudaDeviceKernel->args[index]) {
-		delete[] (char *)cudaDeviceKernel->args[index];
-		cudaDeviceKernel->args[index] = nullptr;
+	if (cudaDeviceKernel.args[index]) {
+		delete[] (char *)cudaDeviceKernel.args[index];
+		cudaDeviceKernel.args[index] = nullptr;
 	}
 
-	cudaDeviceKernel->args[index] = argCpy;
+	cudaDeviceKernel.args[index] = argCpy;
 }
 
-void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernelRPtr kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (kernel);
 	assert (!kernel->IsNull());
@@ -381,14 +390,13 @@ static void ConvertHardwareRange(const HardwareDeviceRange &globalSize,
 	}
 }
 
-void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+void CUDADevice::EnqueueKernel(HardwareDeviceKernelRPtr kernel,
 			const HardwareDeviceRange &globalSize,
 			const HardwareDeviceRange &workGroupSize) {
 	assert (kernel);
 	assert (!kernel->IsNull());
 
-	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
-	assert (cudaDeviceKernel);
+	auto& cudaDeviceKernel = dynamic_cast<CUDADeviceKernelRef>(*kernel);
 
 	u_int blockX, blockY, blockZ;
 	u_int threadX, threadY, threadZ;
@@ -396,11 +404,11 @@ void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			blockX, blockY, blockZ,
 			threadX, threadY, threadZ);
 
-	CHECK_CUDA_ERROR(cuLaunchKernel(cudaDeviceKernel->cudaKernel,
+	CHECK_CUDA_ERROR(cuLaunchKernel(cudaDeviceKernel.cudaKernel,
 			blockX, blockY, blockZ,  // blocks
 			threadX, threadY, threadZ,  // threads
 			0, 0,
-			&cudaDeviceKernel->args[0],
+			&cudaDeviceKernel.args[0],
 			nullptr));
 }
 
@@ -502,15 +510,15 @@ void CUDADevice::AllocBuffer(HardwareDeviceBuffer **hdBuff, const BufferType typ
 				" buffer size: " << ToMemString(size) << ((type & BUFFER_TYPE_OUT_OF_CORE) ? " (OUT OF CORE)" : ""));
 
 	// Check if I was asked for out of core support
-	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc->HasOutOfCoreMemorySupport()) {
-		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc->GetName() << " doesn't support out of core memory buffers: " << desc);
+	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc.HasOutOfCoreMemorySupport()) {
+		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc.GetName() << " doesn't support out of core memory buffers: " << desc);
 	}
 	
 	if (type & BUFFER_TYPE_OUT_OF_CORE) {
 		CHECK_CUDA_ERROR(cuMemAllocManaged(buff, size, CU_MEM_ATTACH_GLOBAL));
 
 		if (type & BUFFER_TYPE_READ_ONLY) {
-			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc->cudaDevice));
+			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc.cudaDevice));
 		}
 	} else {
 		CHECK_CUDA_ERROR(cuMemAlloc(buff, size));

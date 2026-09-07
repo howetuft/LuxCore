@@ -37,7 +37,7 @@ using namespace std::chrono_literals;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
-	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDeviceRef device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -76,7 +76,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork,
 	sharedData.aaSamples =  engine->aaSamples;
 	sharedData.multipassIndexToRender = tileWork.multipassIndexToRender;
 
-	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_FALSE,
+	intersectionDevice.EnqueueWriteBuffer(samplerSharedDataBuff, CL_FALSE,
 			sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
 }
 
@@ -94,7 +94,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 
 	// Clear the frame buffer
 	const u_int filmPixelCount = threadFilms[filmIndex]->GetFilm().GetWidth() * threadFilms[filmIndex]->GetFilm().GetHeight();
-	intersectionDevice->EnqueueKernel(filmClearKernel,
+	intersectionDevice.EnqueueKernel(filmClearKernel,
 		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 		HardwareDeviceRange(filmClearWorkGroupSize));
 
@@ -111,14 +111,14 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	UpdateSamplerData(tileWork, sharedData);
 
 	// Initialize the tasks buffer
-	intersectionDevice->EnqueueKernel(initKernel,
+	intersectionDevice.EnqueueKernel(initKernel,
 			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
-		intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
+		intersectionDevice.EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
 
 		// Advance to next path state
 		EnqueueAdvancePathsKernel();
@@ -140,7 +140,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
-	intersectionDevice->PushThreadCurrentDevice();
+	intersectionDevice.PushThreadCurrentDevice();
 
         //----------------------------------------------------------------------
         // Initialization
@@ -149,7 +149,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
         const u_int taskCount = engine->taskCount;
 
         // Initialize random number generator seeds
-        intersectionDevice->EnqueueKernel(initSeedKernel,
+        intersectionDevice.EnqueueKernel(initSeedKernel,
                         HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
         //----------------------------------------------------------------------
@@ -189,13 +189,13 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                 }
 
                 // Async. transfer of GPU task statistics
-                intersectionDevice->EnqueueReadBuffer(
+                intersectionDevice.EnqueueReadBuffer(
                         taskStatsBuff,
                         CL_FALSE,
                         sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-                        gpuTaskStats);
+                        gpuTaskStats.get());
 
-                intersectionDevice->FinishQueue();
+                intersectionDevice.FinishQueue();
 
                 const double t1 = WallClockTime();
                 const double renderingTime = t1 - t0;
@@ -207,7 +207,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                 // Check the the time spent, if it is too small (< 400ms) get more tiles
                 // (avoid to increase the number of tiles on CPU devices, it is useless)
                 if ((tileWorks.size() < engine->maxTilePerDevice) && (renderingTime < 0.4) && 
-                                (intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
+                                (intersectionDevice.GetDeviceDesc().GetType() != DEVICE_TYPE_OPENCL_CPU)) {
                         IncThreadFilms();
                         tileWorks.resize(tileWorks.size() + 1);
                         samplerDatas.resize(samplerDatas.size() + 1);
@@ -237,7 +237,7 @@ void TilePathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	if (engine->photonGICache)
 		engine->photonGICache->FinishUpdate(threadIndex);
 
-	intersectionDevice->PopThreadCurrentDevice();
+	intersectionDevice.PopThreadCurrentDevice();
 }
 
 #endif

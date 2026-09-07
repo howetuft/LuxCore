@@ -38,20 +38,15 @@ LuxLinearToneMap::LuxLinearToneMap() {
 	sensitivity = 100.f;
 	exposure = 1.f / 1000.f;
 	fstop = 2.8f;
-
-	applyKernel = NULL;
 }
 
 LuxLinearToneMap::LuxLinearToneMap(const float s, const float e, const float f) {
 	sensitivity = s;
 	exposure = e;
 	fstop = f;
-
-	applyKernel = NULL;
 }
 
 LuxLinearToneMap::~LuxLinearToneMap() {
-	delete applyKernel;
 }
 
 float LuxLinearToneMap::GetScale(const float gamma) const {
@@ -108,16 +103,13 @@ void LuxLinearToneMap::ApplyHW(Film &film, const u_int index) {
 		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
 		opts.push_back("-D SLG_OPENCL_KERNEL");
 
-		HardwareDeviceProgram *program = nullptr;
-		hardwareDevice->CompileProgram(&program,
+		auto program = hardwareDevice->CompileProgram(
 				opts,
 				slg::ocl::KernelSource_tonemap_luxlinear_funcs,
 				"LuxLinearToneMap");
 
 		SLG_LOG("[LuxLinearToneMap] Compiling LuxLinearToneMap_Apply Kernel");
-		hardwareDevice->GetKernel(program, &applyKernel, "LuxLinearToneMap_Apply");
-
-		delete program;
+		applyKernel = hardwareDevice->GetKernel(*program, "LuxLinearToneMap_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;

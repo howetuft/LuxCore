@@ -20,6 +20,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/displacement.h"
+#include "luxrays/core/trianglemesh.h"
 #include "slg/scene/scene.h"
 
 using namespace std;
@@ -41,8 +42,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 	const double startTime = WallClockTime();
 
 	const u_int vertCount = srcMesh.GetTotalVertexCount();
-	const Point *vertices = srcMesh.GetVertices();
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
+	const auto vertices = srcMesh.GetVertices();
+	VertexBuffer newVertices(vertCount);
 
 	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
 	// used for vector displacement but they may be used by the texture too.
@@ -55,8 +56,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	// Go trough the faces and save the information
 	vector<bool> doneVerts(vertCount, false);
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
-	const Triangle *tris = srcMesh.GetTriangles();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
+	const auto tris(srcMesh.GetTriangles());
 	for (u_int i = 0; i < triCount; ++i) {
 		const Triangle &tri = tris[i];
 
@@ -158,9 +159,9 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMeshRef srcMesh, const 
 
 	// Make a copy of the original mesh and overwrite vertex information
 	mesh = srcMesh.Copy(
-		newVertices,
-		nullptr,
-		nullptr,
+		std::move(newVertices),
+		std::nullopt,
+		std::nullopt,
 		std::nullopt,
 		std::nullopt,
 		std::nullopt

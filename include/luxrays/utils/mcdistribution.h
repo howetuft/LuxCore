@@ -19,11 +19,14 @@
 #ifndef _LUXRAYS_MCDISTRIBUTION_H
 #define _LUXRAYS_MCDISTRIBUTION_H
 
+#include <stdexcept>
 #include <vector>
 #include <cstring>
+#include <span>
 
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/usings.h"
 
 namespace luxrays {
 
@@ -37,16 +40,12 @@ public:
 	 * It is assumed that the given function is sampled regularly sampled in
 	 * the interval [0,1] (ex. 0.1, 0.3, 0.5, 0.7, 0.9 for 5 samples).
 	 *
-	 * @param f The values of the function.
-	 * @param n The number of samples.
+	 * @param s The values of the function.
 	 */
-	Function1D(float *f, int n) {
-		func = new float[n];
-		count = n;
-		memcpy(func, f, n*sizeof(float));
-	}
-	~Function1D() {
-		delete[] func;
+	Function1D(std::span<float> source) {
+		func.reserve(source.size());
+
+		std::ranges::copy(source.begin(), source.end(), std::back_inserter(func));
 	}
 
 	/**
@@ -57,9 +56,10 @@ public:
 	 * @return The function value at the given position.
 	 */
 	float Eval(float x) const {
+		auto count = func.size();
 		float pos = Clamp(x, 0.f, 1.f) * count + .5f;
-		int off1 = (int)pos;
-		int off2 = Min(count-1, off1 + 1);
+		auto off1 = static_cast<decltype(count)>(pos);
+		auto off2 = std::min(count-1, off1 + 1);
 		float d = pos - off1;
 		return func[off1] * (1.f - d) * func[off2] * d;
 	}
@@ -68,11 +68,7 @@ public:
 	/*
 	 * The function values.
 	 */
-	float *func;
-	/*
-	 * The number of function values.
-	 */
-	int count;
+	std::vector<float> func;
 };
 
 /**
@@ -88,7 +84,7 @@ public:
 	 * @param f The values of the function.
 	 * @param n The number of samples.
 	 */
-	Distribution1D(const float *f, u_int n);
+	Distribution1D(std::span<float> data);
 	~Distribution1D();
 
 	/**
@@ -145,6 +141,7 @@ public:
 
 	friend class boost::serialization::access;
 
+	constexpr auto static NullPtr = std::unique_ptr<Distribution1D>(nullptr);
 private:
 	// Used by serialization
 	Distribution1D() { }
@@ -176,7 +173,7 @@ private:
 class Distribution2D {
 public:
 	// Distribution2D Public Methods
-	Distribution2D(const float *data, u_int nu, u_int nv);
+	Distribution2D(std::span<float> data, u_int nu, u_int nv);
 	~Distribution2D();
 
 	void SampleContinuous(float u0, float u1, float uv[2],
@@ -192,12 +189,14 @@ public:
 
 	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }
 	const u_int GetHeight() const { return pMarginal->GetCount(); }
-	const Distribution1D *GetMarginalDistribution() const { return pMarginal; }
-	const Distribution1D *GetConditionalDistribution(const u_int i) const {
+	const Distribution1DRPtr GetMarginalDistribution() const { return pMarginal; }
+	const Distribution1DRPtr GetConditionalDistribution(const u_int i) const {
 		return pConditionalV[i];
 	}
 
 	friend class boost::serialization::access;
+
+	static constexpr auto NullPtr = std::unique_ptr<Distribution2D>(nullptr);
 
 private:
 	// Used by serialization
@@ -209,8 +208,8 @@ private:
 	}
 
 	// Distribution2D Private Data
-	std::vector<Distribution1D *> pConditionalV;
-	Distribution1D *pMarginal;
+	std::vector<Distribution1DUPtr> pConditionalV;
+	Distribution1DUPtr pMarginal;
 };
 
 /**
@@ -228,18 +227,15 @@ public:
 	 * @param aFx  The values of the function.
 	 * @param aN   The number of samples.
 	 */
-	IrregularFunction1D(float *aX, float *aFx, int aN) {
-		count = aN;
-		xFunc = new float[count];
-		yFunc = new float[count];
-		memcpy(xFunc, aX, aN*sizeof(float));
-		memcpy(yFunc, aFx, aN*sizeof(float));
+	IrregularFunction1D(std::span<float> aX, std::span<float> aFx) :
+		xFunc(aX.begin(), aX.end()), yFunc(aFx.begin(), aFx.end())
+	{
+		if (aX.size() != aFx.size()) {
+			throw std::runtime_error("IrregularFunction1D: misaligned arguments.");
+		}
 	}
 
-	~IrregularFunction1D() {
-		delete[] xFunc;
-		delete[] yFunc;
-	}
+	~IrregularFunction1D() {}
 
 	/**
 	 * Evaluates the function at the given position.
@@ -249,13 +245,15 @@ public:
 	 * @return The function value at the given position.
 	 */
 	float Eval(float x) const {
+		auto count = xFunc.size();
 		if (x <= xFunc[0])
 			return yFunc[0];
 		if (x >= xFunc[count - 1])
 			return yFunc[count - 1];
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		const u_int offset = static_cast<u_int>(ptr - xFunc - 1);
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		//const u_int offset = static_cast<u_int>(ptr - xFunc - 1);
+		const size_t offset = std::distance(xFunc.begin(), upper) - 1;
 
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
@@ -271,6 +269,7 @@ public:
 	 * @return The index of the given position.
 	 */
 	int IndexOf(float x, float *d) const {
+		auto count = xFunc.size();
 		if (x <= xFunc[0]) {
 			*d = 0.f;
 			return 0;
@@ -280,8 +279,8 @@ public:
 			return count - 1;
 		}
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
 
 		*d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 		return offset;
@@ -292,11 +291,7 @@ private:
 	/*
 	 * The sample locations and the function values.
 	 */
-	float *xFunc, *yFunc;
-	/*
-	 * The number of function values. The number of cdf values is count+1.
-	 */
-	int count;
+	std::vector<float> xFunc, yFunc;
 };
 
 /**
@@ -315,17 +310,24 @@ public:
 	 * @param aFx The values of the function.
 	 * @param aN  The number of samples.
 	 */
-	IrregularDistribution1D(float aX0, float aX1, float *aX, float *aFx, int aN) {
-		count = aN;
+	IrregularDistribution1D(
+		float aX0, float aX1,
+		std::span<float> aX,
+		std::span<float> aFx
+	) :
+		xFunc(aX.begin(), aX.end()),
+		yFunc(aFx.begin(), aFx.end()),
+		xCdf(aX.size()),
+		yCdf(aX.size())
+	{
+		if (aX.size() != aFx.size()) {
+			throw std::runtime_error("IrregularDistribution1D: misaligned arguments.");
+		}
+
+		count = aX.size();
 		x0 = aX0;
 		x1 = aX1;
-		xFunc = new float[count];
-		yFunc = new float[count];
-		xCdf = new float[count+1];
-		yCdf = new float[count+1];
-		memcpy(xFunc, aX, count*sizeof(float));
-		memcpy(yFunc, aFx, count*sizeof(float));
-		
+
 		// Compute integrals of step function
 		xCdf[0] = aX0;
 		for (int i = 1; i < count; ++i)
@@ -333,7 +335,7 @@ public:
 		xCdf[count] = aX1;
 		yCdf[0] = 0.f;
 		for (int i = 1; i < count+1; ++i) {
-			yCdf[i] = yCdf[i-1] + Max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
+			yCdf[i] = yCdf[i-1] + std::max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
 		}
 		funcInt = yCdf[count];
 		// Transform step function integral into cdf
@@ -344,12 +346,6 @@ public:
 		invCount = 1.f / count;
 	}
 
-	~IrregularDistribution1D() {
-		delete[] xFunc;
-		delete[] yFunc;
-		delete[] xCdf;
-		delete[] yCdf;
-	}
 
 	/**
 	 * Samples from this distribution.
@@ -360,22 +356,24 @@ public:
 	 *
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */ 
-	float Sample(float u, float *pdf) const {
+	std::tuple<float, float>
+	Sample(float u) const {
+		auto count = xFunc.size();
 		// Find surrounding cdf segments
 		if (u >= yCdf[count]) {
-			*pdf = xFunc[count] * invFuncInt;
-			return xCdf[count];
+			auto pdf = xFunc[count] * invFuncInt;
+			return std::make_tuple(xCdf[count], pdf);
 		}
 		if (u <= yCdf[0]) {
-			*pdf = xFunc[0] * invFuncInt;
-			return xCdf[0];
+			auto pdf = xFunc[0] * invFuncInt;
+			return std::make_tuple(xCdf[0], pdf);
 		}
-		float *ptr = std::upper_bound(yCdf, yCdf + count + 1, u);
-		int offset = ptr - yCdf - 1;
+		auto upper = std::upper_bound(yCdf.begin(), yCdf.end(), u);
+		auto offset = std::distance(yCdf.begin(), upper) - 1;
 		// Return offset along current cdf segment
 		float du = (u - yCdf[offset]) / (yCdf[offset + 1] - yCdf[offset]);
-		*pdf = xFunc[offset] * invFuncInt;
-		return Lerp(du, xCdf[offset], xCdf[offset + 1]);
+		auto pdf = xFunc[offset] * invFuncInt;
+		return std::make_tuple(Lerp(du, xCdf[offset], xCdf[offset + 1]), pdf);
 	}
 
 	/**
@@ -391,8 +389,8 @@ public:
 		if (x >= xFunc[count - 1])
 			return yFunc[count - 1];
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
 
 		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
 
@@ -407,21 +405,21 @@ public:
 	 *
 	 * @return The index of the given position.
 	 */
-	int IndexOf(float x, float *d) const {
+	std::tuple<size_t, float>
+	IndexOf(const float x) const {
 		if (x <= xFunc[0]) {
-			*d = 0.f;
-			return 0;
-		}
-		else if (x >= xFunc[count - 1]) {
-			*d = 0.f;
-			return count - 1;
+			return std::tuple<size_t, float>(0, 0.f);
 		}
 
-		float *ptr = std::upper_bound(xFunc, xFunc + count, x);
-		int offset = ptr - xFunc - 1;
+		if (x >= xFunc[xFunc.size() - 1]) {
+			return std::tuple<size_t, float>(xFunc.size() - 1, 0.f);
+		}
 
-		*d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
-		return offset;
+		auto upper = std::upper_bound(xFunc.begin(), xFunc.end(), x);
+		auto offset = std::distance(xFunc.begin(), upper) - 1;
+		float d = (x - xFunc[offset]) / (xFunc[offset + 1] - xFunc[offset]);
+
+		return std::make_tuple(offset, d);
 	}
 
 	// IrregularDistribution1D Data
@@ -432,11 +430,11 @@ public:
 	/*
 	 * The sample locations and the function values.
 	 */
-	float *xFunc, *yFunc;
+	std::vector<float> xFunc, yFunc;
 	/*
 	 * The sample locations of the cdf and the cdf values.
 	 */
-	float *xCdf, *yCdf;
+	std::vector<float> xCdf, yCdf;
 	/**
 	 * The function integral (of the scaled function!),
 	 * the inverted function integral and the inverted count.

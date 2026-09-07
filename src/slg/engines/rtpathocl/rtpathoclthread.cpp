@@ -37,7 +37,7 @@ using namespace std::literals::chrono_literals;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
-	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDeviceRef device, TilePathOCLRenderEngine *re) : 
 	TilePathOCLRenderThread(index, device, re) {
 }
 
@@ -114,12 +114,12 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		// NOTE: I can only after having compiled and set arguments.
 		RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 
-		intersectionDevice->EnqueueKernel(initSeedKernel,
+		intersectionDevice.EnqueueKernel(initSeedKernel,
 				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 	}
 
 	// Reset statistics in order to be more accurate
-	intersectionDevice->ResetPerformaceStats();
+	intersectionDevice.ResetPerformaceStats();
 }
 
 void RTPathOCLRenderThread::UpdateAllThreadsOCLBuffers() {
@@ -129,9 +129,9 @@ void RTPathOCLRenderThread::UpdateAllThreadsOCLBuffers() {
 		// Update all threads
 		for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 			RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
-			thread->intersectionDevice->PushThreadCurrentDevice();
+			thread->intersectionDevice.PushThreadCurrentDevice();
 			thread->UpdateOCLBuffers(engine->updateActions);
-			thread->intersectionDevice->PopThreadCurrentDevice();
+			thread->intersectionDevice.PopThreadCurrentDevice();
 		}
 
 		// Reset updateActions
@@ -142,7 +142,7 @@ void RTPathOCLRenderThread::UpdateAllThreadsOCLBuffers() {
 void RTPathOCLRenderThread::UpdateCameraOCLBuffer() {
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 
-	intersectionDevice->EnqueueWriteBuffer(cameraBuff, false, sizeof(slg::ocl::Camera),
+	intersectionDevice.EnqueueWriteBuffer(cameraBuff, false, sizeof(slg::ocl::Camera),
 			&engine->compiledScene->camera);
 }
 
@@ -152,9 +152,9 @@ void RTPathOCLRenderThread::UpdateAllCameraThreadsOCLBuffers() {
 	// Update all threads
 	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 		RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
-		thread->intersectionDevice->PushThreadCurrentDevice();
+		thread->intersectionDevice.PushThreadCurrentDevice();
 		thread->UpdateCameraOCLBuffer();
-		thread->intersectionDevice->PopThreadCurrentDevice();
+		thread->intersectionDevice.PopThreadCurrentDevice();
 	}
 }
 
@@ -165,7 +165,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
 	auto *syncBarrier = engine->syncBarrier;
 	auto *frameBarrier = engine->frameBarrier;
 
-	intersectionDevice->PushThreadCurrentDevice();
+	intersectionDevice.PushThreadCurrentDevice();
 
 	// To synchronize with RTPathOCLRenderEngine::StartLockLess()
 	if (threadIndex == 0)
@@ -183,7 +183,7 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
         //----------------------------------------------------------------------
 
         // Initialize OpenCL structures
-        intersectionDevice->EnqueueKernel(initSeedKernel,
+        intersectionDevice.EnqueueKernel(initSeedKernel,
                         HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
         //----------------------------------------------------------------------
@@ -216,12 +216,12 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
                         RenderTileWork(tileWork, samplerData, 0);
 
                         // Async. transfer of GPU task statistics
-                        intersectionDevice->EnqueueReadBuffer(
+                        intersectionDevice.EnqueueReadBuffer(
                                 taskStatsBuff,
                                 CL_FALSE,
                                 sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
-                                gpuTaskStats);
-                        intersectionDevice->FinishQueue();
+                                gpuTaskStats.get());
+                        intersectionDevice.FinishQueue();
 
                         engine->tileRepository->NextTile(engine->GetFilm(), engine->filmMutex, tileWork, threadFilms[0]->GetFilm());
 
@@ -323,11 +323,11 @@ void RTPathOCLRenderThread::RenderThreadImpl(std::stop_token stop_token) {
         if (stop_token.stop_requested())
 		SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 
-	intersectionDevice->FinishQueue();
+	intersectionDevice.FinishQueue();
 
 	threadDone = true;
 	
-	intersectionDevice->PopThreadCurrentDevice();
+	intersectionDevice.PopThreadCurrentDevice();
 }
 
 #endif

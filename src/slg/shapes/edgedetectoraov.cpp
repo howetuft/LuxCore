@@ -50,8 +50,8 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshRef srcMesh,
 
 	const double startTime = WallClockTime();
 
-	const Triangle *tris = srcMesh.GetTriangles();
-	const u_int triCount = srcMesh.GetTotalTriangleCount();
+	const auto tris = srcMesh.GetTriangles();
+	const auto triCount = srcMesh.GetTotalTriangleCount();
 
 	// Build the edge information
 	vector<Edge> edges;
@@ -65,8 +65,8 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMeshRef srcMesh,
 
 	auto IsSameVertex = [&](const u_int v0, const u_int v1) {
 		return DistanceSquared(
-					srcMesh.GetVertex(Transform::TRANS_IDENTITY, v0),
-					srcMesh.GetVertex(Transform::TRANS_IDENTITY, v1)) < DEFAULT_EPSILON_STATIC;
+			srcMesh.GetVertex(Transform::TRANS_IDENTITY, v0),
+			srcMesh.GetVertex(Transform::TRANS_IDENTITY, v1)) < DEFAULT_EPSILON_STATIC;
 	};
 
 	auto IsSameEdge = [&](const u_int edge0Index, const u_int edge1Index) {

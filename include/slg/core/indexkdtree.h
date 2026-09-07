@@ -19,11 +19,12 @@
 #ifndef __SLG_INDEXKDTREE_H
 #define	__SLG_INDEXKDTREE_H
 
+#include <boost/serialization/version.hpp>
 #include <vector>
 
-#include "luxrays/utils/serializationutils.h"
-
-#include "slg/slg.h"
+namespace boost { namespace serialization {
+class access;
+} }
 
 namespace slg {
 
@@ -41,70 +42,66 @@ namespace slg {
 #define KdTreeNodeData_SetRightChild(nodeData, index) nodeData = ((nodeData) & 0xe0000000u) | ((index) & 0x1fffffffu)
 #define KdTreeNodeData_NULL_INDEX 0x1fffffffu
 
-typedef struct IndexKdTreeArrayNode_t {
+struct IndexKdTreeArrayNode {
 	float splitPos;
-	u_int index;
+	size_t index;
 
 	// Most significant 30 and 31 bits are used to encode the splitting axis and
 	// if it is a leaf
 	// 29 bit => if it has a left child
 	// [0, 28] bits => the index of right child
 	unsigned int nodeData;
-	
+
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
 		ar & splitPos;
 		ar & index;
 		ar & nodeData;
 	}
-} IndexKdTreeArrayNode;
+};
 
 template <class T>
 class IndexKdTree {
 public:
-	IndexKdTree(const std::vector<T> *entries);
-	virtual ~IndexKdTree();
+	IndexKdTree(const std::vector<T>& entries);
+	virtual ~IndexKdTree() = default;
 
-	size_t GetMemoryUsage() const { return allEntries->size() * sizeof(IndexKdTreeArrayNode); }
+	size_t GetMemoryUsage() const;
+
+	const std::vector<T> & GetAllEntries() const;
+
+
+protected:
+
+	void Build(
+		const size_t nodeIndex,
+		const size_t start,
+		const size_t end,
+		std::vector<size_t>& buildNodes
+	);
+
+
+	const std::vector<T> & allEntries;
+	std::vector<IndexKdTreeArrayNode> arrayNodes;
+
+	size_t nextFreeNode;
 
 	friend class boost::serialization::access;
 
-protected:
-	// Used by serialization
-	IndexKdTree();
+	template<class Archive>
+	void serialize(Archive &ar, const unsigned int file_version);
 
-	void Build(const u_int nodeIndex, const u_int start, const u_int end, u_int *buildNodes);
-
-	template<class Archive> void save(Archive &ar, const unsigned int version) const {
-		ar & allEntries;
-
-		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
-	}
-
-	template<class Archive>	void load(Archive &ar, const unsigned int version) {
-		ar & allEntries;
-
-		arrayNodes = new IndexKdTreeArrayNode[allEntries->size()];
-		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
-	}
-	
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	const std::vector<T> *allEntries;
-	IndexKdTreeArrayNode *arrayNodes;
-
-	u_int nextFreeNode;
 };
 
-}
+}  // Namespace slg
 
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::IndexKdTree)
+
+
 
 BOOST_CLASS_VERSION(slg::IndexKdTreeArrayNode, 1)
-		
-BOOST_CLASS_EXPORT_KEY(slg::IndexKdTreeArrayNode)
+
 
 #endif	/* __SLG_INDEXKDTREE_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
