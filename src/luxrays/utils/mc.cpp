@@ -342,9 +342,6 @@ Distribution1D::Distribution1D(const std::span<float> data) :
 	}
 }
 
-Distribution1D::~Distribution1D() {
-}
-
 float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 	// Find surrounding CDF segments and offset
 	if (u <= cdf[0]) {
@@ -446,9 +443,6 @@ Distribution2D::Distribution2D(std::span<float> data,  u_int nu, u_int nv) {
 	for (u_int v = 0; v < nv; ++v)
 		marginalFunc.push_back(pConditionalV[v]->Average());
 	pMarginal = std::make_unique<Distribution1D>(marginalFunc);
-}
-
-Distribution2D::~Distribution2D() {
 }
 
 void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],

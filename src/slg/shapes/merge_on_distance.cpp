@@ -963,9 +963,7 @@ MergeOnDistanceShape::MergeOnDistanceShape(
 
 	const double endTime = WallClockTime();
 	SDL_LOG(
-		std::format(
-			"Merge On Distance - Merging time: {:.3f} secs", endTime - startTime
-		)
+		"Merge On Distance - Merging time: " << endTime - startTime << " seconds"
 	);
 }
 

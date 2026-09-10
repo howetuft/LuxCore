@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_MCDISTRIBUTION_H
 #define _LUXRAYS_MCDISTRIBUTION_H
 
+#include <memory>
 #include <stdexcept>
 #include <vector>
 #include <cstring>
@@ -85,7 +86,6 @@ public:
 	 * @param n The number of samples.
 	 */
 	Distribution1D(std::span<float> data);
-	~Distribution1D();
 
 	/**
 	 * Samples a point from this distribution.
@@ -141,7 +141,6 @@ public:
 
 	friend class boost::serialization::access;
 
-	constexpr auto static NullPtr = std::unique_ptr<Distribution1D>(nullptr);
 private:
 	// Used by serialization
 	Distribution1D() { }
@@ -174,7 +173,6 @@ class Distribution2D {
 public:
 	// Distribution2D Public Methods
 	Distribution2D(std::span<float> data, u_int nu, u_int nv);
-	~Distribution2D();
 
 	void SampleContinuous(float u0, float u1, float uv[2],
 		float *pdf) const;
@@ -189,14 +187,12 @@ public:
 
 	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }
 	const u_int GetHeight() const { return pMarginal->GetCount(); }
-	const Distribution1DRPtr GetMarginalDistribution() const { return pMarginal; }
-	const Distribution1DRPtr GetConditionalDistribution(const u_int i) const {
+	Distribution1DRPtr GetMarginalDistribution() const { return pMarginal; }
+	Distribution1DRPtr GetConditionalDistribution(const u_int i) const {
 		return pConditionalV[i];
 	}
 
 	friend class boost::serialization::access;
-
-	static constexpr auto NullPtr = std::unique_ptr<Distribution2D>(nullptr);
 
 private:
 	// Used by serialization
@@ -208,8 +204,8 @@ private:
 	}
 
 	// Distribution2D Private Data
-	std::vector<Distribution1DUPtr> pConditionalV;
-	Distribution1DUPtr pMarginal;
+	std::vector<std::unique_ptr<Distribution1D>> pConditionalV;
+	std::unique_ptr<Distribution1D> pMarginal;
 };
 
 /**

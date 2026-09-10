@@ -671,12 +671,28 @@ private:
 }
 }
 
-template <> struct std::formatter<luxcore::Camera::CameraType>: formatter<string_view> {
+#if SPDLOG_USE_STD_FORMAT
 
-  auto format(luxcore::Camera::CameraType cam, std::format_context& ctx) const
-    -> format_context::iterator;
+template <>
+struct std::formatter<luxcore::Camera::CameraType>: std::formatter<std::string_view> {
+
+	auto format(luxcore::Camera::CameraType cam, std::format_context& ctx) const
+		-> std::format_context::iterator;
 };
 
+#else
+
+// Old versions of macos (<13.3) do not support std::format, as they don't
+// provide std::to_chars.
+// For those environments, we have to rely on fmtlib
+template<>
+struct fmt::formatter<luxcore::Camera::CameraType>: fmt::formatter<fmt::string_view> {
+
+	auto format(luxcore::Camera::CameraType cam, fmt::format_context& ctx) const
+		-> fmt::format_context::iterator;
+};
+
+#endif
 
 
 #endif	/* _LUXCOREIMPL_H */

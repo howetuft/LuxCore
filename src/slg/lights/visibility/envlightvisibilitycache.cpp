@@ -756,6 +756,7 @@ void EnvLightVisibilityCache::Build() {
 //------------------------------------------------------------------------------
 
 Distribution2DRPtr EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) const {
+	static constexpr std::unique_ptr<Distribution2D> _null{nullptr};
 	if (cacheEntriesBVH) {
 		const ELVCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(bsdf.hitPoint.p,
 				bsdf.hitPoint.GetLandingShadeN(), bsdf.IsVolume());
@@ -763,7 +764,7 @@ Distribution2DRPtr EnvLightVisibilityCache::GetVisibilityMap(const BSDF &bsdf) c
 			return entry->visibilityMap;
 	}
 
-	return Distribution2D::NullPtr;
+	return _null;
 }
 
 //------------------------------------------------------------------------------

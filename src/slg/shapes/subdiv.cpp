@@ -1634,7 +1634,7 @@ SubdivShape::SubdivShape(
 	//mesh->Save("debug.ply");
 
 	const double endTime = WallClockTime();
-	SDL_LOG(std::format("Subdividing time: {:.3f} secs", endTime - startTime));
+	SDL_LOG("Subdividing time: " << endTime - startTime << " secs");
 }
 
 
