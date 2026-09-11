@@ -33,6 +33,7 @@ endif()
 
 set_target_properties(luxcoreconsole PROPERTIES
   INSTALL_RPATH "\$ORIGIN/../lib"
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
 )
 
 install(

@@ -114,7 +114,10 @@ target_link_libraries(luxcore_static PRIVATE
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
-set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(luxcore PROPERTIES
+  WINDOWS_EXPORT_ALL_SYMBOLS ON
+  INTERPROCEDURAL_OPTIMIZATION ON
+)
 set_target_properties(luxcore_static PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 message(status ${INSTALL_EXCLUDE_REGEXES})

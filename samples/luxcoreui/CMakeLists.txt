@@ -64,6 +64,7 @@ target_link_libraries(luxcoreui PRIVATE
 )
 set_target_properties(luxcoreui PROPERTIES
   INSTALL_RPATH "\$ORIGIN/../lib"
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
 )
 install(
   TARGETS luxcoreui

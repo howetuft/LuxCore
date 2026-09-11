@@ -42,13 +42,18 @@ target_link_libraries(pyluxcore PRIVATE
     embree::embree
 )
 
+# Target properties (global and per platform)
+set_target_properties(pyluxcore PROPERTIES
+  PREFIX ""
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
+)
+
 if(APPLE)
   target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP)
 else()
   target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
 endif(APPLE)
 
-set_target_properties(pyluxcore PROPERTIES PREFIX "")
 if(MSVC)
   set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
