@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,69 +16,39 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SHAPE_H
-#define	_SLG_SHAPE_H
+#ifndef _SLG_SIMPLIFYSHAPE2_H
+#define	_SLG_SIMPLIFYSHAPE2_H
 
-#include <vector>
+#include <string>
 
+#include "luxrays/usings.h"
 #include "slg/usings.h"
-#include "luxcore/cfg_simplify2.h"
+#include "slg/shapes/shape.h"
 
-namespace luxrays {
-	class ExtTriangleMesh;
-}
+// Check if the experimental SimplifyShape2 is enabled
+#if LUXCORE_SIMPLIFY2_ENABLED
 
 namespace slg {
 
-class Scene;
+// Forward declaration for the feature flag check
+bool IsSimplify2Enabled();
 
-class Shape {
+class SimplifyShape2 : public Shape {
 public:
-	typedef enum {
-		MESH,
-		POINTINESS,
-		STRANDS,
-		GROUP,
-		SUBDIV,
-		DISPLACEMENT,
-		HARLEQUIN,
-		SIMPLIFY,
-		ISLANDAOV,
-		RANDOMTRIANGLEAOV,
-		EDGEDETECTORAOV,
-		BEVEL,
-		CAMERAPROJUV,
-		MERGEONDISTANCE
-		// Experimental new version of simplify shape
-		#if LUXCORE_SIMPLIFY2_ENABLED
-		, SIMPLIFY2
-		#endif
-	} ShapeType;
+	SimplifyShape2(CameraConstPtr camera, luxrays::ExtTriangleMeshRef srcMesh,
+			const float target, const float edgeScreenSize, const bool preserveBorder);
+	virtual ~SimplifyShape2();
 
-	Shape() : refined(false) { }
-	virtual ~Shape() { }
-
-	virtual ShapeType GetType() const = 0;
-
-	// Shape::Refine is the main method of the API. It is intended to be called
-	// during shape parsing (see Scene::ParseShapes)
-	// Note: it can be called only once and the object is not usable anymore
-	// (it is moved to caller)
-	luxrays::ExtTriangleMeshUPtr Refine(SceneConstRef scene);
+	virtual ShapeType GetType() const override { return SIMPLIFY2; }
 
 protected:
-	// RefineImpl implements refining for derived classes. It is called by
-	// Shape::Refine under the hood.
-	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) = 0;
+	virtual luxrays::ExtTriangleMeshUPtr RefineImpl(SceneConstRef scene) override;
 
-	bool refined;
-
-	// Derived classes store the shape which they construct into a
-	// std::unique_ptr usually named 'mesh', that they define on their own.
-	luxrays::ExtTriangleMeshUPtr mesh;
 };
 
 }
 
-#endif	/* _SLG_SHAPE_H */
+#endif // LUXCORE_SIMPLIFY2_ENABLED
+
+#endif	/* _SLG_SIMPLIFYSHAPE2_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

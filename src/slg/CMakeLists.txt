@@ -39,6 +39,26 @@ generate_doc(slg)
 
 link_directories (${LuxRays_LIB_DIR})
 
+# Feature flag for experimental SimplifyShape2
+# Can be enabled via CMake option or environment variable LUXCORE_ENABLE_SIMPLIFY2
+option(LUXCORE_ENABLE_SIMPLIFY2 "Enable experimental SimplifyShape2" OFF)
+
+# Check environment variable first, then CMake option
+if(DEFINED ENV{LUXCORE_ENABLE_SIMPLIFY2})
+    if(ENV{LUXCORE_ENABLE_SIMPLIFY2} MATCHES "^[tT][rR][uU][eE]|[yY][eE][sS]|[1-9][0-9]*$")
+        set(LUXCORE_ENABLE_SIMPLIFY2 ON)
+    else()
+        set(LUXCORE_ENABLE_SIMPLIFY2 OFF)
+    endif()
+endif()
+
+if(LUXCORE_ENABLE_SIMPLIFY2)
+    MESSAGE(STATUS "Experimental SimplifyShape2: ENABLED")
+    add_definitions(-DLUXCORE_ENABLE_SIMPLIFY2)
+else()
+    MESSAGE(STATUS "Experimental SimplifyShape2: DISABLED")
+endif()
+
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 
 ###########################################################################
@@ -493,6 +513,12 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/renderstate.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
+
+# Add experimental SimplifyShape2 source files conditionally
+if(LUXCORE_ENABLE_SIMPLIFY2)
+    list(APPEND SLG_CORE_SRCS ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp)
+    SOURCE_GROUP("Source Files\\SLG Core Library\\Experimental" FILES ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp)
+endif()
 
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 

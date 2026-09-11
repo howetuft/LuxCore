@@ -31,6 +31,11 @@
 #include "slg/shapes/harlequinshape.h"
 #include "slg/shapes/simplify.h"
 #include "slg/shapes/islandaovshape.h"
+
+// Include experimental SimplifyShape2 if enabled
+#if LUXCORE_SIMPLIFY2_ENABLED
+#include "slg/shapes/simplify2.h"
+#endif
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
 #include "slg/shapes/bevelshape.h"
@@ -448,6 +453,40 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			edgeScreenSize,
 			preserveBorder
 		);
+
+	} else if (shapeType == "simplify2") {
+		// Experimental SimplifyShape2 - only available when LUXCORE_ENABLE_SIMPLIFY2 is enabled
+		#if LUXCORE_SIMPLIFY2_ENABLED
+		const string sourceMeshName = props.Get(
+			Property(propName + ".source")("")
+		).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error(
+				"Unknown shape name in a simplify2 shape: " + shapeName
+			);
+
+		const float target = props.Get(
+			Property(propName + ".target")(.25f)
+		).Get<double>();
+		const float edgeScreenSize = Clamp(
+			props.Get(Property(propName + ".edgescreensize")(0.0)).Get<double>(),
+			0.0,
+			1.0
+		);
+		const bool preserveBorder = props.Get(
+			Property(propName + ".preserveborder")(false)
+		).Get<bool>();
+
+		shape = std::make_unique<SimplifyShape2>(
+			CameraPtr(&GetCamera()),
+			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
+			target,
+			edgeScreenSize,
+			preserveBorder
+		);
+		#else
+		throw runtime_error("SimplifyShape2 is not available. Please enable LUXCORE_ENABLE_SIMPLIFY2 CMake option.");
+		#endif
 
 	} else if (shapeType == "islandaov") {
 
