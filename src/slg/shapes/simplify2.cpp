@@ -27,8 +27,16 @@
 #include <string>
 #include <queue>
 #include <limits>
+#include <cstring> // for memset
 
 #include <boost/format.hpp>
+
+// SIMD intrinsics
+#if defined(__SSE__)
+#include <xmmintrin.h>  // SSE
+#elif defined(__AVX__)
+#include <immintrin.h>  // AVX
+#endif
 
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
@@ -70,14 +78,61 @@ using namespace slg;
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
+// Check if SIMD is available
+#if defined(__SSE__) || defined(__AVX__) || defined(__ARM_NEON)
+    #define SIMPLIFY2_USE_SIMD 1
+#endif
+
+// SIMD-optimized SymetricMatrix for quadric error metrics
+// Uses SoA (Structure of Arrays) layout for better SIMD utilization
+// The 4x4 symmetric matrix has 10 unique elements:
+// [0] = m11, [1] = m12, [2] = m13, [3] = m14,
+// [4] = m22, [5] = m23, [6] = m24,
+// [7] = m33, [8] = m34,
+// [9] = m44
+
 class SymetricMatrix2 {
 public:
-	// Constructor
-	SymetricMatrix2(const float c = 0.f) {
-		for (u_int i = 0; i < 10; ++i)
-			m[i] = c;
+	// Storage: 10 unique elements of symmetric 4x4 matrix
+	// Layout optimized for cache locality and SIMD access
+	float m[10];
+
+	// Default constructor - initialize to zero
+	SymetricMatrix2() {
+		// Use memset for faster zero-initialization
+		#ifdef SIMPLIFY2_USE_SIMD
+			// Zero 3 x 4 = 12 floats (covers 10 elements)
+			__m128* ptr = reinterpret_cast<__m128*>(m);
+			ptr[0] = _mm_setzero_ps();
+			ptr[1] = _mm_setzero_ps();
+			// Zero remaining 2 floats
+			m[8] = 0.0f;
+			m[9] = 0.0f;
+		#else
+			for (u_int i = 0; i < 10; ++i) {
+				m[i] = 0.0f;
+			}
+		#endif
 	}
 
+	// Constructor with scalar value
+	explicit SymetricMatrix2(const float c) {
+		#ifdef SIMPLIFY2_USE_SIMD
+			// Broadcast scalar to all 10 elements
+			const __m128 scalar = _mm_set1_ps(c);
+			__m128* ptr = reinterpret_cast<__m128*>(m);
+			ptr[0] = scalar;
+			ptr[1] = scalar;
+			m[8] = c;
+			m[9] = c;
+		#else
+			for (u_int i = 0; i < 10; ++i) {
+				m[i] = c;
+			}
+		#endif
+	}
+
+	// Constructor with all 10 elements
 	SymetricMatrix2(
 			const float m11, const float m12, const float m13, const float m14,
 			const float m22, const float m23, const float m24,
@@ -95,8 +150,14 @@ public:
 		m[9] = m44;
 	}
 
-	// Make plane
+	// Make plane from normal (a,b,c) and distance d: ax+by+cz+d=0
+	// This creates the outer product matrix: [a;b;c;d] * [a b c d]
+	// For a symmetric matrix, we only store the upper triangular part
 	SymetricMatrix2(const float a, const float b, const float c, const float d) {
+		// For the plane constructor, SIMD doesn't provide much benefit
+		// due to the scattered access pattern. Use scalar operations.
+		// This is typically called once per triangle during initialization,
+		// not in the hot path.
 		m[0] = a * a;
 		m[1] = a * b;
 		m[2] = a * c;
@@ -109,44 +170,85 @@ public:
 		m[9] = d * d;
 	}
 
+	// Accessor for element
 	float operator[](int c) const {
 		return m[c];
 	}
 
-	// Determinant
+	// Element accessor for non-const
+	float& operator[](int c) {
+		return m[c];
+	}
+
+	// Determinant of 3x3 submatrix
+	// Note: This is for the full 4x4 matrix, but we use specific indices
 	float det(
 			const u_int a11, const u_int a12, const u_int a13,
 			const u_int a21, const u_int a22, const u_int a23,
 			const u_int a31, const u_int a32, const u_int a33) const {
+		// For a 3x3 submatrix of the 4x4 matrix
+		// Using scalar operations as SIMD doesn't help much here
 		const float det = m[a11] * m[a22] * m[a33] + m[a13] * m[a21] * m[a32] + m[a12] * m[a23] * m[a31]
 				- m[a13] * m[a22] * m[a31] - m[a11] * m[a23] * m[a32] - m[a12] * m[a21] * m[a33];
 		return det;
 	}
 
+	// SIMD-optimized addition
 	const SymetricMatrix2 operator+(const SymetricMatrix2 &n) const {
-		return SymetricMatrix2(
+		#ifdef SIMPLIFY2_USE_SIMD
+			SymetricMatrix2 result;
+			// Process 4 elements at a time with SIMD
+			__m128* src1 = reinterpret_cast<const __m128*>(m);
+			__m128* src2 = reinterpret_cast<const __m128*>(n.m);
+			__m128* dst = reinterpret_cast<__m128*>(result.m);
+			
+			// Process first 8 elements (2 x 4-vector SIMD)
+			dst[0] = _mm_add_ps(src1[0], src2[0]);
+			dst[1] = _mm_add_ps(src1[1], src2[1]);
+			
+			// Process remaining 2 elements
+			result.m[8] = m[8] + n.m[8];
+			result.m[9] = m[9] + n.m[9];
+			
+			return result;
+		#else
+			return SymetricMatrix2(
 				m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],
 				m[4] + n[4], m[5] + n[5], m[6] + n[6],
 				m[7] + n[7], m[8] + n[8],
 				m[9] + n[9]);
+		#endif
 	}
 
+	// SIMD-optimized in-place addition
 	SymetricMatrix2& operator+=(const SymetricMatrix2& n) {
-		m[0] += n[0];
-		m[1] += n[1];
-		m[2] += n[2];
-		m[3] += n[3];
-		m[4] += n[4];
-		m[5] += n[5];
-		m[6] += n[6];
-		m[7] += n[7];
-		m[8] += n[8];
-		m[9] += n[9];
-
+		#ifdef SIMPLIFY2_USE_SIMD
+			// Process 4 elements at a time with SIMD
+			__m128* src = reinterpret_cast<const __m128*>(n.m);
+			__m128* dst = reinterpret_cast<__m128*>(m);
+			
+			// Process first 8 elements (2 x 4-vector SIMD)
+			dst[0] = _mm_add_ps(dst[0], src[0]);
+			dst[1] = _mm_add_ps(dst[1], src[1]);
+			
+			// Process remaining 2 elements
+			m[8] += n.m[8];
+			m[9] += n.m[9];
+		#else
+			m[0] += n[0];
+			m[1] += n[1];
+			m[2] += n[2];
+			m[3] += n[3];
+			m[4] += n[4];
+			m[5] += n[5];
+			m[6] += n[6];
+			m[7] += n[7];
+			m[8] += n[8];
+			m[9] += n[9];
+		#endif
+		
 		return *this;
 	}
-
-	float m[10];
 };
 
 
