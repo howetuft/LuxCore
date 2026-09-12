@@ -41,6 +41,12 @@
 
 using namespace std;
 using namespace luxrays;
+
+namespace slg {
+namespace simplify2 {
+
+using namespace std;
+using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
@@ -899,9 +905,19 @@ private:
 	}
 };
 
+} // namespace simplify2
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
+} // namespace slg
+
+namespace slg {
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
 SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh,
 		const float target, const float edgeScreenSize, const bool preserveBorder) {
@@ -914,7 +930,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	const u_int targetCount = Max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
-	Simplify2 simplify(srcMesh);
+	simplify2::Simplify2 simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
@@ -932,12 +948,12 @@ ExtTriangleMeshUPtr SimplifyShape2::RefineImpl(SceneConstRef scene) {
 }
 
 // Feature flag function
-namespace slg {
-	bool IsSimplify2Enabled() {
-		// This will be controlled by CMake option LUXCORE_ENABLE_SIMPLIFY2
-		return true;
-	}
+bool IsSimplify2Enabled() {
+	// This will be controlled by CMake option LUXCORE_ENABLE_SIMPLIFY2
+	return true;
 }
+
+} // namespace slg
 
 #endif // LUXCORE_SIMPLIFY2_ENABLED
 

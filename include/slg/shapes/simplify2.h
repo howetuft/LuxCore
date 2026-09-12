@@ -30,8 +30,12 @@
 
 namespace slg {
 
-// Forward declaration for the feature flag check
-bool IsSimplify2Enabled();
+// Simplify2 namespace for experimental mesh simplification
+namespace simplify2 {
+
+class Simplify2;
+
+} // namespace simplify2
 
 class SimplifyShape2 : public Shape {
 public:
@@ -46,7 +50,7 @@ protected:
 
 };
 
-}
+} // namespace slg
 
 #endif // LUXCORE_SIMPLIFY2_ENABLED
 
