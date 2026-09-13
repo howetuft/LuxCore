@@ -25,8 +25,8 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <queue>
 #include <limits>
+#include <algorithm>
 #include <cstring> // for memset
 
 #include <boost/format.hpp>
@@ -380,9 +380,9 @@ public:
 		camera = &scnCamera;
 		edgeScreenSize = screenSize;
 
-		// Work on 10% of all triangles for each iteration
-		maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
-
+		// Work on N% of all triangles for each iteration (keep only N% lowest error candidates)
+		const float candidatePercent = 0.1f; // 10%
+		
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].deleted = false;
@@ -439,18 +439,6 @@ private:
 		u_int tid, tvertex;
 	};
 
-	class SimplifyRefErrCompare2 {
-	public:
-		SimplifyRefErrCompare2(const Simplify2 &s) : simplify(s) { }
-
-		bool operator()(const SimplifyRef2 &sr1, const SimplifyRef2 &sr2) const {
-			return simplify.triangles[sr1.tid].err[sr1.tvertex] < simplify.triangles[sr2.tid].err[sr2.tvertex];
-		}
-
-	private:
-		const Simplify2 &simplify;
-	};
-
 	std::vector<SimplifyTriangle2> triangles;
 	std::vector<SimplifyVertex2> vertices;
 	std::vector<SimplifyRef2> refs;
@@ -458,7 +446,6 @@ private:
 	CameraConstPtr camera;
 	float edgeScreenSize;
 
-	u_int maxCandidateQueueSize;
 	std::vector<SimplifyRef2> candidateList;
 
 	u_int deletedTriangles;
@@ -763,9 +750,15 @@ private:
 				}			}
 		}
 
-		// Build the edge candidate queue
-		std::priority_queue<SimplifyRef2, std::vector<SimplifyRef2>, SimplifyRefErrCompare2>
-			candidateQueue{ SimplifyRefErrCompare2(*this) };
+		// Build the edge candidate list and keep only the N% lowest error candidates
+		std::vector<SimplifyRef2> allCandidates;
+		allCandidates.reserve(triangles.size());
+		
+		// Lambda to compare SimplifyRef2 by error
+		auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
+			return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
+		};
+		
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			const SimplifyTriangle2 &t = triangles[i];
 
@@ -807,28 +800,22 @@ private:
 			if (minErrorIndex == NULL_INDEX)
 				continue;
 
-			if (candidateQueue.size() < maxCandidateQueueSize) {
-				candidateQueue.push(SimplifyRef2{i, minErrorIndex});
-				continue;
-			}
-
-			const SimplifyRef2 &top = candidateQueue.top();
-			if (t.err[minErrorIndex] < triangles[top.tid].err[top.tvertex]) {
-				candidateQueue.pop();
-				candidateQueue.push(SimplifyRef2{i, minErrorIndex});
-			}
+			// Collect all valid candidates
+			allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
 		}
 
-		if (candidateQueue.size() > 0) {
-			candidateList.resize(candidateQueue.size());
-			for (u_int i = candidateList.size() - 1;;) {
-				candidateList[i] = candidateQueue.top();
-				candidateQueue.pop();
+		// Sort all candidates by error (ascending)
+		std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
+		
+		// Keep only the N% lowest error candidates
+		const u_int nPercentCount = std::max(1u, Floor2UInt(allCandidates.size() * candidatePercent));
+		if (allCandidates.size() > nPercentCount) {
+			allCandidates.resize(nPercentCount);
+		}
 
-				if (i == 0)
-					break;
-				--i;
-			}
+		// Copy to candidateList in reverse order (worst first) to match original behavior
+		candidateList = allCandidates;
+		std::reverse(candidateList.begin(), candidateList.end());
 
 			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
 				const SimplifyTriangle2 &t = triangles[candidateList[i].tid];
