@@ -199,15 +199,15 @@ public:
 			__m128* src1 = reinterpret_cast<const __m128*>(m);
 			__m128* src2 = reinterpret_cast<const __m128*>(n.m);
 			__m128* dst = reinterpret_cast<__m128*>(result.m);
-			
+
 			// Process first 8 elements (2 x 4-vector SIMD)
 			dst[0] = _mm_add_ps(src1[0], src2[0]);
 			dst[1] = _mm_add_ps(src1[1], src2[1]);
-			
+
 			// Process remaining 2 elements
 			result.m[8] = m[8] + n.m[8];
 			result.m[9] = m[9] + n.m[9];
-			
+
 			return result;
 		#else
 			return SymetricMatrix2(
@@ -224,11 +224,11 @@ public:
 			// Process 4 elements at a time with SIMD
 			__m128* src = reinterpret_cast<const __m128*>(n.m);
 			__m128* dst = reinterpret_cast<__m128*>(m);
-			
+
 			// Process first 8 elements (2 x 4-vector SIMD)
 			dst[0] = _mm_add_ps(dst[0], src[0]);
 			dst[1] = _mm_add_ps(dst[1], src[1]);
-			
+
 			// Process remaining 2 elements
 			m[8] += n.m[8];
 			m[9] += n.m[9];
@@ -244,7 +244,7 @@ public:
 			m[8] += n[8];
 			m[9] += n[9];
 		#endif
-		
+
 		return *this;
 	}
 };
@@ -261,7 +261,7 @@ public:
 		vertices.resize(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			vertices[i].p = verts[i];
-		
+
 		if (srcMesh.HasNormals()) {
 			const auto& norms = srcMesh.GetNormals();
 			for (auto i = 0; i < vertCount; ++i)
@@ -270,7 +270,7 @@ public:
 			hasNormals = true;
 		} else
 			hasNormals = false;
-		
+
 		if (srcMesh.HasUVs(0)) {
 			const auto uvs = srcMesh.GetUVs(0);
 			for (u_int i = 0; i < vertCount; ++i)
@@ -279,7 +279,7 @@ public:
 			hasUVs = true;
 		} else
 			hasUVs = false;
-		
+
 		if (srcMesh.HasColors(0)) {
 			const auto cols = srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
@@ -371,10 +371,10 @@ public:
 			const float screenSize, const bool border) {
 		// TODO: Implement new simplification algorithm here
 		// This is where you would put your new implementation
-		
+
 		// For now, just log that we're using the new version
 		SDL_LOG("SimplifyShape2: Using experimental simplification algorithm");
-		
+
 		// Call the original algorithm as fallback
 		preserveBorder = border;
 		camera = &scnCamera;
@@ -548,7 +548,7 @@ private:
 			if (hasColors)
 				v0.col = triCol0;
 			if (hasAlphas)
-				v0.alpha = triAlpha0;			
+				v0.alpha = triAlpha0;
 		}
 
 		const u_int tstart = refs.size();
@@ -755,7 +755,7 @@ private:
 							vcount[ofs]++;
 						}
 					}
-					
+
 					for (u_int j = 0; j < vcount.size(); ++j) {
 						if (vcount[j] == 1)
 							vertices[vids[j]].border = true;
@@ -803,10 +803,10 @@ private:
 					minError = t.err[j];
 				}
 			}
-				
+
 			if (minErrorIndex == NULL_INDEX)
 				continue;
-			
+
 			if (candidateQueue.size() < maxCandidateQueueSize) {
 				candidateQueue.push(SimplifyRef2{i, minErrorIndex});
 				continue;
@@ -837,7 +837,7 @@ private:
 
 				const u_int i0 = t.v[candidateList[i].tvertex];
 				SimplifyVertex2 &v0 = vertices[i0];
-				
+
 				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
 				SimplifyVertex2 &v1 = vertices[i1];
 
@@ -846,7 +846,7 @@ private:
 						vertices[t.v[candidateList[i].tvertex]].border << " " <<
 						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
 			}*/
-			
+
 			/*ExtTriangleMeshBuilder meshBuilder;
 			for (u_int i = 0; i < candidateList.size(); ++i) {
 				const SimplifyTriangle2 &t = triangles[candidateList[i].tid];
@@ -992,7 +992,7 @@ private:
 		} else
 			return 1.f;
 	}
-	
+
 	void UpdateTriangleError(SimplifyTriangle2 &t) const {
 		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
