@@ -47,13 +47,11 @@
 #include "slg/utils/harlequincolors.h"
 #include "slg/cameras/camera.h"
 
-using namespace std;
 using namespace luxrays;
 
 namespace slg {
 namespace simplify2 {
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -383,7 +381,7 @@ public:
 		edgeScreenSize = screenSize;
 
 		// Work on 10% of all triangles for each iteration
-		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
+		maxCandidateQueueSize = std::max(64u, Floor2UInt(triangles.size() * .1f));
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
@@ -392,7 +390,7 @@ public:
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
-		vector<bool> deleted0, deleted1;
+		std::vector<bool> deleted0, deleted1;
 		for (u_int iteration = 0; iteration < 64; ++iteration) {
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
 				break;
@@ -453,21 +451,21 @@ private:
 		const Simplify2 &simplify;
 	};
 
-	vector<SimplifyTriangle2> triangles;
-	vector<SimplifyVertex2> vertices;
-	vector<SimplifyRef2> refs;
+	std::vector<SimplifyTriangle2> triangles;
+	std::vector<SimplifyVertex2> vertices;
+	std::vector<SimplifyRef2> refs;
 
 	CameraConstPtr camera;
 	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
-	vector<SimplifyRef2> candidateList;
+	std::vector<SimplifyRef2> candidateList;
 
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
-			vector<bool> &deleted0, vector<bool> &deleted1) {
+			std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
 		SimplifyTriangle2 &t = triangles[trinagleIndex];
 
 		if (t.deleted)
@@ -563,7 +561,7 @@ private:
 		if (tcount <= v0.tcount) {
 			// Save ram
 			if (tcount)
-				copy(&refs[tstart], &refs[tstart] + tcount, &refs[v0.tstart]);
+				std::copy(&refs[tstart], &refs[tstart] + tcount, &refs[v0.tstart]);
 		} else
 			// Append
 			v0.tstart = tstart;
@@ -575,7 +573,7 @@ private:
 
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			vector<bool> *deleted = nullptr) const {
+			std::vector<bool> *deleted = nullptr) const {
 		const SimplifyVertex2 &v0 = vertices[i0];
 
 		for (u_int k = 0; k < v0.tcount; ++k) {
@@ -615,7 +613,7 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const u_int i0, const SimplifyVertex2 &v,
-			const  vector<bool> &deleted) {
+			const std::vector<bool> &deleted) {
 		for (u_int k = 0; k < v.tcount; ++k) {
 			const SimplifyRef2 &r = refs[v.tstart + k];
 			SimplifyTriangle2 &t = triangles[r.tid];
@@ -729,7 +727,7 @@ private:
 			for (u_int i = 0; i < vertices.size(); ++i)
 				vertices[i].border = false;
 
-			vector<u_int> vcount, vids;
+			std::vector<u_int> vcount, vids;
 			for (u_int i = 0; i < vertices.size(); ++i) {
 				SimplifyVertex2 &v = vertices[i];
 				vcount.clear();
@@ -766,14 +764,14 @@ private:
 		}
 
 		// Build the edge candidate queue
-		priority_queue<SimplifyRef2, vector<SimplifyRef2>, SimplifyRefErrCompare2>
+		std::priority_queue<SimplifyRef2, std::vector<SimplifyRef2>, SimplifyRefErrCompare2>
 			candidateQueue{ SimplifyRefErrCompare2(*this) };
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			const SimplifyTriangle2 &t = triangles[i];
 
 			// Look for the (valid) triangle vertex with the minimum error
 			u_int minErrorIndex = NULL_INDEX;
-			float minError = numeric_limits<float>::infinity();
+			float minError = std::numeric_limits<float>::infinity();
 			for (u_int j = 0; j < 3; ++j) {
 				const u_int i0 = t.v[j];
 				SimplifyVertex2 &v0 = vertices[i0];
@@ -961,7 +959,7 @@ private:
 		}
 
 		// Adding 1.0 because error have negative values
-		return Max(error + 1.f, 0.f);
+		return std::max(error + 1.f, 0.f);
 	}
 
 	float CalculateCollapseScreenErrorScale(const Point &v0, const Point &v1) const {
@@ -990,7 +988,7 @@ private:
 			if (edge == 0.f)
 				return notVisibleScale;
 
-			return Max(edge / edgeScreenSize, notVisibleScale);
+			return std::max(edge / edgeScreenSize, notVisibleScale);
 		} else
 			return 1.f;
 	}
@@ -1017,7 +1015,6 @@ private:
 
 namespace slg {
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -1030,7 +1027,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	const float startTime = WallClockTime();
 
-	const u_int targetCount = Max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
+	const u_int targetCount = std::max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
 	simplify2::Simplify2 simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
