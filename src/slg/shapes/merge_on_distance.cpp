@@ -37,6 +37,7 @@
 #include "slg/shapes/merge_on_distance.h"
 #include "slg/scene/scene.h"
 #include "luxrays/utils/utils.h"
+#include "slg/utils/unionfind.h"
 
 using luxrays::Point;
 using luxrays::WallClockTime;
@@ -85,115 +86,6 @@ inline bool compare_points(
 	return m0 && m1 && m2;
 }
 
-
-// This is the classical Union-Find algorithm,
-// in a parallel implementation (tbb powered)
-class alignas(std::hardware_destructive_interference_size) UnionFind {
-public:
-    UnionFind() {}
-    explicit UnionFind(const size_t count) {
-		reserve(count);
-	}
-	UnionFind(const UnionFind& other) :
-		parent(other.parent, Allocator()),
-		rank(other.rank, Allocator())
-	{}
-	UnionFind(UnionFind&& other) :
-		parent(std::move(other.parent)),
-		rank(std::move(other.rank))
-	{}
-	UnionFind& operator=(const UnionFind& other) {
-		parent = other.parent;
-		rank = other.rank;
-		return (*this);
-	}
-	UnionFind& operator=(UnionFind&& other) {
-		parent = std::move(other.parent);
-		rank = std::move(other.rank);
-		return (*this);
-	}
-
-    // Find the root of the set containing element i
-    u_int find(const u_int i) {
-        if (parent.find(i) == parent.end()) {
-            parent[i] = i;
-            rank[i] = 0;
-        }
-        if (parent[i] != i) {
-            parent[i] = find(parent[i]); // Path compression
-        }
-        return parent[i];
-    }
-
-    // Union the sets containing elements i and j
-    void unite(const u_int i, const u_int j) {
-        const u_int rootI = find(i);
-        const u_int rootJ = find(j);
-
-        if (rootI != rootJ) {
-            // Union by rank
-            if (rank[rootI] > rank[rootJ]) {
-                parent[rootJ] = rootI;
-            } else if (rank[rootI] < rank[rootJ]) {
-                parent[rootI] = rootJ;
-            } else {
-                parent[rootJ] = rootI;
-                rank[rootI]++;
-            }
-        }
-    }
-
-	// Reserve space
-	void reserve(const size_t count) {
-		parent.reserve(count);
-		rank.reserve(count);
-	}
-
-    // Overload the += operator to merge two UnionFind instances
-    UnionFind operator+=(const UnionFind& other) {
-
-        for (const auto& pair : other.parent) {
-            unite(pair.first, pair.second);
-        }
-
-        return (*this);
-    }
-
-	size_t size() const {
-		return parent.size();
-	}
-
-	// Find without compression
-	u_int find_readonly(const u_int i) const {
-		auto res = parent.find(i);
-        if (res != parent.end()) {
-			return res->second;
-		} else {
-			return i;
-		}
-
-	}
-
-private:
-	using Allocator = tbb::cache_aligned_allocator<std::pair<const u_int, u_int>>;
-	using Hash = std::hash<u_int>;
-	using Equal = std::equal_to<u_int>;
-    std::unordered_map<u_int, u_int, Hash, Equal, Allocator> parent;
-    std::unordered_map<u_int, u_int, Hash, Equal, Allocator> rank;
-
-    friend std::ostream& operator<<(std::ostream& os, const UnionFind& uf);
-};
-
-std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
-    os << "Parent: ";
-    for (const auto& pair : uf.parent) {
-        os << "(" << pair.first << ", " << pair.second << ") ";
-    }
-    os << "\nRank: ";
-    for (const auto& pair : uf.rank) {
-        os << "(" << pair.first << ", " << pair.second << ") ";
-    }
-    return os;
 }
 
 // Cell Id, for partition indexing
@@ -479,7 +371,7 @@ class PointGrouping {
 
 public:
 
-	UnionFind dsu;
+	slg::UnionFind dsu;
 
 	// Constructor (plain)
 	PointGrouping(
@@ -490,7 +382,7 @@ public:
 		partition(p_partition),
 		comparator(p_comparator),
 		numPoints(p_numPoints),
-		dsu(UnionFind(numPoints))
+		dsu(numPoints)
 	{}
 
 	// Constructor (split)
@@ -498,7 +390,7 @@ public:
 		partition(x.partition),
 		comparator(x.comparator),
 		numPoints(x.numPoints),
-		dsu(UnionFind(numPoints))
+		dsu(numPoints)
 	{}
 
 	// Body
@@ -543,7 +435,7 @@ public:
 };
 
 
-UnionFind GroupPoints(const Partition& partition, u_int numPoints, u_int tolerance) {
+slg::UnionFind GroupPoints(const Partition& partition, u_int numPoints, u_int tolerance) {
 
 	static tbb::affinity_partitioner tbb_partitioner;
 
@@ -585,7 +477,7 @@ using ClusterMap = std::unordered_map<
 >;
 
 // Group equivalent points into clusters
-ClusterMap CreateClusters(const UnionFind& dsu, u_int numPoints) {
+ClusterMap CreateClusters(const slg::UnionFind& dsu, u_int numPoints) {
 	// Avoid tiny sets of data for body
 	constexpr size_t grain = 1024;
 
@@ -666,7 +558,7 @@ ClusterMap mergePoints(
 	// For each cell, compare points within the cell and adjacent cells
 	// and gather points at (nearly) zero distance from each others.
 	// Gathering is made via a Union Find algo
-	const UnionFind dsu{GroupPoints(partition, numPoints, tolerance)};
+	const slg::UnionFind dsu{GroupPoints(partition, numPoints, tolerance)};
 
 	// Finally, reformat result into convenient cluster format (vector of
 	// vectors)
