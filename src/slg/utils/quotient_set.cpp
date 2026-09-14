@@ -132,28 +132,28 @@ std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
 }
 
 // Helper function in anonymous namespace that uses UnionFind
-slg::Clusters QuotientSetImpl(size_t elementCount, const slg::EquivalenceRelation& relation) {
+slg::Clusters QuotientSetImpl(size_t numElements, const slg::EquivalenceRelation& relation) {
 	slg::Clusters clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
-	
-	UnionFind uf(elementCount);
-	
+
+	UnionFind uf(numElements);
+
 	// Union all pairs in the equivalence relation
 	for (const auto& [i, j] : relation) {
 		uf.unite(i, j);
 	}
-	
+
 	// Create clusters from the UnionFind
-	for (size_t i = 0; i < elementCount; ++i) {
+	for (size_t i = 0; i < numElements; ++i) {
 		const size_t root = uf.find(i);
 		clusterMap[root].push_back(i);
 	}
-	
+
 	clusters.reserve(clusterMap.size());
 	for (auto& [root, indices] : clusterMap) {
 		clusters.push_back(std::move(indices));
 	}
-	
+
 	return clusters;
 }
 
@@ -228,8 +228,8 @@ public:
 
 namespace slg {
 
-Clusters QuotientSet(size_t elementCount, const EquivalenceRelation& relation) {
-	return QuotientSetImpl(elementCount, relation);
+Clusters QuotientSet(size_t numElements, const EquivalenceRelation& relation) {
+	return QuotientSetImpl(numElements, relation);
 }
 
 } // namespace slg

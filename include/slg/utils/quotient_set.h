@@ -26,7 +26,7 @@ namespace slg {
 using EquivalenceRelation = std::vector<std::pair<size_t, size_t>>;
 using Clusters = std::vector<std::vector<size_t>>;
 
-Clusters QuotientSet(size_t elementCount, const EquivalenceRelation& relation);
+Clusters QuotientSet(size_t numElements, const EquivalenceRelation& relation);
 
 } // namespace slg
 
