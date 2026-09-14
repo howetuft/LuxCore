@@ -18,7 +18,7 @@
 
 #include "slg/utils/quotient_set.h"
 
-namespace {
+namespace slg {
 
 // This is the classical Union-Find algorithm,
 // in a parallel implementation (tbb powered)
@@ -130,15 +130,12 @@ std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
     return os;
 }
 
-} // namespace
-
-namespace slg {
-
-QuotientSet::QuotientSet(size_t elementCount, const EquivalenceRelation& relation)
-	: dsu(std::make_unique<UnionFind>(elementCount)) {
+std::unique_ptr<UnionFind> QuotientSet(size_t elementCount, const EquivalenceRelation& relation) {
+	auto dsu = std::make_unique<UnionFind>(elementCount);
 	for (const auto& pair : relation) {
 		dsu->unite(pair.first, pair.second);
 	}
+	return dsu;
 }
 
 } // namespace slg

@@ -24,21 +24,11 @@
 
 namespace slg {
 
-// Forward declaration
-class UnionFind;
-
 using EquivalenceRelation = std::vector<std::pair<size_t, size_t>>;
 
-// QuotientSet represents a partition of a set of elements into equivalence classes
-// (quotient set).
+class UnionFind;
 
-class QuotientSet {
-public:
-	QuotientSet(size_t elementCount, const EquivalenceRelation& relation);
-
-private:
-	std::unique_ptr<UnionFind> dsu;
-};
+std::unique_ptr<UnionFind> QuotientSet(size_t elementCount, const EquivalenceRelation& relation);
 
 } // namespace slg
 
