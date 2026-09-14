@@ -18,17 +18,15 @@
 
 #pragma once
 
-#include <memory>
 #include <vector>
 #include <utility>
 
 namespace slg {
 
 using EquivalenceRelation = std::vector<std::pair<size_t, size_t>>;
+using Clusters = std::vector<std::vector<size_t>>;
 
-class UnionFind;
-
-std::unique_ptr<UnionFind> QuotientSet(size_t elementCount, const EquivalenceRelation& relation);
+Clusters QuotientSet(size_t elementCount, const EquivalenceRelation& relation);
 
 } // namespace slg
 

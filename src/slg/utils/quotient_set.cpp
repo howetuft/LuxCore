@@ -18,7 +18,11 @@
 
 #include "slg/utils/quotient_set.h"
 
-namespace slg {
+#include <unordered_map>
+#include "oneapi/tbb.h"
+#include "oneapi/tbb/cache_aligned_allocator.h"
+
+namespace {
 
 // This is the classical Union-Find algorithm,
 // in a parallel implementation (tbb powered)
@@ -85,11 +89,9 @@ public:
 
     // Overload the += operator to merge two UnionFind instances
     UnionFind operator+=(const UnionFind& other) {
-
         for (const auto& pair : other.parent) {
             unite(pair.first, pair.second);
         }
-
         return (*this);
     }
 
@@ -105,7 +107,6 @@ public:
 		} else {
 			return i;
 		}
-
 	}
 
 private:
@@ -130,12 +131,105 @@ std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
     return os;
 }
 
-std::unique_ptr<UnionFind> QuotientSet(size_t elementCount, const EquivalenceRelation& relation) {
-	auto dsu = std::make_unique<UnionFind>(elementCount);
-	for (const auto& pair : relation) {
-		dsu->unite(pair.first, pair.second);
+// Helper function in anonymous namespace that uses UnionFind
+slg::Clusters QuotientSetImpl(size_t elementCount, const slg::EquivalenceRelation& relation) {
+	slg::Clusters clusters;
+	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
+	
+	UnionFind uf(elementCount);
+	
+	// Union all pairs in the equivalence relation
+	for (const auto& [i, j] : relation) {
+		uf.unite(i, j);
 	}
-	return dsu;
+	
+	// Create clusters from the UnionFind
+	for (size_t i = 0; i < elementCount; ++i) {
+		const size_t root = uf.find(i);
+		clusterMap[root].push_back(i);
+	}
+	
+	clusters.reserve(clusterMap.size());
+	for (auto& [root, indices] : clusterMap) {
+		clusters.push_back(std::move(indices));
+	}
+	
+	return clusters;
+}
+
+// TODO: PointGrouping class from merge_on_distance.cpp - needs supporting types
+// (CellId, Partition, NearlyEqualComparator, compare_points, adjacency) to compile
+// Copied here for reference, will need dependencies to be modularized
+/*
+class PointGrouping {
+	const Partition& partition;
+	const NearlyEqualComparator& comparator;
+	const size_t numPoints;
+	static constexpr auto ADJACENCY = adjacency();
+
+public:
+
+	UnionFind dsu;
+
+	PointGrouping(
+		const Partition& p_partition,
+		const NearlyEqualComparator& p_comparator,
+		size_t p_numPoints
+	) :
+		partition(p_partition),
+		comparator(p_comparator),
+		numPoints(p_numPoints),
+		dsu(UnionFind(numPoints))
+	{}
+
+	PointGrouping(PointGrouping& x, tbb::split):
+		partition(x.partition),
+		comparator(x.comparator),
+		numPoints(x.numPoints),
+		dsu(UnionFind(numPoints))
+	{}
+
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		auto it = partition.begin();
+		std::advance(it, r.begin());
+		for (auto i = r.begin(); i != r.end(); ++i, ++it) {
+			const auto& [cellId, cellPoints] = *it;
+
+			for (const auto& [idx, curPoint] : cellPoints) {
+				for (const auto [dx, dy, dz] : ADJACENCY) {
+					if (cellId.out_of_bound(dx, dy, dz)) continue;
+					const CellId adjCellId(cellId, dx, dy, dz);
+
+					const auto adjIt = partition.find(adjCellId);
+					if (adjIt == partition.end()) continue;
+					const auto& adjPoints = adjIt->second;
+
+					for (const auto& [adjIdx, adjPoint] : adjPoints) {
+						if (idx >= adjIdx) continue;
+						if (compare_points(curPoint, adjPoint, comparator)) {
+							dsu.unite(idx, adjIdx);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void join(PointGrouping& rhs) {
+		if (dsu.size() < rhs.dsu.size()) {
+			std::swap(dsu, rhs.dsu);
+		}
+		dsu += rhs.dsu;
+	}
+};
+*/
+
+} // namespace
+
+namespace slg {
+
+Clusters QuotientSet(size_t elementCount, const EquivalenceRelation& relation) {
+	return QuotientSetImpl(elementCount, relation);
 }
 
 } // namespace slg
