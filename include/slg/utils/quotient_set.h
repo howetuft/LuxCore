@@ -24,11 +24,11 @@
 
 namespace slg {
 
-using Clusters = std::vector<std::vector<size_t>>;
+using Classes = std::vector<std::vector<size_t>>;
 
 // QuotientSet computes the quotient set (equivalence classes) from an equivalence relation.
 // Given a set of elements [0, numElements) and a relation (pairs of equivalent elements),
-// it returns a Clusters object where each inner vector contains all elements that are
+// it returns a Classes object where each inner vector contains all elements that are
 // equivalent under the transitive closure of the relation.
 //
 // In other words, if relation contains pairs indicating which elements are equivalent,
@@ -56,7 +56,7 @@ using Clusters = std::vector<std::vector<size_t>>;
 
 template<std::ranges::range Range>
     requires std::same_as<std::ranges::range_value_t<Range>, std::pair<size_t, size_t>>
-Clusters QuotientSet(size_t numElements, Range&& relation);
+Classes QuotientSet(size_t numElements, Range&& relation);
 
 } // namespace slg
 

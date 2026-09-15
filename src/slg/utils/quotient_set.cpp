@@ -181,8 +181,8 @@ public:
 
 
 // Parallel helper function in anonymous namespace that uses tbb::parallel_reduce
-slg::Clusters QuotientSetImpl(size_t numElements, auto&& relation) {
-	slg::Clusters clusters;
+slg::Classes QuotientSetImpl(size_t numElements, auto&& relation) {
+	slg::Classes clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
 
 	// Use parallel_reduce with ParallelQuotientSet
