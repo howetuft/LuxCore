@@ -279,14 +279,14 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	class ConvertClassMapToClasses {
 		const ClassMap& classMap;
 		slg::Classes result;
-		std::vector<const std::vector<size_t>*> vecPtrs;
+		std::vector<ClassMap::const_iterator> iters;
 
 	public:
 		ConvertClassMapToClasses(const ClassMap& p_classMap)
 			: classMap(p_classMap) {
-			vecPtrs.reserve(classMap.size());
-			for (const auto& kv : classMap) {
-				vecPtrs.push_back(&kv.second);
+			iters.reserve(classMap.size());
+			for (auto it = classMap.begin(); it != classMap.end(); ++it) {
+				iters.push_back(it);
 			}
 		}
 
@@ -297,7 +297,7 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 			const size_t start = r.begin();
 			const size_t end = r.end();
 			for (size_t i = start; i < end; ++i) {
-				result.push_back(*vecPtrs[i]);
+				result.push_back(iters[i]->second);
 			}
 		}
 
