@@ -26,13 +26,13 @@ namespace slg {
 
 using Classes = std::vector<std::vector<size_t>>;
 
-// QuotientSet computes the quotient set (equivalence classes) from an equivalence relation.
+// GroupByEquivalence computes the quotient set (equivalence classes) from an equivalence relation.
 // Given a set of elements [0, numElements) and a relation (pairs of equivalent elements),
 // it returns a Classes object where each inner vector contains all elements that are
 // equivalent under the transitive closure of the relation.
 //
 // In other words, if relation contains pairs indicating which elements are equivalent,
-// QuotientSet groups all elements into disjoint clusters where each cluster contains
+// GroupByEquivalence groups all elements into disjoint classes where each cluster contains
 // all elements that are transitively equivalent to each other.
 //
 // The function relies on a parallel implementation of the Union-Find algorithm (using TBB)
@@ -44,19 +44,19 @@ using Classes = std::vector<std::vector<size_t>>;
 // Usage examples:
 //   // With std::vector
 //   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
-//   auto clusters = QuotientSet(n, pairs);
+//   auto clusters = GroupByEquivalence(n, pairs);
 //
 //   // With std::span
-//   auto clusters = QuotientSet(n, std::span(pairs));
+//   auto clusters = GroupByEquivalence(n, std::span(pairs));
 //
 //   // With std::views::transform (lazy evaluation)
 //   auto view = std::views::iota(0u, m)
 //       | std::views::transform([](size_t i) { return std::make_pair(i, i+1); });
-//   auto clusters = QuotientSet(n, view);
+//   auto clusters = GroupByEquivalence(n, view);
 
 template<std::ranges::range Range>
     requires std::same_as<std::ranges::range_value_t<Range>, std::pair<size_t, size_t>>
-Classes QuotientSet(size_t numElements, Range&& relation);
+Classes GroupByEquivalence(size_t numElements, Range&& relation);
 
 } // namespace slg
 

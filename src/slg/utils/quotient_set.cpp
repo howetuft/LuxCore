@@ -132,24 +132,24 @@ std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
     return os;
 }
 
-// Parallel QuotientSet builder for use with tbb::parallel_reduce
+// Parallel GroupByEquivalence builder for use with tbb::parallel_reduce
 // Processes equivalence relations in parallel using UnionFind
 template<typename Range>
-class ParallelQuotientSet {
+class ParallelGroupByEquivalence {
 	UnionFind dsu;
 	const size_t numPoints;
 	Range relation;
 
 public:
 	// Constructor (plain)
-	ParallelQuotientSet(size_t p_numPoints, Range p_relation)
+	ParallelGroupByEquivalence(size_t p_numPoints, Range p_relation)
 		: numPoints(p_numPoints),
 		  relation(std::move(p_relation)),
 		  dsu(p_numPoints)
 	{}
 
 	// Constructor (split)
-	ParallelQuotientSet(ParallelQuotientSet& x, tbb::split)
+	ParallelGroupByEquivalence(ParallelGroupByEquivalence& x, tbb::split)
 		: numPoints(x.numPoints),
 		  relation(x.relation),
 		  dsu(x.numPoints)
@@ -166,7 +166,7 @@ public:
 	}
 
 	// Reduction: merge two UnionFind instances
-	void join(ParallelQuotientSet& rhs) {
+	void join(ParallelGroupByEquivalence& rhs) {
 		if (dsu.size() < rhs.dsu.size()) {
 			std::swap(dsu, rhs.dsu);
 		}
@@ -181,18 +181,18 @@ public:
 
 
 // Parallel helper function in anonymous namespace that uses tbb::parallel_reduce
-slg::Classes QuotientSetImpl(size_t numElements, auto&& relation) {
+slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	slg::Classes clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
 
-	// Use parallel_reduce with ParallelQuotientSet
+	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
 	// Determine grain size based on relation size
 	const size_t relationSize = std::ranges::size(relation);
 	constexpr size_t grain = 1024;
 
-	ParallelQuotientSet pqs(numElements, std::forward<decltype(relation)>(relation));
+	ParallelGroupByEquivalence pqs(numElements, std::forward<decltype(relation)>(relation));
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),
