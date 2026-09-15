@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/utils/quotient_set.h"
+#include "slg/utils/group_by_equivalence.h"
 
 #include <ranges>
 #include <unordered_map>
