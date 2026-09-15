@@ -282,6 +282,17 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	return classBuilder.getResult();
 }
 
+} // namespace
+
+namespace slg {
+
+template<std::ranges::range Range>
+    requires std::same_as<std::ranges::range_value_t<Range>,
+        std::pair<size_t, size_t>>
+Classes GroupByEquivalence(size_t numElements, Range&& relation) {
+	return GroupByEquivalenceImpl(numElements,
+		std::forward<Range>(relation));
+}
 
 } // namespace slg
 
