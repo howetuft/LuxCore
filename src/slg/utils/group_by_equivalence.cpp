@@ -239,6 +239,44 @@ public:
 	const ClassMap& getResult() const { return classMap; }
 };
 
+// Helper class for parallel conversion of ClassMap to Classes
+class ConvertClassMapToClasses {
+	const ClassMap& classMap;
+	slg::Classes result;
+	std::vector<ClassMap::const_iterator> iters;
+
+public:
+	ConvertClassMapToClasses(const ClassMap& p_classMap)
+		: classMap(p_classMap) {
+		iters.reserve(classMap.size());
+		for (auto it = classMap.begin(); it != classMap.end(); ++it) {
+			iters.push_back(it);
+		}
+	}
+
+	ConvertClassMapToClasses(ConvertClassMapToClasses& x, tbb::split)
+		: classMap(x.classMap) {}
+
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		const size_t start = r.begin();
+		const size_t end = r.end();
+		for (size_t i = start; i < end; ++i) {
+			result.push_back(iters[i]->second);
+		}
+	}
+
+	void join(ConvertClassMapToClasses& rhs) {
+		// Move rhs.result into this->result
+		result.insert(
+			result.end(),
+			std::make_move_iterator(rhs.result.begin()),
+			std::make_move_iterator(rhs.result.end())
+		);
+	}
+
+	slg::Classes getResult() && { return std::move(result); }
+};
+
 // Parallel helper function in anonymous namespace that uses
 // tbb::parallel_reduce
 slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
@@ -274,44 +312,6 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	);
 	// Convert ClassMap to slg::Classes using parallel_reduce
 	const ClassMap& finalClassMap = classMapBuilder.getResult();
-
-	// Helper class for parallel conversion of ClassMap to Classes
-	class ConvertClassMapToClasses {
-		const ClassMap& classMap;
-		slg::Classes result;
-		std::vector<ClassMap::const_iterator> iters;
-
-	public:
-		ConvertClassMapToClasses(const ClassMap& p_classMap)
-			: classMap(p_classMap) {
-			iters.reserve(classMap.size());
-			for (auto it = classMap.begin(); it != classMap.end(); ++it) {
-				iters.push_back(it);
-			}
-		}
-
-		ConvertClassMapToClasses(ConvertClassMapToClasses& x, tbb::split)
-			: classMap(x.classMap) {}
-
-		void operator()(const tbb::blocked_range<size_t>& r) {
-			const size_t start = r.begin();
-			const size_t end = r.end();
-			for (size_t i = start; i < end; ++i) {
-				result.push_back(iters[i]->second);
-			}
-		}
-
-		void join(ConvertClassMapToClasses& rhs) {
-			// Move rhs.result into this->result
-			result.insert(
-				result.end(),
-				std::make_move_iterator(rhs.result.begin()),
-				std::make_move_iterator(rhs.result.end())
-			);
-		}
-
-		slg::Classes getResult() && { return std::move(result); }
-	};
 
 	static tbb::affinity_partitioner tbb_convert_partitioner;
 	constexpr size_t convert_grain = 1024;
