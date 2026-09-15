@@ -209,35 +209,35 @@ slg::Clusters QuotientSetImplSequential(size_t numElements, auto&& relation) {
 slg::Clusters QuotientSetImpl(size_t numElements, auto&& relation) {
 	slg::Clusters clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
-	
+
 	// Use parallel_reduce with ParallelQuotientSet
 	static tbb::affinity_partitioner tbb_partitioner;
-	
+
 	// Determine grain size based on relation size
 	const size_t relationSize = std::ranges::size(relation);
 	constexpr size_t grain = 1024;
-	
+
 	ParallelQuotientSet pqs(numElements, std::forward<decltype(relation)>(relation));
-	
+
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),
 		pqs,
 		tbb_partitioner
 	);
-	
+
 	UnionFind uf = pqs.getResult();
-	
+
 	// Create clusters from the UnionFind
 	for (size_t i = 0; i < numElements; ++i) {
 		const size_t root = uf.find(i);
 		clusterMap[root].push_back(i);
 	}
-	
+
 	clusters.reserve(clusterMap.size());
 	for (auto& [root, indices] : clusterMap) {
 		clusters.push_back(std::move(indices));
 	}
-	
+
 	return clusters;
 }
 
