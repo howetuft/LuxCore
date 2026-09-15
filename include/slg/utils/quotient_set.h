@@ -35,6 +35,9 @@ using Clusters = std::vector<std::vector<size_t>>;
 // QuotientSet groups all elements into disjoint clusters where each cluster contains
 // all elements that are transitively equivalent to each other.
 //
+// The function relies on a parallel implementation of the Union-Find algorithm (using TBB)
+// and should be fast for large equivalence relations.
+//
 // The function accepts any range of std::pair<size_t, size_t> as the relation parameter,
 // including std::vector, std::span, and lazy views like std::views::transform.
 //
