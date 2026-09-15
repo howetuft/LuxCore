@@ -20,13 +20,30 @@
 
 #include <vector>
 #include <utility>
+#include <ranges>
 
 namespace slg {
 
-using EquivalenceRelation = std::vector<std::pair<size_t, size_t>>;
 using Clusters = std::vector<std::vector<size_t>>;
 
-Clusters QuotientSet(size_t numElements, const EquivalenceRelation& relation);
+// QuotientSet accepts any range of std::pair<size_t, size_t>
+//
+// Usage examples:
+//   // With std::vector
+//   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
+//   auto clusters = QuotientSet(n, pairs);
+//
+//   // With std::span
+//   auto clusters = QuotientSet(n, std::span(pairs));
+//
+//   // With std::views::transform (lazy evaluation)
+//   auto view = std::views::iota(0u, m)
+//       | std::views::transform([](size_t i) { return std::make_pair(i, i+1); });
+//   auto clusters = QuotientSet(n, view);
+
+template<std::ranges::range Range>
+    requires std::same_as<std::ranges::range_value_t<Range>, std::pair<size_t, size_t>>
+Clusters QuotientSet(size_t numElements, Range&& relation);
 
 } // namespace slg
 

@@ -18,6 +18,7 @@
 
 #include "slg/utils/quotient_set.h"
 
+#include <ranges>
 #include <unordered_map>
 #include "oneapi/tbb.h"
 #include "oneapi/tbb/cache_aligned_allocator.h"
@@ -132,7 +133,7 @@ std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
 }
 
 // Helper function in anonymous namespace that uses UnionFind
-slg::Clusters QuotientSetImpl(size_t numElements, const slg::EquivalenceRelation& relation) {
+slg::Clusters QuotientSetImpl(size_t numElements, auto&& relation) {
 	slg::Clusters clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
 
@@ -228,8 +229,10 @@ public:
 
 namespace slg {
 
-Clusters QuotientSet(size_t numElements, const EquivalenceRelation& relation) {
-	return QuotientSetImpl(numElements, relation);
+template<std::ranges::range Range>
+    requires std::same_as<std::ranges::range_value_t<Range>, std::pair<size_t, size_t>>
+Clusters QuotientSet(size_t numElements, Range&& relation) {
+	return QuotientSetImpl(numElements, std::forward<Range>(relation));
 }
 
 } // namespace slg
