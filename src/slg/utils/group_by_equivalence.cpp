@@ -264,7 +264,7 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	// Build class map from UnionFind using parallel_reduce with helper class
 	static tbb::affinity_partitioner tbb_class_partitioner;
 	constexpr size_t class_grain = 1024;
-	
+
 	BuildClassMapFromUnionFind classMapBuilder(uf,
 		numElements / class_grain + 1);
 	tbb::parallel_reduce(
@@ -274,7 +274,7 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	);
 	// Convert ClassMap to slg::Classes using parallel_reduce
 	const ClassMap& finalClassMap = classMapBuilder.getResult();
-	
+
 	// Helper class for parallel conversion of ClassMap to Classes
 	class ConvertClassMapToClasses {
 		const ClassMap& classMap;
@@ -315,14 +315,14 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 
 	static tbb::affinity_partitioner tbb_convert_partitioner;
 	constexpr size_t convert_grain = 1024;
-	
+
 	ConvertClassMapToClasses converter(finalClassMap);
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, finalClassMap.size(), convert_grain),
 		converter,
 		tbb_convert_partitioner
 	);
-	
+
 	return std::move(converter).getResult();
 }
 
