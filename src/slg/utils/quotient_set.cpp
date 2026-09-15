@@ -179,31 +179,6 @@ public:
 	}
 };
 
-// Sequential helper function in anonymous namespace
-slg::Clusters QuotientSetImplSequential(size_t numElements, auto&& relation) {
-	slg::Clusters clusters;
-	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
-
-	UnionFind uf(numElements);
-
-	// Union all pairs in the equivalence relation
-	for (const auto& [i, j] : relation) {
-		uf.unite(i, j);
-	}
-
-	// Create clusters from the UnionFind
-	for (size_t i = 0; i < numElements; ++i) {
-		const size_t root = uf.find(i);
-		clusterMap[root].push_back(i);
-	}
-
-	clusters.reserve(clusterMap.size());
-	for (auto& [root, indices] : clusterMap) {
-		clusters.push_back(std::move(indices));
-	}
-
-	return clusters;
-}
 
 // Parallel helper function in anonymous namespace that uses tbb::parallel_reduce
 slg::Clusters QuotientSetImpl(size_t numElements, auto&& relation) {
