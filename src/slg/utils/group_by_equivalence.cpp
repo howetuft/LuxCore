@@ -180,12 +180,76 @@ public:
 	}
 };
 
+// Helper class for building Classes from UnionFind using tbb::parallel_reduce
+class BuildClassesFromUnionFind {
+	const UnionFind& uf;
+	slg::Classes result;
+
+public:
+	BuildClassesFromUnionFind(const UnionFind& p_uf, size_t reserveSize = 0)
+		: uf(p_uf) {
+		result.reserve(reserveSize);
+	}
+
+	BuildClassesFromUnionFind(BuildClassesFromUnionFind& x, tbb::split)
+		: uf(x.uf) {}
+
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		std::unordered_map<size_t, std::vector<size_t>> localClassMap;
+		for (size_t i = r.begin(); i < r.end(); ++i) {
+			const size_t root = uf.find_readonly(i);
+			localClassMap[root].push_back(i);
+		}
+		// Convert to Classes format and merge into result
+		for (auto& [root, indices] : localClassMap) {
+			// Find or create the class for this root in result
+			bool found = false;
+			for (auto& existing : result) {
+				if (!existing.empty() && existing[0] == root) {
+					existing.insert(
+						existing.end(),
+						std::make_move_iterator(indices.begin()),
+						std::make_move_iterator(indices.end())
+					);
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				result.push_back(std::move(indices));
+			}
+		}
+	}
+
+	void join(BuildClassesFromUnionFind& rhs) {
+		// Merge rhs.result into this->result
+		for (auto& rhsIndices : rhs.result) {
+			if (rhsIndices.empty()) continue;
+			const size_t root = rhsIndices[0];
+			bool found = false;
+			for (auto& existing : result) {
+				if (!existing.empty() && existing[0] == root) {
+					existing.insert(
+						existing.end(),
+						std::make_move_iterator(rhsIndices.begin()),
+						std::make_move_iterator(rhsIndices.end())
+					);
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				result.push_back(std::move(rhsIndices));
+			}
+		}
+	}
+
+	const slg::Classes& getResult() const { return result; }
+};
 
 // Parallel helper function in anonymous namespace that uses
 // tbb::parallel_reduce
 slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
-	slg::Classes classes;
-
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
@@ -205,66 +269,17 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 
 	UnionFind uf = solver.getResult();
 
-	// Build classes from UnionFind using parallel_reduce
+	// Build classes from UnionFind using parallel_reduce with helper class
 	static tbb::affinity_partitioner tbb_class_partitioner;
 	constexpr size_t class_grain = 1024;
 	
-	classes = tbb::parallel_reduce(
+	BuildClassesFromUnionFind classBuilder(uf, numElements / class_grain + 1);
+	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, numElements, class_grain),
-		slg::Classes(),
-		[&uf](const tbb::blocked_range<size_t>& r, slg::Classes localClasses)
-			-> slg::Classes {
-			// Build a local map for this thread's range
-			std::unordered_map<size_t, std::vector<size_t>> localClassMap;
-			for (size_t i = r.begin(); i < r.end(); ++i) {
-				const size_t root = uf.find(i);
-				localClassMap[root].push_back(i);
-			}
-			// Convert to Classes format
-			localClasses.reserve(localClassMap.size());
-			for (auto& [root, indices] : localClassMap) {
-				localClasses.push_back(std::move(indices));
-			}
-			return localClasses;
-		},
-		[](slg::Classes&& classes1, slg::Classes&& classes2)
-			-> slg::Classes {
-			// Merge two Classes by root index
-			// We need to merge vectors with the same root
-			std::unordered_map<size_t, std::vector<size_t>> mergedMap;
-			for (auto& indices : classes1) {
-				if (!indices.empty()) {
-					const size_t root = indices[0];
-					auto& merged = mergedMap[root];
-					merged.insert(
-						merged.end(),
-						std::make_move_iterator(indices.begin()),
-						std::make_move_iterator(indices.end())
-					);
-				}
-			}
-			for (auto& indices : classes2) {
-				if (!indices.empty()) {
-					const size_t root = indices[0];
-					auto& merged = mergedMap[root];
-					merged.insert(
-						merged.end(),
-						std::make_move_iterator(indices.begin()),
-						std::make_move_iterator(indices.end())
-					);
-				}
-			}
-			// Convert back to Classes
-			slg::Classes mergedClasses;
-			mergedClasses.reserve(mergedMap.size());
-			for (auto& [root, indices] : mergedMap) {
-				mergedClasses.push_back(std::move(indices));
-			}
-			return mergedClasses;
-		}
+		classBuilder,
+		tbb_class_partitioner
 	);
-
-	return classes;
+	return classBuilder.getResult();
 }
 
 
