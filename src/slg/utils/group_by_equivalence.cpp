@@ -185,7 +185,6 @@ public:
 // tbb::parallel_reduce
 slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	slg::Classes classes;
-	std::unordered_map<size_t, std::vector<size_t>> classMap;
 
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
@@ -206,16 +205,64 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 
 	UnionFind uf = solver.getResult();
 
-	// Create classes from the UnionFind
-	for (size_t i = 0; i < numElements; ++i) {
-		const size_t root = uf.find(i);
-		classMap[root].push_back(i);
-	}
-
-	classes.reserve(classMap.size());
-	for (auto& [root, indices] : classMap) {
-		classes.push_back(std::move(indices));
-	}
+	// Build classes from UnionFind using parallel_reduce
+	static tbb::affinity_partitioner tbb_class_partitioner;
+	constexpr size_t class_grain = 1024;
+	
+	classes = tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, numElements, class_grain),
+		slg::Classes(),
+		[&uf](const tbb::blocked_range<size_t>& r, slg::Classes localClasses)
+			-> slg::Classes {
+			// Build a local map for this thread's range
+			std::unordered_map<size_t, std::vector<size_t>> localClassMap;
+			for (size_t i = r.begin(); i < r.end(); ++i) {
+				const size_t root = uf.find(i);
+				localClassMap[root].push_back(i);
+			}
+			// Convert to Classes format
+			localClasses.reserve(localClassMap.size());
+			for (auto& [root, indices] : localClassMap) {
+				localClasses.push_back(std::move(indices));
+			}
+			return localClasses;
+		},
+		[](slg::Classes&& classes1, slg::Classes&& classes2)
+			-> slg::Classes {
+			// Merge two Classes by root index
+			// We need to merge vectors with the same root
+			std::unordered_map<size_t, std::vector<size_t>> mergedMap;
+			for (auto& indices : classes1) {
+				if (!indices.empty()) {
+					const size_t root = indices[0];
+					auto& merged = mergedMap[root];
+					merged.insert(
+						merged.end(),
+						std::make_move_iterator(indices.begin()),
+						std::make_move_iterator(indices.end())
+					);
+				}
+			}
+			for (auto& indices : classes2) {
+				if (!indices.empty()) {
+					const size_t root = indices[0];
+					auto& merged = mergedMap[root];
+					merged.insert(
+						merged.end(),
+						std::make_move_iterator(indices.begin()),
+						std::make_move_iterator(indices.end())
+					);
+				}
+			}
+			// Convert back to Classes
+			slg::Classes mergedClasses;
+			mergedClasses.reserve(mergedMap.size());
+			for (auto& [root, indices] : mergedMap) {
+				mergedClasses.push_back(std::move(indices));
+			}
+			return mergedClasses;
+		}
+	);
 
 	return classes;
 }
