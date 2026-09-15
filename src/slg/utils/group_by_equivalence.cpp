@@ -194,17 +194,17 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	const size_t relationSize = std::ranges::size(relation);
 	constexpr size_t grain = 1024;
 
-	ParallelGroupByEquivalence pqs(
+	ParallelGroupByEquivalence groupByEquivalenceSolver(
 		numElements, std::forward<decltype(relation)>(relation)
 	);
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),
-		pqs,
+		groupByEquivalenceSolver,
 		tbb_partitioner
 	);
 
-	UnionFind uf = pqs.getResult();
+	UnionFind uf = groupByEquivalenceSolver.getResult();
 
 	// Create clusters from the UnionFind
 	for (size_t i = 0; i < numElements; ++i) {
