@@ -184,8 +184,8 @@ public:
 // Parallel helper function in anonymous namespace that uses
 // tbb::parallel_reduce
 slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
-	slg::Classes clusters;
-	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
+	slg::Classes classes;
+	std::unordered_map<size_t, std::vector<size_t>> classMap;
 
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
@@ -206,18 +206,18 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 
 	UnionFind uf = solver.getResult();
 
-	// Create clusters from the UnionFind
+	// Create classes from the UnionFind
 	for (size_t i = 0; i < numElements; ++i) {
 		const size_t root = uf.find(i);
-		clusterMap[root].push_back(i);
+		classMap[root].push_back(i);
 	}
 
-	clusters.reserve(clusterMap.size());
-	for (auto& [root, indices] : clusterMap) {
-		clusters.push_back(std::move(indices));
+	classes.reserve(classMap.size());
+	for (auto& [root, indices] : classMap) {
+		classes.push_back(std::move(indices));
 	}
 
-	return clusters;
+	return classes;
 }
 
 
