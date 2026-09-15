@@ -26,7 +26,17 @@ namespace slg {
 
 using Clusters = std::vector<std::vector<size_t>>;
 
-// QuotientSet accepts any range of std::pair<size_t, size_t>
+// QuotientSet computes the quotient set (equivalence classes) from an equivalence relation.
+// Given a set of elements [0, numElements) and a relation (pairs of equivalent elements),
+// it returns a Clusters object where each inner vector contains all elements that are
+// equivalent under the transitive closure of the relation.
+//
+// In other words, if relation contains pairs indicating which elements are equivalent,
+// QuotientSet groups all elements into disjoint clusters where each cluster contains
+// all elements that are transitively equivalent to each other.
+//
+// The function accepts any range of std::pair<size_t, size_t> as the relation parameter,
+// including std::vector, std::span, and lazy views like std::views::transform.
 //
 // Usage examples:
 //   // With std::vector
