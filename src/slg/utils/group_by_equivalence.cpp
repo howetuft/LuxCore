@@ -22,8 +22,11 @@
 #include <unordered_map>
 #include "oneapi/tbb.h"
 #include "oneapi/tbb/cache_aligned_allocator.h"
+#include "tsl/robin_map.h"
 
 namespace {
+
+using ClassMap = tsl::robin_map<size_t, std::vector<size_t>>;
 
 // This is the classical Union-Find algorithm,
 // in a parallel implementation (tbb powered)
@@ -180,71 +183,60 @@ public:
 	}
 };
 
-// Helper class for building Classes from UnionFind using tbb::parallel_reduce
-class BuildClassesFromUnionFind {
+// Helper class for building ClassMap from UnionFind using tbb::parallel_reduce
+class BuildClassMapFromUnionFind {
 	const UnionFind& uf;
-	slg::Classes result;
+	ClassMap classMap;
 
 public:
-	BuildClassesFromUnionFind(const UnionFind& p_uf, size_t reserveSize = 0)
+	BuildClassMapFromUnionFind(const UnionFind& p_uf, size_t reserveSize = 0)
 		: uf(p_uf) {
-		result.reserve(reserveSize);
+		classMap.reserve(reserveSize);
 	}
 
-	BuildClassesFromUnionFind(BuildClassesFromUnionFind& x, tbb::split)
+	BuildClassMapFromUnionFind(BuildClassMapFromUnionFind& x, tbb::split)
 		: uf(x.uf) {}
 
 	void operator()(const tbb::blocked_range<size_t>& r) {
-		std::unordered_map<size_t, std::vector<size_t>> localClassMap;
+		ClassMap localClassMap;
 		for (size_t i = r.begin(); i < r.end(); ++i) {
 			const size_t root = uf.find_readonly(i);
 			localClassMap[root].push_back(i);
 		}
-		// Convert to Classes format and merge into result
+		// Merge local into classMap
 		for (auto& [root, indices] : localClassMap) {
-			// Find or create the class for this root in result
-			bool found = false;
-			for (auto& existing : result) {
-				if (!existing.empty() && existing[0] == root) {
-					existing.insert(
-						existing.end(),
-						std::make_move_iterator(indices.begin()),
-						std::make_move_iterator(indices.end())
-					);
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				result.push_back(std::move(indices));
+			auto it = classMap.find(root);
+			if (it != classMap.end()) {
+				// Need to use non-const access for insert
+				classMap[root].insert(
+					classMap[root].end(),
+					std::make_move_iterator(indices.begin()),
+					std::make_move_iterator(indices.end())
+				);
+			} else {
+				classMap[root] = std::move(indices);
 			}
 		}
 	}
 
-	void join(BuildClassesFromUnionFind& rhs) {
-		// Merge rhs.result into this->result
-		for (auto& rhsIndices : rhs.result) {
-			if (rhsIndices.empty()) continue;
-			const size_t root = rhsIndices[0];
-			bool found = false;
-			for (auto& existing : result) {
-				if (!existing.empty() && existing[0] == root) {
-					existing.insert(
-						existing.end(),
-						std::make_move_iterator(rhsIndices.begin()),
-						std::make_move_iterator(rhsIndices.end())
-					);
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				result.push_back(std::move(rhsIndices));
+	void join(BuildClassMapFromUnionFind& rhs) {
+		// Merge rhs.classMap into this->classMap
+		for (auto& [root, indices] : rhs.classMap) {
+			auto it = classMap.find(root);
+			if (it != classMap.end()) {
+				// Need to use non-const access for insert
+				classMap[root].insert(
+					classMap[root].end(),
+					std::make_move_iterator(indices.begin()),
+					std::make_move_iterator(indices.end())
+				);
+			} else {
+				classMap[root] = std::move(indices);
 			}
 		}
 	}
 
-	const slg::Classes& getResult() const { return result; }
+	const ClassMap& getResult() const { return classMap; }
 };
 
 // Parallel helper function in anonymous namespace that uses
@@ -269,17 +261,25 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 
 	UnionFind uf = solver.getResult();
 
-	// Build classes from UnionFind using parallel_reduce with helper class
+	// Build class map from UnionFind using parallel_reduce with helper class
 	static tbb::affinity_partitioner tbb_class_partitioner;
 	constexpr size_t class_grain = 1024;
 	
-	BuildClassesFromUnionFind classBuilder(uf, numElements / class_grain + 1);
+	BuildClassMapFromUnionFind classMapBuilder(uf,
+		numElements / class_grain + 1);
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, numElements, class_grain),
-		classBuilder,
+		classMapBuilder,
 		tbb_class_partitioner
 	);
-	return classBuilder.getResult();
+	// Convert ClassMap to slg::Classes
+	slg::Classes classes;
+	const ClassMap& finalClassMap = classMapBuilder.getResult();
+	classes.reserve(finalClassMap.size());
+	for (const auto& [root, indices] : finalClassMap) {
+		classes.push_back(indices);
+	}
+	return classes;
 }
 
 } // namespace
