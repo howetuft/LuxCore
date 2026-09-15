@@ -111,7 +111,8 @@ public:
 	}
 
 private:
-	using Allocator = tbb::cache_aligned_allocator<std::pair<const size_t, size_t>>;
+	using Allocator =
+		tbb::cache_aligned_allocator<std::pair<const size_t, size_t>>;
 	using Hash = std::hash<size_t>;
 	using Equal = std::equal_to<size_t>;
     std::unordered_map<size_t, size_t, Hash, Equal, Allocator> parent;
@@ -180,7 +181,8 @@ public:
 };
 
 
-// Parallel helper function in anonymous namespace that uses tbb::parallel_reduce
+// Parallel helper function in anonymous namespace that uses
+// tbb::parallel_reduce
 slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	slg::Classes clusters;
 	std::unordered_map<size_t, std::vector<size_t>> clusterMap;
@@ -192,7 +194,9 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	const size_t relationSize = std::ranges::size(relation);
 	constexpr size_t grain = 1024;
 
-	ParallelGroupByEquivalence pqs(numElements, std::forward<decltype(relation)>(relation));
+	ParallelGroupByEquivalence pqs(
+		numElements, std::forward<decltype(relation)>(relation)
+	);
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),

@@ -26,20 +26,22 @@ namespace slg {
 
 using Classes = std::vector<std::vector<size_t>>;
 
-// GroupByEquivalence computes the quotient set (equivalence classes) from an equivalence relation.
-// Given a set of elements [0, numElements) and a relation (pairs of equivalent elements),
-// it returns a Classes object where each inner vector contains all elements that are
-// equivalent under the transitive closure of the relation.
+// GroupByEquivalence computes the quotient set (equivalence classes) from an
+// equivalence relation.
+// Given a set of elements [0, numElements) and a relation (pairs of equivalent
+// elements), it returns a Classes object where each inner vector contains all
+// elements that are equivalent under the transitive closure of the relation.
 //
-// In other words, if relation contains pairs indicating which elements are equivalent,
-// GroupByEquivalence groups all elements into disjoint classes where each cluster contains
-// all elements that are transitively equivalent to each other.
+// In other words, if relation contains pairs indicating which elements are
+// equivalent, GroupByEquivalence groups all elements into disjoint classes
+// where each class contains all elements that are transitively equivalent.
 //
-// The function relies on a parallel implementation of the Union-Find algorithm (using TBB)
-// and should be fast for large equivalence relations.
+// The function relies on a parallel implementation of the Union-Find algorithm
+// (using TBB) and should be fast for large equivalence relations.
 //
-// The function accepts any range of std::pair<size_t, size_t> as the relation parameter,
-// including std::vector, std::span, and lazy views like std::views::transform.
+// The function accepts any range of std::pair<size_t, size_t> as the relation
+// parameter, including std::vector, std::span, and lazy views like
+// std::views::transform.
 //
 // Usage examples:
 //   // With std::vector
@@ -51,11 +53,14 @@ using Classes = std::vector<std::vector<size_t>>;
 //
 //   // With std::views::transform (lazy evaluation)
 //   auto view = std::views::iota(0u, m)
-//       | std::views::transform([](size_t i) { return std::make_pair(i, i+1); });
+//       | std::views::transform([](size_t i) {
+//           return std::make_pair(i, i+1);
+//       });
 //   auto clusters = GroupByEquivalence(n, view);
 
 template<std::ranges::range Range>
-    requires std::same_as<std::ranges::range_value_t<Range>, std::pair<size_t, size_t>>
+    requires std::same_as<std::ranges::range_value_t<Range>,
+        std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation);
 
 } // namespace slg
