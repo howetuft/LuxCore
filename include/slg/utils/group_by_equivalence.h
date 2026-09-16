@@ -39,30 +39,50 @@ using Classes = std::vector<std::vector<size_t>>;
 // The function relies on a parallel implementation of the Union-Find algorithm
 // (using TBB) and should be fast for large equivalence relations.
 //
-// The function accepts any range of std::pair<size_t, size_t> as the relation
-// parameter, including std::vector, std::span, and lazy views like
-// std::views::transform.
+// Two overloads are provided:
+// 1. For callable generators: GroupByEquivalence(numElements, relation)
+//    where relation is a callable that takes an interval [r1, r2) with r1
+//    and r2 of size_t type and returns a range of std::pair<size_t, size_t>
+// 2. For direct ranges: GroupByEquivalence(numElements, relation)
+//    where relation is a std::ranges::range (e.g. std::span, std::vector)
+//    of std::pair<size_t, size_t>
 //
 // Usage examples:
-//   // With std::vector
-//   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
-//   auto clusters = GroupByEquivalence(n, pairs);
+//   // With a callable generator (functor)
+//   auto relation = [&](size_t r1, size_t r2) {
+//       std::vector<std::pair<size_t, size_t>> pairs;
+//       for (size_t i = r1; i < r2; ++i) {
+//           if (condition(i)) pairs.emplace_back(i, i+1);
+//       }
+//       return pairs;
+//   };
+//   auto clusters = GroupByEquivalence(n, relation);
 //
 //   // With std::span
+//   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
 //   auto clusters = GroupByEquivalence(n, std::span(pairs));
 //
-//   // With std::views::transform (lazy evaluation)
-//   auto view = std::views::iota(0u, m)
-//       | std::views::transform([](size_t i) {
-//           return std::make_pair(i, i+1);
-//       });
-//   auto clusters = GroupByEquivalence(n, view);
+//   // With std::vector
+//   auto clusters = GroupByEquivalence(n, pairs);
 
+// Version for callable generators: Range is a functor that takes an
+// interval [r1, r2) with r1 and r2 of size_t type and returns a range of
+// std::pair<size_t, size_t>
+template<typename Range>
+    requires std::invocable<Range, size_t, size_t> &&
+        std::ranges::range<std::invoke_result_t<Range, size_t, size_t>> &&
+        std::same_as<std::ranges::range_value_t<
+            std::invoke_result_t<Range, size_t, size_t>>,
+        std::pair<size_t, size_t>>
+Classes GroupByEquivalence(size_t numElements, Range&& relation);
+
+// Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
+// std::vector) of std::pair<size_t, size_t>
 template<std::ranges::range Range>
     requires std::same_as<std::ranges::range_value_t<Range>,
         std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation);
 
-} // namespace slg
+}  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

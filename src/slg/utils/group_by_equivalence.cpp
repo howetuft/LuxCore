@@ -62,7 +62,7 @@ public:
             rank[i] = 0;
         }
         if (parent[i] != i) {
-            parent[i] = find(parent[i]); // Path compression
+            parent[i] = find(parent[i]);  // Path compression
         }
         return parent[i];
     }
@@ -182,6 +182,47 @@ public:
 		return dsu;
 	}
 };
+// Helper class for building UnionFind from a callable generator
+// using tbb::parallel_reduce
+template<typename Generator>
+class ParallelGroupByEquivalenceFromGenerator {
+	const size_t numPoints;
+	Generator relation;
+	UnionFind dsu;
+
+public:
+	ParallelGroupByEquivalenceFromGenerator(size_t p_numPoints,
+		Generator p_relation)
+		: numPoints(p_numPoints),
+		  relation(std::move(p_relation)),
+		  dsu(p_numPoints) {}
+
+	ParallelGroupByEquivalenceFromGenerator(
+		ParallelGroupByEquivalenceFromGenerator& x, tbb::split)
+		: numPoints(x.numPoints),
+		  relation(x.relation),
+		  dsu(x.numPoints) {}
+
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		// Get pairs for this range
+		auto pairsRange = relation(r.begin(), r.end());
+
+		// Process each pair
+		for (const auto& [i, j] : pairsRange) {
+			dsu.unite(i, j);
+		}
+	}
+
+	void join(ParallelGroupByEquivalenceFromGenerator<Generator>& rhs) {
+		if (dsu.size() < rhs.dsu.size()) {
+			std::swap(dsu, rhs.dsu);
+		}
+		dsu += rhs.dsu;
+	}
+
+	UnionFind getResult() const { return dsu; }
+};
+
 
 // Helper class for building ClassMap from UnionFind using tbb::parallel_reduce
 class BuildClassMapFromUnionFind {
@@ -277,28 +318,8 @@ public:
 	slg::Classes getResult() && { return std::move(result); }
 };
 
-// Parallel helper function in anonymous namespace that uses
-// tbb::parallel_reduce
-slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
-	// Use parallel_reduce with ParallelGroupByEquivalence
-	static tbb::affinity_partitioner tbb_partitioner;
-
-	// Determine grain size based on relation size
-	const size_t relationSize = std::ranges::size(relation);
-	constexpr size_t grain = 1024;
-
-	ParallelGroupByEquivalence solver(
-		numElements, std::forward<decltype(relation)>(relation)
-	);
-
-	tbb::parallel_reduce(
-		tbb::blocked_range<size_t>(0, relationSize, grain),
-		solver,
-		tbb_partitioner
-	);
-
-	UnionFind uf = solver.getResult();
-
+// Helper function to build Classes from a UnionFind
+slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, size_t numElements) {
 	// Build class map from UnionFind using parallel_reduce with helper class
 	static tbb::affinity_partitioner tbb_class_partitioner;
 	constexpr size_t class_grain = 1024;
@@ -310,15 +331,14 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 		classMapBuilder,
 		tbb_class_partitioner
 	);
-	// Convert ClassMap to slg::Classes using parallel_reduce
+	// Convert ClassMap to Classes using parallel_reduce
 	const ClassMap& finalClassMap = classMapBuilder.getResult();
 
 	static tbb::affinity_partitioner tbb_convert_partitioner;
-	constexpr size_t convert_grain = 1024;
 
 	ConvertClassMapToClasses converter(finalClassMap);
 	tbb::parallel_reduce(
-		tbb::blocked_range<size_t>(0, finalClassMap.size(), convert_grain),
+		tbb::blocked_range<size_t>(0, finalClassMap.size(), class_grain),
 		converter,
 		tbb_convert_partitioner
 	);
@@ -326,18 +346,65 @@ slg::Classes GroupByEquivalenceImpl(size_t numElements, auto&& relation) {
 	return std::move(converter).getResult();
 }
 
-} // namespace
+}  // namespace
 
 namespace slg {
 
+// Version for callable generators: Range is a functor that takes an
+// interval [r1, r2) with r1 and r2 of size_t type and returns a range of
+// std::pair<size_t, size_t>
+template<typename Range>
+    requires std::invocable<Range, size_t, size_t> &&
+        std::ranges::range<std::invoke_result_t<Range, size_t, size_t>> &&
+        std::same_as<std::ranges::range_value_t<
+            std::invoke_result_t<Range, size_t, size_t>>,
+        std::pair<size_t, size_t>>
+Classes GroupByEquivalence(size_t numElements, Range&& relation) {
+	// Use parallel_reduce with
+	// ParallelGroupByEquivalenceFromGenerator
+	static tbb::affinity_partitioner tbb_partitioner;
+	constexpr size_t grain = 1024;
+
+	ParallelGroupByEquivalenceFromGenerator solver(numElements,
+		std::forward<Range>(relation));
+
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, numElements, grain),
+		solver,
+		tbb_partitioner
+	);
+
+	UnionFind uf = solver.getResult();
+	return BuildClassesFromUnionFind(uf, numElements);
+}
+
+// Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
+// std::vector) of std::pair<size_t, size_t>
 template<std::ranges::range Range>
     requires std::same_as<std::ranges::range_value_t<Range>,
         std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation) {
-	return GroupByEquivalenceImpl(numElements,
-		std::forward<Range>(relation));
+	// Use parallel_reduce with ParallelGroupByEquivalence
+	static tbb::affinity_partitioner tbb_partitioner;
+
+	// Determine grain size based on relation size
+	const size_t relationSize = std::ranges::size(relation);
+	constexpr size_t grain = 1024;
+
+	ParallelGroupByEquivalence solver(
+		numElements, std::forward<Range>(relation)
+	);
+
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, relationSize, grain),
+		solver,
+		tbb_partitioner
+	);
+
+	UnionFind uf = solver.getResult();
+	return BuildClassesFromUnionFind(uf, numElements);
 }
 
-} // namespace slg
+}  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
