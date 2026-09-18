@@ -405,6 +405,9 @@ Classes GroupByEquivalence(size_t numElements, Range&& relation) {
 	return BuildClassesFromUnionFind(uf, numElements);
 }
 
+// Explicit template instantiations for commonly used types
+template Classes GroupByEquivalence<std::span<std::pair<size_t, size_t>>>(size_t, std::span<std::pair<size_t, size_t>>);
+
 }  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
