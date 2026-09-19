@@ -477,6 +477,7 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/utils/group_by_equivalence.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/utils/meshutils.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
