@@ -21,10 +21,15 @@
 #include <vector>
 #include <utility>
 #include <ranges>
+#include <functional>
+#include <span>
 
 namespace slg {
 
 using Classes = std::vector<std::vector<size_t>>;
+using Relation = std::pair<size_t, size_t>;
+using RelationSpan = std::span<const Relation>;
+using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
 
 // GroupByEquivalence computes the quotient set (equivalence classes) from an
 // equivalence relation.
@@ -41,14 +46,13 @@ using Classes = std::vector<std::vector<size_t>>;
 //
 // Two overloads are provided:
 // 1. For callable generators: GroupByEquivalence(numElements, relation)
-//    where relation is a callable that takes an interval [r1, r2) with r1
-//    and r2 of size_t type and returns a range of std::pair<size_t, size_t>
+//    where relation is a RelationFunction (std::function<std::vector<Relation>
+//    (size_t, size_t)>) that takes an interval [r1, r2) and returns pairs
 // 2. For direct ranges: GroupByEquivalence(numElements, relation)
-//    where relation is a std::ranges::range (e.g. std::span, std::vector)
-//    of std::pair<size_t, size_t>
+//    where relation is a RelationSpan (std::span<const Relation>)
 //
 // Usage examples:
-//   // With a callable generator (functor)
+//   // With a callable generator (functor or lambda)
 //   auto relation = [&](size_t r1, size_t r2) {
 //       std::vector<std::pair<size_t, size_t>> pairs;
 //       for (size_t i = r1; i < r2; ++i) {
@@ -60,29 +64,18 @@ using Classes = std::vector<std::vector<size_t>>;
 //
 //   // With std::span
 //   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
-//   auto clusters = GroupByEquivalence(n, std::span(pairs));
+//   auto clusters = GroupByEquivalence(n, std::span<const Relation>(pairs));
 //
-//   // With std::vector
-//   auto clusters = GroupByEquivalence(n, pairs);
+//   // Note: std::vector<Relation> is implicitly convertible to RelationSpan
 
-// Version for callable generators: Range is a functor that takes an
-// interval [r1, r2) with r1 and r2 of size_t type and returns a range of
-// std::pair<size_t, size_t>
-template<typename Range>
-    requires std::invocable<Range, size_t, size_t> &&
-        std::ranges::range<std::invoke_result_t<Range, size_t, size_t>> &&
-        std::same_as<std::ranges::range_value_t<
-            std::invoke_result_t<Range, size_t, size_t>>,
-        std::pair<size_t, size_t>>
-Classes GroupByEquivalence(size_t numElements, Range&& relation);
+// Version for callable generators: relation is a functor that takes an
+// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
+// Relation. Functor is evaluated in multithreaded process, which may be more
+// efficient than statically compute it beforehand
+Classes GroupByEquivalence(size_t numElements, RelationFunction relation);
 
-// Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
-// std::vector) of std::pair<size_t, size_t>
-template<std::ranges::range Range>
-    requires std::same_as<std::ranges::range_value_t<Range>,
-        std::pair<size_t, size_t>>
-Classes GroupByEquivalence(size_t numElements, Range&& relation);
-
+// Version for direct ranges: relation is a span of Relation pairs
+Classes GroupByEquivalence(size_t numElements, RelationSpan relation);
 }  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

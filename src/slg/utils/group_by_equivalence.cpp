@@ -350,23 +350,16 @@ slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, size_t numElements) 
 
 namespace slg {
 
-// Version for callable generators: Range is a functor that takes an
-// interval [r1, r2) with r1 and r2 of size_t type and returns a range of
-// std::pair<size_t, size_t>
-template<typename Range>
-    requires std::invocable<Range, size_t, size_t> &&
-        std::ranges::range<std::invoke_result_t<Range, size_t, size_t>> &&
-        std::same_as<std::ranges::range_value_t<
-            std::invoke_result_t<Range, size_t, size_t>>,
-        std::pair<size_t, size_t>>
-Classes GroupByEquivalence(size_t numElements, Range&& relation) {
-	// Use parallel_reduce with
-	// ParallelGroupByEquivalenceFromGenerator
+// Version for callable generators: relation is a functor that takes an
+// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
+// Relation
+Classes GroupByEquivalence(size_t numElements, RelationFunction relation) {
+	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	static tbb::affinity_partitioner tbb_partitioner;
 	constexpr size_t grain = 1024;
 
-	ParallelGroupByEquivalenceFromGenerator solver(numElements,
-		std::forward<Range>(relation));
+	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
+		numElements, std::move(relation));
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, numElements, grain),
@@ -378,22 +371,17 @@ Classes GroupByEquivalence(size_t numElements, Range&& relation) {
 	return BuildClassesFromUnionFind(uf, numElements);
 }
 
-// Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
-// std::vector) of std::pair<size_t, size_t>
-template<std::ranges::range Range>
-    requires std::same_as<std::ranges::range_value_t<Range>,
-        std::pair<size_t, size_t>>
-Classes GroupByEquivalence(size_t numElements, Range&& relation) {
+// Version for direct ranges: relation is a span of Relation pairs
+Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
 	// Determine grain size based on relation size
-	const size_t relationSize = std::ranges::size(relation);
+	const size_t relationSize = relation.size();
 	constexpr size_t grain = 1024;
 
-	ParallelGroupByEquivalence solver(
-		numElements, std::forward<Range>(relation)
-	);
+	ParallelGroupByEquivalence<RelationSpan> solver(
+		numElements, std::move(relation));
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, relationSize, grain),
