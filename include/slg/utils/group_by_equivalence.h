@@ -25,7 +25,6 @@
 namespace slg {
 
 using Classes = std::vector<std::vector<size_t>>;
-using Relation = std::pair<size_t, size_t>;
 
 // GroupByEquivalence computes the quotient set (equivalence classes) from an
 // equivalence relation.
@@ -69,21 +68,19 @@ using Relation = std::pair<size_t, size_t>;
 // Version for callable generators: Range is a functor that takes an
 // interval [r1, r2) with r1 and r2 of size_t type and returns a range of
 // std::pair<size_t, size_t>
-//
-// Functor is evaluated in multithreaded process, this may be more efficient
-// than statically compute it beforehand
 template<typename Range>
     requires std::invocable<Range, size_t, size_t> &&
         std::ranges::range<std::invoke_result_t<Range, size_t, size_t>> &&
         std::same_as<std::ranges::range_value_t<
             std::invoke_result_t<Range, size_t, size_t>>,
-        Relation>
+        std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation);
 
 // Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
 // std::vector) of std::pair<size_t, size_t>
 template<std::ranges::range Range>
-    requires std::same_as<std::ranges::range_value_t<Range>, Relation>
+    requires std::same_as<std::ranges::range_value_t<Range>,
+        std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation);
 
 }  // namespace slg

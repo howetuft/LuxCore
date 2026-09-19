@@ -381,7 +381,8 @@ Classes GroupByEquivalence(size_t numElements, Range&& relation) {
 // Version for direct ranges: Range is a std::ranges::range (e.g. std::span,
 // std::vector) of std::pair<size_t, size_t>
 template<std::ranges::range Range>
-    requires std::same_as<std::ranges::range_value_t<Range>, Relation>
+    requires std::same_as<std::ranges::range_value_t<Range>,
+        std::pair<size_t, size_t>>
 Classes GroupByEquivalence(size_t numElements, Range&& relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
@@ -404,9 +405,6 @@ Classes GroupByEquivalence(size_t numElements, Range&& relation) {
 	return BuildClassesFromUnionFind(uf, numElements);
 }
 
-// Explicit template instantiations for commonly used types
-using RelationSpan = std::span<Relation>;
-template Classes GroupByEquivalence<>(size_t, RelationSpan&&);
 
 }  // namespace slg
 
