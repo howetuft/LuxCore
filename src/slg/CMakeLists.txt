@@ -430,6 +430,7 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/randomtriangleaovshape.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/shape.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/strands.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/slg.cpp
@@ -514,12 +515,6 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/renderstate.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
-
-# Add experimental SimplifyShape2 source files conditionally
-if(LUXCORE_ENABLE_SIMPLIFY2)
-    list(APPEND SLG_CORE_SRCS ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp)
-    SOURCE_GROUP("Source Files\\SLG Core Library\\Experimental" FILES ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp)
-endif()
 
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 

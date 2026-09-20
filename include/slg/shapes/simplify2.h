@@ -25,9 +25,6 @@
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 
-// Check if the experimental SimplifyShape2 is enabled
-#if LUXCORE_SIMPLIFY2_ENABLED
-
 namespace slg {
 
 // Simplify2 namespace for experimental mesh simplification
@@ -52,7 +49,6 @@ protected:
 
 } // namespace slg
 
-#endif // LUXCORE_SIMPLIFY2_ENABLED
 
 #endif	/* _SLG_SIMPLIFYSHAPE2_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

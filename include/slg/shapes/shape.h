@@ -48,11 +48,8 @@ public:
 		EDGEDETECTORAOV,
 		BEVEL,
 		CAMERAPROJUV,
-		MERGEONDISTANCE
-		// Experimental new version of simplify shape
-		#if LUXCORE_SIMPLIFY2_ENABLED
-		, SIMPLIFY2
-		#endif
+		MERGEONDISTANCE,
+		SIMPLIFY2
 	} ShapeType;
 
 	Shape() : refined(false) { }

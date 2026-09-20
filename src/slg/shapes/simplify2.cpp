@@ -20,7 +20,6 @@
 // Enable with LUXCORE_ENABLE_SIMPLIFY2 CMake option
 
 // Only compile this file if the feature is enabled
-#if LUXCORE_SIMPLIFY2_ENABLED
 
 #include <map>
 #include <vector>
@@ -34,13 +33,6 @@
 #include <robin_hood.h>
 
 #include <boost/format.hpp>
-
-// SIMD intrinsics
-#if defined(__SSE__)
-#include <xmmintrin.h>  // SSE
-#elif defined(__AVX__)
-#include <immintrin.h>  // AVX
-#endif
 
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
@@ -80,13 +72,7 @@ using namespace slg;
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
-// Check if SIMD is available
-#if defined(__SSE__) || defined(__AVX__) || defined(__ARM_NEON)
-    #define SIMPLIFY2_USE_SIMD 1
-#endif
-
-// SIMD-optimized SymetricMatrix for quadric error metrics
-// Uses SoA (Structure of Arrays) layout for better SIMD utilization
+// SymetricMatrix for quadric error metrics
 // The 4x4 symmetric matrix has 10 unique elements:
 // [0] = m11, [1] = m12, [2] = m13, [3] = m14,
 // [4] = m22, [5] = m23, [6] = m24,
@@ -96,42 +82,20 @@ using namespace slg;
 class SymetricMatrix2 {
 public:
 	// Storage: 10 unique elements of symmetric 4x4 matrix
-	// Layout optimized for cache locality and SIMD access
 	float m[10];
 
 	// Default constructor - initialize to zero
 	SymetricMatrix2() {
-		// Use memset for faster zero-initialization
-		#ifdef SIMPLIFY2_USE_SIMD
-			// Zero 3 x 4 = 12 floats (covers 10 elements)
-			__m128* ptr = reinterpret_cast<__m128*>(m);
-			ptr[0] = _mm_setzero_ps();
-			ptr[1] = _mm_setzero_ps();
-			// Zero remaining 2 floats
-			m[8] = 0.0f;
-			m[9] = 0.0f;
-		#else
-			for (u_int i = 0; i < 10; ++i) {
-				m[i] = 0.0f;
-			}
-		#endif
+		for (u_int i = 0; i < 10; ++i) {
+			m[i] = 0.0f;
+		}
 	}
 
 	// Constructor with scalar value
 	explicit SymetricMatrix2(const float c) {
-		#ifdef SIMPLIFY2_USE_SIMD
-			// Broadcast scalar to all 10 elements
-			const __m128 scalar = _mm_set1_ps(c);
-			__m128* ptr = reinterpret_cast<__m128*>(m);
-			ptr[0] = scalar;
-			ptr[1] = scalar;
-			m[8] = c;
-			m[9] = c;
-		#else
-			for (u_int i = 0; i < 10; ++i) {
-				m[i] = c;
-			}
-		#endif
+		for (u_int i = 0; i < 10; ++i) {
+			m[i] = c;
+		}
 	}
 
 	// Constructor with all 10 elements
@@ -195,59 +159,27 @@ public:
 		return det;
 	}
 
-	// SIMD-optimized addition
+	// Addition
 	const SymetricMatrix2 operator+(const SymetricMatrix2 &n) const {
-		#ifdef SIMPLIFY2_USE_SIMD
-			SymetricMatrix2 result;
-			// Process 4 elements at a time with SIMD
-			__m128* src1 = reinterpret_cast<const __m128*>(m);
-			__m128* src2 = reinterpret_cast<const __m128*>(n.m);
-			__m128* dst = reinterpret_cast<__m128*>(result.m);
-
-			// Process first 8 elements (2 x 4-vector SIMD)
-			dst[0] = _mm_add_ps(src1[0], src2[0]);
-			dst[1] = _mm_add_ps(src1[1], src2[1]);
-
-			// Process remaining 2 elements
-			result.m[8] = m[8] + n.m[8];
-			result.m[9] = m[9] + n.m[9];
-
-			return result;
-		#else
-			return SymetricMatrix2(
-				m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],
-				m[4] + n[4], m[5] + n[5], m[6] + n[6],
-				m[7] + n[7], m[8] + n[8],
-				m[9] + n[9]);
-		#endif
+		return SymetricMatrix2(
+			m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],
+			m[4] + n[4], m[5] + n[5], m[6] + n[6],
+			m[7] + n[7], m[8] + n[8],
+			m[9] + n[9]);
 	}
 
-	// SIMD-optimized in-place addition
+	// In-place addition
 	SymetricMatrix2& operator+=(const SymetricMatrix2& n) {
-		#ifdef SIMPLIFY2_USE_SIMD
-			// Process 4 elements at a time with SIMD
-			__m128* src = reinterpret_cast<const __m128*>(n.m);
-			__m128* dst = reinterpret_cast<__m128*>(m);
-
-			// Process first 8 elements (2 x 4-vector SIMD)
-			dst[0] = _mm_add_ps(dst[0], src[0]);
-			dst[1] = _mm_add_ps(dst[1], src[1]);
-
-			// Process remaining 2 elements
-			m[8] += n.m[8];
-			m[9] += n.m[9];
-		#else
-			m[0] += n[0];
-			m[1] += n[1];
-			m[2] += n[2];
-			m[3] += n[3];
-			m[4] += n[4];
-			m[5] += n[5];
-			m[6] += n[6];
-			m[7] += n[7];
-			m[8] += n[8];
-			m[9] += n[9];
-		#endif
+		m[0] += n[0];
+		m[1] += n[1];
+		m[2] += n[2];
+		m[3] += n[3];
+		m[4] += n[4];
+		m[5] += n[5];
+		m[6] += n[6];
+		m[7] += n[7];
+		m[8] += n[8];
+		m[9] += n[9];
 
 		return *this;
 	}
@@ -386,7 +318,7 @@ public:
 
 		// Work on N% of all triangles for each iteration (keep only N% lowest error candidates)
 		const float candidatePercent = 0.1f; // 10%
-		
+
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].deleted = false;
@@ -394,28 +326,116 @@ public:
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
-		
+
+		double stepStartTime = WallClockTime();
+
+		// Initialize quadrics, edge errors, vertex references and border flags
+		UpdateMesh(0);
+		SDL_LOG("Simplify2: Mesh initialized (quadrics, edge errors, references, border flags) in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+		stepStartTime = WallClockTime();
+
+		// Build the edge candidate list and keep only the N% lowest error candidates
+		std::vector<SimplifyRef2> allCandidates;
+		allCandidates.reserve(triangles.size());
+
+		// Lambda to compare SimplifyRef2 by error
+		auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
+			return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
+		};
+
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			const SimplifyTriangle2 &t = triangles[i];
+
+			// Look for the (valid) triangle vertex with the minimum error
+			u_int minErrorIndex = NULL_INDEX;
+			float minError = std::numeric_limits<float>::infinity();
+			for (u_int j = 0; j < 3; ++j) {
+				const u_int i0 = t.v[j];
+				SimplifyVertex2 &v0 = vertices[i0];
+
+				const u_int i1 = t.v[(j + 1) % 3];
+				SimplifyVertex2 &v1 = vertices[i1];
+
+				// Border check
+				if (preserveBorder) {
+					if (v0.border && v1.border)
+						continue;
+				} else {
+					if (v0.border != v1.border)
+						continue;
+				}
+
+				// Compute vertex to collapse to
+				Point p;
+				CalculateCollapseError(i0, i1, &p);
+
+				// Don't remove if flipped
+				if (Flipped(p, i0, i1, refs))
+					continue;
+				if (Flipped(p, i1, i0, refs))
+					continue;
+
+				if (t.err[j] < minError) {
+					minErrorIndex = j;
+					minError = t.err[j];
+				}
+			}
+
+			if (minErrorIndex == NULL_INDEX)
+				continue;
+
+			// Collect all valid candidates
+			allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
+		}  // for triangles
+		SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+		// Sort all candidates by error (ascending)
+		std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
+
+		// Keep only the N% lowest error candidates
+		const u_int totalCandidateCount = allCandidates.size();
+		const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
+		if (allCandidates.size() > nPercentCount) {
+			allCandidates.resize(nPercentCount);
+		}
+		SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
+			<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
+
+		// Copy to candidateList in reverse order (worst first) to match original behavior
+		candidateList = allCandidates;
+		std::reverse(candidateList.begin(), candidateList.end());
+
 		// Compute candidate neighbourhoods and closures for parallel processing
+		stepStartTime = WallClockTime();
 		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
 		candidateNeighbourhoods.reserve(allCandidates.size());
 		for (const auto& cand : allCandidates) {
 			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
 		}
 		std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
-		
+		SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
 		// Process closures in parallel using TBB parallel_reduce
+		stepStartTime = WallClockTime();
 		ProcessClosuresParallel(candidateClosures, allCandidates);
-		
-		SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel, deleted " 
-			<< deletedTriangles << "/" << startTriangleCount << " triangles");
-		
+		SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel, deleted "
+			<< deletedTriangles << "/" << startTriangleCount << " triangles in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
 		// Note: The parallel_reduce approach ensures that:
 		// - Each closure has its own copy of triangle deleted/dirty flags
 		// - States are merged with logical OR
 		// - Assertion verifies no triangle is deleted by multiple closures (indicates bug)
 
 		// Clean up mesh
+		stepStartTime = WallClockTime();
 		CompactMesh();
+		SDL_LOG("Simplify2: Mesh compacted in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 	}
 
 private:
@@ -443,6 +463,20 @@ private:
 		u_int tid, tvertex;
 	};
 
+	// Local working state for edge collapses.
+	//
+	// During the parallel processing of closures, each thread works on its own
+	// copy of the references list (starting from the global baseline) and its
+	// own deleted-triangles counter, so that CollapseEdge never mutates the
+	// shared state. The local refs (i.e. the appended tails and the vertices
+	// repointed into them) are merged back by the reduce step (join).
+	struct CollapseContext {
+		std::vector<SimplifyRef2> refs;
+		// Vertices whose tstart has been repointed into the appended region of refs
+		std::vector<u_int> repointedVertices;
+		u_int deletedCount;
+	};
+
 	std::vector<SimplifyTriangle2> triangles;
 	std::vector<SimplifyVertex2> vertices;
 	std::vector<SimplifyRef2> refs;
@@ -456,7 +490,7 @@ private:
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
-			std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
+			CollapseContext &ctx, std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
 		SimplifyTriangle2 &t = triangles[trinagleIndex];
 
 		if (t.deleted)
@@ -483,9 +517,9 @@ private:
 		deleted1.resize(v1.tcount);
 
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, &deleted0))
+		if (Flipped(p, i0, i1, ctx.refs, &deleted0))
 			return false;
-		if (Flipped(p, i1, i0, &deleted1))
+		if (Flipped(p, i1, i0, ctx.refs, &deleted1))
 			return false;
 
 		// Save original vertex information
@@ -542,28 +576,27 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
-		const u_int tstart = refs.size();
+		const u_int tstart = ctx.refs.size();
 
-		UpdateTriangles(i0, v0, deleted0);
-		UpdateTriangles(i0, v1, deleted1);
+		UpdateTriangles(i0, v0, deleted0, ctx);
+		UpdateTriangles(i0, v1, deleted1, ctx);
 
-		const u_int tcount = refs.size() - tstart;
+		const u_int tcount = ctx.refs.size() - tstart;
 
-		if (tcount <= v0.tcount) {
-			// Save ram
-			if (tcount)
-				std::copy(&refs[tstart], &refs[tstart] + tcount, &refs[v0.tstart]);
-		} else
-			// Append
-			v0.tstart = tstart;
-
+		// Append the new references to the local buffer and repoint the vertex.
+		// The final position of the appended region is decided when the local
+		// refs are merged back by the reduce step (join), which also fixes up
+		// the repointed vertices accordingly.
+		v0.tstart = tstart;
 		v0.tcount = tcount;
+		ctx.repointedVertices.push_back(i0);
 
 		return true;
 	}
 
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
+			const std::vector<SimplifyRef2> &refs,
 			std::vector<bool> *deleted = nullptr) const {
 		const SimplifyVertex2 &v0 = vertices[i0];
 
@@ -604,9 +637,9 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const u_int i0, const SimplifyVertex2 &v,
-			const std::vector<bool> &deleted) {
+			const std::vector<bool> &deleted, CollapseContext &ctx) {
 		for (u_int k = 0; k < v.tcount; ++k) {
-			const SimplifyRef2 &r = refs[v.tstart + k];
+			const SimplifyRef2 &r = ctx.refs[v.tstart + k];
 			SimplifyTriangle2 &t = triangles[r.tid];
 
 			if (t.deleted)
@@ -614,7 +647,7 @@ private:
 
 			if (deleted[k]) {
 				t.deleted = true;
-				deletedTriangles++;
+				ctx.deletedCount++;
 				continue;
 			}
 
@@ -622,7 +655,7 @@ private:
 			t.dirty = true;
 			UpdateTriangleError(t);
 
-			refs.push_back(r);
+			ctx.refs.push_back(r);
 		}
 	}
 
@@ -744,120 +777,20 @@ private:
 							vids.push_back(id);
 						} else
 							vcount[ofs]++;
-						}
 					}
-
-					for (u_int j = 0; j < vcount.size(); ++j) {
-						if (vcount[j] == 1)
-							vertices[vids[j]].border = true;
-					}
-				}			}
-		}
-
-		// Build the edge candidate list and keep only the N% lowest error candidates
-		std::vector<SimplifyRef2> allCandidates;
-		allCandidates.reserve(triangles.size());
-		
-		// Lambda to compare SimplifyRef2 by error
-		auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
-			return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
-		};
-		
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			const SimplifyTriangle2 &t = triangles[i];
-
-			// Look for the (valid) triangle vertex with the minimum error
-			u_int minErrorIndex = NULL_INDEX;
-			float minError = std::numeric_limits<float>::infinity();
-			for (u_int j = 0; j < 3; ++j) {
-				const u_int i0 = t.v[j];
-				SimplifyVertex2 &v0 = vertices[i0];
-
-				const u_int i1 = t.v[(j + 1) % 3];
-				SimplifyVertex2 &v1 = vertices[i1];
-
-				// Border check
-				if (preserveBorder) {
-					if (v0.border && v1.border)
-						continue;
-				} else {
-					if (v0.border != v1.border)
-						continue;
 				}
 
-				// Compute vertex to collapse to
-				Point p;
-				CalculateCollapseError(i0, i1, &p);
-
-				// Don't remove if flipped
-				if (Flipped(p, i0, i1))
-					continue;
-				if (Flipped(p, i1, i0))
-					continue;
-
-				if (t.err[j] < minError) {
-					minErrorIndex = j;
-					minError = t.err[j];
+				for (u_int j = 0; j < vcount.size(); ++j) {
+					if (vcount[j] == 1)
+						vertices[vids[j]].border = true;
 				}
 			}
-
-			if (minErrorIndex == NULL_INDEX)
-				continue;
-
-			// Collect all valid candidates
-			allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
-		}
-
-		// Sort all candidates by error (ascending)
-		std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
-		
-		// Keep only the N% lowest error candidates
-		const u_int nPercentCount = std::max(1u, Floor2UInt(allCandidates.size() * candidatePercent));
-		if (allCandidates.size() > nPercentCount) {
-			allCandidates.resize(nPercentCount);
-		}
-
-		// Copy to candidateList in reverse order (worst first) to match original behavior
-		candidateList = allCandidates;
-		std::reverse(candidateList.begin(), candidateList.end());
-
-			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
-				const SimplifyTriangle2 &t = triangles[candidateList[i].tid];
-
-				SDL_LOG("#" << i << " Min. error: " << fixed << setprecision(10) << t.err[candidateList[i].tvertex] << " (triangle " << candidateList[i].tid << ")");
-
-				const u_int i0 = t.v[candidateList[i].tvertex];
-				SimplifyVertex2 &v0 = vertices[i0];
-
-				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
-				SimplifyVertex2 &v1 = vertices[i1];
-
-				SDL_LOG("#" << i << " Collapse screen error scale: " << fixed << setprecision(10) <<  CalculateCollapseScreenErrorScale(v0.p, v1.p));
-				SDL_LOG("#" << i << " Triangle " << candidateList[i].tid << " border: " <<
-						vertices[t.v[candidateList[i].tvertex]].border << " " <<
-						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
-			}*/
-
-			/*ExtTriangleMeshBuilder meshBuilder;
-			for (u_int i = 0; i < candidateList.size(); ++i) {
-				const SimplifyTriangle2 &t = triangles[candidateList[i].tid];
-
-				const u_int index = meshBuilder.vertices.size();
-				meshBuilder.AddVertex(vertices[t.v[candidateList[i].tvertex]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 1) % 3]].p);
-				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 2) % 3]].p);
-
-				meshBuilder.AddTriangle(Triangle(index, index + 1, index +2));
-			}
-			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
-			debugMesh->Save("debug-candidates.ply");
-			delete debugMesh;*/
 		}
 
 		// Clear dirty flag
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
-	}
+	}  // UpdateMesh
 
 	// Finally compact mesh before exiting
 	void CompactMesh() {
@@ -1003,11 +936,11 @@ private:
 		const SimplifyTriangle2& t = triangles[candidate.tid];
 		const u_int v0_idx = t.v[candidate.tvertex];
 		const u_int v1_idx = t.v[(candidate.tvertex + 1) % 3];
-		
+
 		// The two vertices of the edge being collapsed are always in the neighbourhood
 		neighbourhood.insert(v0_idx);
 		neighbourhood.insert(v1_idx);
-		
+
 		// Add all vertices connected to v0
 		for (u_int k = 0; k < vertices[v0_idx].tcount; ++k) {
 			const SimplifyRef2& ref = refs[vertices[v0_idx].tstart + k];
@@ -1019,7 +952,7 @@ private:
 				}
 			}
 		}
-		
+
 		// Add all vertices connected to v1
 		for (u_int k = 0; k < vertices[v1_idx].tcount; ++k) {
 			const SimplifyRef2& ref = refs[vertices[v1_idx].tstart + k];
@@ -1031,18 +964,18 @@ private:
 				}
 			}
 		}
-		
+
 		return neighbourhood;
 	}
 
 	// Computes whether two candidates are neighbour-connected
 	// Two candidates are connected if their neighbourhoods overlap
-	bool AreCandidatesNeighbourConnected(const SimplifyRef2& c0, const SimplifyRef2& c1, 
-			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods, 
+	bool AreCandidatesNeighbourConnected(const SimplifyRef2& c0, const SimplifyRef2& c1,
+			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods,
 			u_int index0, u_int index1) const {
 		const auto& nh0 = candidateNeighbourhoods[index0];
 		const auto& nh1 = candidateNeighbourhoods[index1];
-		
+
 		// Check if any vertex in nh0 exists in nh1
 		// Use the smaller set for iteration to minimize lookups
 		if (nh0.size() < nh1.size()) {
@@ -1068,21 +1001,21 @@ private:
 		if (candidateCount == 0) {
 			return {};
 		}
-		
+
 		// Precompute neighbourhoods for all candidates
 		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
 		candidateNeighbourhoods.reserve(candidateCount);
 		for (const auto& cand : candidates) {
 			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
 		}
-		
+
 		// Union-Find (Disjoint Set Union) data structure
 		std::vector<u_int> parent(candidateCount);
 		std::vector<u_int> rank(candidateCount, 0);
 		for (u_int i = 0; i < candidateCount; ++i) {
 			parent[i] = i;
 		}
-		
+
 		// Find with path compression
 		std::function<u_int(u_int)> find = [&](u_int x) {
 			if (parent[x] != x) {
@@ -1090,7 +1023,7 @@ private:
 			}
 			return parent[x];
 		};
-		
+
 		// Union by rank
 		auto unite = [&](u_int x, u_int y) {
 			u_int rx = find(x);
@@ -1105,7 +1038,7 @@ private:
 				rank[rx]++;
 			}
 		};
-		
+
 		// Build connections between candidates
 		for (u_int i = 0; i < candidateCount; ++i) {
 			for (u_int j = i + 1; j < candidateCount; ++j) {
@@ -1114,19 +1047,19 @@ private:
 				}
 			}
 		}
-		
+
 		// Group candidates by their root parent
 		std::map<u_int, std::vector<u_int>> closureMap;
 		for (u_int i = 0; i < candidateCount; ++i) {
 			closureMap[find(i)].push_back(i);
 		}
-		
+
 		// Convert to vector of vectors
 		std::vector<std::vector<u_int>> closures;
 		for (const auto& [root, indices] : closureMap) {
 			closures.push_back(indices);
 		}
-		
+
 		return closures;
 	}
 
@@ -1134,62 +1067,94 @@ private:
 	// Each closure is processed independently with its own copy of triangle flags
 	// Flags are merged with logical OR in the join step
 	class ParallelClosureProcessor {
-		const Simplify2& simplify;
+		Simplify2& simplify;
 		const std::vector<std::vector<u_int>>& closures;
 		const std::vector<SimplifyRef2>& allCandidates;
-		
+
 		// Local state for each thread
 		std::vector<bool> deleted;
 		std::vector<bool> dirty;
-		u_int deletedCount;
-		
+
+		// Local refs (and related collapse state) - merged back by the reduce step
+		CollapseContext ctx;
+
 	public:
 		// Constructor for master thread
-		ParallelClosureProcessor(const Simplify2& s, 
-				const std::vector<std::vector<u_int>>& c, 
+		ParallelClosureProcessor(Simplify2& s,
+				const std::vector<std::vector<u_int>>& c,
 				const std::vector<SimplifyRef2>& a)
 			: simplify(s), closures(c), allCandidates(a),
-			  deleted(s.triangles.size()), dirty(s.triangles.size()), deletedCount(0) {
+			  deleted(s.triangles.size()), dirty(s.triangles.size()) {
 			// Initialize from global state
 			for (size_t i = 0; i < deleted.size(); ++i) {
 				deleted[i] = s.triangles[i].deleted;
 				dirty[i] = s.triangles[i].dirty;
 			}
-			deletedCount = s.deletedTriangles;
+			// Start from a local copy of the global baseline: the appends
+			// performed by CollapseEdge stay thread-local until the merge
+			ctx.refs = s.refs;
+			ctx.deletedCount = s.deletedTriangles;
 		}
-		
-		// Split constructor for TBB
+
+		// Split constructor for TBB: restart from the global baseline (which is
+		// never modified during the parallel processing)
 		ParallelClosureProcessor(ParallelClosureProcessor& other, tbb::split)
 			: simplify(other.simplify), closures(other.closures), allCandidates(other.allCandidates),
-			  deleted(other.deleted.size(), false), dirty(other.dirty.size(), false), deletedCount(0) {}
-		
+			  deleted(other.deleted.size(), false), dirty(other.dirty.size(), false) {
+			ctx.refs = simplify.refs;
+			ctx.deletedCount = 0;
+		}
+
 		// Process a range of closures
 		void operator()(const tbb::blocked_range<size_t>& r) {
 			for (size_t i = r.begin(); i < r.end(); ++i) {
 				ProcessClosure(closures[i]);
 			}
 		}
-		
-		// Join: merge with logical OR and check for conflicts
+
+		// Join (reduce step): merge the sibling's local state into this one
 		void join(ParallelClosureProcessor& other) {
 			assert(deleted.size() == other.deleted.size());
 			assert(dirty.size() == other.dirty.size());
-			
+
+			// Merge the refs append-tails: my tail first, then the sibling's.
+			// The global baseline (simplify.refs) is never modified during the
+			// parallel processing, so both local refs share the same base and
+			// the sibling's appended tail starts at the same offset.
+			const size_t baseSize = simplify.refs.size();
+			const size_t myTailSize = ctx.refs.size() - baseSize;
+
+			// Fix up the vertices repointed by the sibling: their tstart must
+			// be shifted past my tail to match the merged refs layout
+			for (const u_int v : other.ctx.repointedVertices)
+				simplify.vertices[v].tstart += myTailSize;
+
+			// Append the sibling's tail to my local refs
+			ctx.refs.insert(ctx.refs.end(),
+					other.ctx.refs.begin() + baseSize, other.ctx.refs.end());
+
+			// Merge the repointed vertices lists
+			std::copy(other.ctx.repointedVertices.begin(), other.ctx.repointedVertices.end(),
+					std::back_inserter(ctx.repointedVertices));
+
 			for (size_t i = 0; i < deleted.size(); ++i) {
-				// Use logical OR
-				deleted[i] = deleted[i] || other.deleted[i];
-				dirty[i] = dirty[i] || other.dirty[i];
-				
-				// Assertion: A triangle cannot be deleted in two different closure processes
+				// Assertion: A candidate triangle cannot be deleted in two
+				// different closure processes (checked before the merge,
+				// otherwise the OR below would make the condition trivially
+				// true whenever the sibling has the flag set)
 				if (deleted[i] && other.deleted[i]) {
 					SDL_LOG("ERROR: Triangle " << i << " was deleted in multiple closures!");
 					SDL_LOG("  This indicates a bug in closure computation - neighbourhoods overlap.");
 					assert(false && "Triangle deleted in multiple closures - neighbourhoods overlap!");
 				}
+
+				// Use logical OR
+				deleted[i] = deleted[i] || other.deleted[i];
+				dirty[i] = dirty[i] || other.dirty[i];
 			}
-			deletedCount += other.deletedCount;
+			ctx.deletedCount += other.ctx.deletedCount;
 		}
-		
+
 		// Apply the final state to the global triangles
 		void applyResult() {
 			for (size_t i = 0; i < deleted.size(); ++i) {
@@ -1200,54 +1165,36 @@ private:
 					simplify.triangles[i].dirty = true;
 				}
 			}
-			simplify.deletedTriangles = deletedCount;
+
+			// Merge back the refs (global baseline + all appended tails).
+			// The vertices repointed during the processing are already
+			// consistent with this layout (fixed up by the join step).
+			simplify.refs = std::move(ctx.refs);
+			simplify.deletedTriangles = ctx.deletedCount;
 		}
-		
+
 	private:
 		// Process a single closure
 		void ProcessClosure(const std::vector<u_int>& closureIndices) {
 			std::vector<bool> deleted0, deleted1;
-			
+
 			// Process each candidate in the closure in order
 			for (u_int idx : closureIndices) {
 				const SimplifyRef2& candidate = allCandidates[idx];
-				
+
 				// Skip if triangle was already deleted in this thread's state
 				if (deleted[candidate.tid]) {
 					continue;
 				}
-				
+
 				// Try to collapse this edge
-				bool success = simplify.CollapseEdge(candidate.tid, candidate.tvertex, deleted0, deleted1);
-				
+				bool success = simplify.CollapseEdge(candidate.tid, candidate.tvertex, ctx, deleted0, deleted1);
+
 				if (success) {
-					// Mark the triangle as deleted in our local state
+					// Mark the collapsed triangle as deleted in our local state.
+					// (It is counted as deleted by UpdateTriangles via
+					// ctx.deletedCount.)
 					deleted[candidate.tid] = true;
-					deletedCount++;
-					
-					// Mark triangles in deleted0 and deleted1 as deleted
-					// deleted0 and deleted1 use the vertex's triangle reference indices
-					const SimplifyVertex2& v0 = simplify.vertices[candidate.tid];
-					for (size_t k = 0; k < deleted0.size(); ++k) {
-						if (deleted0[k]) {
-							const SimplifyRef2& ref = simplify.refs[v0.tstart + k];
-							deleted[ref.tid] = true;
-							deletedCount++;
-						}
-					}
-					
-					const u_int v1_idx = simplify.triangles[candidate.tid].v[(candidate.tvertex + 1) % 3];
-					const SimplifyVertex2& v1 = simplify.vertices[v1_idx];
-					for (size_t k = 0; k < deleted1.size(); ++k) {
-						if (deleted1[k]) {
-							const SimplifyRef2& ref = simplify.refs[v1.tstart + k];
-							deleted[ref.tid] = true;
-							deletedCount++;
-						}
-					}
-					
-					deleted0.clear();
-					deleted1.clear();
 				}
 			}
 		}
@@ -1259,19 +1206,26 @@ private:
 		if (closures.empty()) {
 			return;
 		}
-		
-		// Use parallel_reduce to process closures in parallel
-		// Each closure is processed independently with its own copy of triangle flags
+
+		// Use parallel_reduce to process closures in parallel.
+		//
+		// The closures have disjoint neighbourhoods so the updates of triangles
+		// and vertices performed by CollapseEdge are race-free, while the refs
+		// appends are thread-local (CollapseContext) and merged by the reduce
+		// step (join).
 		ParallelClosureProcessor processor(*this, closures, allCandidates);
-		
+
 		// Grain size: process at least 1 closure per thread
 		const size_t grain_size = std::max<size_t>(1, closures.size() / tbb::this_task_arena::max_concurrency());
-		
+
+		SDL_LOG("Simplify2: Processing " << closures.size() << " closures on "
+			<< tbb::this_task_arena::max_concurrency() << " threads (grain size " << grain_size << ")");
+
 		tbb::parallel_reduce(
 			tbb::blocked_range<size_t>(0, closures.size(), grain_size),
 			processor
 		);
-		
+
 		// Apply the final merged state to global triangles
 		processor.applyResult();
 	}
@@ -1296,9 +1250,9 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 	SDL_LOG("SimplifyShape2: Creating simplified shape " << srcMesh.GetName() << " with target " << target);
 
 	if ((edgeScreenSize > 0.f) && !camera)
-		throw runtime_error("The scene.GetCamera() must be defined in order to enable simplify edgescreensize option");
+		throw std::runtime_error("The scene.GetCamera() must be defined in order to enable simplify edgescreensize option");
 
-	const float startTime = WallClockTime();
+	const double startTime = WallClockTime();
 
 	const u_int targetCount = std::max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
@@ -1308,7 +1262,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	SDL_LOG("SimplifyShape2: Simplified shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 
-	const float endTime = WallClockTime();
+	const double endTime = WallClockTime();
 	SDL_LOG("SimplifyShape2 time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
@@ -1326,7 +1280,5 @@ bool IsSimplify2Enabled() {
 }
 
 } // namespace slg
-
-#endif // LUXCORE_SIMPLIFY2_ENABLED
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

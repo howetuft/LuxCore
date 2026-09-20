@@ -33,9 +33,7 @@
 #include "slg/shapes/islandaovshape.h"
 
 // Include experimental SimplifyShape2 if enabled
-#if LUXCORE_SIMPLIFY2_ENABLED
 #include "slg/shapes/simplify2.h"
-#endif
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
 #include "slg/shapes/bevelshape.h"
@@ -456,7 +454,6 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 
 	} else if (shapeType == "simplify2") {
 		// Experimental SimplifyShape2 - only available when LUXCORE_ENABLE_SIMPLIFY2 is enabled
-		#if LUXCORE_SIMPLIFY2_ENABLED
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
@@ -484,9 +481,6 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			edgeScreenSize,
 			preserveBorder
 		);
-		#else
-		throw runtime_error("SimplifyShape2 is not available. Please enable LUXCORE_ENABLE_SIMPLIFY2 CMake option.");
-		#endif
 
 	} else if (shapeType == "islandaov") {
 
