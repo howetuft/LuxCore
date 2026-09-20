@@ -28,6 +28,10 @@
 #include <limits>
 #include <algorithm>
 #include <cstring> // for memset
+#include <functional>
+
+#include <oneapi/tbb.h>
+#include <robin_hood.h>
 
 #include <boost/format.hpp>
 
@@ -390,25 +394,25 @@ public:
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
-		std::vector<bool> deleted0, deleted1;
-		for (u_int iteration = 0; iteration < 64; ++iteration) {
-			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
-				break;
-
-			const u_int initialdeletedTriangles = deletedTriangles;
-
-			// Update mesh constantly
-			UpdateMesh(iteration);
-
-			// Remove vertices & mark deleted triangles
-			for (u_int i = 0; i < candidateList.size(); ++i)
-				CollapseEdge(candidateList[i].tid, candidateList[i].tvertex, deleted0, deleted1);
-
-			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
-			SDL_LOG("Simplify2 iteration " << iteration << " (" << candidateList.size() << " edge candidates, deleted " << iterationDeletedTriangles << "/" << deletedTriangles << " of " << startTriangleCount << " triangles)");
-			if (iterationDeletedTriangles == 0)
-				break;
+		
+		// Compute candidate neighbourhoods and closures for parallel processing
+		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
+		candidateNeighbourhoods.reserve(allCandidates.size());
+		for (const auto& cand : allCandidates) {
+			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
 		}
+		std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
+		
+		// Process closures in parallel using TBB parallel_reduce
+		ProcessClosuresParallel(candidateClosures, allCandidates);
+		
+		SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel, deleted " 
+			<< deletedTriangles << "/" << startTriangleCount << " triangles");
+		
+		// Note: The parallel_reduce approach ensures that:
+		// - Each closure has its own copy of triangle deleted/dirty flags
+		// - States are merged with logical OR
+		// - Assertion verifies no triangle is deleted by multiple closures (indicates bug)
 
 		// Clean up mesh
 		CompactMesh();
@@ -990,6 +994,288 @@ private:
 		t.err[2] = CalculateCollapseError(t.v[2], t.v[0]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[2]].p, vertices[t.v[0]].p);
 	}
+
+	// Computes the neighbourhood of a candidate edge collapse
+	// The neighbourhood includes all vertices that would be impacted by collapsing
+	// the edge (v0, v1) in triangle tid
+	robin_hood::unordered_set<u_int> ComputeCandidateNeighbourhood(const SimplifyRef2& candidate) const {
+		robin_hood::unordered_set<u_int> neighbourhood;
+		const SimplifyTriangle2& t = triangles[candidate.tid];
+		const u_int v0_idx = t.v[candidate.tvertex];
+		const u_int v1_idx = t.v[(candidate.tvertex + 1) % 3];
+		
+		// The two vertices of the edge being collapsed are always in the neighbourhood
+		neighbourhood.insert(v0_idx);
+		neighbourhood.insert(v1_idx);
+		
+		// Add all vertices connected to v0
+		for (u_int k = 0; k < vertices[v0_idx].tcount; ++k) {
+			const SimplifyRef2& ref = refs[vertices[v0_idx].tstart + k];
+			const SimplifyTriangle2& tri = triangles[ref.tid];
+			for (u_int j = 0; j < 3; ++j) {
+				u_int vid = tri.v[j];
+				if (vid != v0_idx && vid != v1_idx) {
+					neighbourhood.insert(vid);
+				}
+			}
+		}
+		
+		// Add all vertices connected to v1
+		for (u_int k = 0; k < vertices[v1_idx].tcount; ++k) {
+			const SimplifyRef2& ref = refs[vertices[v1_idx].tstart + k];
+			const SimplifyTriangle2& tri = triangles[ref.tid];
+			for (u_int j = 0; j < 3; ++j) {
+				u_int vid = tri.v[j];
+				if (vid != v0_idx && vid != v1_idx) {
+					neighbourhood.insert(vid);
+				}
+			}
+		}
+		
+		return neighbourhood;
+	}
+
+	// Computes whether two candidates are neighbour-connected
+	// Two candidates are connected if their neighbourhoods overlap
+	bool AreCandidatesNeighbourConnected(const SimplifyRef2& c0, const SimplifyRef2& c1, 
+			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods, 
+			u_int index0, u_int index1) const {
+		const auto& nh0 = candidateNeighbourhoods[index0];
+		const auto& nh1 = candidateNeighbourhoods[index1];
+		
+		// Check if any vertex in nh0 exists in nh1
+		// Use the smaller set for iteration to minimize lookups
+		if (nh0.size() < nh1.size()) {
+			for (u_int v : nh0) {
+				if (nh1.contains(v)) {
+					return true;
+				}
+			}
+		} else {
+			for (u_int v : nh1) {
+				if (nh0.contains(v)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// Computes candidate closures (connected components in the neighbour graph)
+	// Uses union-find (disjoint set) to group connected candidates
+	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates) {
+		const u_int candidateCount = candidates.size();
+		if (candidateCount == 0) {
+			return {};
+		}
+		
+		// Precompute neighbourhoods for all candidates
+		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
+		candidateNeighbourhoods.reserve(candidateCount);
+		for (const auto& cand : candidates) {
+			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
+		}
+		
+		// Union-Find (Disjoint Set Union) data structure
+		std::vector<u_int> parent(candidateCount);
+		std::vector<u_int> rank(candidateCount, 0);
+		for (u_int i = 0; i < candidateCount; ++i) {
+			parent[i] = i;
+		}
+		
+		// Find with path compression
+		std::function<u_int(u_int)> find = [&](u_int x) {
+			if (parent[x] != x) {
+				parent[x] = find(parent[x]);
+			}
+			return parent[x];
+		};
+		
+		// Union by rank
+		auto unite = [&](u_int x, u_int y) {
+			u_int rx = find(x);
+			u_int ry = find(y);
+			if (rx == ry) return;
+			if (rank[rx] < rank[ry]) {
+				parent[rx] = ry;
+			} else if (rank[rx] > rank[ry]) {
+				parent[ry] = rx;
+			} else {
+				parent[ry] = rx;
+				rank[rx]++;
+			}
+		};
+		
+		// Build connections between candidates
+		for (u_int i = 0; i < candidateCount; ++i) {
+			for (u_int j = i + 1; j < candidateCount; ++j) {
+				if (AreCandidatesNeighbourConnected(candidates[i], candidates[j], candidateNeighbourhoods, i, j)) {
+					unite(i, j);
+				}
+			}
+		}
+		
+		// Group candidates by their root parent
+		std::map<u_int, std::vector<u_int>> closureMap;
+		for (u_int i = 0; i < candidateCount; ++i) {
+			closureMap[find(i)].push_back(i);
+		}
+		
+		// Convert to vector of vectors
+		std::vector<std::vector<u_int>> closures;
+		for (const auto& [root, indices] : closureMap) {
+			closures.push_back(indices);
+		}
+		
+		return closures;
+	}
+
+	// Class for processing closures in parallel using TBB parallel_reduce
+	// Each closure is processed independently with its own copy of triangle flags
+	// Flags are merged with logical OR in the join step
+	class ParallelClosureProcessor {
+		const Simplify2& simplify;
+		const std::vector<std::vector<u_int>>& closures;
+		const std::vector<SimplifyRef2>& allCandidates;
+		
+		// Local state for each thread
+		std::vector<bool> deleted;
+		std::vector<bool> dirty;
+		u_int deletedCount;
+		
+	public:
+		// Constructor for master thread
+		ParallelClosureProcessor(const Simplify2& s, 
+				const std::vector<std::vector<u_int>>& c, 
+				const std::vector<SimplifyRef2>& a)
+			: simplify(s), closures(c), allCandidates(a),
+			  deleted(s.triangles.size()), dirty(s.triangles.size()), deletedCount(0) {
+			// Initialize from global state
+			for (size_t i = 0; i < deleted.size(); ++i) {
+				deleted[i] = s.triangles[i].deleted;
+				dirty[i] = s.triangles[i].dirty;
+			}
+			deletedCount = s.deletedTriangles;
+		}
+		
+		// Split constructor for TBB
+		ParallelClosureProcessor(ParallelClosureProcessor& other, tbb::split)
+			: simplify(other.simplify), closures(other.closures), allCandidates(other.allCandidates),
+			  deleted(other.deleted.size(), false), dirty(other.dirty.size(), false), deletedCount(0) {}
+		
+		// Process a range of closures
+		void operator()(const tbb::blocked_range<size_t>& r) {
+			for (size_t i = r.begin(); i < r.end(); ++i) {
+				ProcessClosure(closures[i]);
+			}
+		}
+		
+		// Join: merge with logical OR and check for conflicts
+		void join(ParallelClosureProcessor& other) {
+			assert(deleted.size() == other.deleted.size());
+			assert(dirty.size() == other.dirty.size());
+			
+			for (size_t i = 0; i < deleted.size(); ++i) {
+				// Use logical OR
+				deleted[i] = deleted[i] || other.deleted[i];
+				dirty[i] = dirty[i] || other.dirty[i];
+				
+				// Assertion: A triangle cannot be deleted in two different closure processes
+				if (deleted[i] && other.deleted[i]) {
+					SDL_LOG("ERROR: Triangle " << i << " was deleted in multiple closures!");
+					SDL_LOG("  This indicates a bug in closure computation - neighbourhoods overlap.");
+					assert(false && "Triangle deleted in multiple closures - neighbourhoods overlap!");
+				}
+			}
+			deletedCount += other.deletedCount;
+		}
+		
+		// Apply the final state to the global triangles
+		void applyResult() {
+			for (size_t i = 0; i < deleted.size(); ++i) {
+				if (deleted[i]) {
+					simplify.triangles[i].deleted = true;
+				}
+				if (dirty[i]) {
+					simplify.triangles[i].dirty = true;
+				}
+			}
+			simplify.deletedTriangles = deletedCount;
+		}
+		
+	private:
+		// Process a single closure
+		void ProcessClosure(const std::vector<u_int>& closureIndices) {
+			std::vector<bool> deleted0, deleted1;
+			
+			// Process each candidate in the closure in order
+			for (u_int idx : closureIndices) {
+				const SimplifyRef2& candidate = allCandidates[idx];
+				
+				// Skip if triangle was already deleted in this thread's state
+				if (deleted[candidate.tid]) {
+					continue;
+				}
+				
+				// Try to collapse this edge
+				bool success = simplify.CollapseEdge(candidate.tid, candidate.tvertex, deleted0, deleted1);
+				
+				if (success) {
+					// Mark the triangle as deleted in our local state
+					deleted[candidate.tid] = true;
+					deletedCount++;
+					
+					// Mark triangles in deleted0 and deleted1 as deleted
+					// deleted0 and deleted1 use the vertex's triangle reference indices
+					const SimplifyVertex2& v0 = simplify.vertices[candidate.tid];
+					for (size_t k = 0; k < deleted0.size(); ++k) {
+						if (deleted0[k]) {
+							const SimplifyRef2& ref = simplify.refs[v0.tstart + k];
+							deleted[ref.tid] = true;
+							deletedCount++;
+						}
+					}
+					
+					const u_int v1_idx = simplify.triangles[candidate.tid].v[(candidate.tvertex + 1) % 3];
+					const SimplifyVertex2& v1 = simplify.vertices[v1_idx];
+					for (size_t k = 0; k < deleted1.size(); ++k) {
+						if (deleted1[k]) {
+							const SimplifyRef2& ref = simplify.refs[v1.tstart + k];
+							deleted[ref.tid] = true;
+							deletedCount++;
+						}
+					}
+					
+					deleted0.clear();
+					deleted1.clear();
+				}
+			}
+		}
+	};
+
+	// Process all closures using TBB parallel_reduce
+	void ProcessClosuresParallel(const std::vector<std::vector<u_int>>& closures,
+			const std::vector<SimplifyRef2>& allCandidates) {
+		if (closures.empty()) {
+			return;
+		}
+		
+		// Use parallel_reduce to process closures in parallel
+		// Each closure is processed independently with its own copy of triangle flags
+		ParallelClosureProcessor processor(*this, closures, allCandidates);
+		
+		// Grain size: process at least 1 closure per thread
+		const size_t grain_size = std::max<size_t>(1, closures.size() / tbb::this_task_arena::max_concurrency());
+		
+		tbb::parallel_reduce(
+			tbb::blocked_range<size_t>(0, closures.size(), grain_size),
+			processor
+		);
+		
+		// Apply the final merged state to global triangles
+		processor.applyResult();
+	}
+
 };
 
 } // namespace simplify2
