@@ -42,6 +42,7 @@
 #include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
+#include "slg/utils/group_by_equivalence.h"
 #include "slg/cameras/camera.h"
 
 using namespace luxrays;
@@ -1063,7 +1064,9 @@ private:
 	// Two candidates are connected if their neighbourhoods share a vertex.
 	// Instead of testing all the O(n^2) candidate pairs, a vertex -> candidates
 	// reverse index is built: all the candidates in the same bucket share a
-	// vertex, i.e. they are all neighbour-connected and can be unioned directly.
+	// vertex, i.e. they are all neighbour-connected, so the (chained) buckets
+	// define the equivalence relation given to GroupByEquivalence (which
+	// relies on a parallel Union-Find).
 	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates,
 			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods) {
 		const u_int candidateCount = candidates.size();
@@ -1071,41 +1074,9 @@ private:
 			return {};
 		}
 
-		// Union-Find (Disjoint Set Union) data structure
-		std::vector<u_int> parent(candidateCount);
-		std::vector<u_int> rank(candidateCount, 0);
-		for (u_int i = 0; i < candidateCount; ++i) {
-			parent[i] = i;
-		}
-
-		// Find with path compression (iterative, path halving)
-		auto find = [&](u_int x) {
-			while (parent[x] != x) {
-				parent[x] = parent[parent[x]];
-				x = parent[x];
-			}
-			return x;
-		};
-
-		// Union by rank
-		auto unite = [&](u_int x, u_int y) {
-			u_int rx = find(x);
-			u_int ry = find(y);
-			if (rx == ry)
-				return;
-			if (rank[rx] < rank[ry]) {
-				parent[rx] = ry;
-			} else if (rank[rx] > rank[ry]) {
-				parent[ry] = rx;
-			} else {
-				parent[ry] = rx;
-				rank[rx]++;
-			}
-		};
-
 		// Build the vertex -> candidates reverse index as a CSR structure
-		// (bucket count, prefix sum, bucket fill on flat arrays) instead of a
-		// hash map of buckets: no hashing and no per bucket allocation.
+		// (bucket count, prefix sum, bucket fill on flat arrays): no hashing
+		// and no per bucket allocation.
 		// (Kept serial: the count/fill updates of a vertex would be shared by
 		// all the candidates reading it, so the parallel version would need
 		// contended atomics.)
@@ -1130,25 +1101,40 @@ private:
 			}
 		}
 
-		// Union all the candidates sharing a vertex (all the candidates in a
-		// bucket are neighbour-connected by definition)
+		// Build the equivalence relation: all the candidates in a bucket are
+		// neighbour-connected (chaining each bucket is enough to express it)
+		std::vector<Relation> relations;
+		relations.reserve(bucketEntries.size());
 		for (u_int v = 0; v < vertexCount; ++v) {
 			for (u_int k = bucketStart[v] + 1; k < bucketStart[v + 1]; ++k) {
-				unite(bucketEntries[k - 1], bucketEntries[k]);
+				relations.push_back(Relation(bucketEntries[k - 1], bucketEntries[k]));
 			}
 		}
 
-		// Group candidates by their root parent
-		robin_hood::unordered_map<u_int, std::vector<u_int>> closureMap;
-		for (u_int i = 0; i < candidateCount; ++i) {
-			closureMap[find(i)].push_back(i);
+		if (relations.empty()) {
+			// No connections at all: each candidate is its own closure
+			std::vector<std::vector<u_int>> closures;
+			closures.reserve(candidateCount);
+			for (u_int i = 0; i < candidateCount; ++i)
+				closures.push_back(std::vector<u_int>{i});
+
+			return closures;
 		}
 
-		// Convert to vector of vectors
+		// Group the connected candidates with the parallel Union-Find
+		const Classes classes = GroupByEquivalence(candidateCount, RelationSpan(relations));
+
+		// Convert the classes to closures. The order inside a class is not
+		// significant for GroupByEquivalence: restore the ascending candidate
+		// order (ascending error), i.e. the greedy processing order of the
+		// collapses.
 		std::vector<std::vector<u_int>> closures;
-		closures.reserve(closureMap.size());
-		for (auto& [root, indices] : closureMap) {
-			closures.push_back(std::move(indices));
+		closures.reserve(classes.size());
+		for (const auto& indices : classes) {
+			std::vector<u_int> closure(indices.begin(), indices.end());
+			std::sort(closure.begin(), closure.end());
+
+			closures.push_back(std::move(closure));
 		}
 
 		return closures;
