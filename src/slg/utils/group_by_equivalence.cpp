@@ -103,13 +103,15 @@ public:
 		return parent.size();
 	}
 
-	// Find without compression
+	// Find without compression (walk the chain up to the root: the trees
+	// are not flattened after the merges, so a single hop is not enough)
 	size_t find_readonly(const size_t i) const {
-		auto res = parent.find(i);
-        if (res != parent.end()) {
-			return res->second;
-		} else {
-			return i;
+		size_t x = i;
+		for (;;) {
+			const auto res = parent.find(x);
+			if (res == parent.end() || res->second == x)
+				return x;
+			x = res->second;
 		}
 	}
 
