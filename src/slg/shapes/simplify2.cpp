@@ -323,6 +323,13 @@ public:
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].deleted = false;
 
+		// Init the screen projection cache (used by UpdateTriangleError when
+		// edgeScreenSize > 0)
+		vertexScreenX.assign(vertices.size(), 0.f);
+		vertexScreenY.assign(vertices.size(), 0.f);
+		vertexScreenValid.assign(vertices.size(), false);
+		vertexScreenVisible.assign(vertices.size(), false);
+
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
@@ -522,6 +529,17 @@ private:
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
+	// Cached screen space projections of the vertices (normalized
+	// coordinates), lazily computed and invalidated when a vertex moves.
+	// Only used when edgeScreenSize > 0.
+	//
+	// Race-free during the parallel processing: the entries touched by a
+	// closure are all in its neighbourhood, like the other vertex data.
+	std::vector<float> vertexScreenX;
+	std::vector<float> vertexScreenY;
+	std::vector<bool> vertexScreenValid;    // the projection has been computed
+	std::vector<bool> vertexScreenVisible;  // and the vertex is visible
+
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
 			CollapseContext &ctx, std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
 		SimplifyTriangle2 &t = triangles[trinagleIndex];
@@ -578,6 +596,8 @@ private:
 
 		// Not flipped, so remove edge
 		v0.p = p;
+		// The vertex moved: invalidate its cached screen projection
+		vertexScreenValid[i0] = false;
 		v0.q = v1.q + v0.q;
 
 		// Interpolate other vertex attributes
@@ -919,46 +939,67 @@ private:
 		return std::max(error + 1.f, 0.f);
 	}
 
-	float CalculateCollapseScreenErrorScale(const Point &v0, const Point &v1) const {
+	// Get the screen space projection (normalized coordinates) of a vertex,
+	// with lazy caching. Returns false if the vertex is not visible (the
+	// result is cached anyway: the camera projection is expensive).
+	bool GetScreenPosition(const u_int vertexIndex, float * const x, float * const y) {
+		if (vertexScreenValid[vertexIndex]) {
+			*x = vertexScreenX[vertexIndex];
+			*y = vertexScreenY[vertexIndex];
+			return vertexScreenVisible[vertexIndex];
+		}
+
+		float px, py;
+		const bool visible = camera->GetSamplePosition(vertices[vertexIndex].p, &px, &py) &&
+				IsValid(px) && IsValid(py);
+
+		if (visible) {
+			// Normalize
+			px /= camera->filmWidth;
+			py /= camera->filmHeight;
+		}
+
+		vertexScreenX[vertexIndex] = px;
+		vertexScreenY[vertexIndex] = py;
+		vertexScreenValid[vertexIndex] = true;
+		vertexScreenVisible[vertexIndex] = visible;
+
+		*x = px;
+		*y = py;
+		return visible;
+	}
+
+	// Update the collapse errors of a triangle: quadric error scaled by the
+	// screen error scale (one cached camera projection per vertex instead
+	// of two per edge)
+	void UpdateTriangleError(SimplifyTriangle2 &t) {
+		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]);
+		t.err[1] = CalculateCollapseError(t.v[1], t.v[2]);
+		t.err[2] = CalculateCollapseError(t.v[2], t.v[0]);
+
 		if (edgeScreenSize > 0.f) {
 			const float notVisibleScale = .5f;
 
-			float v0x, v0y;
-			if (!camera->GetSamplePosition(v0, &v0x, &v0y) ||
-					!IsValid(v0x) || !IsValid(v0y))
-				return notVisibleScale;
+			float sx[3], sy[3];
+			bool visible[3];
+			for (u_int j = 0; j < 3; ++j) {
+				visible[j] = GetScreenPosition(t.v[j], &sx[j], &sy[j]);
+			}
 
-			// Normalize
-			v0x /= camera->filmWidth;
-			v0y /= camera->filmHeight;
+			for (u_int j = 0; j < 3; ++j) {
+				const u_int j1 = (j + 1) % 3;
 
-			float v1x, v1y;
-			if (!camera->GetSamplePosition(v1, &v1x, &v1y) ||
-					!IsValid(v1x) || !IsValid(v1y))
-				return notVisibleScale;
+				float scale;
+				if (visible[j] && visible[j1]) {
+					const float edge = sqrtf(Sqr(sx[j] - sx[j1]) + Sqr(sy[j] - sy[j1]));
+					scale = (edge == 0.f) ? notVisibleScale :
+							std::max(edge / edgeScreenSize, notVisibleScale);
+				} else
+					scale = notVisibleScale;
 
-			// Normalize
-			v1x /= camera->filmWidth;
-			v1y /= camera->filmHeight;
-
-			const float edge = sqrtf(Sqr(v0x - v1x) + Sqr(v0y - v1y));
-			if (edge == 0.f)
-				return notVisibleScale;
-
-			return std::max(edge / edgeScreenSize, notVisibleScale);
-		} else
-			return 1.f;
-	}
-
-	void UpdateTriangleError(SimplifyTriangle2 &t) const {
-		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
-
-		t.err[1] = CalculateCollapseError(t.v[1], t.v[2]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[1]].p, vertices[t.v[2]].p);
-
-		t.err[2] = CalculateCollapseError(t.v[2], t.v[0]) *
-				CalculateCollapseScreenErrorScale(vertices[t.v[2]].p, vertices[t.v[0]].p);
+				t.err[j] *= scale;
+			}
+		}
 	}
 
 	// Computes the neighbourhood of a candidate edge collapse
