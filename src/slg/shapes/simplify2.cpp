@@ -318,7 +318,8 @@ public:
 		edgeScreenSize = screenSize;
 
 		// Work on N% of all triangles for each iteration (keep only N% lowest error candidates)
-		const float candidatePercent = 0.1f; // 10%
+		// TODO: this should be a parameter (like target), tunable per shape
+		const float candidatePercent = 0.3f; // 30%
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
