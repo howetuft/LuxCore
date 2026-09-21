@@ -430,13 +430,17 @@ public:
 
 			// Compute candidate neighbourhoods and closures for parallel processing
 			stepStartTime = WallClockTime();
-			std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
-			candidateNeighbourhoods.reserve(allCandidates.size());
-			for (const auto& cand : allCandidates) {
-				candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
-			}
+			std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods(allCandidates.size());
+			tbb::parallel_for(size_t(0), allCandidates.size(),
+					[this, &allCandidates, &candidateNeighbourhoods](size_t i) {
+				candidateNeighbourhoods[i] = ComputeCandidateNeighbourhood(allCandidates[i]);
+			});
 			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
-			SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures in "
+			size_t maxClosureSize = 0;
+			for (const auto& closure : candidateClosures)
+				maxClosureSize = std::max(maxClosureSize, closure.size());
+			SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures (max size "
+				<< maxClosureSize << ") in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// Process closures in parallel using TBB parallel_reduce
@@ -1218,22 +1222,31 @@ private:
 			return;
 		}
 
+		// Process the largest closures first to limit the load imbalance: the
+		// candidates of a closure interact, so a closure is processed serially
+		// and the biggest ones must start as early as possible
+		std::vector<std::vector<u_int>> sortedClosures(closures.begin(), closures.end());
+		std::sort(sortedClosures.begin(), sortedClosures.end(),
+				[](const std::vector<u_int>& a, const std::vector<u_int>& b) {
+					return a.size() > b.size();
+				});
+
 		// Use parallel_reduce to process closures in parallel.
 		//
 		// The closures have disjoint neighbourhoods so the updates of triangles
 		// and vertices performed by CollapseEdge are race-free, while the refs
 		// appends are thread-local (CollapseContext) and merged by the reduce
 		// step (join).
-		ParallelClosureProcessor processor(*this, closures, allCandidates);
+		ParallelClosureProcessor processor(*this, sortedClosures, allCandidates);
 
 		// Grain size: process at least 1 closure per thread
-		const size_t grain_size = std::max<size_t>(1, closures.size() / tbb::this_task_arena::max_concurrency());
+		const size_t grain_size = std::max<size_t>(1, sortedClosures.size() / tbb::this_task_arena::max_concurrency());
 
-		SDL_LOG("Simplify2: Processing " << closures.size() << " closures on "
+		SDL_LOG("Simplify2: Processing " << sortedClosures.size() << " closures on "
 			<< tbb::this_task_arena::max_concurrency() << " threads (grain size " << grain_size << ")");
 
 		tbb::parallel_reduce(
-			tbb::blocked_range<size_t>(0, closures.size(), grain_size),
+			tbb::blocked_range<size_t>(0, sortedClosures.size(), grain_size),
 			processor
 		);
 
