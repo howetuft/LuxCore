@@ -897,7 +897,7 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshRef srcMesh,
 	if ((edgeScreenSize > 0.f) && !camera)
 		throw runtime_error("The scene.GetCamera() must be defined in order to enable simplify edgescreensize option");
 
-	const float startTime = WallClockTime();
+	const double startTime = WallClockTime();
 
 	const u_int targetCount = Max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
@@ -920,7 +920,7 @@ SimplifyShape::SimplifyShape(CameraConstPtr camera, ExtTriangleMeshRef srcMesh,
 	// For some debugging
 	//mesh->Save("debug.ply");
 
-	const float endTime = WallClockTime();
+	const double endTime = WallClockTime();
 	SDL_LOG("Simplify time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
