@@ -41,6 +41,8 @@ using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
 // equivalent, GroupByEquivalence groups all elements into disjoint classes
 // where each class contains all elements that are transitively equivalent.
 //
+// Each class contains its elements in ascending order.
+//
 // The function relies on a parallel implementation of the Union-Find algorithm
 // (using TBB) and should be fast for large equivalence relations.
 //

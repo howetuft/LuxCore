@@ -1124,18 +1124,13 @@ private:
 		// Group the connected candidates with the parallel Union-Find
 		const Classes classes = GroupByEquivalence(candidateCount, RelationSpan(relations));
 
-		// Convert the classes to closures. The order inside a class is not
-		// significant for GroupByEquivalence: restore the ascending candidate
-		// order (ascending error), i.e. the greedy processing order of the
-		// collapses.
+		// Convert the classes to closures (the GroupByEquivalence classes come
+		// with their members in ascending order, i.e. ascending error: the
+		// greedy processing order of the collapses)
 		std::vector<std::vector<u_int>> closures;
 		closures.reserve(classes.size());
-		for (const auto& indices : classes) {
-			std::vector<u_int> closure(indices.begin(), indices.end());
-			std::sort(closure.begin(), closure.end());
-
-			closures.push_back(std::move(closure));
-		}
+		for (const auto& indices : classes)
+			closures.push_back(std::vector<u_int>(indices.begin(), indices.end()));
 
 		return closures;
 	}
