@@ -25,6 +25,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <cstdint>
 #include <algorithm>
 #include <cstring> // for memset
 #include <functional>
@@ -545,10 +546,14 @@ private:
 	//
 	// Race-free during the parallel processing: the entries touched by a
 	// closure are all in its neighbourhood, like the other vertex data.
+	// The validity/visibility flags are one byte per vertex (not bit packed):
+	// the closures have disjoint vertex sets but adjacent vertices can still
+	// share a byte, and the bit read-modify-write of e.g. std::vector<bool>
+	// would race between closures.
 	std::vector<float> vertexScreenX;
 	std::vector<float> vertexScreenY;
-	std::vector<bool> vertexScreenValid;    // the projection has been computed
-	std::vector<bool> vertexScreenVisible;  // and the vertex is visible
+	std::vector<std::uint8_t> vertexScreenValid;    // the projection has been computed
+	std::vector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
 			CollapseContext &ctx, std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
