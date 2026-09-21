@@ -326,116 +326,131 @@ public:
 		// Main iteration loop
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
+		u_int totalDeletedTriangles = 0;
+		for (u_int iteration = 0; iteration < 64; ++iteration) {
+			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount)
+				break;
 
-		double stepStartTime = WallClockTime();
+			const double iterationStartTime = WallClockTime();
+			double stepStartTime = iterationStartTime;
 
-		// Initialize quadrics, edge errors, vertex references and border flags
-		UpdateMesh(0);
-		SDL_LOG("Simplify2: Mesh initialized (quadrics, edge errors, references, border flags) in "
-			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+			// Compact the deleted triangles (iteration > 0), rebuild the vertex
+			// references and clear the dirty flags (quadrics, edge errors and
+			// border flags are initialized once, at iteration 0)
+			UpdateMesh(iteration);
+			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-		stepStartTime = WallClockTime();
+			// Build the edge candidate list and keep only the N% lowest error candidates
+			stepStartTime = WallClockTime();
+			std::vector<SimplifyRef2> allCandidates;
+			allCandidates.reserve(triangles.size());
 
-		// Build the edge candidate list and keep only the N% lowest error candidates
-		std::vector<SimplifyRef2> allCandidates;
-		allCandidates.reserve(triangles.size());
+			// Lambda to compare SimplifyRef2 by error
+			auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
+				return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
+			};
 
-		// Lambda to compare SimplifyRef2 by error
-		auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
-			return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
-		};
+			for (u_int i = 0; i < triangles.size(); ++i) {
+				const SimplifyTriangle2 &t = triangles[i];
 
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			const SimplifyTriangle2 &t = triangles[i];
+				// Look for the (valid) triangle vertex with the minimum error
+				u_int minErrorIndex = NULL_INDEX;
+				float minError = std::numeric_limits<float>::infinity();
+				for (u_int j = 0; j < 3; ++j) {
+					const u_int i0 = t.v[j];
+					SimplifyVertex2 &v0 = vertices[i0];
 
-			// Look for the (valid) triangle vertex with the minimum error
-			u_int minErrorIndex = NULL_INDEX;
-			float minError = std::numeric_limits<float>::infinity();
-			for (u_int j = 0; j < 3; ++j) {
-				const u_int i0 = t.v[j];
-				SimplifyVertex2 &v0 = vertices[i0];
+					const u_int i1 = t.v[(j + 1) % 3];
+					SimplifyVertex2 &v1 = vertices[i1];
 
-				const u_int i1 = t.v[(j + 1) % 3];
-				SimplifyVertex2 &v1 = vertices[i1];
+					// Border check
+					if (preserveBorder) {
+						if (v0.border && v1.border)
+							continue;
+					} else {
+						if (v0.border != v1.border)
+							continue;
+					}
 
-				// Border check
-				if (preserveBorder) {
-					if (v0.border && v1.border)
+					// Compute vertex to collapse to
+					Point p;
+					CalculateCollapseError(i0, i1, &p);
+
+					// Don't remove if flipped
+					if (Flipped(p, i0, i1, refs))
 						continue;
-				} else {
-					if (v0.border != v1.border)
+					if (Flipped(p, i1, i0, refs))
 						continue;
+
+					if (t.err[j] < minError) {
+						minErrorIndex = j;
+						minError = t.err[j];
+					}
 				}
 
-				// Compute vertex to collapse to
-				Point p;
-				CalculateCollapseError(i0, i1, &p);
-
-				// Don't remove if flipped
-				if (Flipped(p, i0, i1, refs))
-					continue;
-				if (Flipped(p, i1, i0, refs))
+				if (minErrorIndex == NULL_INDEX)
 					continue;
 
-				if (t.err[j] < minError) {
-					minErrorIndex = j;
-					minError = t.err[j];
-				}
+				// Collect all valid candidates
+				allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
+			}  // for triangles
+			SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+			// Sort all candidates by error (ascending)
+			std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
+
+			// Keep only the N% lowest error candidates
+			const u_int totalCandidateCount = allCandidates.size();
+			const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
+			if (allCandidates.size() > nPercentCount) {
+				allCandidates.resize(nPercentCount);
 			}
+			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
+				<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
 
-			if (minErrorIndex == NULL_INDEX)
-				continue;
+			// Copy to candidateList in reverse order (worst first) to match original behavior
+			candidateList = allCandidates;
+			std::reverse(candidateList.begin(), candidateList.end());
 
-			// Collect all valid candidates
-			allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
-		}  // for triangles
-		SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
-			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+			// Compute candidate neighbourhoods and closures for parallel processing
+			stepStartTime = WallClockTime();
+			std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
+			candidateNeighbourhoods.reserve(allCandidates.size());
+			for (const auto& cand : allCandidates) {
+				candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
+			}
+			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
+			SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-		// Sort all candidates by error (ascending)
-		std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
+			// Process closures in parallel using TBB parallel_reduce
+			deletedTriangles = 0;
+			stepStartTime = WallClockTime();
+			ProcessClosuresParallel(candidateClosures, allCandidates);
+			SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-		// Keep only the N% lowest error candidates
-		const u_int totalCandidateCount = allCandidates.size();
-		const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
-		if (allCandidates.size() > nPercentCount) {
-			allCandidates.resize(nPercentCount);
+			// Note: The parallel_reduce approach ensures that:
+			// - Each closure has its own copy of triangle deleted/dirty flags
+			// - States are merged with logical OR
+			// - Assertion verifies no triangle is deleted by multiple closures (indicates bug)
+
+			const u_int iterationDeletedTriangles = deletedTriangles;
+			totalDeletedTriangles += iterationDeletedTriangles;
+			SDL_LOG("Simplify2 iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
+				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
+				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
+			if (iterationDeletedTriangles == 0)
+				break;
 		}
-		SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
-			<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
-
-		// Copy to candidateList in reverse order (worst first) to match original behavior
-		candidateList = allCandidates;
-		std::reverse(candidateList.begin(), candidateList.end());
-
-		// Compute candidate neighbourhoods and closures for parallel processing
-		stepStartTime = WallClockTime();
-		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
-		candidateNeighbourhoods.reserve(allCandidates.size());
-		for (const auto& cand : allCandidates) {
-			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
-		}
-		std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
-		SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures in "
-			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-		// Process closures in parallel using TBB parallel_reduce
-		stepStartTime = WallClockTime();
-		ProcessClosuresParallel(candidateClosures, allCandidates);
-		SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel, deleted "
-			<< deletedTriangles << "/" << startTriangleCount << " triangles in "
-			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-		// Note: The parallel_reduce approach ensures that:
-		// - Each closure has its own copy of triangle deleted/dirty flags
-		// - States are merged with logical OR
-		// - Assertion verifies no triangle is deleted by multiple closures (indicates bug)
 
 		// Clean up mesh
-		stepStartTime = WallClockTime();
+		const double compactStartTime = WallClockTime();
 		CompactMesh();
 		SDL_LOG("Simplify2: Mesh compacted in "
-			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+			<< (boost::format("%.3f") % (WallClockTime() - compactStartTime)) << "secs");
 	}
 
 private:
