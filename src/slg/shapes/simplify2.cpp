@@ -358,12 +358,16 @@ public:
 				return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
 			};
 
+			// An empty collapse context: the candidate building only reads
+			// the global baseline references (no tail)
+			CollapseContext candidateCtx;
+
 			// Evaluate the candidates in parallel: the loop is read-only
 			// (CalculateCollapseError and Flipped are const) and each triangle
 			// writes only its own slot
 			std::vector<u_int> candidateVertexIndex(triangles.size(), NULL_INDEX);
 			tbb::parallel_for(size_t(0), triangles.size(),
-					[this, &candidateVertexIndex](size_t i) {
+					[this, &candidateCtx, &candidateVertexIndex](size_t i) {
 				const SimplifyTriangle2 &t = triangles[i];
 
 				// Look for the (valid) triangle vertex with the minimum error
@@ -390,9 +394,9 @@ public:
 					CalculateCollapseError(i0, i1, &p);
 
 					// Don't remove if flipped
-					if (Flipped(p, i0, i1, refs))
+					if (Flipped(p, i0, i1, candidateCtx))
 						continue;
-					if (Flipped(p, i1, i0, refs))
+					if (Flipped(p, i1, i0, candidateCtx))
 						continue;
 
 					if (t.err[j] < minError) {
@@ -457,10 +461,10 @@ public:
 			SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Note: The parallel_reduce approach ensures that:
-			// - Each closure has its own copy of triangle deleted/dirty flags
-			// - States are merged with logical OR
-			// - Assertion verifies no triangle is deleted by multiple closures (indicates bug)
+			// Note: the closures have disjoint neighbourhoods, so the global
+			// triangle flags written by the collapses are race-free and need no
+			// merge; only the deleted triangles counter is merged (and the
+			// closure disjointness asserted) by applyResult.
 
 			const u_int iterationDeletedTriangles = deletedTriangles;
 			totalDeletedTriangles += iterationDeletedTriangles;
@@ -505,17 +509,23 @@ private:
 
 	// Local working state for edge collapses.
 	//
-	// During the parallel processing of closures, each thread works on its own
-	// copy of the references list (starting from the global baseline) and its
-	// own deleted-triangles counter, so that CollapseEdge never mutates the
-	// shared state. The local refs (i.e. the appended tails and the vertices
-	// repointed into them) are merged back by the reduce step (join).
+	// During the parallel processing of closures, each thread appends the new
+	// references to its own tail (read through the global baseline, see
+	// GetRef) and counts its own deleted triangles, so that CollapseEdge
+	// never mutates the shared reference list. The reference list is rebuilt
+	// from scratch by UpdateMesh at each iteration, so the tails are simply
+	// dropped at the end of the parallel processing (no merge needed).
 	struct CollapseContext {
-		std::vector<SimplifyRef2> refs;
-		// Vertices whose tstart has been repointed into the appended region of refs
-		std::vector<u_int> repointedVertices;
-		u_int deletedCount;
+		std::vector<SimplifyRef2> refsTail;
+		u_int deletedCount = 0;
 	};
+
+	// Read a reference by logical index: the global baseline plus the tail
+	// appended by the collapse context
+	const SimplifyRef2 &GetRef(const CollapseContext &ctx, const u_int index) const {
+		const u_int baseSize = refs.size();
+		return (index < baseSize) ? refs[index] : ctx.refsTail[index - baseSize];
+	}
 
 	std::vector<SimplifyTriangle2> triangles;
 	std::vector<SimplifyVertex2> vertices;
@@ -568,9 +578,9 @@ private:
 		deleted1.resize(v1.tcount);
 
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, ctx.refs, &deleted0))
+		if (Flipped(p, i0, i1, ctx, &deleted0))
 			return false;
-		if (Flipped(p, i1, i0, ctx.refs, &deleted1))
+		if (Flipped(p, i1, i0, ctx, &deleted1))
 			return false;
 
 		// Save original vertex information
@@ -629,37 +639,37 @@ private:
 				v0.alpha = triAlpha0;
 		}
 
-		const u_int tstart = ctx.refs.size();
+		const u_int tstart = refs.size() + ctx.refsTail.size();
 
 		UpdateTriangles(i0, v0, deleted0, ctx);
 		UpdateTriangles(i0, v1, deleted1, ctx);
 
-		const u_int tcount = ctx.refs.size() - tstart;
+		const u_int tcount = (refs.size() + ctx.refsTail.size()) - tstart;
 
-		// Append the new references to the local buffer and repoint the vertex.
-		// The final position of the appended region is decided when the local
-		// refs are merged back by the reduce step (join), which also fixes up
-		// the repointed vertices accordingly.
+		// Append the new references to the local tail and repoint the vertex.
+		// The tail is simply dropped at the end of the parallel processing: the
+		// reference list is rebuilt from scratch by UpdateMesh at each
+		// iteration, so nothing needs to be merged back.
 		v0.tstart = tstart;
 		v0.tcount = tcount;
-		ctx.repointedVertices.push_back(i0);
 
 		return true;
 	}
 
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			const std::vector<SimplifyRef2> &refs,
+			const CollapseContext &ctx,
 			std::vector<bool> *deleted = nullptr) const {
 		const SimplifyVertex2 &v0 = vertices[i0];
 
 		for (u_int k = 0; k < v0.tcount; ++k) {
-			const SimplifyTriangle2 &t = triangles[refs[v0.tstart + k].tid];
+			const SimplifyRef2 &ref = GetRef(ctx, v0.tstart + k);
+			const SimplifyTriangle2 &t = triangles[ref.tid];
 
 			if (t.deleted)
 				continue;
 
-			const u_int s = refs[v0.tstart + k].tvertex;
+			const u_int s = ref.tvertex;
 			const u_int id1 = t.v[(s + 1) % 3];
 			const u_int id2 = t.v[(s + 2) % 3];
 
@@ -692,7 +702,7 @@ private:
 	void UpdateTriangles(const u_int i0, const SimplifyVertex2 &v,
 			const std::vector<bool> &deleted, CollapseContext &ctx) {
 		for (u_int k = 0; k < v.tcount; ++k) {
-			const SimplifyRef2 &r = ctx.refs[v.tstart + k];
+			const SimplifyRef2 &r = GetRef(ctx, v.tstart + k);
 			SimplifyTriangle2 &t = triangles[r.tid];
 
 			if (t.deleted)
@@ -708,7 +718,7 @@ private:
 			t.dirty = true;
 			UpdateTriangleError(t);
 
-			ctx.refs.push_back(r);
+			ctx.refsTail.push_back(r);
 		}
 	}
 
@@ -1119,47 +1129,37 @@ private:
 		return closures;
 	}
 
-	// Class for processing closures in parallel using TBB parallel_reduce
-	// Each closure is processed independently with its own copy of triangle flags
-	// Flags are merged with logical OR in the join step
+	// Class for processing closures in parallel using TBB parallel_reduce.
+	//
+	// The closures have disjoint neighbourhoods, so the triangle and vertex
+	// updates performed by CollapseEdge (including the global deleted/dirty
+	// flags) are race-free and need no merge: each body only appends
+	// thread-local references (CollapseContext, dropped at the end: the
+	// reference list is rebuilt at each iteration) and counts its deleted
+	// triangles.
 	class ParallelClosureProcessor {
 		Simplify2& simplify;
 		const std::vector<std::vector<u_int>>& closures;
 		const std::vector<SimplifyRef2>& allCandidates;
 
-		// Local state for each thread
-		std::vector<bool> deleted;
-		std::vector<bool> dirty;
-
-		// Local refs (and related collapse state) - merged back by the reduce step
+		// Local state: appended refs tail and deleted triangles counter
 		CollapseContext ctx;
 
+		// Candidate triangles deleted by this body (for the disjointness check)
+		std::vector<u_int> deletedCandidates;
+
 	public:
-		// Constructor for master thread
+		// Constructor for the master thread
 		ParallelClosureProcessor(Simplify2& s,
 				const std::vector<std::vector<u_int>>& c,
 				const std::vector<SimplifyRef2>& a)
-			: simplify(s), closures(c), allCandidates(a),
-			  deleted(s.triangles.size()), dirty(s.triangles.size()) {
-			// Initialize from global state
-			for (size_t i = 0; i < deleted.size(); ++i) {
-				deleted[i] = s.triangles[i].deleted;
-				dirty[i] = s.triangles[i].dirty;
-			}
-			// Start from a local copy of the global baseline: the appends
-			// performed by CollapseEdge stay thread-local until the merge
-			ctx.refs = s.refs;
+			: simplify(s), closures(c), allCandidates(a) {
 			ctx.deletedCount = s.deletedTriangles;
 		}
 
-		// Split constructor for TBB: restart from the global baseline (which is
-		// never modified during the parallel processing)
+		// Split constructor for TBB
 		ParallelClosureProcessor(ParallelClosureProcessor& other, tbb::split)
-			: simplify(other.simplify), closures(other.closures), allCandidates(other.allCandidates),
-			  deleted(other.deleted.size(), false), dirty(other.dirty.size(), false) {
-			ctx.refs = simplify.refs;
-			ctx.deletedCount = 0;
-		}
+			: simplify(other.simplify), closures(other.closures), allCandidates(other.allCandidates) {}
 
 		// Process a range of closures
 		void operator()(const tbb::blocked_range<size_t>& r) {
@@ -1168,64 +1168,28 @@ private:
 			}
 		}
 
-		// Join (reduce step): merge the sibling's local state into this one
+		// Join (reduce step): merge the sibling's counter and disjointness data
 		void join(ParallelClosureProcessor& other) {
-			assert(deleted.size() == other.deleted.size());
-			assert(dirty.size() == other.dirty.size());
+			ctx.deletedCount += other.ctx.deletedCount;
+			deletedCandidates.insert(deletedCandidates.end(),
+					other.deletedCandidates.begin(), other.deletedCandidates.end());
+		}
 
-			// Merge the refs append-tails: my tail first, then the sibling's.
-			// The global baseline (simplify.refs) is never modified during the
-			// parallel processing, so both local refs share the same base and
-			// the sibling's appended tail starts at the same offset.
-			const size_t baseSize = simplify.refs.size();
-			const size_t myTailSize = ctx.refs.size() - baseSize;
-
-			// Fix up the vertices repointed by the sibling: their tstart must
-			// be shifted past my tail to match the merged refs layout
-			for (const u_int v : other.ctx.repointedVertices)
-				simplify.vertices[v].tstart += myTailSize;
-
-			// Append the sibling's tail to my local refs
-			ctx.refs.insert(ctx.refs.end(),
-					other.ctx.refs.begin() + baseSize, other.ctx.refs.end());
-
-			// Merge the repointed vertices lists
-			std::copy(other.ctx.repointedVertices.begin(), other.ctx.repointedVertices.end(),
-					std::back_inserter(ctx.repointedVertices));
-
-			for (size_t i = 0; i < deleted.size(); ++i) {
-				// Assertion: A candidate triangle cannot be deleted in two
-				// different closure processes (checked before the merge,
-				// otherwise the OR below would make the condition trivially
-				// true whenever the sibling has the flag set)
-				if (deleted[i] && other.deleted[i]) {
-					SDL_LOG("ERROR: Triangle " << i << " was deleted in multiple closures!");
+		// Check the closure disjointness and merge the deleted triangles
+		// counter. The global triangle flags are already up to date: they are
+		// written by the collapses themselves.
+		void applyResult() {
+			// Assertion: a candidate triangle cannot be deleted in two
+			// different closure processes
+			std::sort(deletedCandidates.begin(), deletedCandidates.end());
+			for (size_t i = 1; i < deletedCandidates.size(); ++i) {
+				if (deletedCandidates[i] == deletedCandidates[i - 1]) {
+					SDL_LOG("ERROR: Triangle " << deletedCandidates[i] << " was deleted in multiple closures!");
 					SDL_LOG("  This indicates a bug in closure computation - neighbourhoods overlap.");
 					assert(false && "Triangle deleted in multiple closures - neighbourhoods overlap!");
 				}
-
-				// Use logical OR
-				deleted[i] = deleted[i] || other.deleted[i];
-				dirty[i] = dirty[i] || other.dirty[i];
-			}
-			ctx.deletedCount += other.ctx.deletedCount;
-		}
-
-		// Apply the final state to the global triangles
-		void applyResult() {
-			for (size_t i = 0; i < deleted.size(); ++i) {
-				if (deleted[i]) {
-					simplify.triangles[i].deleted = true;
-				}
-				if (dirty[i]) {
-					simplify.triangles[i].dirty = true;
-				}
 			}
 
-			// Merge back the refs (global baseline + all appended tails).
-			// The vertices repointed during the processing are already
-			// consistent with this layout (fixed up by the join step).
-			simplify.refs = std::move(ctx.refs);
 			simplify.deletedTriangles = ctx.deletedCount;
 		}
 
@@ -1238,19 +1202,18 @@ private:
 			for (u_int idx : closureIndices) {
 				const SimplifyRef2& candidate = allCandidates[idx];
 
-				// Skip if triangle was already deleted in this thread's state
-				if (deleted[candidate.tid]) {
+				// Skip if the triangle was already deleted (e.g. by an
+				// earlier collapse in this closure)
+				if (simplify.triangles[candidate.tid].deleted) {
 					continue;
 				}
 
 				// Try to collapse this edge
-				bool success = simplify.CollapseEdge(candidate.tid, candidate.tvertex, ctx, deleted0, deleted1);
+				const bool success = simplify.CollapseEdge(candidate.tid, candidate.tvertex, ctx, deleted0, deleted1);
 
 				if (success) {
-					// Mark the collapsed triangle as deleted in our local state.
-					// (It is counted as deleted by UpdateTriangles via
-					// ctx.deletedCount.)
-					deleted[candidate.tid] = true;
+					// Record the collapsed candidate for the disjointness check
+					deletedCandidates.push_back(candidate.tid);
 				}
 			}
 		}
@@ -1275,9 +1238,8 @@ private:
 		// Use parallel_reduce to process closures in parallel.
 		//
 		// The closures have disjoint neighbourhoods so the updates of triangles
-		// and vertices performed by CollapseEdge are race-free, while the refs
-		// appends are thread-local (CollapseContext) and merged by the reduce
-		// step (join).
+		// and vertices performed by CollapseEdge (including the global
+		// deleted/dirty flags) are race-free and need no merge.
 		ParallelClosureProcessor processor(*this, sortedClosures, allCandidates);
 
 		// Grain size: process at least 1 closure per thread
@@ -1291,7 +1253,7 @@ private:
 			processor
 		);
 
-		// Apply the final merged state to global triangles
+		// Check the closure disjointness and merge the deleted triangles counter
 		processor.applyResult();
 	}
 
