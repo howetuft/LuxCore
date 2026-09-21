@@ -415,7 +415,7 @@ public:
 		for (const auto& cand : allCandidates) {
 			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
 		}
-		std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
+		std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
 		SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures in "
 			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
@@ -968,45 +968,17 @@ private:
 		return neighbourhood;
 	}
 
-	// Computes whether two candidates are neighbour-connected
-	// Two candidates are connected if their neighbourhoods overlap
-	bool AreCandidatesNeighbourConnected(const SimplifyRef2& c0, const SimplifyRef2& c1,
-			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods,
-			u_int index0, u_int index1) const {
-		const auto& nh0 = candidateNeighbourhoods[index0];
-		const auto& nh1 = candidateNeighbourhoods[index1];
-
-		// Check if any vertex in nh0 exists in nh1
-		// Use the smaller set for iteration to minimize lookups
-		if (nh0.size() < nh1.size()) {
-			for (u_int v : nh0) {
-				if (nh1.contains(v)) {
-					return true;
-				}
-			}
-		} else {
-			for (u_int v : nh1) {
-				if (nh0.contains(v)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
 	// Computes candidate closures (connected components in the neighbour graph)
-	// Uses union-find (disjoint set) to group connected candidates
-	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates) {
+	//
+	// Two candidates are connected if their neighbourhoods share a vertex.
+	// Instead of testing all the O(n^2) candidate pairs, a vertex -> candidates
+	// reverse index is built: all the candidates in the same bucket share a
+	// vertex, i.e. they are all neighbour-connected and can be unioned directly.
+	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates,
+			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods) {
 		const u_int candidateCount = candidates.size();
 		if (candidateCount == 0) {
 			return {};
-		}
-
-		// Precompute neighbourhoods for all candidates
-		std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods;
-		candidateNeighbourhoods.reserve(candidateCount);
-		for (const auto& cand : candidates) {
-			candidateNeighbourhoods.push_back(ComputeCandidateNeighbourhood(cand));
 		}
 
 		// Union-Find (Disjoint Set Union) data structure
@@ -1016,19 +988,21 @@ private:
 			parent[i] = i;
 		}
 
-		// Find with path compression
-		std::function<u_int(u_int)> find = [&](u_int x) {
-			if (parent[x] != x) {
-				parent[x] = find(parent[x]);
+		// Find with path compression (iterative, path halving)
+		auto find = [&](u_int x) {
+			while (parent[x] != x) {
+				parent[x] = parent[parent[x]];
+				x = parent[x];
 			}
-			return parent[x];
+			return x;
 		};
 
 		// Union by rank
 		auto unite = [&](u_int x, u_int y) {
 			u_int rx = find(x);
 			u_int ry = find(y);
-			if (rx == ry) return;
+			if (rx == ry)
+				return;
 			if (rank[rx] < rank[ry]) {
 				parent[rx] = ry;
 			} else if (rank[rx] > rank[ry]) {
@@ -1039,25 +1013,33 @@ private:
 			}
 		};
 
-		// Build connections between candidates
+		// Build the vertex -> candidates reverse index
+		robin_hood::unordered_map<u_int, std::vector<u_int>> vertexCandidates;
 		for (u_int i = 0; i < candidateCount; ++i) {
-			for (u_int j = i + 1; j < candidateCount; ++j) {
-				if (AreCandidatesNeighbourConnected(candidates[i], candidates[j], candidateNeighbourhoods, i, j)) {
-					unite(i, j);
-				}
+			for (const u_int v : candidateNeighbourhoods[i]) {
+				vertexCandidates[v].push_back(i);
+			}
+		}
+
+		// Union all the candidates sharing a vertex (all the candidates in a
+		// bucket are neighbour-connected by definition)
+		for (const auto& [v, bucket] : vertexCandidates) {
+			for (size_t k = 1; k < bucket.size(); ++k) {
+				unite(bucket[k - 1], bucket[k]);
 			}
 		}
 
 		// Group candidates by their root parent
-		std::map<u_int, std::vector<u_int>> closureMap;
+		robin_hood::unordered_map<u_int, std::vector<u_int>> closureMap;
 		for (u_int i = 0; i < candidateCount; ++i) {
 			closureMap[find(i)].push_back(i);
 		}
 
 		// Convert to vector of vectors
 		std::vector<std::vector<u_int>> closures;
-		for (const auto& [root, indices] : closureMap) {
-			closures.push_back(indices);
+		closures.reserve(closureMap.size());
+		for (auto& [root, indices] : closureMap) {
+			closures.push_back(std::move(indices));
 		}
 
 		return closures;
