@@ -406,15 +406,21 @@ public:
 			SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Sort all candidates by error (ascending)
-			std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
-
 			// Keep only the N% lowest error candidates
 			const u_int totalCandidateCount = allCandidates.size();
 			const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
 			if (allCandidates.size() > nPercentCount) {
+				// Select the N% lowest error candidates: nth_element partitions
+				// in average O(n) and only the kept prefix needs to be ordered
+				// (instead of sorting all the candidates to throw most of them
+				// away)
+				std::nth_element(allCandidates.begin(), allCandidates.begin() + nPercentCount,
+					allCandidates.end(), refCompare);
 				allCandidates.resize(nPercentCount);
 			}
+
+			// Sort the kept candidates by error (ascending)
+			std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
 			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
 				<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
 
