@@ -351,7 +351,12 @@ public:
 				return triangles[a.tid].err[a.tvertex] < triangles[b.tid].err[b.tvertex];
 			};
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
+			// Evaluate the candidates in parallel: the loop is read-only
+			// (CalculateCollapseError and Flipped are const) and each triangle
+			// writes only its own slot
+			std::vector<u_int> candidateVertexIndex(triangles.size(), NULL_INDEX);
+			tbb::parallel_for(size_t(0), triangles.size(),
+					[this, &candidateVertexIndex](size_t i) {
 				const SimplifyTriangle2 &t = triangles[i];
 
 				// Look for the (valid) triangle vertex with the minimum error
@@ -359,10 +364,10 @@ public:
 				float minError = std::numeric_limits<float>::infinity();
 				for (u_int j = 0; j < 3; ++j) {
 					const u_int i0 = t.v[j];
-					SimplifyVertex2 &v0 = vertices[i0];
+					const SimplifyVertex2 &v0 = vertices[i0];
 
 					const u_int i1 = t.v[(j + 1) % 3];
-					SimplifyVertex2 &v1 = vertices[i1];
+					const SimplifyVertex2 &v1 = vertices[i1];
 
 					// Border check
 					if (preserveBorder) {
@@ -389,12 +394,15 @@ public:
 					}
 				}
 
-				if (minErrorIndex == NULL_INDEX)
-					continue;
+				if (minErrorIndex != NULL_INDEX)
+					candidateVertexIndex[i] = minErrorIndex;
+			});
 
-				// Collect all valid candidates
-				allCandidates.push_back(SimplifyRef2{i, minErrorIndex});
-			}  // for triangles
+			// Collect all valid candidates
+			for (u_int i = 0; i < triangles.size(); ++i) {
+				if (candidateVertexIndex[i] != NULL_INDEX)
+					allCandidates.push_back(SimplifyRef2{i, candidateVertexIndex[i]});
+			}
 			SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
