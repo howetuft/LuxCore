@@ -1102,19 +1102,38 @@ private:
 			}
 		};
 
-		// Build the vertex -> candidates reverse index
-		robin_hood::unordered_map<u_int, std::vector<u_int>> vertexCandidates;
+		// Build the vertex -> candidates reverse index as a CSR structure
+		// (bucket count, prefix sum, bucket fill on flat arrays) instead of a
+		// hash map of buckets: no hashing and no per bucket allocation.
+		// (Kept serial: the count/fill updates of a vertex would be shared by
+		// all the candidates reading it, so the parallel version would need
+		// contended atomics.)
+		const u_int vertexCount = vertices.size();
+		std::vector<u_int> bucketStart(vertexCount + 1, 0);
 		for (u_int i = 0; i < candidateCount; ++i) {
 			for (const u_int v : candidateNeighbourhoods[i]) {
-				vertexCandidates[v].push_back(i);
+				++bucketStart[v + 1];
+			}
+		}
+		for (u_int v = 0; v < vertexCount; ++v) {
+			bucketStart[v + 1] += bucketStart[v];
+		}
+
+		std::vector<u_int> bucketEntries(bucketStart[vertexCount]);
+		{
+			std::vector<u_int> bucketCursor(bucketStart.begin(), bucketStart.end() - 1);
+			for (u_int i = 0; i < candidateCount; ++i) {
+				for (const u_int v : candidateNeighbourhoods[i]) {
+					bucketEntries[bucketCursor[v]++] = i;
+				}
 			}
 		}
 
 		// Union all the candidates sharing a vertex (all the candidates in a
 		// bucket are neighbour-connected by definition)
-		for (const auto& [v, bucket] : vertexCandidates) {
-			for (size_t k = 1; k < bucket.size(); ++k) {
-				unite(bucket[k - 1], bucket[k]);
+		for (u_int v = 0; v < vertexCount; ++v) {
+			for (u_int k = bucketStart[v] + 1; k < bucketStart[v + 1]; ++k) {
+				unite(bucketEntries[k - 1], bucketEntries[k]);
 			}
 		}
 
