@@ -30,10 +30,12 @@ namespace slg {
 using Classes = std::vector<std::vector<size_t>>;
 using Relation = std::pair<size_t, size_t>;
 using RelationSpan = std::span<const Relation>;
-// Cache-aligned vector of relations, as returned by the generators: the
-// generator is evaluated in parallel (one call per chunk), so the
-// per-chunk buffers of different threads never share a cache line
-using RelationVector = std::vector<Relation, tbb::cache_aligned_allocator<Relation>>;
+// Vector of relations, as returned by the generators, allocated with the
+// TBB scalable allocator: the generator is evaluated in parallel (one call
+// per chunk) and the returned buffer is consumed once by the Union-Find,
+// so these short-lived allocations are served from the per-thread caches
+// of tbbmalloc
+using RelationVector = std::vector<Relation, tbb::scalable_allocator<Relation>>;
 using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 
 // GroupByEquivalence computes the quotient set (equivalence classes) from an

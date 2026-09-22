@@ -176,19 +176,20 @@ public:
 };
 
 
-// Cache-aligned vector for the containers allocated inside the
-// multithreaded parts (per-thread / per-chunk buffers): the storage
+// Cache-aligned vector for the buffers of the multithreaded parts that
+// persist through a whole phase and are accessed repeatedly: the storage
 // starts on a cache line boundary, so the buffers of different threads
-// never share a cache line (no false sharing on the buffer heads).
+// never share a cache line.
 template<typename T>
 using CacheAlignedVector = std::vector<T, tbb::cache_aligned_allocator<T>>;
 
-// Neighbourhood of a candidate edge collapse, as a sorted (ascending,
-// deduplicated) vector: built inside the parallel_for (one per candidate),
-// cache aligned so the buffers of concurrently building candidates never
-// share a cache line, and iterated sequentially (flat layout, no hashing,
-// no per element node) by the closure computation.
-using CandidateNeighbourhood = CacheAlignedVector<u_int>;
+// Vector with the TBB scalable allocator (tbbmalloc), for the short-lived
+// buffers of the multithreaded parts that are allocated and freed at a
+// high rate with no caching expected (per closure, per chunk): they are
+// served from the per-thread caches of tbbmalloc instead of the shared
+// heap.
+template<typename T>
+using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 
 
 class Simplify2 {
@@ -354,6 +355,22 @@ public:
 			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
+			// Precompute the screen space projections of all the vertices (when
+			// enabled): the parallel phases below then never lazily write the
+			// caches. Closures can share (read only) vertices, so the lazy
+			// cache writes would otherwise race between closures on the shared
+			// entries (the vertex projections are deterministic, but the writes
+			// must not happen concurrently anyway). The vertices moved by the
+			// collapses still have their cache invalidated and lazily
+			// recomputed, but only within a single closure (their triangles
+			// all belong to the collapsing closure).
+			if (edgeScreenSize > 0.f) {
+				tbb::parallel_for(size_t(0), vertices.size(), [this](size_t i) {
+					float x, y;
+					GetScreenPosition(u_int(i), &x, &y);
+				});
+			}
+
 			// Build the edge candidate list and keep only the N% lowest error candidates
 			stepStartTime = WallClockTime();
 			std::vector<SimplifyRef2> allCandidates;
@@ -445,18 +462,9 @@ public:
 			candidateList = allCandidates;
 			std::reverse(candidateList.begin(), candidateList.end());
 
-			// Compute candidate neighbourhoods and closures for parallel processing
+			// Compute candidate closures for parallel processing
 			stepStartTime = WallClockTime();
-			std::vector<CandidateNeighbourhood> candidateNeighbourhoods(allCandidates.size());
-			tbb::parallel_for(size_t(0), allCandidates.size(),
-					[this, &allCandidates, &candidateNeighbourhoods](size_t i) {
-				candidateNeighbourhoods[i] = ComputeCandidateNeighbourhood(allCandidates[i]);
-			});
-			SDL_LOG("Simplify2: Computed " << allCandidates.size() << " neighbourhoods in "
-				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-			stepStartTime = WallClockTime();
-			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
+			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
 			size_t maxClosureSize = 0;
 			for (const auto& closure : candidateClosures)
 				maxClosureSize = std::max(maxClosureSize, closure.size());
@@ -471,7 +479,7 @@ public:
 			SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Note: the closures have disjoint neighbourhoods, so the global
+			// Note: the closures have disjoint triangle sets, so the global
 			// triangle flags written by the collapses are race-free and need no
 			// merge; only the deleted triangles counter is merged (and the
 			// closure disjointness asserted) by applyResult.
@@ -555,11 +563,14 @@ private:
 	// coordinates), lazily computed and invalidated when a vertex moves.
 	// Only used when edgeScreenSize > 0.
 	//
-	// Race-free during the parallel processing: the entries touched by a
-	// closure are all in its neighbourhood, like the other vertex data.
-	// The validity/visibility flags are one byte per vertex (not bit packed):
-	// the closures have disjoint vertex sets but adjacent vertices can still
-	// share a byte, and the bit read-modify-write of e.g. std::vector<bool>
+	// The caches are precomputed at the beginning of each iteration, so the
+	// parallel phases never lazily write the entries: the closures can share
+	// (read only) vertices, and the lazy writes would otherwise race between
+	// closures on the shared entries. The vertices moved by the collapses
+	// still have their cache invalidated and lazily recomputed, but only
+	// within a single closure (their triangles all belong to the collapsing
+	// closure). The validity/visibility flags are one byte per vertex (not
+	// bit packed): the bit read-modify-write of e.g. std::vector<bool>
 	// would race between closures.
 	std::vector<float> vertexScreenX;
 	std::vector<float> vertexScreenY;
@@ -567,7 +578,7 @@ private:
 	std::vector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
-			CollapseContext &ctx, CacheAlignedVector<bool> &deleted0, CacheAlignedVector<bool> &deleted1) {
+			CollapseContext &ctx, ScalableVector<bool> &deleted0, ScalableVector<bool> &deleted1) {
 		SimplifyTriangle2 &t = triangles[trinagleIndex];
 
 		if (t.deleted)
@@ -675,7 +686,7 @@ private:
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
 			const CollapseContext &ctx,
-			CacheAlignedVector<bool> *deleted = nullptr) const {
+			ScalableVector<bool> *deleted = nullptr) const {
 		const SimplifyVertex2 &v0 = vertices[i0];
 
 		for (u_int k = 0; k < v0.tcount; ++k) {
@@ -727,7 +738,7 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const u_int i0, const SimplifyVertex2 &v,
-			const CacheAlignedVector<bool> &deleted, CollapseContext &ctx) {
+			const ScalableVector<bool> &deleted, CollapseContext &ctx) {
 		for (u_int k = 0; k < v.tcount; ++k) {
 			const SimplifyRef2 &r = GetRef(ctx, v.tstart + k);
 			SimplifyTriangle2 &t = triangles[r.tid];
@@ -1060,134 +1071,108 @@ private:
 		}
 	}
 
-	// Computes the neighbourhood of a candidate edge collapse
-	// The neighbourhood includes all vertices that would be impacted by collapsing
-	// the edge (v0, v1) in triangle tid
-	// The result is a sorted (ascending), deduplicated vector
-	CandidateNeighbourhood ComputeCandidateNeighbourhood(const SimplifyRef2& candidate) const {
-		CandidateNeighbourhood neighbourhood;
-		const SimplifyTriangle2& t = triangles[candidate.tid];
-		const u_int v0_idx = t.v[candidate.tvertex];
-		const u_int v1_idx = t.v[(candidate.tvertex + 1) % 3];
-
-		// Upper bound of the neighbourhood size: the 2 edge vertices plus
-		// up to 3 vertices per triangle referencing them (deduplicated below)
-		neighbourhood.reserve(2 + 3 * (vertices[v0_idx].tcount + vertices[v1_idx].tcount));
-
-		// The two vertices of the edge being collapsed are always in the neighbourhood
-		neighbourhood.push_back(v0_idx);
-		neighbourhood.push_back(v1_idx);
-
-		// Add all vertices connected to v0
-		for (u_int k = 0; k < vertices[v0_idx].tcount; ++k) {
-			const SimplifyRef2& ref = refs[vertices[v0_idx].tstart + k];
-			const SimplifyTriangle2& tri = triangles[ref.tid];
-			for (u_int j = 0; j < 3; ++j) {
-				u_int vid = tri.v[j];
-				if (vid != v0_idx && vid != v1_idx) {
-					neighbourhood.push_back(vid);
-				}
-			}
-		}
-
-		// Add all vertices connected to v1
-		for (u_int k = 0; k < vertices[v1_idx].tcount; ++k) {
-			const SimplifyRef2& ref = refs[vertices[v1_idx].tstart + k];
-			const SimplifyTriangle2& tri = triangles[ref.tid];
-			for (u_int j = 0; j < 3; ++j) {
-				u_int vid = tri.v[j];
-				if (vid != v0_idx && vid != v1_idx) {
-					neighbourhood.push_back(vid);
-				}
-			}
-		}
-
-		// Deduplicate: sort + unique (flat layout, no hashing)
-		std::sort(neighbourhood.begin(), neighbourhood.end());
-		neighbourhood.erase(std::unique(neighbourhood.begin(), neighbourhood.end()),
-				neighbourhood.end());
-
-		return neighbourhood;
-	}
-
-	// Computes candidate closures (connected components in the neighbour graph)
+	// Computes candidate closures (connected components in the conflict graph)
 	//
-	// Two candidates are connected if their neighbourhoods share a vertex.
-	// Instead of testing all the O(n^2) candidate pairs, a vertex -> candidates
-	// reverse index is built: all the candidates in the same bucket share a
-	// vertex, i.e. they are all neighbour-connected, so the (chained) buckets
-	// define the equivalence relation given to GroupByEquivalence (which
-	// relies on a parallel Union-Find).
+	// Two candidates conflict (i.e. their collapses are not independent) iff
+	// a triangle references an endpoint of both edges: everything a collapse
+	// touches (CollapseEdge) is the vertex record of its first endpoint and
+	// the records of the triangles referencing either endpoint, so two
+	// collapses with no such common triangle read and write disjoint data and
+	// commute (either order gives the same result). This includes the shared
+	// endpoint case (the triangles around the shared vertex are common).
 	//
-	// The relation generation is lazy: a generator functor is passed to
-	// GroupByEquivalence, which evaluates it in parallel chunks (one per
-	// thread) during the Union-Find reduction. Each chunk generates the
-	// chaining relations for its candidate range by looking up the candidates
-	// in the pre-built CSR buckets — no relations vector is materialized.
-	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates,
-			const std::vector<CandidateNeighbourhood>& candidateNeighbourhoods) {
+	// The conflict relation is expressed as a triangle -> candidates reverse
+	// index (a CSR over the triangles, filled from the candidate endpoints
+	// through the vertex references): all the candidates in the same bucket
+	// pairwise conflict, so the (chained) buckets define the equivalence
+	// relation given to GroupByEquivalence (which relies on a parallel
+	// Union-Find).
+	//
+	// Note: the resulting closures have disjoint triangle sets, so they can
+	// be processed in parallel, but they can still share vertices (read
+	// only). The screen space caches are precomputed for that reason: the
+	// lazy cache writes would otherwise race on the shared vertices.
+	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates) {
 		const u_int candidateCount = candidates.size();
 		if (candidateCount == 0) {
 			return {};
 		}
 
-		// Build the vertex -> candidates reverse index as a CSR structure
+		// Build the triangle -> candidates reverse index as a CSR structure
 		// (bucket count, prefix sum, bucket fill on flat arrays): no hashing
 		// and no per bucket allocation.
-		// (Kept serial: the count/fill updates of a vertex would be shared by
-		// all the candidates reading it, so the parallel version would need
-		// contended atomics.)
-		const u_int vertexCount = vertices.size();
-		std::vector<u_int> bucketStart(vertexCount + 1, 0);
+		// (Kept serial: the count/fill updates of a triangle would be shared
+		// by all the candidates reading it, so the parallel version would
+		// need contended atomics.)
+		const u_int triangleCount = triangles.size();
+		std::vector<u_int> bucketStart(triangleCount + 1, 0);
 		for (u_int i = 0; i < candidateCount; ++i) {
-			for (const u_int v : candidateNeighbourhoods[i]) {
-				++bucketStart[v + 1];
+			const SimplifyTriangle2& t = triangles[candidates[i].tid];
+			for (const u_int v : { t.v[candidates[i].tvertex],
+					t.v[(candidates[i].tvertex + 1) % 3] }) {
+				for (u_int k = 0; k < vertices[v].tcount; ++k)
+					++bucketStart[refs[vertices[v].tstart + k].tid + 1];
 			}
 		}
-		for (u_int v = 0; v < vertexCount; ++v) {
-			bucketStart[v + 1] += bucketStart[v];
+		for (u_int tid = 0; tid < triangleCount; ++tid) {
+			bucketStart[tid + 1] += bucketStart[tid];
 		}
 
-		std::vector<u_int> bucketEntries(bucketStart[vertexCount]);
+		std::vector<u_int> bucketEntries(bucketStart[triangleCount]);
 		{
 			std::vector<u_int> bucketCursor(bucketStart.begin(), bucketStart.end() - 1);
 			for (u_int i = 0; i < candidateCount; ++i) {
-				for (const u_int v : candidateNeighbourhoods[i]) {
-					bucketEntries[bucketCursor[v]++] = i;
+				const SimplifyTriangle2& t = triangles[candidates[i].tid];
+				for (const u_int v : { t.v[candidates[i].tvertex],
+						t.v[(candidates[i].tvertex + 1) % 3] }) {
+					for (u_int k = 0; k < vertices[v].tcount; ++k)
+						bucketEntries[bucketCursor[refs[vertices[v].tstart + k].tid]++] = i;
 				}
 			}
 		}
 
 		// Lazy relation generator: for candidates [r1, r2), look up each
-		// neighbourhood vertex in the CSR and chain i with the next candidate
-		// in the bucket. Bucket entries are in ascending candidate index
-		// order (filled by iterating candidates 0..N), so std::lower_bound
-		// finds i's position. Every candidate emits its own forward link,
-		// so the full chain (c0,c1), (c1,c2), ... is reconstructed in
-		// parallel across threads.
+		// triangle touching their edge in the CSR and chain i with the next
+		// candidate in the bucket. Bucket entries are in ascending candidate
+		// index order (filled by iterating candidates 0..N), so
+		// std::lower_bound finds i's position. Every candidate emits its own
+		// forward link, so the full chain (c0,c1), (c1,c2), ... is
+		// reconstructed in parallel across threads.
 		auto relationGenerator =
-				[&candidateNeighbourhoods, &bucketStart, &bucketEntries]
-				(size_t r1, size_t r2) -> CacheAlignedVector<Relation> {
-			// Cache aligned: allocated per chunk, inside the parallel
-			// evaluation of the generator
-			CacheAlignedVector<Relation> relations;
+				[this, &candidates, &bucketStart, &bucketEntries]
+				(size_t r1, size_t r2) -> ScalableVector<Relation> {
+			// Scalable allocator: allocated per chunk, inside the parallel
+			// evaluation of the generator, consumed once by the Union-Find
+			// (no caching expected)
+			ScalableVector<Relation> relations;
 			for (size_t i = r1; i < r2; ++i) {
-				for (const u_int v : candidateNeighbourhoods[i]) {
-					const u_int start = bucketStart[v];
-					const u_int end = bucketStart[v + 1];
-					if (end - start <= 1)
-						continue;
-					// Find i in the sorted bucket
-					const auto it = std::lower_bound(
-							bucketEntries.begin() + start,
-							bucketEntries.begin() + end,
-							static_cast<u_int>(i));
-					// If i is found and not the last in the bucket, chain
-					// with the next candidate
-					if (it != bucketEntries.begin() + end && *it == i) {
-						const auto next = std::next(it);
-						if (next != bucketEntries.begin() + end)
-							relations.emplace_back(*it, *next);
+				const SimplifyTriangle2& t = triangles[candidates[i].tid];
+				for (const u_int v : { t.v[candidates[i].tvertex],
+						t.v[(candidates[i].tvertex + 1) % 3] }) {
+					for (u_int k = 0; k < vertices[v].tcount; ++k) {
+						const u_int tid = refs[vertices[v].tstart + k].tid;
+						const u_int start = bucketStart[tid];
+						const u_int end = bucketStart[tid + 1];
+						if (end - start <= 1)
+							continue;
+						// Find i in the sorted bucket. The same candidate can
+						// appear multiple times in a bucket (a triangle
+						// referencing both endpoints of the edge, or a
+						// degenerate triangle referencing an endpoint twice):
+						// skip the duplicates of i when chaining.
+						const auto it = std::lower_bound(
+								bucketEntries.begin() + start,
+								bucketEntries.begin() + end,
+								static_cast<u_int>(i));
+						// If i is found and not the last in the bucket, chain
+						// with the next candidate
+						if (it != bucketEntries.begin() + end && *it == i) {
+							auto next = std::next(it);
+							while (next != bucketEntries.begin() + end && *next == i)
+								++next;
+							if (next != bucketEntries.begin() + end)
+								relations.emplace_back(*it, *next);
+						}
 					}
 				}
 			}
@@ -1214,12 +1199,15 @@ private:
 
 	// Class for processing closures in parallel using TBB parallel_reduce.
 	//
-	// The closures have disjoint neighbourhoods, so the triangle and vertex
-	// updates performed by CollapseEdge (including the global deleted/dirty
-	// flags) are race-free and need no merge: each body only appends
-	// thread-local references (CollapseContext, dropped at the end: the
-	// reference list is rebuilt at each iteration) and counts its deleted
-	// triangles.
+	// The closures have disjoint triangle sets, so the triangle updates
+	// performed by CollapseEdge (including the global deleted/dirty flags)
+	// are race-free and need no merge. The closures can still share vertices,
+	// but only read only (a collapse writes only the vertex record of its
+	// first endpoint, whose triangles all belong to the collapsing closure;
+	// the screen space caches are precomputed, so the lazy cache writes never
+	// happen across closures). Each body only appends thread-local references
+	// (CollapseContext, dropped at the end: the reference list is rebuilt at
+	// each iteration) and counts its deleted triangles.
 	class ParallelClosureProcessor {
 		Simplify2& simplify;
 		const std::vector<std::vector<u_int>>& closures;
@@ -1269,8 +1257,8 @@ private:
 			for (size_t i = 1; i < deletedCandidates.size(); ++i) {
 				if (deletedCandidates[i] == deletedCandidates[i - 1]) {
 					SDL_LOG("ERROR: Triangle " << deletedCandidates[i] << " was deleted in multiple closures!");
-					SDL_LOG("  This indicates a bug in closure computation - neighbourhoods overlap.");
-					assert(false && "Triangle deleted in multiple closures - neighbourhoods overlap!");
+					SDL_LOG("  This indicates a bug in closure computation - triangle sets overlap.");
+					assert(false && "Triangle deleted in multiple closures - triangle sets overlap!");
 				}
 			}
 
@@ -1280,9 +1268,9 @@ private:
 	private:
 		// Process a single closure
 		void ProcessClosure(const std::vector<u_int>& closureIndices) {
-			// Cache aligned: allocated and resized inside the parallel
-			// processing (one pair per thread)
-			CacheAlignedVector<bool> deleted0, deleted1;
+			// Scalable allocator: recreated for every closure (no caching
+			// expected), resized for every candidate
+			ScalableVector<bool> deleted0, deleted1;
 
 			// Process each candidate in the closure in order
 			for (u_int idx : closureIndices) {
@@ -1323,9 +1311,11 @@ private:
 
 		// Use parallel_reduce to process closures in parallel.
 		//
-		// The closures have disjoint neighbourhoods so the updates of triangles
-		// and vertices performed by CollapseEdge (including the global
-		// deleted/dirty flags) are race-free and need no merge.
+		// The closures have disjoint triangle sets so the updates of triangles
+		// performed by CollapseEdge (including the global deleted/dirty flags)
+		// are race-free and need no merge. The closures can still share
+		// vertices, but only read only (and the screen caches are
+		// precomputed, see the vertexScreen* comment).
 		ParallelClosureProcessor processor(*this, sortedClosures, allCandidates);
 
 		// Grain size: process at least 1 closure per thread
