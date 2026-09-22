@@ -158,27 +158,19 @@ public:
 		return det;
 	}
 
-	// Addition
+	// Addition (loop form so the 10 float additions are SIMD vectorized
+	// by the compiler: 2x 128-bit + 1x 64-bit packed adds)
 	const SymetricMatrix2 operator+(const SymetricMatrix2 &n) const {
-		return SymetricMatrix2(
-			m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],
-			m[4] + n[4], m[5] + n[5], m[6] + n[6],
-			m[7] + n[7], m[8] + n[8],
-			m[9] + n[9]);
+		SymetricMatrix2 r;
+		for (u_int i = 0; i < 10; ++i)
+			r.m[i] = m[i] + n.m[i];
+		return r;
 	}
 
-	// In-place addition
+	// In-place addition (loop form for the same SIMD vectorization)
 	SymetricMatrix2& operator+=(const SymetricMatrix2& n) {
-		m[0] += n[0];
-		m[1] += n[1];
-		m[2] += n[2];
-		m[3] += n[3];
-		m[4] += n[4];
-		m[5] += n[5];
-		m[6] += n[6];
-		m[7] += n[7];
-		m[8] += n[8];
-		m[9] += n[9];
+		for (u_int i = 0; i < 10; ++i)
+			m[i] += n.m[i];
 
 		return *this;
 	}
@@ -918,12 +910,31 @@ private:
 		vertices.resize(dst);
 	}
 
-	// Error between vertex and Quadric
-	float VertexError(const SymetricMatrix2 &q, const float x, const float y, const float z) const {
-		return q[0] * x * x + 2.f * q[1] * x * y + 2.f * q[2] * x * z + 2.f * q[3] * x +
-			q[4] * y * y + 2.f * q[5] * y * z + 2.f * q[6] * y +
-			q[7] * z * z + 2.f * q[8] * z +
-			q[9];
+	// Error between vertex and Quadric, evaluated for the 3 points at
+	// once: the evaluations are independent and share the same quadric
+	// coefficients, so they are processed in SIMD lanes (one point per
+	// lane, the 4th lane is padding). Each lane evaluates the same
+	// expression as the original scalar version.
+	void VertexError(const SymetricMatrix2 &q,
+			const Point &p1, const Point &p2, const Point &p3,
+			float *error1, float *error2, float *error3) const {
+		// Pack the point coordinates by component, padded to the SIMD width
+		alignas(16) float x[4] = { p1.x, p2.x, p3.x, 0.f };
+		alignas(16) float y[4] = { p1.y, p2.y, p3.y, 0.f };
+		alignas(16) float z[4] = { p1.z, p2.z, p3.z, 0.f };
+		alignas(16) float e[4];
+
+		for (u_int k = 0; k < 4; ++k) {
+			const float xv = x[k], yv = y[k], zv = z[k];
+			e[k] = q[0] * xv * xv + 2.f * q[1] * xv * yv + 2.f * q[2] * xv * zv + 2.f * q[3] * xv +
+				q[4] * yv * yv + 2.f * q[5] * yv * zv + 2.f * q[6] * yv +
+				q[7] * zv * zv + 2.f * q[8] * zv +
+				q[9];
+		}
+
+		*error1 = e[0];
+		*error2 = e[1];
+		*error3 = e[2];
 	}
 
 	// Error for one edge
@@ -938,9 +949,11 @@ private:
 
 		// Error can be negative, I add 1 to have screenErrorScale can than
 		// work as expected
-		const float error1 = VertexError(q, p1.x, p1.y, p1.z) + 1.f;
-		const float error2 = VertexError(q, p2.x, p2.y, p2.z) + 1.f;
-		const float error3 = VertexError(q, p3.x, p3.y, p3.z) + 1.f;
+		float error1, error2, error3;
+		VertexError(q, p1, p2, p3, &error1, &error2, &error3);
+		error1 += 1.f;
+		error2 += 1.f;
+		error3 += 1.f;
 
 		float error;
 		if (preserveBorder && vertices[v1Index].border) {
