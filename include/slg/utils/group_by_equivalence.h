@@ -23,13 +23,18 @@
 #include <ranges>
 #include <functional>
 #include <span>
+#include <oneapi/tbb.h>
 
 namespace slg {
 
 using Classes = std::vector<std::vector<size_t>>;
 using Relation = std::pair<size_t, size_t>;
 using RelationSpan = std::span<const Relation>;
-using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
+// Cache-aligned vector of relations, as returned by the generators: the
+// generator is evaluated in parallel (one call per chunk), so the
+// per-chunk buffers of different threads never share a cache line
+using RelationVector = std::vector<Relation, tbb::cache_aligned_allocator<Relation>>;
+using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 
 // GroupByEquivalence computes the quotient set (equivalence classes) from an
 // equivalence relation.
@@ -48,15 +53,15 @@ using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
 //
 // Two overloads are provided:
 // 1. For callable generators: GroupByEquivalence(numElements, relation)
-//    where relation is a RelationFunction (std::function<std::vector<Relation>
-//    (size_t, size_t)>) that takes an interval [r1, r2) and returns pairs
+//    where relation is a RelationFunction (a std::function taking an
+//    interval [r1, r2) and returning a cache-aligned vector of pairs)
 // 2. For direct ranges: GroupByEquivalence(numElements, relation)
 //    where relation is a RelationSpan (std::span<const Relation>)
 //
 // Usage examples:
 //   // With a callable generator (functor or lambda)
 //   auto relation = [&](size_t r1, size_t r2) {
-//       std::vector<std::pair<size_t, size_t>> pairs;
+//       slg::RelationVector pairs;
 //       for (size_t i = r1; i < r2; ++i) {
 //           if (condition(i)) pairs.emplace_back(i, i+1);
 //       }

@@ -28,7 +28,6 @@
 #include <functional>
 
 #include <oneapi/tbb.h>
-#include <robin_hood.h>
 
 #include <boost/format.hpp>
 
@@ -175,6 +174,21 @@ public:
 		return *this;
 	}
 };
+
+
+// Cache-aligned vector for the containers allocated inside the
+// multithreaded parts (per-thread / per-chunk buffers): the storage
+// starts on a cache line boundary, so the buffers of different threads
+// never share a cache line (no false sharing on the buffer heads).
+template<typename T>
+using CacheAlignedVector = std::vector<T, tbb::cache_aligned_allocator<T>>;
+
+// Neighbourhood of a candidate edge collapse, as a sorted (ascending,
+// deduplicated) vector: built inside the parallel_for (one per candidate),
+// cache aligned so the buffers of concurrently building candidates never
+// share a cache line, and iterated sequentially (flat layout, no hashing,
+// no per element node) by the closure computation.
+using CandidateNeighbourhood = CacheAlignedVector<u_int>;
 
 
 class Simplify2 {
@@ -433,7 +447,7 @@ public:
 
 			// Compute candidate neighbourhoods and closures for parallel processing
 			stepStartTime = WallClockTime();
-			std::vector<robin_hood::unordered_set<u_int>> candidateNeighbourhoods(allCandidates.size());
+			std::vector<CandidateNeighbourhood> candidateNeighbourhoods(allCandidates.size());
 			tbb::parallel_for(size_t(0), allCandidates.size(),
 					[this, &allCandidates, &candidateNeighbourhoods](size_t i) {
 				candidateNeighbourhoods[i] = ComputeCandidateNeighbourhood(allCandidates[i]);
@@ -512,7 +526,9 @@ private:
 	// from scratch by UpdateMesh at each iteration, so the tails are simply
 	// dropped at the end of the parallel processing (no merge needed).
 	struct CollapseContext {
-		std::vector<SimplifyRef2> refsTail;
+		// Cache aligned: the tail grows inside the parallel processing of
+		// the closures (one context per thread)
+		CacheAlignedVector<SimplifyRef2> refsTail;
 		u_int deletedCount = 0;
 	};
 
@@ -551,7 +567,7 @@ private:
 	std::vector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
-			CollapseContext &ctx, std::vector<bool> &deleted0, std::vector<bool> &deleted1) {
+			CollapseContext &ctx, CacheAlignedVector<bool> &deleted0, CacheAlignedVector<bool> &deleted1) {
 		SimplifyTriangle2 &t = triangles[trinagleIndex];
 
 		if (t.deleted)
@@ -659,7 +675,7 @@ private:
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
 			const CollapseContext &ctx,
-			std::vector<bool> *deleted = nullptr) const {
+			CacheAlignedVector<bool> *deleted = nullptr) const {
 		const SimplifyVertex2 &v0 = vertices[i0];
 
 		for (u_int k = 0; k < v0.tcount; ++k) {
@@ -711,7 +727,7 @@ private:
 
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const u_int i0, const SimplifyVertex2 &v,
-			const std::vector<bool> &deleted, CollapseContext &ctx) {
+			const CacheAlignedVector<bool> &deleted, CollapseContext &ctx) {
 		for (u_int k = 0; k < v.tcount; ++k) {
 			const SimplifyRef2 &r = GetRef(ctx, v.tstart + k);
 			SimplifyTriangle2 &t = triangles[r.tid];
@@ -1047,15 +1063,20 @@ private:
 	// Computes the neighbourhood of a candidate edge collapse
 	// The neighbourhood includes all vertices that would be impacted by collapsing
 	// the edge (v0, v1) in triangle tid
-	robin_hood::unordered_set<u_int> ComputeCandidateNeighbourhood(const SimplifyRef2& candidate) const {
-		robin_hood::unordered_set<u_int> neighbourhood;
+	// The result is a sorted (ascending), deduplicated vector
+	CandidateNeighbourhood ComputeCandidateNeighbourhood(const SimplifyRef2& candidate) const {
+		CandidateNeighbourhood neighbourhood;
 		const SimplifyTriangle2& t = triangles[candidate.tid];
 		const u_int v0_idx = t.v[candidate.tvertex];
 		const u_int v1_idx = t.v[(candidate.tvertex + 1) % 3];
 
+		// Upper bound of the neighbourhood size: the 2 edge vertices plus
+		// up to 3 vertices per triangle referencing them (deduplicated below)
+		neighbourhood.reserve(2 + 3 * (vertices[v0_idx].tcount + vertices[v1_idx].tcount));
+
 		// The two vertices of the edge being collapsed are always in the neighbourhood
-		neighbourhood.insert(v0_idx);
-		neighbourhood.insert(v1_idx);
+		neighbourhood.push_back(v0_idx);
+		neighbourhood.push_back(v1_idx);
 
 		// Add all vertices connected to v0
 		for (u_int k = 0; k < vertices[v0_idx].tcount; ++k) {
@@ -1064,7 +1085,7 @@ private:
 			for (u_int j = 0; j < 3; ++j) {
 				u_int vid = tri.v[j];
 				if (vid != v0_idx && vid != v1_idx) {
-					neighbourhood.insert(vid);
+					neighbourhood.push_back(vid);
 				}
 			}
 		}
@@ -1076,10 +1097,15 @@ private:
 			for (u_int j = 0; j < 3; ++j) {
 				u_int vid = tri.v[j];
 				if (vid != v0_idx && vid != v1_idx) {
-					neighbourhood.insert(vid);
+					neighbourhood.push_back(vid);
 				}
 			}
 		}
+
+		// Deduplicate: sort + unique (flat layout, no hashing)
+		std::sort(neighbourhood.begin(), neighbourhood.end());
+		neighbourhood.erase(std::unique(neighbourhood.begin(), neighbourhood.end()),
+				neighbourhood.end());
 
 		return neighbourhood;
 	}
@@ -1099,7 +1125,7 @@ private:
 	// chaining relations for its candidate range by looking up the candidates
 	// in the pre-built CSR buckets — no relations vector is materialized.
 	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates,
-			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods) {
+			const std::vector<CandidateNeighbourhood>& candidateNeighbourhoods) {
 		const u_int candidateCount = candidates.size();
 		if (candidateCount == 0) {
 			return {};
@@ -1141,8 +1167,10 @@ private:
 		// parallel across threads.
 		auto relationGenerator =
 				[&candidateNeighbourhoods, &bucketStart, &bucketEntries]
-				(size_t r1, size_t r2) -> std::vector<Relation> {
-			std::vector<Relation> relations;
+				(size_t r1, size_t r2) -> CacheAlignedVector<Relation> {
+			// Cache aligned: allocated per chunk, inside the parallel
+			// evaluation of the generator
+			CacheAlignedVector<Relation> relations;
 			for (size_t i = r1; i < r2; ++i) {
 				for (const u_int v : candidateNeighbourhoods[i]) {
 					const u_int start = bucketStart[v];
@@ -1200,8 +1228,9 @@ private:
 		// Local state: appended refs tail and deleted triangles counter
 		CollapseContext ctx;
 
-		// Candidate triangles deleted by this body (for the disjointness check)
-		std::vector<u_int> deletedCandidates;
+		// Candidate triangles deleted by this body (for the disjointness check).
+		// Cache aligned: one per thread, appended in the parallel processing
+		CacheAlignedVector<u_int> deletedCandidates;
 
 	public:
 		// Constructor for the master thread
@@ -1251,7 +1280,9 @@ private:
 	private:
 		// Process a single closure
 		void ProcessClosure(const std::vector<u_int>& closureIndices) {
-			std::vector<bool> deleted0, deleted1;
+			// Cache aligned: allocated and resized inside the parallel
+			// processing (one pair per thread)
+			CacheAlignedVector<bool> deleted0, deleted1;
 
 			// Process each candidate in the closure in order
 			for (u_int idx : closureIndices) {
