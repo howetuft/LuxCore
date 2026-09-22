@@ -1068,6 +1068,12 @@ private:
 	// vertex, i.e. they are all neighbour-connected, so the (chained) buckets
 	// define the equivalence relation given to GroupByEquivalence (which
 	// relies on a parallel Union-Find).
+	//
+	// The relation generation is lazy: a generator functor is passed to
+	// GroupByEquivalence, which evaluates it in parallel chunks (one per
+	// thread) during the Union-Find reduction. Each chunk generates the
+	// chaining relations for its candidate range by looking up the candidates
+	// in the pre-built CSR buckets — no relations vector is materialized.
 	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates,
 			const std::vector<robin_hood::unordered_set<u_int>>& candidateNeighbourhoods) {
 		const u_int candidateCount = candidates.size();
@@ -1102,28 +1108,46 @@ private:
 			}
 		}
 
-		// Build the equivalence relation: all the candidates in a bucket are
-		// neighbour-connected (chaining each bucket is enough to express it)
-		std::vector<Relation> relations;
-		relations.reserve(bucketEntries.size());
-		for (u_int v = 0; v < vertexCount; ++v) {
-			for (u_int k = bucketStart[v] + 1; k < bucketStart[v + 1]; ++k) {
-				relations.push_back(Relation(bucketEntries[k - 1], bucketEntries[k]));
+		// Lazy relation generator: for candidates [r1, r2), look up each
+		// neighbourhood vertex in the CSR and chain i with the next candidate
+		// in the bucket. Bucket entries are in ascending candidate index
+		// order (filled by iterating candidates 0..N), so std::lower_bound
+		// finds i's position. Every candidate emits its own forward link,
+		// so the full chain (c0,c1), (c1,c2), ... is reconstructed in
+		// parallel across threads.
+		auto relationGenerator =
+				[&candidateNeighbourhoods, &bucketStart, &bucketEntries]
+				(size_t r1, size_t r2) -> std::vector<Relation> {
+			std::vector<Relation> relations;
+			for (size_t i = r1; i < r2; ++i) {
+				for (const u_int v : candidateNeighbourhoods[i]) {
+					const u_int start = bucketStart[v];
+					const u_int end = bucketStart[v + 1];
+					if (end - start <= 1)
+						continue;
+					// Find i in the sorted bucket
+					const auto it = std::lower_bound(
+							bucketEntries.begin() + start,
+							bucketEntries.begin() + end,
+							static_cast<u_int>(i));
+					// If i is found and not the last in the bucket, chain
+					// with the next candidate
+					if (it != bucketEntries.begin() + end && *it == i) {
+						const auto next = std::next(it);
+						if (next != bucketEntries.begin() + end)
+							relations.emplace_back(*it, *next);
+					}
+				}
 			}
-		}
+			return relations;
+		};
 
-		if (relations.empty()) {
-			// No connections at all: each candidate is its own closure
-			std::vector<std::vector<u_int>> closures;
-			closures.reserve(candidateCount);
-			for (u_int i = 0; i < candidateCount; ++i)
-				closures.push_back(std::vector<u_int>{i});
-
-			return closures;
-		}
-
-		// Group the connected candidates with the parallel Union-Find
-		const Classes classes = GroupByEquivalence(candidateCount, RelationSpan(relations));
+		// Group the connected candidates with the parallel Union-Find.
+		// The generator is evaluated in parallel by GroupByEquivalence:
+		// relations are generated and united in the same parallel_reduce
+		// pass, without materializing a relations vector.
+		const Classes classes = GroupByEquivalence(candidateCount,
+				RelationFunction(relationGenerator));
 
 		// Convert the classes to closures (the GroupByEquivalence classes come
 		// with their members in ascending order, i.e. ascending error: the
