@@ -16,9 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This is the EXPERIMENTAL version of Simplify shape
-// Enable with LUXCORE_ENABLE_SIMPLIFY2 CMake option
-
 // Only compile this file if the feature is enabled
 
 #include <map>
@@ -1308,7 +1305,6 @@ ExtTriangleMeshUPtr SimplifyShape2::RefineImpl(SceneConstRef scene) {
 
 // Feature flag function
 bool IsSimplify2Enabled() {
-	// This will be controlled by CMake option LUXCORE_ENABLE_SIMPLIFY2
 	return true;
 }
 

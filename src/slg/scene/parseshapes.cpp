@@ -453,7 +453,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 		);
 
 	} else if (shapeType == "simplify2") {
-		// Experimental SimplifyShape2 - only available when LUXCORE_ENABLE_SIMPLIFY2 is enabled
+		// Experimental SimplifyShape2
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
