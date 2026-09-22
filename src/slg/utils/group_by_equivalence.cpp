@@ -25,12 +25,19 @@
 
 namespace {
 
+// Vector with the TBB scalable allocator (tbbmalloc): the UnionFind arrays
+// are allocated per reduce body (one pair per thread, constructed inside
+// the parallel execution), and tbbmalloc serves each thread from its own
+// cache, avoiding contention on the shared heap
+template<typename T>
+using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
+
 // Classical Union-Find (disjoint set union) on flat arrays: the elements
 // form the dense range [0, numElements), so the parent and rank structures
 // are plain vectors instead of hash maps.
 class UnionFind {
-	std::vector<size_t> parent;
-	std::vector<size_t> rank;
+	ScalableVector<size_t> parent;
+	ScalableVector<size_t> rank;
 
 public:
 	UnionFind() = default;
