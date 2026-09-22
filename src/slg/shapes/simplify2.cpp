@@ -446,6 +446,10 @@ public:
 					[this, &allCandidates, &candidateNeighbourhoods](size_t i) {
 				candidateNeighbourhoods[i] = ComputeCandidateNeighbourhood(allCandidates[i]);
 			});
+			SDL_LOG("Simplify2: Computed " << allCandidates.size() << " neighbourhoods in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+			stepStartTime = WallClockTime();
 			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates, candidateNeighbourhoods);
 			size_t maxClosureSize = 0;
 			for (const auto& closure : candidateClosures)
