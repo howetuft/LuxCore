@@ -688,15 +688,26 @@ private:
 				continue;
 			}
 
-			// Check if the triangle is too narrow
-			const Vector d1 = Normalize(vertices[id1].p - p);
-			const Vector d2 = Normalize(vertices[id2].p - p);
-			if (AbsDot(d1, d2) > .999f)
+			// Check if the triangle is too narrow. Same test as
+			// AbsDot(Normalize(d1), Normalize(d2)) > .999f, rewritten with
+			// squared quantities to avoid the normalizations (i.e. the
+			// square roots): |d1.d2| / (|d1| |d2|) > .999f
+			const Vector d1 = vertices[id1].p - p;
+			const Vector d2 = vertices[id2].p - p;
+			const float d1DotD2 = Dot(d1, d2);
+			if (d1DotD2 * d1DotD2 > .999f * .999f * Dot(d1, d1) * Dot(d2, d2))
 				return true;
 
-			// Check if the Normal is changing side
-			const Normal geometryN(Normalize(Cross(d1, d2)));
-			if (Dot(geometryN, t.geometryN) < .2f)
+			// Check if the Normal is changing side. Same test as
+			// Dot(Normalize(Cross(d1, d2)), t.geometryN) < .2f, rewritten
+			// with squared quantities to avoid the square roots:
+			// (cross . N) / |cross| < .2f. A zero cross product (degenerate
+			// case) falls through like the NaN of the original test.
+			const Vector cross(Cross(d1, d2));
+			const float crossSq = Dot(cross, cross);
+			const float crossDotN = Dot(Normal(cross), t.geometryN);
+			if (crossSq > 0.f && (crossDotN <= 0.f ||
+					crossDotN * crossDotN < .2f * .2f * crossSq))
 				return true;
 
 			if (deleted)
