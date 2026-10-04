@@ -790,17 +790,31 @@ string Property::PopPrefix(const std::string &name) {
 // Some engine may operate concurrent accesses on Properties (eg bake engine),
 // therefore this class has to be protected against race conditions (mutex).
 // Beware, however, to avoid deadlocks...
+//
+// Thread Safety:
+// - All public methods are thread-safe and protected by mtx mutex
+// - Move operations are thread-safe and lock both source and destination mutexes
+// - Multiple threads can safely read and modify Properties concurrently
 
-Properties::Properties(Properties&& other) noexcept :
-	names(std::move(other.names)),
-	props(std::move(other.props)),
-	mtx()  // Mutex is not movable
-{}
+Properties::Properties(Properties&& other) noexcept {
+	// Lock both mutexes to prevent race conditions during move
+	std::lock_guard<std::mutex> lock1(mtx);
+	std::lock_guard<std::mutex> lock2(other.mtx);
+	
+	names = std::move(other.names);
+	props = std::move(other.props);
+	// Note: mutex is not moved - each Properties gets its own mutex
+}
 
 Properties& Properties::operator=(Properties&& other) noexcept {
 	if (this != &other) {
+		// Lock both mutexes to prevent race conditions during move
+		std::lock_guard<std::mutex> lock1(mtx);
+		std::lock_guard<std::mutex> lock2(other.mtx);
+		
 		names = std::move(other.names);
-		props = std::move(props);
+		props = std::move(other.props);
+		// Note: mutex is not moved - each Properties gets its own mutex
 	}
 	return *this;
 }
@@ -816,16 +830,18 @@ unsigned int Properties::GetSize() const {
 }
 
 void Properties::Save(const std::string &fileName) {
-	// Mutex will be locked by operator <<
-
 	// The use of std::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
 	std::ofstream outFile(std::filesystem::path(fileName),
 			std::ofstream::trunc);
 
+	if (outFile.fail())
+		throw runtime_error("Unable to open properties file for writing: " + fileName);
+
 	// Force to use C locale
 	outFile.imbue(cLocale);
 
+	// ToString() will lock the mutex internally
 	outFile << ToString();
 
 	if (outFile.fail())
