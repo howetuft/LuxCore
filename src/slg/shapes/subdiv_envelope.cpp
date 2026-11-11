@@ -126,78 +126,125 @@ ExtTriangleMeshUPtr BuildSubdivEnvelope(
 	}
 
 	// Per-point varying data: each submesh only fills the points of its own
-	// island (the rest is zero), so merge per point taking the first non-zero
-	// value across siblings (at seams one side's value is kept). Zero normals
-	// would otherwise produce NaN shading downstream.
+	// island (the rest is left uninitialized by the exporter), so merge per
+	// point taking the first non-zero value across siblings, considering ONLY
+	// points referenced by some envelope face (unreferenced points stay zero;
+	// they are never read downstream). Zero normals would otherwise produce
+	// NaN shading downstream.
 	const size_t numPoints = srcMesh.GetTotalVertexCount();
 
-	NormalBuffer normals;
+	// Points referenced by at least one envelope face
+	std::vector<char> referenced(numPoints, 0);
 	for (const auto *m : siblings) {
-		if (!m->HasNormals())
-			continue;
-		const auto n = m->GetNormals();
-		if (!normals) {
-			normals.Allocate(numPoints);
-			for (size_t i = 0; i < numPoints; ++i)
-				normals[i] = n[i];
-		} else {
-			for (size_t i = 0; i < numPoints; ++i)
-				if (normals[i].LengthSquared() == 0.f && n[i].LengthSquared() > 0.f)
-					normals[i] = n[i];
-		}
+		const auto srcTris = m->GetTriangles();
+		for (size_t i = 0; i < srcTris.size(); ++i)
+			for (u_int c = 0; c < 3; ++c)
+				referenced[srcTris[i].v[c]] = 1;
 	}
 
-	// Same first-non-zero merge for the UV / color / alpha layers
+	// Merge helper: for each referenced point, take the first sibling's
+	// non-zero value; zero elsewhere
+	auto mergeLayer = [&](auto &dstBuffer, auto getLayer, auto hasLayer, auto isZero) {
+		bool any = false;
+		for (const auto *m : siblings)
+			if (hasLayer(m)) { any = true; break; }
+		if (!any)
+			return;
+		using Elem = std::remove_reference_t<decltype(dstBuffer[0])>;
+		dstBuffer.Allocate(numPoints);
+		for (size_t i = 0; i < numPoints; ++i)
+			dstBuffer[i] = Elem();  // zero
+		std::vector<char> set(numPoints, 0);
+		for (const auto *m : siblings) {
+			if (!hasLayer(m))
+				continue;
+			const auto layer = getLayer(m);
+			const auto srcTris = m->GetTriangles();
+			for (size_t i = 0; i < srcTris.size(); ++i)
+				for (u_int c = 0; c < 3; ++c) {
+					const size_t p = srcTris[i].v[c];
+					if (!set[p] && !isZero(layer[p])) {
+						dstBuffer[p] = layer[p];
+						set[p] = 1;
+					}
+				}
+		}
+	};
+
+	NormalBuffer normals;
+	mergeLayer(normals,
+		[](const ExtTriangleMesh *m) { return m->GetNormals(); },
+		[](const ExtTriangleMesh *m) { return m->HasNormals(); },
+		[](const luxrays::Normal &n) { return n.LengthSquared() == 0.f; });
+
+	// Same merge for the UV / color / alpha layers
 	luxrays::ExtMeshProp<luxrays::UV> uvs;
 	luxrays::ExtMeshProp<luxrays::Spectrum> cols;
 	luxrays::ExtMeshProp<float> alphas;
 	for (u_int l = 0; l < EXTMESH_MAX_DATA_COUNT; ++l) {
+		bool anyUV = false, anyCol = false, anyAlpha = false;
 		for (const auto *m : siblings) {
-			if (m->HasUVs(l) && !uvs.LayerHasValues(l)) {
-				const auto layer = m->GetAllUVs().GetLayer(l);
-				auto merged = std::make_shared<luxrays::UV[]>(numPoints);
-				for (size_t i = 0; i < numPoints; ++i)
-					merged[i] = layer[i];
-				uvs.SetLayer(l, std::shared_ptr<luxrays::UV[]>(merged), numPoints);
-			}
-			if (m->HasColors(l) && !cols.LayerHasValues(l)) {
-				const auto layer = m->GetAllColors().GetLayer(l);
-				auto merged = std::make_shared<luxrays::Spectrum[]>(numPoints);
-				for (size_t i = 0; i < numPoints; ++i)
-					merged[i] = layer[i];
-				cols.SetLayer(l, std::shared_ptr<luxrays::Spectrum[]>(merged), numPoints);
-			}
-			if (m->HasAlphas(l) && !alphas.LayerHasValues(l)) {
-				const auto layer = m->GetAllAlphas().GetLayer(l);
-				auto merged = std::make_shared<float[]>(numPoints);
-				for (size_t i = 0; i < numPoints; ++i)
-					merged[i] = layer[i];
-				alphas.SetLayer(l, std::shared_ptr<float[]>(merged), numPoints);
-			}
+			if (m->HasUVs(l)) anyUV = true;
+			if (m->HasColors(l)) anyCol = true;
+			if (m->HasAlphas(l)) anyAlpha = true;
 		}
-		// fill the points left at zero by the first sibling from the others
-		for (const auto *m : siblings) {
-			if (uvs.LayerHasValues(l) && m->HasUVs(l)) {
+		if (anyUV) {
+			auto merged = std::make_shared<luxrays::UV[]>(numPoints);
+			// zero-init
+			for (size_t i = 0; i < numPoints; ++i) merged[i] = luxrays::UV(0.f, 0.f);
+			std::vector<char> set(numPoints, 0);
+			for (const auto *m : siblings) {
+				if (!m->HasUVs(l)) continue;
 				const auto layer = m->GetAllUVs().GetLayer(l);
-				auto cur = uvs.GetLayer(l);
-				for (size_t i = 0; i < numPoints; ++i)
-					if (cur[i].u == 0.f && cur[i].v == 0.f && (layer[i].u != 0.f || layer[i].v != 0.f))
-						cur[i] = layer[i];
+				const auto srcTris = m->GetTriangles();
+				for (size_t i = 0; i < srcTris.size(); ++i)
+					for (u_int c = 0; c < 3; ++c) {
+						const size_t p = srcTris[i].v[c];
+						if (!set[p] && (layer[p].u != 0.f || layer[p].v != 0.f)) {
+							merged[p] = layer[p];
+							set[p] = 1;
+						}
+					}
 			}
-			if (cols.LayerHasValues(l) && m->HasColors(l)) {
+			uvs.SetLayer(l, std::shared_ptr<luxrays::UV[]>(merged), numPoints);
+		}
+		if (anyCol) {
+			auto merged = std::make_shared<luxrays::Spectrum[]>(numPoints);
+			for (size_t i = 0; i < numPoints; ++i) merged[i] = luxrays::Spectrum();
+			std::vector<char> set(numPoints, 0);
+			for (const auto *m : siblings) {
+				if (!m->HasColors(l)) continue;
 				const auto layer = m->GetAllColors().GetLayer(l);
-				auto cur = cols.GetLayer(l);
-				for (size_t i = 0; i < numPoints; ++i)
-					if (cur[i].Black() && !layer[i].Black())
-						cur[i] = layer[i];
+				const auto srcTris = m->GetTriangles();
+				for (size_t i = 0; i < srcTris.size(); ++i)
+					for (u_int c = 0; c < 3; ++c) {
+						const size_t p = srcTris[i].v[c];
+						if (!set[p] && !layer[p].Black()) {
+							merged[p] = layer[p];
+							set[p] = 1;
+						}
+					}
 			}
-			if (alphas.LayerHasValues(l) && m->HasAlphas(l)) {
+			cols.SetLayer(l, std::shared_ptr<luxrays::Spectrum[]>(merged), numPoints);
+		}
+		if (anyAlpha) {
+			auto merged = std::make_shared<float[]>(numPoints);
+			for (size_t i = 0; i < numPoints; ++i) merged[i] = 0.f;
+			std::vector<char> set(numPoints, 0);
+			for (const auto *m : siblings) {
+				if (!m->HasAlphas(l)) continue;
 				const auto layer = m->GetAllAlphas().GetLayer(l);
-				auto cur = alphas.GetLayer(l);
-				for (size_t i = 0; i < numPoints; ++i)
-					if (cur[i] == 0.f && layer[i] != 0.f)
-						cur[i] = layer[i];
+				const auto srcTris = m->GetTriangles();
+				for (size_t i = 0; i < srcTris.size(); ++i)
+					for (u_int c = 0; c < 3; ++c) {
+						const size_t p = srcTris[i].v[c];
+						if (!set[p] && layer[p] != 0.f) {
+							merged[p] = layer[p];
+							set[p] = 1;
+						}
+					}
 			}
+			alphas.SetLayer(l, std::shared_ptr<float[]>(merged), numPoints);
 		}
 	}
 
