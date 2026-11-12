@@ -1751,7 +1751,8 @@ static void Scene_DefineMeshExt3(
     const std::optional<std::vector<py_float_array>> alpha_layers,
     const std::optional<py_float_array> transformation,
     const std::optional<py::object> crease_pairs,
-    const std::optional<py::object> crease_weights
+    const std::optional<py::object> crease_weights,
+    const bool normals_pretransformed = false
 ) {
 	// Points: either a new buffer, or shared from an existing mesh (given by
 	// name). A Buffer copy shares the storage, so building the mesh with the
@@ -1850,7 +1851,11 @@ static void Scene_DefineMeshExt3(
 		// ApplyTransform() would have done. The normals buffer may wrap
 		// read-only external memory, so deep-copy it before rotating.
 		if (srcTriMesh) {
-			if (normals) {
+			// normals_pretransformed: the caller already rotated the normals
+			// to world space (e.g. BlendLuxCore bakes the transform into the
+			// points itself and pre-rotates the normals in numpy). Skipping
+			// the rotation here also avoids the O(normals) deep copy.
+			if (normals && !normals_pretransformed) {
 				luxrays::NormalBuffer writableNormals;
 				writableNormals.Set(normals);
 				normals = std::move(writableNormals);
@@ -2914,7 +2919,8 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("alphas") = py::none(),
 		py::arg("transformation") = py::none(),
 		py::arg("crease_pairs") = py::none(),
-		py::arg("crease_weights") = py::none()
+		py::arg("crease_weights") = py::none(),
+		py::arg("normals_pretransformed") = false
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)
 	.def("DefineMeshExt", &Scene_DefineMeshExt2)
