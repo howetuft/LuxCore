@@ -49,6 +49,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "compute_submeshes.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "luxcore/pyluxcore/pyluxcoreutils.h"
 #include "oneapi/tbb/parallel_sort.h"
@@ -2540,6 +2541,21 @@ PYBIND11_MODULE(pyluxcore, m) {
 	  "'secondary' array of the same length, sorts lexicographically by "
 	  "(keys, secondary)",
 	  py::arg("keys"), py::arg("secondary") = py::none());
+
+  // C++ port of BlendLuxCore's mesh compute (weld, islands, grouping,
+  // per-submesh gathers): takes the numpy arrays extracted from Blender,
+  // returns (payloads, info) with per-submesh numpy arrays ready for
+  // Scene.DefineMeshExt. Releases the GIL during the computation.
+  m.def("compute_submeshes_c", &compute_submeshes_c,
+	  "Compute submeshes (weld points, varying-data islands, (material,island) "
+	  "grouping, per-submesh varying data) in C++/TBB. Returns (payloads, info)",
+	  py::arg("vertex_points"), py::arg("loop_vertices"), py::arg("loop_normals"),
+	  py::arg("triangle_loops"), py::arg("loop_triangle_materials"),
+	  py::arg("loop_uvs"), py::arg("color_attrs"), py::arg("color_domains"),
+	  py::arg("edge_verts") = py::none(), py::arg("edge_crease") = py::none(),
+	  py::arg("transform") = py::none(),
+	  py::arg("is_viewport_render"), py::arg("use_instancing"),
+	  py::arg("share_points"), py::arg("mesh_key"));
 
   m.def("Init", &LuxCore_Init);
   m.def("Init", &LuxCore_InitDefaultHandler);
