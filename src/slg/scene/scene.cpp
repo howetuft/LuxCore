@@ -204,6 +204,8 @@ bool Scene::IsImageMapDefined(const string &imgMapName) const {
 
 
 Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	const string &shapeName = mesh->GetName();
 
 	if (extMeshCache.IsExtMeshDefined(shapeName)) {
@@ -252,6 +254,8 @@ Scene::ReturnType<ExtMesh> Scene::DefineMesh(ExtMeshUPtr&& mesh) {
 }
 
 Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(ExtTriangleMeshUPtr&& mesh) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	ExtMeshUPtr extmesh = std::move(mesh);
 	auto [newMeshRef, oldMeshPtr] = DefineMesh(std::move(extmesh));
 
@@ -312,6 +316,8 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMesh(
 	std::span<Spectrum> cols,
 	std::span<float> alphas
 ) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	auto mesh = std::make_unique<ExtTriangleMesh>(std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas);
 	mesh->SetName(shapeName);
@@ -328,6 +334,8 @@ Scene::ReturnType<ExtTriangleMesh> Scene::DefineMeshExt(
 	std::optional<ExtMeshProp<Spectrum>> cols,
 	std::optional<ExtMeshProp<float>> alphas
 ) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	auto mesh = std::make_unique<ExtTriangleMesh>(
 			std::move(p), std::move(vi), std::move(n),
 			uvs, cols, alphas
@@ -342,6 +350,8 @@ Scene::ReturnType<ExtInstanceTriangleMesh> Scene::DefineMesh(
 	const string &meshName,
 	const Transform &trans
 ) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	auto& mesh = extMeshCache.GetExtMesh(meshName);
 	//TODO
 	//if (!mesh)
@@ -364,6 +374,8 @@ Scene::ReturnType<ExtMotionTriangleMesh> Scene::DefineMesh(
 	const string &meshName,
 	const MotionSystem &ms
 ) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
+
 	auto& mesh = extMeshCache.GetExtMesh(meshName);
 	//TODO
 	//if (!mesh)
@@ -382,11 +394,13 @@ Scene::ReturnType<ExtMotionTriangleMesh> Scene::DefineMesh(
 
 void Scene::SetMeshVertexAOV(const string &meshName,
 		const unsigned int index, std::span<float> data) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 	extMeshCache.SetMeshVertexAOV(meshName, index, data);
 }
 
 void Scene::SetMeshTriangleAOV(const string &meshName,
 		const unsigned int index, std::span<float> data) {
+	std::lock_guard<std::recursive_mutex> lock(meshDefMtx);
 	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
 }
 

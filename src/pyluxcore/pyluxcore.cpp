@@ -1759,8 +1759,11 @@ static void Scene_DefineMeshExt3(
 	// name). A Buffer copy shares the storage, so building the mesh with the
 	// sharing ctor on *sharedPoints never duplicates the point data.
 	// NOTE: the GIL is released for the buffer copies / mesh build / scene
-	// insertion below, so callers must not invoke scene methods concurrently
-	// from multiple threads.
+	// insertion below. Scene mesh definition is serialized by the scene's
+	// mesh-def mutex (slg::Scene::MeshDefMutex, taken inside
+	// SceneImpl::DefineMesh), so this method is safe to call concurrently
+	// from multiple threads as long as no mesh is redefined/deleted while
+	// the export runs.
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
 	py_float_array pointsArr;
@@ -1770,6 +1773,10 @@ static void Scene_DefineMeshExt3(
 	luxrays::Transform srcTrans;
 	if (py::isinstance<py::str>(p)) {
 		const std::string srcMeshName = py::cast<std::string>(p);
+		// The source-mesh lookup reads the shared mesh cache: lock it (the
+		// source mesh itself is not modified here; it stays alive because the
+		// cache holds it and meshes are not deleted during the export)
+		std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
 		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(srcMeshName);
 		srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
 		if (!srcTriMesh)
