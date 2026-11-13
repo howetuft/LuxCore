@@ -27,6 +27,14 @@
 
 namespace {
 
+// All containers allocated inside compute_submeshes_c use tbbmalloc: the
+// function runs concurrently from several Python worker threads, and
+// tbbmalloc serves each thread from its own cache, avoiding contention on
+// glibc malloc's arenas. Same pattern as slg's group_by_equivalence.cpp.
+// (The pybind11 signature below keeps std::vector, as pybind11 requires it.)
+template <typename T>
+using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
+
 constexpr size_t MIN_ISLAND_TRIANGLE_COUNT = 64;
 // float(np.cos(np.deg2rad(30.0)))
 constexpr double MIN_ISLAND_MERGE_COS_ANGLE = 0.86602540378443864676;
@@ -34,7 +42,7 @@ constexpr double MIN_ISLAND_MERGE_COS_ANGLE = 0.86602540378443864676;
 using Clock = std::chrono::steady_clock;
 
 struct StageTimer {
-	std::vector<std::pair<std::string, double>> stages;
+	ScalableVector<std::pair<std::string, double>> stages;
 	Clock::time_point t0 = Clock::now();
 	void stage(const char *name) {
 		auto now = Clock::now();
@@ -50,15 +58,15 @@ struct StageTimer {
 //------------------------------------------------------------------------------
 
 template <typename T>
-std::vector<int64_t> argsort1(const T *keys, size_t n) {
-	std::vector<std::pair<T, int64_t>> pairs(n);
+ScalableVector<int64_t> argsort1(const T *keys, size_t n) {
+	ScalableVector<std::pair<T, int64_t>> pairs(n);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i)
 				pairs[i] = std::make_pair(keys[i], static_cast<int64_t>(i));
 		});
 	tbb::parallel_sort(pairs.begin(), pairs.end());
-	std::vector<int64_t> out(n);
+	ScalableVector<int64_t> out(n);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i)
@@ -68,15 +76,15 @@ std::vector<int64_t> argsort1(const T *keys, size_t n) {
 }
 
 template <typename T, typename U>
-std::vector<int64_t> argsort2(const T *keys, const U *secondary, size_t n) {
-	std::vector<std::tuple<T, U, int64_t>> items(n);
+ScalableVector<int64_t> argsort2(const T *keys, const U *secondary, size_t n) {
+	ScalableVector<std::tuple<T, U, int64_t>> items(n);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i)
 				items[i] = std::make_tuple(keys[i], secondary[i], static_cast<int64_t>(i));
 		});
 	tbb::parallel_sort(items.begin(), items.end());
-	std::vector<int64_t> out(n);
+	ScalableVector<int64_t> out(n);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i)
@@ -85,23 +93,18 @@ std::vector<int64_t> argsort2(const T *keys, const U *secondary, size_t n) {
 	return out;
 }
 
-std::vector<uint32_t> union_find_labels(size_t num_elements, const std::vector<slg::equiv::Relation> &rel) {
-	return slg::equiv::GroupByEquivalenceLabels(
-		num_elements, std::span<const slg::equiv::Relation>(rel));
-}
-
 // Serial union-find (path halving + union by size) with dense labels in
 // ascending root order. Produces the same partition as
 // slg::equiv::GroupByEquivalenceLabels, but without its per-reduce-body
 // construction of a numElements-sized parent array, which dominates the cost
 // when the relation count is small relative to the element count (the common
 // case for mesh island graphs: ~1.5 relations per triangle).
-std::vector<uint32_t> serial_union_find_labels(size_t num_elements, const std::vector<slg::equiv::Relation> &rel) {
+ScalableVector<uint32_t> serial_union_find_labels(size_t num_elements, const ScalableVector<slg::equiv::Relation> &rel) {
 	if (num_elements == 0)
 		return {};
-	std::vector<uint32_t> parent(num_elements);
+	ScalableVector<uint32_t> parent(num_elements);
 	std::iota(parent.begin(), parent.end(), 0u);
-	std::vector<uint32_t> sz(num_elements, 1);
+	ScalableVector<uint32_t> sz(num_elements, 1);
 	auto find = [&parent](size_t i) {
 		while (parent[i] != i) {
 			parent[i] = parent[parent[i]];
@@ -120,34 +123,25 @@ std::vector<uint32_t> serial_union_find_labels(size_t num_elements, const std::v
 	}
 	// Dense labels in ascending root order: mark the roots in a bitmap, then
 	// prefix-sum it (O(n), no sort)
-	std::vector<uint32_t> roots(num_elements);
-	std::vector<uint8_t> isRoot(num_elements, 0);
+	ScalableVector<uint32_t> roots(num_elements);
+	ScalableVector<uint8_t> isRoot(num_elements, 0);
 	for (size_t i = 0; i < num_elements; ++i) {
 		const uint32_t r = (uint32_t)find(i);
 		roots[i] = r;
 		isRoot[r] = 1;
 	}
-	std::vector<uint32_t> labelOfRoot(num_elements, 0);
+	ScalableVector<uint32_t> labelOfRoot(num_elements, 0);
 	uint32_t count = 0;
 	for (size_t i = 0; i < num_elements; ++i) {
 		labelOfRoot[i] = count;
 		count += isRoot[i];
 	}
-	std::vector<uint32_t> labels(num_elements);
+	ScalableVector<uint32_t> labels(num_elements);
 	for (size_t i = 0; i < num_elements; ++i)
 		labels[i] = labelOfRoot[roots[i]];
 	return labels;
 }
 
-// Containers allocated per iteration inside tbb::parallel_for bodies (the
-// per-group temporaries of the payload loop) use tbbmalloc: it serves each
-// thread from its own cache, avoiding contention on glibc malloc's arenas.
-// Same pattern as slg's group_by_equivalence.cpp. The big per-call buffers
-// (weld, sig, candidates, attr arrays) are allocated once per call, outside
-// the parallel regions; attr buffers larger than the mmap threshold go
-// straight to mmap anyway.
-template <typename T>
-using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 
 //------------------------------------------------------------------------------
 // Weld: order-preserving float-bit keys, (x,y) packed into a uint64 sort key
@@ -164,9 +158,9 @@ inline uint32_t sortable_float_bits(float f) {
 }
 
 struct WeldResult {
-	std::vector<float> points;         // [P, 3]
-	std::vector<int64_t> first_index;  // [P]
-	std::vector<int64_t> inverse;      // [V]
+	ScalableVector<float> points;         // [P, 3]
+	ScalableVector<int64_t> first_index;  // [P]
+	ScalableVector<int64_t> inverse;      // [V]
 };
 
 // NaN-aware exact weld (fallback path, mirrors np.unique(axis=0) semantics:
@@ -186,7 +180,7 @@ WeldResult weld_points_nan_fallback(const float *vp, size_t V) {
 			return a < b;
 		}
 	};
-	std::vector<int64_t> order(V);
+	ScalableVector<int64_t> order(V);
 	for (size_t i = 0; i < V; ++i) order[i] = (int64_t)i;
 	std::sort(order.begin(), order.end(), Cmp{vp});
 	WeldResult res;
@@ -221,7 +215,7 @@ WeldResult weld_points(const float *vp, size_t V) {
 	if (has_nan)
 		return weld_points_nan_fallback(vp, V);
 
-	std::vector<uint32_t> kx(V), ky(V), kz(V);
+	ScalableVector<uint32_t> kx(V), ky(V), kz(V);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, V),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i) {
@@ -230,17 +224,17 @@ WeldResult weld_points(const float *vp, size_t V) {
 				kz[i] = sortable_float_bits(vp[i * 3 + 2]);
 			}
 		});
-	std::vector<uint64_t> key64(V);
+	ScalableVector<uint64_t> key64(V);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, V),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i)
 				key64[i] = (static_cast<uint64_t>(kx[i]) << 32) | ky[i];
 		});
-	std::vector<int64_t> order = argsort2<uint64_t, uint32_t>(key64.data(), kz.data(), V);
+	ScalableVector<int64_t> order = argsort2<uint64_t, uint32_t>(key64.data(), kz.data(), V);
 
 	WeldResult res;
 	res.inverse.assign(V, 0);
-	std::vector<char> boundary(V);
+	ScalableVector<char> boundary(V);
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, V),
 		[&](const tbb::blocked_range<size_t> &r) {
 			for (size_t i = r.begin(); i < r.end(); ++i) {
@@ -340,11 +334,11 @@ struct SubmeshOut {
 };
 
 struct ComputeResult {
-	std::vector<SubmeshOut> submeshes;
-	std::vector<std::vector<float>> candidates;
-	std::vector<int> candidate_cols;  // floats per row of each candidate
-	std::vector<float> welded_points;
-	std::vector<int64_t> island_debug;  // per-triangle island labels (A-B tests)
+	ScalableVector<SubmeshOut> submeshes;
+	ScalableVector<ScalableVector<float>> candidates;
+	ScalableVector<int> candidate_cols;  // floats per row of each candidate
+	ScalableVector<float> welded_points;
+	ScalableVector<int64_t> island_debug;  // per-triangle island labels (A-B tests)
 	StageTimer timer;
 	size_t num_points = 0;
 	size_t num_raw = 0;
@@ -354,11 +348,11 @@ struct ComputeResult {
 // Zero-copy wrap of an owned vector into a numpy array (the capsule keeps the
 // vector alive as long as the array exists)
 template <typename T, typename Vec>
-py::array_t<T> wrap_owned(Vec &&vec, std::vector<py::ssize_t> shape) {
+py::array_t<T> wrap_owned(Vec &&vec, ScalableVector<py::ssize_t> shape) {
 	using VecT = std::decay_t<Vec>;
 	auto *holder = new VecT(std::move(vec));
 	py::capsule cap(holder, [](void *p) { delete static_cast<VecT *>(p); });
-	std::vector<py::ssize_t> strides(shape.size());
+	ScalableVector<py::ssize_t> strides(shape.size());
 	py::ssize_t s = sizeof(T);
 	for (size_t i = shape.size(); i-- > 0;) {
 		strides[i] = s;
@@ -371,12 +365,12 @@ py::array_t<T> wrap_owned(Vec &&vec, std::vector<py::ssize_t> shape) {
 // never references are left untouched -- they are never read, exactly like
 // the numpy fallback's np.empty)
 template <typename T, typename Buf>
-py::array_t<T> wrap_owned_buf(Buf &&buf, std::vector<py::ssize_t> shape) {
+py::array_t<T> wrap_owned_buf(Buf &&buf, ScalableVector<py::ssize_t> shape) {
 	T *data = buf.get();
 	using BufT = std::decay_t<Buf>;
 	auto *holder = new BufT(std::move(buf));
 	py::capsule cap(holder, [](void *p) { delete static_cast<BufT *>(p); });
-	std::vector<py::ssize_t> strides(shape.size());
+	ScalableVector<py::ssize_t> strides(shape.size());
 	py::ssize_t s = sizeof(T);
 	for (size_t i = shape.size(); i-- > 0;) {
 		strides[i] = s;
@@ -432,11 +426,11 @@ py::tuple compute_submeshes_c(
 	float *ln = loop_normals.mutable_data();
 	const uint32_t *tl = triangle_loops.data();
 	const uint32_t *mats = loop_triangle_materials.data();
-	std::vector<const float *> uv_ptrs(n_uv);
+	ScalableVector<const float *> uv_ptrs(n_uv);
 	for (size_t i = 0; i < n_uv; ++i)
 		uv_ptrs[i] = loop_uvs[i].data();
-	std::vector<const float *> col_ptrs(color_attrs.size());
-	std::vector<size_t> col_rows(color_attrs.size());
+	ScalableVector<const float *> col_ptrs(color_attrs.size());
+	ScalableVector<size_t> col_rows(color_attrs.size());
 	for (size_t i = 0; i < color_attrs.size(); ++i) {
 		if (color_attrs[i].ndim() != 2 || color_attrs[i].shape(1) != 4)
 			throw std::runtime_error("compute_submeshes_c: color_attrs layers must be [N,4] float32");
@@ -480,8 +474,8 @@ py::tuple compute_submeshes_c(
 		// --- weld ---
 		WeldResult W = weld_points(vp, V);
 		R.welded_points = std::move(W.points);
-		const std::vector<int64_t> first_index = std::move(W.first_index);
-		const std::vector<int64_t> weld_inverse = std::move(W.inverse);
+		const ScalableVector<int64_t> first_index = std::move(W.first_index);
+		const ScalableVector<int64_t> weld_inverse = std::move(W.inverse);
 		const size_t P = R.welded_points.size() / 3;
 		R.num_points = P;
 		R.num_raw = V;
@@ -489,7 +483,7 @@ py::tuple compute_submeshes_c(
 
 		// --- per-loop signature: uv layers + shading normal ---
 		const size_t K = 2 * n_uv + 3;
-		std::vector<float> sig(L * K);
+		ScalableVector<float> sig(L * K);
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, L),
 			[&](const tbb::blocked_range<size_t> &r) {
 				for (size_t l = r.begin(); l < r.end(); ++l) {
@@ -511,9 +505,9 @@ py::tuple compute_submeshes_c(
 		ScalableVector<uint32_t> crease_pairs;
 		ScalableVector<float> crease_weights;
 		if (has_edge_verts) {
-			std::vector<uint64_t> keys;
-			std::vector<int64_t> w0, w1;
-			std::vector<float> cw;
+			ScalableVector<uint64_t> keys;
+			ScalableVector<int64_t> w0, w1;
+			ScalableVector<float> cw;
 			keys.reserve(E);
 			for (size_t e = 0; e < E; ++e) {
 				if (!ec || !(ec[e] > 0.0f))
@@ -527,8 +521,8 @@ py::tuple compute_submeshes_c(
 				cw.push_back(ec[e]);
 			}
 			const size_t nk = keys.size();
-			std::vector<int64_t> order = nk ? argsort1<uint64_t>(keys.data(), nk) : std::vector<int64_t>();
-			std::vector<size_t> first;
+			ScalableVector<int64_t> order = nk ? argsort1<uint64_t>(keys.data(), nk) : ScalableVector<int64_t>();
+			ScalableVector<size_t> first;
 			for (size_t i = 0; i < nk; ++i)
 				if (i == 0 || keys[order[i]] != keys[order[i - 1]])
 					first.push_back((size_t)order[i]);
@@ -549,13 +543,13 @@ py::tuple compute_submeshes_c(
 
 		// --- edge occurrences ---
 		const size_t n_occ = T * 3;
-		std::vector<int64_t> loop_welded(L);
+		ScalableVector<int64_t> loop_welded(L);
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, L),
 			[&](const tbb::blocked_range<size_t> &r) {
 				for (size_t l = r.begin(); l < r.end(); ++l)
 					loop_welded[l] = weld_inverse[lv[l]];
 			});
-		std::vector<int64_t> e_key(n_occ), e_lo(n_occ), e_hi(n_occ), l_lo(n_occ), l_hi(n_occ);
+		ScalableVector<int64_t> e_key(n_occ), e_lo(n_occ), e_hi(n_occ), l_lo(n_occ), l_hi(n_occ);
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, T),
 			[&](const tbb::blocked_range<size_t> &r) {
 				for (size_t t = r.begin(); t < r.end(); ++t) {
@@ -578,8 +572,8 @@ py::tuple compute_submeshes_c(
 				}
 			});
 
-		std::vector<int64_t> order = T ? argsort1<int64_t>(e_key.data(), n_occ) : std::vector<int64_t>();
-		std::vector<int64_t> k_s(n_occ);
+		ScalableVector<int64_t> order = T ? argsort1<int64_t>(e_key.data(), n_occ) : ScalableVector<int64_t>();
+		ScalableVector<int64_t> k_s(n_occ);
 		if (T) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, n_occ),
 				[&](const tbb::blocked_range<size_t> &r) {
@@ -590,8 +584,8 @@ py::tuple compute_submeshes_c(
 		R.timer.stage("edge_sort");
 
 		// triangle of each loop / occurrence
-		std::vector<int64_t> tri_of_loop(L, 0);
-		std::vector<int64_t> tri_of_sorted(n_occ);
+		ScalableVector<int64_t> tri_of_loop(L, 0);
+		ScalableVector<int64_t> tri_of_sorted(n_occ);
 		if (T) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, T),
 				[&](const tbb::blocked_range<size_t> &r) {
@@ -602,7 +596,7 @@ py::tuple compute_submeshes_c(
 						}
 					}
 				});
-			std::vector<int64_t> tmp = tri_of_sorted;
+			ScalableVector<int64_t> tmp = tri_of_sorted;
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, n_occ),
 				[&](const tbb::blocked_range<size_t> &r) {
 					for (size_t i = r.begin(); i < r.end(); ++i)
@@ -611,10 +605,10 @@ py::tuple compute_submeshes_c(
 		}
 
 		// union pairs over triangles across shared edges with matching sigs
-		std::vector<slg::equiv::Relation> pairs;
+		ScalableVector<slg::equiv::Relation> pairs;
 		if (T) {
 			pairs.reserve(n_occ / 2 + 1);
-			std::vector<char> join(n_occ, 0);
+			ScalableVector<char> join(n_occ, 0);
 			const size_t sig_bytes = K * 4;
 			tbb::parallel_for(tbb::blocked_range<size_t>(1, n_occ),
 				[&](const tbb::blocked_range<size_t> &r) {
@@ -633,9 +627,9 @@ py::tuple compute_submeshes_c(
 				if (join[i])
 					pairs.emplace_back((uint32_t)tri_of_sorted[i], (uint32_t)tri_of_sorted[i - 1]);
 		}
-		std::vector<int64_t> island;
+		ScalableVector<int64_t> island;
 		if (T) {
-			std::vector<uint32_t> labels = serial_union_find_labels(T, pairs);
+			ScalableVector<uint32_t> labels = serial_union_find_labels(T, pairs);
 			island.assign(labels.begin(), labels.end());
 		}
 		R.timer.stage("union_find");
@@ -645,27 +639,27 @@ py::tuple compute_submeshes_c(
 			int64_t n_islands0 = 0;
 			for (size_t t = 0; t < T; ++t)
 				n_islands0 = std::max(n_islands0, island[t] + 1);
-			std::vector<int64_t> island_size(n_islands0, 0);
+			ScalableVector<int64_t> island_size(n_islands0, 0);
 			for (size_t t = 0; t < T; ++t)
 				++island_size[island[t]];
-			std::vector<char> small(n_islands0);
+			ScalableVector<char> small(n_islands0);
 			bool any_small = false;
 			for (int64_t i = 0; i < n_islands0; ++i) {
 				small[i] = island_size[i] < (int64_t)MIN_ISLAND_TRIANGLE_COUNT;
 				any_small |= small[i];
 			}
 			if (any_small) {
-				std::vector<int64_t> starts;
+				ScalableVector<int64_t> starts;
 				for (size_t i = 0; i < n_occ; ++i)
 					if (i == 0 || k_s[i] != k_s[i - 1])
 						starts.push_back((int64_t)i);
-				std::vector<int64_t> ends;
+				ScalableVector<int64_t> ends;
 				for (size_t i = 1; i < starts.size(); ++i)
 					ends.push_back(starts[i] - 1);
 				ends.push_back((int64_t)n_occ - 1);
 				const size_t n_runs = starts.size();
-				std::vector<int64_t> isl_a(n_runs), isl_b(n_runs);
-				std::vector<char> adj(n_runs, 0), not_hard(n_runs, 0), any_s(n_runs, 0);
+				ScalableVector<int64_t> isl_a(n_runs), isl_b(n_runs);
+				ScalableVector<char> adj(n_runs, 0), not_hard(n_runs, 0), any_s(n_runs, 0);
 				tbb::parallel_for(tbb::blocked_range<size_t>(0, n_runs),
 					[&](const tbb::blocked_range<size_t> &r) {
 						for (size_t i = r.begin(); i < r.end(); ++i) {
@@ -684,7 +678,7 @@ py::tuple compute_submeshes_c(
 							any_s[i] = small[a] || small[b];
 						}
 					});
-				std::vector<std::pair<uint32_t, uint32_t>> isl_pairs;
+				ScalableVector<std::pair<uint32_t, uint32_t>> isl_pairs;
 				for (size_t i = 0; i < n_runs; ++i)
 					if (adj[i] && any_s[i] && not_hard[i])
 						isl_pairs.emplace_back((uint32_t)isl_a[i], (uint32_t)isl_b[i]);
@@ -692,11 +686,11 @@ py::tuple compute_submeshes_c(
 					// np.unique(axis=0): lexicographic sort + dedupe
 					std::sort(isl_pairs.begin(), isl_pairs.end());
 					isl_pairs.erase(std::unique(isl_pairs.begin(), isl_pairs.end()), isl_pairs.end());
-					std::vector<slg::equiv::Relation> rel;
+					ScalableVector<slg::equiv::Relation> rel;
 					rel.reserve(isl_pairs.size());
 					for (auto &p : isl_pairs)
 						rel.emplace_back(p.first, p.second);
-					std::vector<uint32_t> isl_map = serial_union_find_labels((size_t)n_islands0, rel);
+					ScalableVector<uint32_t> isl_map = serial_union_find_labels((size_t)n_islands0, rel);
 					for (size_t t = 0; t < T; ++t)
 						island[t] = isl_map[island[t]];
 				}
@@ -706,7 +700,7 @@ py::tuple compute_submeshes_c(
 		R.island_debug = island;
 
 		// loop island
-		std::vector<int64_t> loop_island(L);
+		ScalableVector<int64_t> loop_island(L);
 		if (T) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, L),
 				[&](const tbb::blocked_range<size_t> &r) {
@@ -724,7 +718,7 @@ py::tuple compute_submeshes_c(
 		// one sort of tri_key + split by boundary: members end up in ascending
 		// triangle order within each group, groups in ascending key order
 		// (same as np.unique(return_inverse) + argsort/nonzero in numpy)
-		std::vector<int64_t> tri_key(T);
+		ScalableVector<int64_t> tri_key(T);
 		if (T) {
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, T),
 				[&](const tbb::blocked_range<size_t> &r) {
@@ -732,8 +726,8 @@ py::tuple compute_submeshes_c(
 						tri_key[t] = (int64_t)mats[t] * n_islands + island[t];
 				});
 		}
-		std::vector<int64_t> g_order = T ? argsort1<int64_t>(tri_key.data(), T) : std::vector<int64_t>();
-		std::vector<int64_t> group_start, group_key;
+		ScalableVector<int64_t> g_order = T ? argsort1<int64_t>(tri_key.data(), T) : ScalableVector<int64_t>();
+		ScalableVector<int64_t> group_start, group_key;
 		for (size_t i = 0; i < T; ++i) {
 			if (i == 0 || tri_key[g_order[i]] != tri_key[g_order[i - 1]]) {
 				group_start.push_back((int64_t)i);
@@ -796,7 +790,7 @@ py::tuple compute_submeshes_c(
 		// pt_rgb (k=3) + pt_alpha (k=1)
 		// cand[loop_welded[l]] = loop_data[l], last writer wins (loop order)
 		auto make_candidate = [&](const float *loop_data, size_t k) {
-			std::vector<float> cand(P * k, 0.0f);
+			ScalableVector<float> cand(P * k, 0.0f);
 			for (size_t l = 0; l < L; ++l)
 				std::memcpy(&cand[loop_welded[l] * k], &loop_data[l * k], k * 4);
 			return cand;
@@ -810,14 +804,14 @@ py::tuple compute_submeshes_c(
 		const int NORMAL_CAND = (int)R.candidates.size() - 1;
 
 		// contiguous corner color arrays (rgb/alpha) per CORNER attr
-		std::vector<std::vector<float>> corner_rgb_store(color_attrs.size());
-		std::vector<std::vector<float>> corner_alpha_store(color_attrs.size());
-		std::vector<const float *> corner_rgb(color_attrs.size(), nullptr);
-		std::vector<const float *> corner_alpha(color_attrs.size(), nullptr);
-		std::vector<int> color_cand_rgb(color_attrs.size(), -1);
-		std::vector<int> color_cand_alpha(color_attrs.size(), -1);
-		std::vector<int> point_cand_rgb(color_attrs.size(), -1);
-		std::vector<int> point_cand_alpha(color_attrs.size(), -1);
+		ScalableVector<ScalableVector<float>> corner_rgb_store(color_attrs.size());
+		ScalableVector<ScalableVector<float>> corner_alpha_store(color_attrs.size());
+		ScalableVector<const float *> corner_rgb(color_attrs.size(), nullptr);
+		ScalableVector<const float *> corner_alpha(color_attrs.size(), nullptr);
+		ScalableVector<int> color_cand_rgb(color_attrs.size(), -1);
+		ScalableVector<int> color_cand_alpha(color_attrs.size(), -1);
+		ScalableVector<int> point_cand_rgb(color_attrs.size(), -1);
+		ScalableVector<int> point_cand_alpha(color_attrs.size(), -1);
 		for (size_t i = 0; i < color_attrs.size(); ++i) {
 			if (color_domains[i] == "CORNER") {
 				size_t n = col_rows[i];
@@ -839,7 +833,7 @@ py::tuple compute_submeshes_c(
 				color_cand_alpha[i] = (int)R.candidates.size() - 1;
 			} else if (color_domains[i] == "POINT") {
 				// per-vertex colors welded once: colors[first_index], split rgb/alpha
-				std::vector<float> rgb(P * 3), alpha(P);
+				ScalableVector<float> rgb(P * 3), alpha(P);
 				for (size_t p = 0; p < P; ++p) {
 					const float *src = &col_ptrs[i][first_index[p] * 4];
 					rgb[p * 3] = src[0];
@@ -1014,7 +1008,7 @@ py::tuple compute_submeshes_c(
 	}
 
 	// ---- wrap results into python objects (GIL held) ----
-	std::vector<py::array> cand_arrays(R.candidates.size());
+	ScalableVector<py::array> cand_arrays(R.candidates.size());
 	for (size_t i = 0; i < R.candidates.size(); ++i)
 		cand_arrays[i] = wrap_owned<float>(std::move(R.candidates[i]),
 			{(py::ssize_t)R.num_points, (py::ssize_t)R.candidate_cols[i]});
@@ -1049,7 +1043,7 @@ py::tuple compute_submeshes_c(
 		d["alphas"] = alphas;
 		if (sm.has_transform)
 			d["transformation"] = wrap_owned<float>(
-				std::vector<float>(sm.transform, sm.transform + 16), {4, 4});
+				ScalableVector<float>(sm.transform, sm.transform + 16), {4, 4});
 		else
 			d["transformation"] = py::none();
 		if (sm.has_creases) {
