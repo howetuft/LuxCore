@@ -297,9 +297,25 @@ void inv3(const float m[9], float out[9]) {
 // Output structures
 //------------------------------------------------------------------------------
 
+// Deleter for buffers allocated with tbb::scalable_allocator (the payload
+// loop runs in parallel over groups; tbbmalloc serves each thread from its
+// own cache, avoiding contention on glibc malloc's arenas)
+struct ScalableDeleter {
+	size_t count;
+	void operator()(float *p) const {
+		tbb::scalable_allocator<float> a;
+		a.deallocate(p, count);
+	}
+};
+
+inline std::unique_ptr<float[], ScalableDeleter> scalable_float_array(size_t n) {
+	tbb::scalable_allocator<float> a;
+	return {a.allocate(n), ScalableDeleter{n}};
+}
+
 struct AttrRef {
 	int cand = -1;                  // >= 0: shared candidate index, -1: owned buffer
-	std::unique_ptr<float[]> owned; // [P, k] row-major, only when cand < 0
+	std::unique_ptr<float[], ScalableDeleter> owned; // [P, k] row-major, only when cand < 0
 	size_t owned_size = 0;
 };
 
@@ -308,16 +324,16 @@ struct SubmeshOut {
 	bool points_is_name = false;      // share mode, not the first submesh
 	char points_name[64];             // name of the first submesh (share mode)
 	bool points_shared = false;       // share mode, first submesh (uses welded points)
-	std::vector<float> points_owned;  // compact mode
-	std::vector<uint32_t> triangles;  // [g, 3] flat
+	ScalableVector<float> points_owned;     // compact mode
+	ScalableVector<uint32_t> triangles;     // [g, 3] flat
 	size_t n_points = 0;              // P of the attr arrays
 	AttrRef normals;
-	std::vector<AttrRef> uvs, colors, alphas;
+	ScalableVector<AttrRef> uvs, colors, alphas;
 	bool has_transform = false;
 	float transform[16];
 	bool has_creases = false;
-	std::vector<uint32_t> crease_pairs;    // flat [2E]
-	std::vector<float> crease_weights;     // [E]
+	ScalableVector<uint32_t> crease_pairs;    // flat [2E]
+	ScalableVector<float> crease_weights;     // [E]
 	bool normals_pretransformed = false;
 	uint32_t mat = 0;
 	int slot = 0;
@@ -337,10 +353,11 @@ struct ComputeResult {
 
 // Zero-copy wrap of an owned vector into a numpy array (the capsule keeps the
 // vector alive as long as the array exists)
-template <typename T>
-py::array_t<T> wrap_owned(std::vector<T> &&vec, std::vector<py::ssize_t> shape) {
-	auto *holder = new std::vector<T>(std::move(vec));
-	py::capsule cap(holder, [](void *p) { delete static_cast<std::vector<T> *>(p); });
+template <typename T, typename Vec>
+py::array_t<T> wrap_owned(Vec &&vec, std::vector<py::ssize_t> shape) {
+	using VecT = std::decay_t<Vec>;
+	auto *holder = new VecT(std::move(vec));
+	py::capsule cap(holder, [](void *p) { delete static_cast<VecT *>(p); });
 	std::vector<py::ssize_t> strides(shape.size());
 	py::ssize_t s = sizeof(T);
 	for (size_t i = shape.size(); i-- > 0;) {
@@ -353,11 +370,12 @@ py::array_t<T> wrap_owned(std::vector<T> &&vec, std::vector<py::ssize_t> shape) 
 // Same as wrap_owned, but for an uninitialized buffer (rows that the submesh
 // never references are left untouched -- they are never read, exactly like
 // the numpy fallback's np.empty)
-template <typename T>
-py::array_t<T> wrap_owned_buf(std::unique_ptr<T[]> buf, std::vector<py::ssize_t> shape) {
+template <typename T, typename Buf>
+py::array_t<T> wrap_owned_buf(Buf &&buf, std::vector<py::ssize_t> shape) {
 	T *data = buf.get();
-	auto *holder = new std::unique_ptr<T[]>(std::move(buf));
-	py::capsule cap(holder, [](void *p) { delete static_cast<std::unique_ptr<T *> *>(p); });
+	using BufT = std::decay_t<Buf>;
+	auto *holder = new BufT(std::move(buf));
+	py::capsule cap(holder, [](void *p) { delete static_cast<BufT *>(p); });
 	std::vector<py::ssize_t> strides(shape.size());
 	py::ssize_t s = sizeof(T);
 	for (size_t i = shape.size(); i-- > 0;) {
@@ -490,8 +508,8 @@ py::tuple compute_submeshes_c(
 		// Python: keep = crease > 0; keys over kept edges; np.unique(keys,
 		// return_index=True) -> first kept occurrence per unique key, ordered
 		// by sorted key
-		std::vector<uint32_t> crease_pairs;
-		std::vector<float> crease_weights;
+		ScalableVector<uint32_t> crease_pairs;
+		ScalableVector<float> crease_weights;
 		if (has_edge_verts) {
 			std::vector<uint64_t> keys;
 			std::vector<int64_t> w0, w1;
@@ -903,7 +921,7 @@ py::tuple compute_submeshes_c(
 							// uninitialized: rows outside the submesh's referenced
 							// points are never read (same as np.empty in the
 							// numpy fallback)
-							ref.owned.reset(new float[P * k]);
+							ref.owned = scalable_float_array(P * k);
 							ref.owned_size = P * k;
 							for (size_t i = 0; i < isl_loops.size(); ++i)
 								std::memcpy(&ref.owned[isl_gw[i] * k], &loop_data[isl_loops[i] * k], k * 4);
@@ -956,7 +974,7 @@ py::tuple compute_submeshes_c(
 							std::memcpy(sm.transform, mesh_transform, sizeof(sm.transform));
 						auto compact_attr = [&](const float *loop_data, size_t k) -> AttrRef {
 							AttrRef ref;
-							ref.owned.reset(new float[n_used * k]);
+							ref.owned = scalable_float_array(n_used * k);
 							ref.owned_size = n_used * k;
 							for (size_t i = 0; i < g_n * 3; ++i)
 								std::memcpy(&ref.owned[local_idx[i] * k], &loop_data[g_loops[i] * k], k * 4);
@@ -968,9 +986,9 @@ py::tuple compute_submeshes_c(
 						for (size_t i = 0; i < color_attrs.size(); ++i) {
 							if (color_domains[i] == "POINT") {
 								AttrRef r, a;
-								r.owned.reset(new float[n_used * 3]);
+								r.owned = scalable_float_array(n_used * 3);
 								r.owned_size = n_used * 3;
-								a.owned.reset(new float[n_used]);
+								a.owned = scalable_float_array(n_used);
 								a.owned_size = n_used;
 								const float *prgb = R.candidates[point_cand_rgb[i]].data();
 								const float *pal = R.candidates[point_cand_alpha[i]].data();
