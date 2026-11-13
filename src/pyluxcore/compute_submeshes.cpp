@@ -10,6 +10,7 @@
 #include "compute_submeshes.h"
 
 #include <tbb/parallel_for.h>
+#include <tbb/scalable_allocator.h>
 #include <tbb/parallel_sort.h>
 #include <tbb/parallel_reduce.h>
 #include <tbb/blocked_range.h>
@@ -137,6 +138,16 @@ std::vector<uint32_t> serial_union_find_labels(size_t num_elements, const std::v
 		labels[i] = labelOfRoot[roots[i]];
 	return labels;
 }
+
+// Containers allocated per iteration inside tbb::parallel_for bodies (the
+// per-group temporaries of the payload loop) use tbbmalloc: it serves each
+// thread from its own cache, avoiding contention on glibc malloc's arenas.
+// Same pattern as slg's group_by_equivalence.cpp. The big per-call buffers
+// (weld, sig, candidates, attr arrays) are allocated once per call, outside
+// the parallel regions; attr buffers larger than the mmap threshold go
+// straight to mmap anyway.
+template <typename T>
+using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 
 //------------------------------------------------------------------------------
 // Weld: order-preserving float-bit keys, (x,y) packed into a uint64 sort key
@@ -293,9 +304,9 @@ struct AttrRef {
 };
 
 struct SubmeshOut {
-	std::string name;
+	char name[64];                    // fixed buffer: no heap alloc per group
 	bool points_is_name = false;      // share mode, not the first submesh
-	std::string points_name;          // name of the first submesh (share mode)
+	char points_name[64];             // name of the first submesh (share mode)
 	bool points_shared = false;       // share mode, first submesh (uses welded points)
 	std::vector<float> points_owned;  // compact mode
 	std::vector<uint32_t> triangles;  // [g, 3] flat
@@ -843,16 +854,14 @@ py::tuple compute_submeshes_c(
 					size_t g_n = (size_t)(g_end - g_start);
 
 					SubmeshOut &sm = R.submeshes[g];
-					char namebuf[64];
-					snprintf(namebuf, sizeof(namebuf), "%s%03ui%03u", mesh_key.c_str(), mat, isl);
-					sm.name = namebuf;
+					snprintf(sm.name, sizeof(sm.name), "%s%03ui%03u", mesh_key.c_str(), mat, isl);
 					sm.mat = mat;
 					sm.slot = (int)g + 1;
 					sm.normals_pretransformed = normals_pretransformed;
 
 					// this group's loops and welded corners
-					std::vector<int64_t> g_loops(g_n * 3);
-					std::vector<int64_t> gw(g_n * 3);
+					ScalableVector<int64_t> g_loops(g_n * 3);
+					ScalableVector<int64_t> gw(g_n * 3);
 					for (size_t j = 0; j < g_n; ++j) {
 						int64_t t = g_order[g_start + j];
 						for (int c = 0; c < 3; ++c) {
@@ -868,7 +877,7 @@ py::tuple compute_submeshes_c(
 						for (size_t i = 0; i < g_n * 3; ++i)
 							sm.triangles[i] = (uint32_t)gw[i];
 						// island loops of this submesh
-						std::vector<int64_t> isl_loops, isl_gw;
+						ScalableVector<int64_t> isl_loops, isl_gw;
 						isl_loops.reserve(g_n * 3);
 						isl_gw.reserve(g_n * 3);
 						for (size_t i = 0; i < g_n * 3; ++i)
@@ -919,7 +928,7 @@ py::tuple compute_submeshes_c(
 								std::memcpy(sm.transform, mesh_transform, sizeof(sm.transform));
 						} else {
 							sm.points_is_name = true;
-							sm.points_name = R.submeshes[0].name;
+							std::strncpy(sm.points_name, R.submeshes[0].name, sizeof(sm.points_name) - 1);
 						}
 						sm.has_creases = has_edge_verts;
 						if (sm.has_creases) {
@@ -928,12 +937,12 @@ py::tuple compute_submeshes_c(
 						}
 					} else {
 						// compact: unique used welded points, local remap
-						std::vector<int64_t> used = gw;
+						ScalableVector<int64_t> used(gw.begin(), gw.end());
 						std::sort(used.begin(), used.end());
 						used.erase(std::unique(used.begin(), used.end()), used.end());
 						const size_t n_used = used.size();
 						sm.n_points = n_used;
-						std::vector<int64_t> local_idx(g_n * 3);
+						ScalableVector<int64_t> local_idx(g_n * 3);
 						for (size_t i = 0; i < g_n * 3; ++i)
 							local_idx[i] = std::lower_bound(used.begin(), used.end(), gw[i]) - used.begin();
 						sm.triangles.resize(g_n * 3);
