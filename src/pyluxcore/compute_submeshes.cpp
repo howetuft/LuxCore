@@ -297,9 +297,15 @@ void inv3(const float m[9], float out[9]) {
 // Output structures
 //------------------------------------------------------------------------------
 
+struct ScalableFree {
+	void operator()(float *p) const { scalable_free(p); }
+};
+
 struct AttrRef {
 	int cand = -1;                  // >= 0: shared candidate index, -1: owned buffer
-	std::unique_ptr<float[]> owned; // [P, k] row-major, only when cand < 0
+	// [P, k] row-major, only when cand < 0. Scalable allocation: the payload
+	// loop runs in parallel over groups and the default malloc would contend
+	std::unique_ptr<float[], ScalableFree> owned;
 	size_t owned_size = 0;
 };
 
@@ -315,9 +321,7 @@ struct SubmeshOut {
 	std::vector<AttrRef> uvs, colors, alphas;
 	bool has_transform = false;
 	float transform[16];
-	bool has_creases = false;
-	std::vector<uint32_t> crease_pairs;    // flat [2E]
-	std::vector<float> crease_weights;     // [E]
+	bool has_creases = false;  // only the first submesh carries them (shared arrays in R)
 	bool normals_pretransformed = false;
 	uint32_t mat = 0;
 	int slot = 0;
@@ -325,6 +329,10 @@ struct SubmeshOut {
 
 struct ComputeResult {
 	std::vector<SubmeshOut> submeshes;
+	std::vector<uint32_t> crease_pairs;    // flat [2E], shared by all submeshes
+	std::vector<float> crease_weights;     // [E]
+	bool has_creases = false;
+
 	std::vector<std::vector<float>> candidates;
 	std::vector<int> candidate_cols;  // floats per row of each candidate
 	std::vector<float> welded_points;
@@ -353,11 +361,12 @@ py::array_t<T> wrap_owned(std::vector<T> &&vec, std::vector<py::ssize_t> shape) 
 // Same as wrap_owned, but for an uninitialized buffer (rows that the submesh
 // never references are left untouched -- they are never read, exactly like
 // the numpy fallback's np.empty)
-template <typename T>
-py::array_t<T> wrap_owned_buf(std::unique_ptr<T[]> buf, std::vector<py::ssize_t> shape) {
+template <typename T, typename Buf>
+py::array_t<T> wrap_owned_buf(Buf &&buf, std::vector<py::ssize_t> shape) {
 	T *data = buf.get();
-	auto *holder = new std::unique_ptr<T[]>(std::move(buf));
-	py::capsule cap(holder, [](void *p) { delete static_cast<std::unique_ptr<T *> *>(p); });
+	using BufT = std::decay_t<Buf>;
+	auto *holder = new BufT(std::move(buf));
+	py::capsule cap(holder, [](void *p) { delete static_cast<BufT *>(p); });
 	std::vector<py::ssize_t> strides(shape.size());
 	py::ssize_t s = sizeof(T);
 	for (size_t i = shape.size(); i-- > 0;) {
@@ -527,6 +536,9 @@ py::tuple compute_submeshes_c(
 				crease_weights[i] = w > 10.0f ? 10.0f : w;
 			}
 		}
+		R.crease_pairs = std::move(crease_pairs);
+		R.crease_weights = std::move(crease_weights);
+		R.has_creases = has_edge_verts;
 		R.timer.stage("creases");
 
 		// --- edge occurrences ---
@@ -859,42 +871,65 @@ py::tuple compute_submeshes_c(
 					sm.slot = (int)g + 1;
 					sm.normals_pretransformed = normals_pretransformed;
 
-					// this group's loops and welded corners
+					// Single fused pass over this group's corners: loop ids,
+					// welded corner ids and (share mode) the triangle array
+					const bool whole_mesh = (g_n == (size_t)T);
 					ScalableVector<int64_t> g_loops(g_n * 3);
 					ScalableVector<int64_t> gw(g_n * 3);
+					if (share_points)
+						sm.triangles.resize(g_n * 3);
 					for (size_t j = 0; j < g_n; ++j) {
 						int64_t t = g_order[g_start + j];
 						for (int c = 0; c < 3; ++c) {
+							size_t i = j * 3 + c;
 							int64_t loop = tl[t * 3 + c];
-							g_loops[j * 3 + c] = loop;
-							gw[j * 3 + c] = loop_welded[loop];
+							int64_t w = loop_welded[loop];
+							g_loops[i] = loop;
+							gw[i] = w;
+							if (share_points)
+								sm.triangles[i] = (uint32_t)w;
 						}
 					}
 
 					if (share_points) {
 						sm.n_points = P;
-						sm.triangles.resize(g_n * 3);
-						for (size_t i = 0; i < g_n * 3; ++i)
-							sm.triangles[i] = (uint32_t)gw[i];
-						// island loops of this submesh
+						// Island loops of this submesh. When the group covers the
+						// whole mesh there is a single island, so the island filter
+						// is a no-op and the corner arrays can be used directly
 						ScalableVector<int64_t> isl_loops, isl_gw;
-						isl_loops.reserve(g_n * 3);
-						isl_gw.reserve(g_n * 3);
-						for (size_t i = 0; i < g_n * 3; ++i)
-							if (loop_island[g_loops[i]] == (int64_t)isl) {
-								isl_loops.push_back(g_loops[i]);
-								isl_gw.push_back(gw[i]);
-							}
+						const int64_t *isl_loops_p;
+						const int64_t *isl_gw_p;
+						size_t isl_n;
+						if (whole_mesh) {
+							isl_loops_p = g_loops.data();
+							isl_gw_p = gw.data();
+							isl_n = g_n * 3;
+						} else {
+							isl_loops.reserve(g_n * 3);
+							isl_gw.reserve(g_n * 3);
+							for (size_t i = 0; i < g_n * 3; ++i)
+								if (loop_island[g_loops[i]] == (int64_t)isl) {
+									isl_loops.push_back(g_loops[i]);
+									isl_gw.push_back(gw[i]);
+								}
+							isl_loops_p = isl_loops.data();
+							isl_gw_p = isl_gw.data();
+							isl_n = isl_loops.size();
+						}
 						auto submesh_attr = [&](int cand, const float *loop_data, size_t k) -> AttrRef {
 							// share the candidate if every corner agrees with it
+							// (memcmp: bitwise row compare, SIMD-friendly; rows with
+							// identical NaN payloads compare equal, which is fine since
+							// the shared data would be bit-identical anyway)
 							if (cand >= 0) {
 								const float *c = R.candidates[cand].data();
 								bool equal = true;
-								for (size_t i = 0; i < g_n * 3 && equal; ++i) {
-									const float *a = &loop_data[g_loops[i] * k];
-									const float *b = &c[gw[i] * k];
-									for (size_t c2 = 0; c2 < k; ++c2)
-										if (a[c2] != b[c2]) { equal = false; break; }
+								for (size_t i = 0; i < g_n * 3; ++i) {
+									if (std::memcmp(&loop_data[g_loops[i] * k], &c[gw[i] * k],
+											k * sizeof(float)) != 0) {
+										equal = false;
+										break;
+									}
 								}
 								if (equal)
 									return AttrRef{cand, {}};
@@ -903,10 +938,11 @@ py::tuple compute_submeshes_c(
 							// uninitialized: rows outside the submesh's referenced
 							// points are never read (same as np.empty in the
 							// numpy fallback)
-							ref.owned.reset(new float[P * k]);
+							ref.owned.reset(static_cast<float *>(
+								scalable_malloc(sizeof(float) * P * k)));
 							ref.owned_size = P * k;
-							for (size_t i = 0; i < isl_loops.size(); ++i)
-								std::memcpy(&ref.owned[isl_gw[i] * k], &loop_data[isl_loops[i] * k], k * 4);
+							for (size_t i = 0; i < isl_n; ++i)
+								std::memcpy(&ref.owned[isl_gw_p[i] * k], &loop_data[isl_loops_p[i] * k], k * 4);
 							return ref;
 						};
 						for (size_t u = 0; u < n_uv; ++u)
@@ -930,11 +966,9 @@ py::tuple compute_submeshes_c(
 							sm.points_is_name = true;
 							std::strncpy(sm.points_name, R.submeshes[0].name, sizeof(sm.points_name) - 1);
 						}
-						sm.has_creases = has_edge_verts;
-						if (sm.has_creases) {
-							sm.crease_pairs = crease_pairs;
-							sm.crease_weights = crease_weights;
-						}
+						// Creases live once in R; only the first submesh references
+						// them (BLC only reads creases from submesh 0)
+						sm.has_creases = has_edge_verts && (g == 0);
 					} else {
 						// compact: unique used welded points, local remap
 						ScalableVector<int64_t> used(gw.begin(), gw.end());
@@ -956,7 +990,8 @@ py::tuple compute_submeshes_c(
 							std::memcpy(sm.transform, mesh_transform, sizeof(sm.transform));
 						auto compact_attr = [&](const float *loop_data, size_t k) -> AttrRef {
 							AttrRef ref;
-							ref.owned.reset(new float[n_used * k]);
+							ref.owned.reset(static_cast<float *>(
+								scalable_malloc(sizeof(float) * n_used * k)));
 							ref.owned_size = n_used * k;
 							for (size_t i = 0; i < g_n * 3; ++i)
 								std::memcpy(&ref.owned[local_idx[i] * k], &loop_data[g_loops[i] * k], k * 4);
@@ -968,9 +1003,11 @@ py::tuple compute_submeshes_c(
 						for (size_t i = 0; i < color_attrs.size(); ++i) {
 							if (color_domains[i] == "POINT") {
 								AttrRef r, a;
-								r.owned.reset(new float[n_used * 3]);
+								r.owned.reset(static_cast<float *>(
+									scalable_malloc(sizeof(float) * n_used * 3)));
 								r.owned_size = n_used * 3;
-								a.owned.reset(new float[n_used]);
+								a.owned.reset(static_cast<float *>(
+									scalable_malloc(sizeof(float) * n_used)));
 								a.owned_size = n_used;
 								const float *prgb = R.candidates[point_cand_rgb[i]].data();
 								const float *pal = R.candidates[point_cand_alpha[i]].data();
@@ -1009,6 +1046,15 @@ py::tuple compute_submeshes_c(
 		return wrap_owned_buf<float>(std::move(ref.owned), {(py::ssize_t)P, (py::ssize_t)k});
 	};
 
+	// Crease arrays are shared by all submeshes: wrap them once and borrow
+	py::array crease_pairs_arr, crease_weights_arr;
+	if (R.has_creases) {
+		py::ssize_t npairs = (py::ssize_t)R.crease_pairs.size();
+		py::ssize_t nweights = (py::ssize_t)R.crease_weights.size();
+		crease_pairs_arr = wrap_owned<uint32_t>(std::move(R.crease_pairs), {npairs});
+		crease_weights_arr = wrap_owned<float>(std::move(R.crease_weights), {nweights});
+	}
+
 	py::list payloads;
 	for (auto &sm : R.submeshes) {
 		py::dict d;
@@ -1035,10 +1081,8 @@ py::tuple compute_submeshes_c(
 		else
 			d["transformation"] = py::none();
 		if (sm.has_creases) {
-			d["crease_pairs"] = wrap_owned<uint32_t>(std::move(sm.crease_pairs),
-				{(py::ssize_t)sm.crease_pairs.size()});
-			d["crease_weights"] = wrap_owned<float>(std::move(sm.crease_weights),
-				{(py::ssize_t)sm.crease_weights.size()});
+			d["crease_pairs"] = py::reinterpret_borrow<py::array>(crease_pairs_arr);
+			d["crease_weights"] = py::reinterpret_borrow<py::array>(crease_weights_arr);
 		} else {
 			d["crease_pairs"] = py::none();
 			d["crease_weights"] = py::none();
