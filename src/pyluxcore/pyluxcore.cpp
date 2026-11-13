@@ -1753,7 +1753,9 @@ static void Scene_DefineMeshExt3(
     const std::optional<py_float_array> transformation,
     const std::optional<py::object> crease_pairs,
     const std::optional<py::object> crease_weights,
-    const bool normals_pretransformed = false
+    const bool normals_pretransformed = false,
+    const int tri_aov_index = -1,
+    const float tri_aov_value = 0.0f
 ) {
 	// Points: either a new buffer, or shared from an existing mesh (given by
 	// name). A Buffer copy shares the storage, so building the mesh with the
@@ -1894,6 +1896,15 @@ static void Scene_DefineMeshExt3(
 			newMesh->SetLocal2World(srcTrans);
 		else if (luxtrans.has_value())
 			newMesh->ApplyTransform(luxtrans.value());
+
+		// Optional constant per-triangle AOV (e.g. material slot): built and
+		// set here, with the GIL released and before the scene insertion, so
+		// the caller needs no extra SetMeshTriangleAOV round-trip (which would
+		// copy the array under the GIL and take the mesh-def mutex again)
+		if (tri_aov_index >= 0) {
+			std::vector<float> aov(triangles.Count(), tri_aov_value);
+			newMesh->SetTriAOV((u_int)tri_aov_index, std::span<float>(aov.data(), aov.size()));
+		}
 
 		// Insert mesh into the scene
 		scene->DefineMesh(std::move(newMesh));
@@ -2943,7 +2954,9 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("transformation") = py::none(),
 		py::arg("crease_pairs") = py::none(),
 		py::arg("crease_weights") = py::none(),
-		py::arg("normals_pretransformed") = false
+		py::arg("normals_pretransformed") = false,
+		py::arg("tri_aov_index") = -1,
+		py::arg("tri_aov_value") = 0.0
 	)
 	.def("DefineMeshExt", &Scene_DefineMeshExt1)
 	.def("DefineMeshExt", &Scene_DefineMeshExt2)
