@@ -94,7 +94,7 @@ void Scene::Init(luxrays::PropertiesRPtr resizePolicyProps) {
 
 Scene::~Scene() {
 #ifndef NDEBUG
-	std::cerr << "Deleting scene\n";
+	SDL_LOG("Deleting scene");
 #endif
 	dataSet.reset();
 }
