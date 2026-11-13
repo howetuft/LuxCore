@@ -437,12 +437,6 @@ bool Scene::IsMeshDefined(const string &meshName) const {
 }
 
 void Scene::Parse(PropertiesRPtr props) {
-	if (enableParsePrint) {
-		SDL_LOG("========================Scene::Parse()========================="
-		<< endl << *props);
-		SDL_LOG("===============================================================");
-	}
-
 	//--------------------------------------------------------------------------
 	// Read all textures
 	//--------------------------------------------------------------------------
