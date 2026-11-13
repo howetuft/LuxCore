@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <numeric>
 #include <tuple>
 
 #include "slg/utils/group_by_equivalence.h"
@@ -86,6 +87,55 @@ std::vector<int64_t> argsort2(const T *keys, const U *secondary, size_t n) {
 std::vector<uint32_t> union_find_labels(size_t num_elements, const std::vector<slg::equiv::Relation> &rel) {
 	return slg::equiv::GroupByEquivalenceLabels(
 		num_elements, std::span<const slg::equiv::Relation>(rel));
+}
+
+// Serial union-find (path halving + union by size) with dense labels in
+// ascending root order. Produces the same partition as
+// slg::equiv::GroupByEquivalenceLabels, but without its per-reduce-body
+// construction of a numElements-sized parent array, which dominates the cost
+// when the relation count is small relative to the element count (the common
+// case for mesh island graphs: ~1.5 relations per triangle).
+std::vector<uint32_t> serial_union_find_labels(size_t num_elements, const std::vector<slg::equiv::Relation> &rel) {
+	if (num_elements == 0)
+		return {};
+	std::vector<uint32_t> parent(num_elements);
+	std::iota(parent.begin(), parent.end(), 0u);
+	std::vector<uint32_t> sz(num_elements, 1);
+	auto find = [&parent](size_t i) {
+		while (parent[i] != i) {
+			parent[i] = parent[parent[i]];
+			i = parent[i];
+		}
+		return i;
+	};
+	for (const auto &r : rel) {
+		size_t a = find(r.first), b = find(r.second);
+		if (a == b)
+			continue;
+		if (sz[a] < sz[b])
+			std::swap(a, b);
+		parent[b] = (uint32_t)a;
+		sz[a] += sz[b];
+	}
+	// Dense labels in ascending root order: mark the roots in a bitmap, then
+	// prefix-sum it (O(n), no sort)
+	std::vector<uint32_t> roots(num_elements);
+	std::vector<uint8_t> isRoot(num_elements, 0);
+	for (size_t i = 0; i < num_elements; ++i) {
+		const uint32_t r = (uint32_t)find(i);
+		roots[i] = r;
+		isRoot[r] = 1;
+	}
+	std::vector<uint32_t> labelOfRoot(num_elements, 0);
+	uint32_t count = 0;
+	for (size_t i = 0; i < num_elements; ++i) {
+		labelOfRoot[i] = count;
+		count += isRoot[i];
+	}
+	std::vector<uint32_t> labels(num_elements);
+	for (size_t i = 0; i < num_elements; ++i)
+		labels[i] = labelOfRoot[roots[i]];
+	return labels;
 }
 
 //------------------------------------------------------------------------------
@@ -237,8 +287,9 @@ void inv3(const float m[9], float out[9]) {
 //------------------------------------------------------------------------------
 
 struct AttrRef {
-	int cand = -1;             // >= 0: shared candidate index, -1: owned buffer
-	std::vector<float> owned;  // [P, k] row-major, only when cand < 0
+	int cand = -1;                  // >= 0: shared candidate index, -1: owned buffer
+	std::unique_ptr<float[]> owned; // [P, k] row-major, only when cand < 0
+	size_t owned_size = 0;
 };
 
 struct SubmeshOut {
@@ -286,6 +337,23 @@ py::array_t<T> wrap_owned(std::vector<T> &&vec, std::vector<py::ssize_t> shape) 
 		s *= shape[i];
 	}
 	return py::array_t<T>(shape, strides, holder->data(), cap);
+}
+
+// Same as wrap_owned, but for an uninitialized buffer (rows that the submesh
+// never references are left untouched -- they are never read, exactly like
+// the numpy fallback's np.empty)
+template <typename T>
+py::array_t<T> wrap_owned_buf(std::unique_ptr<T[]> buf, std::vector<py::ssize_t> shape) {
+	T *data = buf.get();
+	auto *holder = new std::unique_ptr<T[]>(std::move(buf));
+	py::capsule cap(holder, [](void *p) { delete static_cast<std::unique_ptr<T *> *>(p); });
+	std::vector<py::ssize_t> strides(shape.size());
+	py::ssize_t s = sizeof(T);
+	for (size_t i = shape.size(); i-- > 0;) {
+		strides[i] = s;
+		s *= shape[i];
+	}
+	return py::array_t<T>(shape, strides, data, cap);
 }
 
 }  // namespace
@@ -516,6 +584,7 @@ py::tuple compute_submeshes_c(
 		// union pairs over triangles across shared edges with matching sigs
 		std::vector<slg::equiv::Relation> pairs;
 		if (T) {
+			pairs.reserve(n_occ / 2 + 1);
 			std::vector<char> join(n_occ, 0);
 			const size_t sig_bytes = K * 4;
 			tbb::parallel_for(tbb::blocked_range<size_t>(1, n_occ),
@@ -537,7 +606,7 @@ py::tuple compute_submeshes_c(
 		}
 		std::vector<int64_t> island;
 		if (T) {
-			std::vector<uint32_t> labels = union_find_labels(T, pairs);
+			std::vector<uint32_t> labels = serial_union_find_labels(T, pairs);
 			island.assign(labels.begin(), labels.end());
 		}
 		R.timer.stage("union_find");
@@ -598,7 +667,7 @@ py::tuple compute_submeshes_c(
 					rel.reserve(isl_pairs.size());
 					for (auto &p : isl_pairs)
 						rel.emplace_back(p.first, p.second);
-					std::vector<uint32_t> isl_map = union_find_labels((size_t)n_islands0, rel);
+					std::vector<uint32_t> isl_map = serial_union_find_labels((size_t)n_islands0, rel);
 					for (size_t t = 0; t < T; ++t)
 						island[t] = isl_map[island[t]];
 				}
@@ -822,7 +891,11 @@ py::tuple compute_submeshes_c(
 									return AttrRef{cand, {}};
 							}
 							AttrRef ref;
-							ref.owned.assign(P * k, 0.0f);
+							// uninitialized: rows outside the submesh's referenced
+							// points are never read (same as np.empty in the
+							// numpy fallback)
+							ref.owned.reset(new float[P * k]);
+							ref.owned_size = P * k;
 							for (size_t i = 0; i < isl_loops.size(); ++i)
 								std::memcpy(&ref.owned[isl_gw[i] * k], &loop_data[isl_loops[i] * k], k * 4);
 							return ref;
@@ -874,7 +947,8 @@ py::tuple compute_submeshes_c(
 							std::memcpy(sm.transform, mesh_transform, sizeof(sm.transform));
 						auto compact_attr = [&](const float *loop_data, size_t k) -> AttrRef {
 							AttrRef ref;
-							ref.owned.assign(n_used * k, 0.0f);
+							ref.owned.reset(new float[n_used * k]);
+							ref.owned_size = n_used * k;
 							for (size_t i = 0; i < g_n * 3; ++i)
 								std::memcpy(&ref.owned[local_idx[i] * k], &loop_data[g_loops[i] * k], k * 4);
 							return ref;
@@ -885,8 +959,10 @@ py::tuple compute_submeshes_c(
 						for (size_t i = 0; i < color_attrs.size(); ++i) {
 							if (color_domains[i] == "POINT") {
 								AttrRef r, a;
-								r.owned.resize(n_used * 3);
-								a.owned.resize(n_used);
+								r.owned.reset(new float[n_used * 3]);
+								r.owned_size = n_used * 3;
+								a.owned.reset(new float[n_used]);
+								a.owned_size = n_used;
 								const float *prgb = R.candidates[point_cand_rgb[i]].data();
 								const float *pal = R.candidates[point_cand_alpha[i]].data();
 								for (size_t p = 0; p < n_used; ++p) {
@@ -918,10 +994,10 @@ py::tuple compute_submeshes_c(
 	py::array welded_arr = wrap_owned<float>(std::move(R.welded_points),
 		{(py::ssize_t)R.num_points, 3});
 
-	auto wrap_attr = [&](const AttrRef &ref, size_t P, int k) -> py::array {
+	auto wrap_attr = [&](AttrRef &ref, size_t P, int k) -> py::array {
 		if (ref.cand >= 0)
 			return py::reinterpret_borrow<py::array>(cand_arrays[ref.cand]);
-		return wrap_owned<float>(std::vector<float>(ref.owned), {(py::ssize_t)P, (py::ssize_t)k});
+		return wrap_owned_buf<float>(std::move(ref.owned), {(py::ssize_t)P, (py::ssize_t)k});
 	};
 
 	py::list payloads;
