@@ -109,53 +109,14 @@ ScalableVector<int64_t> argsort2(const T *keys, const U *secondary, size_t n) {
 	return out;
 }
 
-// Serial union-find (path halving + union by size) with dense labels in
-// ascending root order. Produces the same partition as
-// slg::equiv::GroupByEquivalenceLabels, but without its per-reduce-body
-// construction of a numElements-sized parent array, which dominates the cost
-// when the relation count is small relative to the element count (the common
-// case for mesh island graphs: ~1.5 relations per triangle).
-ScalableVector<uint32_t> serial_union_find_labels(size_t num_elements, const ScalableVector<slg::equiv::Relation> &rel) {
-	if (num_elements == 0)
-		return {};
-	ScalableVector<uint32_t> parent(num_elements);
-	std::iota(parent.begin(), parent.end(), 0u);
-	ScalableVector<uint32_t> sz(num_elements, 1);
-	auto find = [&parent](size_t i) {
-		while (parent[i] != i) {
-			parent[i] = parent[parent[i]];
-			i = parent[i];
-		}
-		return i;
-	};
-	for (const auto &r : rel) {
-		size_t a = find(r.first), b = find(r.second);
-		if (a == b)
-			continue;
-		if (sz[a] < sz[b])
-			std::swap(a, b);
-		parent[b] = (uint32_t)a;
-		sz[a] += sz[b];
-	}
-	// Dense labels in ascending root order: mark the roots in a bitmap, then
-	// prefix-sum it (O(n), no sort)
-	ScalableVector<uint32_t> roots(num_elements);
-	ScalableVector<uint8_t> isRoot(num_elements, 0);
-	for (size_t i = 0; i < num_elements; ++i) {
-		const uint32_t r = (uint32_t)find(i);
-		roots[i] = r;
-		isRoot[r] = 1;
-	}
-	ScalableVector<uint32_t> labelOfRoot(num_elements, 0);
-	uint32_t count = 0;
-	for (size_t i = 0; i < num_elements; ++i) {
-		labelOfRoot[i] = count;
-		count += isRoot[i];
-	}
-	ScalableVector<uint32_t> labels(num_elements);
-	for (size_t i = 0; i < num_elements; ++i)
-		labels[i] = labelOfRoot[roots[i]];
-	return labels;
+// Island union-find: the shared slg::equiv::GroupByEquivalenceLabels, which
+// picks the sparse per-body DSU for sparse relation sets (the mesh island
+// case: ~1.5 relations per triangle) and the dense per-body DSU otherwise.
+// Returns dense labels in ascending root order.
+ScalableVector<uint32_t> island_union_find_labels(size_t num_elements, const ScalableVector<slg::equiv::Relation> &rel) {
+	std::vector<uint32_t> labels = slg::equiv::GroupByEquivalenceLabels(
+		num_elements, std::span<const slg::equiv::Relation>(rel.data(), rel.size()));
+	return ScalableVector<uint32_t>(labels.begin(), labels.end());
 }
 
 
@@ -645,7 +606,7 @@ py::tuple compute_submeshes_c(
 		}
 		ScalableVector<int64_t> island;
 		if (T) {
-			ScalableVector<uint32_t> labels = serial_union_find_labels(T, pairs);
+			ScalableVector<uint32_t> labels = island_union_find_labels(T, pairs);
 			island.assign(labels.begin(), labels.end());
 		}
 		R.timer.stage("union_find");
@@ -706,7 +667,7 @@ py::tuple compute_submeshes_c(
 					rel.reserve(isl_pairs.size());
 					for (auto &p : isl_pairs)
 						rel.emplace_back(p.first, p.second);
-					ScalableVector<uint32_t> isl_map = serial_union_find_labels((size_t)n_islands0, rel);
+					ScalableVector<uint32_t> isl_map = island_union_find_labels((size_t)n_islands0, rel);
 					for (size_t t = 0; t < T; ++t)
 						island[t] = isl_map[island[t]];
 				}
