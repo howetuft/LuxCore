@@ -317,7 +317,6 @@ struct ComputeResult {
 	ScalableVector<ScalableVector<float>> candidates;
 	ScalableVector<int> candidate_cols;  // floats per row of each candidate
 	ScalableVector<float> welded_points;
-	ScalableVector<int64_t> island_debug;  // per-triangle island labels (A-B tests)
 	StageTimer timer;
 	size_t num_points = 0;
 	size_t num_raw = 0;
@@ -683,7 +682,6 @@ py::tuple compute_submeshes_c(
 			}
 		}
 		R.timer.stage("islands");
-		R.island_debug = island;
 
 		// loop island
 		ScalableVector<int64_t> loop_island(L);
@@ -1063,15 +1061,6 @@ py::tuple compute_submeshes_c(
 	for (auto &s : R.timer.stages)
 		stages[s.first.c_str()] = s.second;
 	info["stages"] = stages;
-	// debug/A-B: per-triangle island labels, so the numpy fallback can be
-	// compared against this implementation exactly
-	{
-		py::array_t<int64_t> isl(R.island_debug.size());
-		auto m = isl.mutable_unchecked<1>();
-		for (size_t i = 0; i < R.island_debug.size(); ++i)
-			m(i) = R.island_debug[i];
-		info["island"] = isl;
-	}
 
 	return py::make_tuple(payloads, info);
 }
