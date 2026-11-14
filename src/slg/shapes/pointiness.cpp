@@ -16,10 +16,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
+
 #include <algorithm>
 #include <boost/format.hpp>
 #include <limits>
+#include <numeric>
 #include <optional>
+#include <utility>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/pointiness.h"
@@ -39,6 +45,7 @@ namespace {
 
 class Edge {
 public:
+	Edge() : v0(0), v1(0) { }
 	// Normalize to (lo, hi) so an undirected edge has a single representation
 	Edge(const u_int va, const u_int vb) : v0(std::min(va, vb)), v1(std::max(va, vb)) { }
 	~Edge() { }
@@ -112,86 +119,205 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 
 	const TriangleBuffer tris(srcMesh.GetTriangles());
 
-	// Build the edge information: flat vector + sort + unique instead of
-	// std::set (no per-edge node allocation, and a deterministic order that
-	// the FP accumulation loops below rely on)
-	std::vector<Edge> edges;
-	edges.reserve(triCount * 3);
-	for (u_int i = 0; i < triCount; ++i) {
-		edges.emplace_back(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
-		edges.emplace_back(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
-		edges.emplace_back(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
-	}
-	std::sort(edges.begin(), edges.end());
+	// Build the edge information: flat vector + parallel sort + unique.
+	// Edges are normalized (lo, hi) and the (v0, v1) pairs are unique, so
+	// both sorts below are total orders -> deterministic output regardless
+	// of thread count.
+	std::vector<Edge> edges((size_t)triCount * 3);
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, triCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i) {
+				edges[i * 3]     = Edge(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
+				edges[i * 3 + 1] = Edge(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
+				edges[i * 3 + 2] = Edge(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
+			}
+		});
+	tbb::parallel_sort(edges.begin(), edges.end());
 	edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+	const size_t edgeCount = edges.size();
 
-	// Build the vertex information
+	// Permutation of the edge indices sorted by (v1, v0, index): a total
+	// order, so the v1-side accumulation below is deterministic too
+	std::vector<u_int> byV1(edgeCount);
+	std::iota(byV1.begin(), byV1.end(), 0u);
+	tbb::parallel_sort(byV1.begin(), byV1.end(),
+		[&](const u_int a, const u_int b) {
+			const Edge &ea = edges[a], &eb = edges[b];
+			if (ea.v1 != eb.v1)
+				return ea.v1 < eb.v1;
+			if (ea.v0 != eb.v0)
+				return ea.v0 < eb.v0;
+			return a < b;
+		});
+
+	// Per-edge normalized direction, computed once (pure function of the edge)
+	std::vector<Vector> edgeDirs(edgeCount);
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, edgeCount),
+		[&](const tbb::blocked_range<size_t> &r) {
+			for (size_t i = r.begin(); i < r.end(); ++i)
+				edgeDirs[i] = Normalize(originalVertices[edges[i].v0] - originalVertices[edges[i].v1]);
+		});
+
+	// Build the vertex information. In the v0-sorted edge array every vertex
+	// owns a contiguous run, so each vertex can be accumulated independently
+	// (race-free) and in a fixed order (deterministic): first the v0 side,
+	// then the v1 side via the byV1 permutation.
 	std::vector<Vector> vertexEdgeVecs(originalVertCount, Vector());
 	std::vector<u_int> vertexCounters(originalVertCount, 0);
-	for(const Edge &e: edges) {
-		const Vector ev = Normalize(originalVertices[e.v0] - originalVertices[e.v1]);
-
-		vertexEdgeVecs[e.v0] += ev;
-		vertexCounters[e.v0]++;
-
-		vertexEdgeVecs[e.v1] -= ev;
-		vertexCounters[e.v1]++;
-	}
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int v = r.begin(); v < r.end(); ++v) {
+				const auto lo = std::lower_bound(edges.begin(), edges.end(), v,
+					[](const Edge &e, const u_int x) { return e.v0 < x; });
+				const auto hi = std::upper_bound(edges.begin(), edges.end(), v,
+					[](const u_int x, const Edge &e) { return x < e.v0; });
+				Vector acc;
+				u_int cnt = 0;
+				for (auto it = lo; it != hi; ++it) {
+					acc += edgeDirs[it - edges.begin()];
+					++cnt;
+				}
+				vertexEdgeVecs[v] = acc;
+				vertexCounters[v] = cnt;
+			}
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int v = r.begin(); v < r.end(); ++v) {
+				const auto lo = std::lower_bound(byV1.begin(), byV1.end(), v,
+					[&](const u_int k, const u_int x) { return edges[k].v1 < x; });
+				const auto hi = std::upper_bound(byV1.begin(), byV1.end(), v,
+					[&](const u_int x, const u_int k) { return x < edges[k].v1; });
+				for (auto it = lo; it != hi; ++it) {
+					vertexEdgeVecs[v] -= edgeDirs[*it];
+					vertexCounters[v]++;
+				}
+			}
+		});
 
 	// Build the normal information
 	std::vector<Normal> vertexNormal(originalVertCount);
 	if (srcMesh.HasNormals()) {
-		for (u_int i = 0; i < originalVertCount; ++i) 
-			vertexNormal[i] = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, i);
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+			[&](const tbb::blocked_range<u_int> &r) {
+				for (u_int i = r.begin(); i < r.end(); ++i)
+					vertexNormal[i] = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, i);
+			});
 	} else {
-		for (u_int i = 0; i < triCount; ++i) {
-			const Normal triNormal = srcMesh.GetGeometryNormal(Transform::TRANS_IDENTITY, i);
-
-			vertexNormal[uniqueVertices[tris[i].v[0]]] += triNormal;
-			vertexNormal[uniqueVertices[tris[i].v[1]]] += triNormal;
-			vertexNormal[uniqueVertices[tris[i].v[2]]] += triNormal;
-		}
-		for (u_int i = 0; i < uniqueVertCount; ++i) {
-			// Ignore not unique vertices
-			if (uniqueVertices[i] != i)
-				continue;
-
-			vertexNormal[i] = Normalize(vertexNormal[i]);
-		}
+		// Accumulate the geometry normal of each triangle into its unique
+		// vertices: sort (unique vertex, triangle index) pairs -- a total
+		// order -- then accumulate per vertex over its contiguous run
+		std::vector<std::pair<u_int, u_int>> triKeys((size_t)triCount * 3);
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, triCount),
+			[&](const tbb::blocked_range<u_int> &r) {
+				for (u_int i = r.begin(); i < r.end(); ++i) {
+					triKeys[i * 3]     = {uniqueVertices[tris[i].v[0]], i};
+					triKeys[i * 3 + 1] = {uniqueVertices[tris[i].v[1]], i};
+					triKeys[i * 3 + 2] = {uniqueVertices[tris[i].v[2]], i};
+				}
+			});
+		tbb::parallel_sort(triKeys.begin(), triKeys.end());
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+			[&](const tbb::blocked_range<u_int> &r) {
+				for (u_int v = r.begin(); v < r.end(); ++v) {
+					const auto lo = std::lower_bound(triKeys.begin(), triKeys.end(), v,
+						[](const std::pair<u_int, u_int> &p, const u_int x) { return p.first < x; });
+					const auto hi = std::upper_bound(triKeys.begin(), triKeys.end(), v,
+						[](const u_int x, const std::pair<u_int, u_int> &p) { return x < p.first; });
+					Normal acc;
+					for (auto it = lo; it != hi; ++it)
+						acc += srcMesh.GetGeometryNormal(Transform::TRANS_IDENTITY, it->second);
+					// the serial loop only accumulates into representative
+					// vertices; duplicates keep the zero-initialized normal
+					vertexNormal[v] = (uniqueVertices[v] == v) ? acc : Normal();
+				}
+			});
+		tbb::parallel_for(tbb::blocked_range<u_int>(0, uniqueVertCount),
+			[&](const tbb::blocked_range<u_int> &r) {
+				for (u_int i = r.begin(); i < r.end(); ++i) {
+					// Ignore not unique vertices
+					if (uniqueVertices[i] == i)
+						vertexNormal[i] = Normalize(vertexNormal[i]);
+				}
+			});
 	}
 
 	// Build the curvature information
 	std::vector<float> rawCurvature(originalVertCount);
-	for (u_int i = 0; i < originalVertCount; ++i) {
-		if (vertexCounters[i] > 0)
-			rawCurvature[i] = -Dot(vertexNormal[i], vertexEdgeVecs[i] / vertexCounters[i]);
-		else
-			rawCurvature[i] = 0.f;
-	}
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i) {
+				if (vertexCounters[i] > 0)
+					rawCurvature[i] = -Dot(vertexNormal[i], vertexEdgeVecs[i] / vertexCounters[i]);
+				else
+					rawCurvature[i] = 0.f;
+			}
+		});
 
-	// Blur the curvature information
+	// Blur the curvature information (same two-pass, per-vertex scheme as
+	// the vertex information above)
 	auto curvature = std::make_unique<float[]>(originalVertCount);
 	std::span<float> curvatureSpan(curvature.get(), originalVertCount);
-	std::fill(curvatureSpan.begin(), curvatureSpan.end(), 0.f);
-	std::fill(vertexCounters.begin(), vertexCounters.end(), 1);
-	for(const Edge &e: edges) {
-		curvatureSpan[e.v0] += rawCurvature[e.v1];
-		vertexCounters[e.v0]++;
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i)
+				curvatureSpan[i] = 0.f;
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i)
+				vertexCounters[i] = 1;
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int v = r.begin(); v < r.end(); ++v) {
+				const auto lo = std::lower_bound(edges.begin(), edges.end(), v,
+					[](const Edge &e, const u_int x) { return e.v0 < x; });
+				const auto hi = std::upper_bound(edges.begin(), edges.end(), v,
+					[](const u_int x, const Edge &e) { return x < e.v0; });
+				for (auto it = lo; it != hi; ++it) {
+					curvatureSpan[v] += rawCurvature[it->v1];
+					vertexCounters[v]++;
+				}
+			}
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int v = r.begin(); v < r.end(); ++v) {
+				const auto lo = std::lower_bound(byV1.begin(), byV1.end(), v,
+					[&](const u_int k, const u_int x) { return edges[k].v1 < x; });
+				const auto hi = std::upper_bound(byV1.begin(), byV1.end(), v,
+					[&](const u_int x, const u_int k) { return x < edges[k].v1; });
+				for (auto it = lo; it != hi; ++it) {
+					curvatureSpan[v] += rawCurvature[edges[*it].v0];
+					vertexCounters[v]++;
+				}
+			}
+		});
 
-		curvatureSpan[e.v1] += rawCurvature[e.v0];
-		vertexCounters[e.v1]++;
-	}
-
-	// Normalize and factor also old vertex alphas
-	for (u_int i = 0; i < originalVertCount; ++i) {
-		if (uniqueVertices[i] == i) {
-			// It is an unique vertex
-			curvatureSpan[i] *= (srcMesh.HasAlphas(0) ? srcMesh.GetAlpha(i, 0) : 1.f) / vertexCounters[i];
-		} else {
-			// It is a duplicate, just copy the already compute curvature
-			curvatureSpan[i] = curvatureSpan[uniqueVertices[i]];
-		}
-	}
+	// Normalize and factor also old vertex alphas. Serial order matters here:
+	// a duplicate reads its representative's curvature scaled if the
+	// representative has a lower index, unscaled if higher. Three
+	// race-free passes reproduce that exactly.
+	const bool hasAlphas = srcMesh.HasAlphas(0);
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i)
+				if (uniqueVertices[i] != i && uniqueVertices[i] > i)
+					curvatureSpan[i] = curvatureSpan[uniqueVertices[i]];
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i)
+				if (uniqueVertices[i] == i)
+					curvatureSpan[i] *= (hasAlphas ? srcMesh.GetAlpha(i, 0) : 1.f) / vertexCounters[i];
+		});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, originalVertCount),
+		[&](const tbb::blocked_range<u_int> &r) {
+			for (u_int i = r.begin(); i < r.end(); ++i)
+				if (uniqueVertices[i] != i && uniqueVertices[i] < i)
+					curvatureSpan[i] = curvatureSpan[uniqueVertices[i]];
+		});
 
 	if (destAOVIndex == NULL_INDEX) {
 		// Make a copy of the original mesh and overwrite vertex color information
