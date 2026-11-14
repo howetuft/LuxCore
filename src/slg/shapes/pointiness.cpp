@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <algorithm>
 #include <boost/format.hpp>
 #include <limits>
 #include <optional>
@@ -29,22 +30,34 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+// Anonymous namespace: this file-local helper must have internal linkage.
+// A global-scope class Edge also exists in edgedetectoraov.cpp and
+// exttrianglemeshbevel.cpp with a different layout; as a global class the
+// inline members and std::vector<Edge> instantiations have identical mangled
+// names across TUs (ODR violation), and the linker can pick another TU's
+// vector<Edge> code (different sizeof(Edge)) -> heap corruption.
+namespace {
+
 class Edge {
 public:
-	Edge(const u_int va, const u_int vb) : v0(va), v1(vb) { }
+	// Normalize to (lo, hi) so an undirected edge has a single representation
+	Edge(const u_int va, const u_int vb) : v0(std::min(va, vb)), v1(std::max(va, vb)) { }
 	~Edge() { }
 
-	// Used by std::set
+	// Lexicographic order: deterministic iteration regardless of insertion
+	// order or allocation addresses (the old pointer-based fallback made the
+	// FP accumulation loops below sum in a run-dependent order)
 	bool operator<(const Edge &e) const {
-		if (((e.v0 == v0) && (e.v1 == v1)) ||
-				((e.v0 == v1) && (e.v1 == v0)))
-			return false;
-		else
-			return this < &e;
+		return v0 < e.v0 || (v0 == e.v0 && v1 < e.v1);
+	}
+	bool operator==(const Edge &e) const {
+		return v0 == e.v0 && v1 == e.v1;
 	}
 
-	const u_int v0, v1;
+	u_int v0, v1;
 };
+
+}  // namespace
 
 // Compare vertices by sum of their coordinates.
 class VertexAverageComparator {
@@ -100,13 +113,18 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 
 	const TriangleBuffer tris(srcMesh.GetTriangles());
 
-	// Build the edge information
-	std::set<Edge> edges;
+	// Build the edge information: flat vector + sort + unique instead of
+	// std::set (no per-edge node allocation, and a deterministic order that
+	// the FP accumulation loops below rely on)
+	vector<Edge> edges;
+	edges.reserve(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
-		edges.emplace(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
-		edges.emplace(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
-		edges.emplace(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
+		edges.emplace_back(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
+		edges.emplace_back(uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]);
+		edges.emplace_back(uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]);
 	}
+	std::sort(edges.begin(), edges.end());
+	edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
 
 	// Build the vertex information
 	vector<Vector> vertexEdgeVecs(originalVertCount, Vector());
