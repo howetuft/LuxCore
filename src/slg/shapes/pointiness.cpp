@@ -26,7 +26,6 @@
 #include "luxrays/utils/buffer.h"
 #include "slg/scene/scene.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -107,7 +106,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 					triMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex1),
 					triMesh.GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex2)));
 	};
-	vector<u_int> uniqueVertices;
+	std::vector<u_int> uniqueVertices;
 	const u_int uniqueVertCount = srcMesh.GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount);
 
@@ -116,7 +115,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	// Build the edge information: flat vector + sort + unique instead of
 	// std::set (no per-edge node allocation, and a deterministic order that
 	// the FP accumulation loops below rely on)
-	vector<Edge> edges;
+	std::vector<Edge> edges;
 	edges.reserve(triCount * 3);
 	for (u_int i = 0; i < triCount; ++i) {
 		edges.emplace_back(uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]);
@@ -127,8 +126,8 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
 
 	// Build the vertex information
-	vector<Vector> vertexEdgeVecs(originalVertCount, Vector());
-	vector<u_int> vertexCounters(originalVertCount, 0);
+	std::vector<Vector> vertexEdgeVecs(originalVertCount, Vector());
+	std::vector<u_int> vertexCounters(originalVertCount, 0);
 	for(const Edge &e: edges) {
 		const Vector ev = Normalize(originalVertices[e.v0] - originalVertices[e.v1]);
 
@@ -140,7 +139,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	}
 
 	// Build the normal information
-	vector<Normal> vertexNormal(originalVertCount);
+	std::vector<Normal> vertexNormal(originalVertCount);
 	if (srcMesh.HasNormals()) {
 		for (u_int i = 0; i < originalVertCount; ++i) 
 			vertexNormal[i] = srcMesh.GetShadeNormal(Transform::TRANS_IDENTITY, i);
@@ -162,7 +161,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	}
 
 	// Build the curvature information
-	vector<float> rawCurvature(originalVertCount);
+	std::vector<float> rawCurvature(originalVertCount);
 	for (u_int i = 0; i < originalVertCount; ++i) {
 		if (vertexCounters[i] > 0)
 			rawCurvature[i] = -Dot(vertexNormal[i], vertexEdgeVecs[i] / vertexCounters[i]);
