@@ -59,6 +59,7 @@ using Clock = std::chrono::steady_clock;
 
 struct StageTimer {
 	ScalableVector<std::pair<std::string, double>> stages;
+	StageTimer() { stages.reserve(16); }
 	Clock::time_point t0 = Clock::now();
 	void stage(const char *name) {
 		auto now = Clock::now();
@@ -162,6 +163,7 @@ WeldResult weld_points_nan_fallback(const float *vp, size_t V) {
 	std::sort(order.begin(), order.end(), Cmp{vp});
 	WeldResult res;
 	res.inverse.assign(V, 0);
+	res.first_index.reserve(V);
 	int64_t group = -1;
 	for (size_t i = 0; i < V; ++i) {
 		if (i == 0 || Cmp{vp}(order[i - 1], order[i])) {
@@ -486,6 +488,9 @@ py::tuple compute_submeshes_c(
 			ScalableVector<int64_t> w0, w1;
 			ScalableVector<float> cw;
 			keys.reserve(E);
+			w0.reserve(E);
+			w1.reserve(E);
+			cw.reserve(E);
 			for (size_t e = 0; e < E; ++e) {
 				if (!ec || !(ec[e] > 0.0f))
 					continue;
@@ -500,6 +505,7 @@ py::tuple compute_submeshes_c(
 			const size_t nk = keys.size();
 			ScalableVector<int64_t> order = nk ? argsort1<uint64_t>(keys.data(), nk) : ScalableVector<int64_t>();
 			ScalableVector<size_t> first;
+			first.reserve(nk);
 			for (size_t i = 0; i < nk; ++i)
 				if (i == 0 || keys[order[i]] != keys[order[i - 1]])
 					first.push_back((size_t)order[i]);
@@ -627,10 +633,12 @@ py::tuple compute_submeshes_c(
 			}
 			if (any_small) {
 				ScalableVector<int64_t> starts;
+				starts.reserve(n_occ);
 				for (size_t i = 0; i < n_occ; ++i)
 					if (i == 0 || k_s[i] != k_s[i - 1])
 						starts.push_back((int64_t)i);
 				ScalableVector<int64_t> ends;
+				ends.reserve(starts.size());
 				for (size_t i = 1; i < starts.size(); ++i)
 					ends.push_back(starts[i] - 1);
 				ends.push_back((int64_t)n_occ - 1);
@@ -656,6 +664,7 @@ py::tuple compute_submeshes_c(
 						}
 					});
 				ScalableVector<std::pair<uint32_t, uint32_t>> isl_pairs;
+				isl_pairs.reserve(n_runs);
 				for (size_t i = 0; i < n_runs; ++i)
 					if (adj[i] && any_s[i] && not_hard[i])
 						isl_pairs.emplace_back((uint32_t)isl_a[i], (uint32_t)isl_b[i]);
@@ -705,6 +714,8 @@ py::tuple compute_submeshes_c(
 		}
 		ScalableVector<int64_t> g_order = T ? argsort1<int64_t>(tri_key.data(), T) : ScalableVector<int64_t>();
 		ScalableVector<int64_t> group_start, group_key;
+		group_start.reserve(T);
+		group_key.reserve(T);
 		for (size_t i = 0; i < T; ++i) {
 			if (i == 0 || tri_key[g_order[i]] != tri_key[g_order[i - 1]]) {
 				group_start.push_back((int64_t)i);
@@ -772,6 +783,9 @@ py::tuple compute_submeshes_c(
 				std::memcpy(&cand[loop_welded[l] * k], &loop_data[l * k], k * 4);
 			return cand;
 		};
+		const size_t n_cand = n_uv + 1 + 2 * color_attrs.size();
+		R.candidates.reserve(n_cand);
+		R.candidate_cols.reserve(n_cand);
 		for (size_t u = 0; u < n_uv; ++u) {
 			R.candidates.push_back(make_candidate(uv_ptrs[u], 2));
 			R.candidate_cols.push_back(2);
@@ -843,6 +857,9 @@ py::tuple compute_submeshes_c(
 					size_t g_n = (size_t)(g_end - g_start);
 
 					SubmeshOut &sm = R.submeshes[g];
+					sm.uvs.reserve(n_uv);
+					sm.colors.reserve(color_attrs.size());
+					sm.alphas.reserve(color_attrs.size());
 					snprintf(sm.name, sizeof(sm.name), "%s%03ui%03u", mesh_key.c_str(), mat, isl);
 					sm.mat = mat;
 					sm.slot = (int)g + 1;
