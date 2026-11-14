@@ -19,6 +19,8 @@
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
 
+#include <boost/format.hpp>
+
 #include <unordered_set>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -92,7 +94,8 @@ void Scene::ParseShapes(const Properties &props) {
 		}
 	}
 
-	double lastPrint = WallClockTime();
+	const double startTime = WallClockTime();
+	double lastPrint = startTime;
 	u_int shapeCount = 0;
 	if (!hasIntraLoopDependency) {
 		// Create the shapes in parallel: this is the expensive part (PLY
@@ -115,7 +118,8 @@ void Scene::ParseShapes(const Properties &props) {
 
 			const double now = WallClockTime();
 			if (now - lastPrint > 2.0) {
-				SDL_LOG("Shape count: " << shapeCount);
+				SDL_LOG("Shape count: " << shapeCount << " ("
+					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
 				lastPrint = now;
 			}
 		}
@@ -129,12 +133,14 @@ void Scene::ParseShapes(const Properties &props) {
 
 			const double now = WallClockTime();
 			if (now - lastPrint > 2.0) {
-				SDL_LOG("Shape count: " << shapeCount);
+				SDL_LOG("Shape count: " << shapeCount << " ("
+					<< (boost::format("%.3f") % (now - startTime)) << " secs)");
 				lastPrint = now;
 			}
 		}
 	}
-	SDL_LOG("Shape count: " << shapeCount);
+	SDL_LOG("Shape count: " << shapeCount << " ("
+		<< (boost::format("%.3f") % (WallClockTime() - startTime)) << " secs)");
 
 	editActions.AddActions(GEOMETRY_EDIT);
 }
