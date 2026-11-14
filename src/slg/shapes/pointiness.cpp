@@ -23,8 +23,10 @@
 #include <algorithm>
 #include <boost/format.hpp>
 #include <limits>
+#include <mutex>
 #include <numeric>
 #include <optional>
+#include <sstream>
 #include <utility>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -63,6 +65,13 @@ public:
 	u_int v0, v1;
 };
 
+// Serializes the SDL_LOG emission of pointiness shapes running on TBB
+// worker threads (the debug handler itself is not synchronized)
+std::mutex &LogMutex() {
+	static std::mutex m;
+	return m;
+}
+
 }  // namespace
 
 // Compare vertices by sum of their coordinates.
@@ -93,7 +102,12 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	// The source mesh is expected to be already welded (BlendLuxCore welds
 	// coincident vertices at export); use a mergeondistance shape first for
 	// meshes with split vertices (e.g. raw PLY files)
-	SDL_LOG("Pointiness shape " << srcMesh.GetName());
+	// Gather this shape's log lines and emit them with a single SDL_LOG
+	// call at the end: the ctor runs on TBB worker threads (parallel
+	// ParseShapes) and the debug handler is not synchronized, so per-line
+	// calls from several shapes would interleave
+	std::ostringstream log;
+	log << "Pointiness shape " << srcMesh.GetName() << "\n";
 
 	const double startTime = WallClockTime();
 
@@ -115,7 +129,7 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	};
 	std::vector<u_int> uniqueVertices;
 	const u_int uniqueVertCount = srcMesh.GetUniqueVerticesMapping(uniqueVertices, compareVerts);
-	SDL_LOG("Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount);
+	log << "Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount << "\n";
 
 	const TriangleBuffer tris(srcMesh.GetTriangles());
 
@@ -337,7 +351,11 @@ PointinessShape::PointinessShape(ExtTriangleMeshRef srcMesh, const u_int destAOV
 	}
 
 	const double endTime = WallClockTime();
-	SDL_LOG("Pointiness time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
+	log << "Pointiness time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs";
+	{
+		std::lock_guard<std::mutex> lock(LogMutex());
+		SDL_LOG(log.str());
+	}
 }
 
 PointinessShape::~PointinessShape() {
