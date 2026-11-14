@@ -111,6 +111,7 @@ void Scene::ParseTextures(const Properties &props) {
 		struct Preload {
 			string file;
 			ImageMapConfig cfg;
+			bool applyResize;
 		};
 		vector<Preload> preload;
 		std::unordered_set<string> seenKeys;
@@ -121,14 +122,37 @@ void Scene::ParseTextures(const Properties &props) {
 			const string file = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 			ImageMapConfig cfg(props, propName);
 			if (seenKeys.insert(imgMapCache.GetCacheKey(file, cfg)).second)
-				preload.push_back({file, std::move(cfg)});
+				preload.push_back({file, std::move(cfg), true});
+		}
+		// Also preload the image files referenced directly by light sources
+		// (infinite env maps, projection/emission map files), so they are
+		// decoded in the same parallel batch instead of on first use during
+		// ParseLights. Lights call GetImageMap with applyResizePolicy=false,
+		// and mappoint/mapsphere force float storage (as CreateEmissionMap).
+		for (const string &lkey : props.GetAllUniqueSubNames("scene.lights")) {
+			const string lprop = "scene.lights." + Property::ExtractField(lkey, 2);
+			const string ltype = props.Get(Property(lprop + ".type")("sky2")).Get<string>();
+			if (ltype != "infinite" && ltype != "projection" &&
+					ltype != "mappoint" && ltype != "mapsphere")
+				continue;
+			const string fileSuffix = (ltype == "infinite") ? ".file" : ".mapfile";
+			if (!props.IsDefined(lprop + fileSuffix))
+				continue;
+			const string file = props.Get(Property(lprop + fileSuffix)("")).Get<string>();
+			if (file.empty())
+				continue;
+			ImageMapConfig cfg(props, lprop);
+			if (ltype == "mappoint" || ltype == "mapsphere")
+				cfg.SetStorageType(ImageMapStorage::FLOAT);
+			if (seenKeys.insert(imgMapCache.GetCacheKey(file, cfg)).second)
+				preload.push_back({file, std::move(cfg), false});
 		}
 		if (!preload.empty()) {
 			SDL_LOG("Preloading " << preload.size() << " image map(s) in parallel");
 			tbb::parallel_for(tbb::blocked_range<size_t>(0, preload.size()),
 				[&](const tbb::blocked_range<size_t> &r) {
 					for (size_t i = r.begin(); i < r.end(); ++i)
-						imgMapCache.GetImageMap(preload[i].file, preload[i].cfg, true);
+						imgMapCache.GetImageMap(preload[i].file, preload[i].cfg, preload[i].applyResize);
 				});
 		}
 	}
@@ -175,7 +199,7 @@ void Scene::ParseTextures(const Properties &props) {
 		}
 	}
 
-	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
+editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
 TextureUPtr Scene::CreateTexture(const string &texName, const Properties &props) {
