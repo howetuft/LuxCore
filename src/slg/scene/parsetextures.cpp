@@ -745,6 +745,11 @@ Spectrum Scene::GetColor(const luxrays::Property &prop) {
 }
 
 TextureRef Scene::GetTexture(const luxrays::Property &prop) {
+	// The check + implicit definition below mutate texDefs, and this method
+	// is called concurrently from the parallel material creation of
+	// ParseMaterials: serialize it (textures are never deleted during the
+	// parse, so the returned reference stays valid after the unlock)
+	std::lock_guard<std::recursive_mutex> lock(texDefMtx);
 	const string &name = prop.GetValuesString();
 
 	if (texDefs.IsTextureDefined(name))

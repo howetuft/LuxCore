@@ -335,6 +335,10 @@ protected:
 	// by the mesh definition entry points (see MeshDefMutex())
 	mutable std::recursive_mutex meshDefMtx;
 
+	// Guards texDefs during the parallel material creation of ParseMaterials:
+	// Scene::GetTexture implicitly defines constant textures on first use
+	mutable std::recursive_mutex texDefMtx;
+
 	// Subdivided-envelope cache (see GetSubdivEnvelopeCache); mutable because it
 	// is filled lazily from const scene references during shape refinement
 	mutable std::mutex subdivEnvelopeMtx;
