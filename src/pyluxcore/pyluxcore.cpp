@@ -34,6 +34,7 @@
 
 #include <locale>
 #include <memory>
+#include <unordered_map>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -1837,7 +1838,14 @@ static ParsedExtMesh parseExtMeshArgs(
 // caller; the mesh is NOT inserted into the scene here. The mesh-def mutex is
 // only taken for the shared-points lookup (it is recursive, so this is safe
 // under an outer batch lock too).
-static luxrays::ExtTriangleMeshUPtr buildExtMesh(const SceneImplPtr &scene, ParsedExtMesh &a) {
+// batchLocal: meshes already built by the current DefineMeshesExt batch, by
+// name. When the points source is one of them, it is used directly and no
+// lock is needed (the batch keeps the source alive until insertion). Only
+// sources outside the batch fall back to the locked scene-cache lookup.
+static luxrays::ExtTriangleMeshUPtr buildExtMesh(
+	const SceneImplPtr &scene, ParsedExtMesh &a,
+	const std::unordered_map<std::string, luxrays::ExtTriangleMesh *> *batchLocal = nullptr
+) {
 	luxrays::VertexBuffer points;
 	const luxrays::VertexBuffer *sharedPoints = &points;
 	// When sharing the points of an existing mesh, that buffer is already in
@@ -1845,15 +1853,22 @@ static luxrays::ExtTriangleMeshUPtr buildExtMesh(const SceneImplPtr &scene, Pars
 	luxrays::ExtTriangleMesh *srcTriMesh = nullptr;
 	luxrays::Transform srcTrans;
 	if (a.pointsIsName) {
-		// The source-mesh lookup reads the shared mesh cache: lock it (the
-		// source mesh itself is not modified here; it stays alive because the
-		// cache holds it and meshes are not deleted during the export)
-		std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
-		auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(a.srcMeshName);
-		srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
-		if (!srcTriMesh)
-			throw std::runtime_error("Scene.DefineMeshExt: mesh '" + a.srcMeshName +
-				"' used as points source is not a triangle mesh");
+		if (batchLocal) {
+			auto it = batchLocal->find(a.srcMeshName);
+			if (it != batchLocal->end())
+				srcTriMesh = it->second;
+		}
+		if (!srcTriMesh) {
+			// The source-mesh lookup reads the shared mesh cache: lock it (the
+			// source mesh itself is not modified here; it stays alive because the
+			// cache holds it and meshes are not deleted during the export)
+			std::lock_guard<std::recursive_mutex> meshLock(scene->GetSlgScene().MeshDefMutex());
+			auto &srcMesh = scene->GetSlgScene().GetExtMeshes().GetExtMesh(a.srcMeshName);
+			srcTriMesh = dynamic_cast<luxrays::ExtTriangleMesh *>(&srcMesh);
+			if (!srcTriMesh)
+				throw std::runtime_error("Scene.DefineMeshExt: mesh '" + a.srcMeshName +
+					"' used as points source is not a triangle mesh");
+		}
 		sharedPoints = &srcTriMesh->GetVertexBuffer();
 		srcTriMesh->GetLocal2World(0.f, srcTrans);
 	}
@@ -1978,9 +1993,10 @@ static void Scene_DefineMeshExt3(
 
 // Batch version of DefineMeshExt: 'payloads' is a list of dicts with the same
 // keys as the DefineMeshExt kwargs (plus optional tri_aov_index/tri_aov_value).
-// One GIL release and one mesh-def mutex acquisition for the whole batch,
-// instead of one pybind call + lock per submesh. Meshes are built and inserted
-// in list order (a submesh may reference the points of an earlier one by name).
+// One GIL release for the whole batch, and one mesh-def mutex acquisition that
+// covers only the insertions (the builds run lock-free; a submesh referencing
+// the points of an earlier payload of the same batch resolves it batch-locally,
+// without touching the scene cache). Meshes are inserted in list order.
 static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &payloads) {
 	std::vector<ParsedExtMesh> parsed;
 	parsed.reserve(py::len(payloads));
@@ -1996,12 +2012,30 @@ static void Scene_DefineMeshesExt(const SceneImplPtr &scene, const py::list &pay
 			d.contains("tri_aov_value") ? py::cast<float>(d["tri_aov_value"]) : 0.0f));
 	}
 	Py_BEGIN_ALLOW_THREADS
-	// One lock for the whole batch (recursive mutex: the shared-points lookups
-	// and Scene::DefineMesh re-locking are no-ops on this thread)
-	std::lock_guard<std::recursive_mutex> batchLock(scene->GetSlgScene().MeshDefMutex());
+	// Build all meshes first, WITHOUT the mesh-def lock: the build only copies
+	// buffers and constructs mesh objects (the expensive part), and the only
+	// scene access is the shared-points lookup, resolved batch-locally when
+	// the source is an earlier payload of the same batch (BlendLuxCore only
+	// shares points between submeshes of one object, i.e. within one batch).
+	std::vector<luxrays::ExtTriangleMeshUPtr> built;
+	built.reserve(parsed.size());
+	std::unordered_map<std::string, luxrays::ExtTriangleMesh *> builtByName;
+	builtByName.reserve(parsed.size() * 2);
 	for (auto &a : parsed) {
-		auto newMesh = buildExtMesh(scene, a);
-		scene->DefineMesh(std::move(newMesh));
+		auto newMesh = buildExtMesh(scene, a, &builtByName);
+		builtByName.emplace(a.meshName, newMesh.get());
+		built.push_back(std::move(newMesh));
+	}
+	// One lock for the insertions only: per mesh it is just a cache map
+	// insert + vector push + edit flag (O(1)), so the lock hold time is
+	// negligible and the buffer copies above run lock-free, in parallel
+	// across batches. Insertion in list order keeps shared-points references
+	// valid (the source is inserted first). Recursive mutex: Scene::DefineMesh
+	// re-locking is a no-op on this thread.
+	{
+		std::lock_guard<std::recursive_mutex> batchLock(scene->GetSlgScene().MeshDefMutex());
+		for (auto &m : built)
+			scene->DefineMesh(std::move(m));
 	}
 	Py_END_ALLOW_THREADS
 }
