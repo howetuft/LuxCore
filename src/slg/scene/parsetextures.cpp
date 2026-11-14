@@ -17,6 +17,10 @@
  ***************************************************************************/
 
 #include <memory>
+#include <unordered_set>
+
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -95,6 +99,38 @@ void Scene::ParseTextures(const Properties &props) {
 	if (texKeys.size() == 0) {
 		// There is no texture definition
 		return;
+	}
+
+	// Preload all the image map files in parallel: the OIIO decode inside
+	// ImageMapCache::GetImageMap is the expensive part of texture parsing
+	// and each file is independent. The keys are deduped so every file is
+	// loaded exactly once (GetImageMap is thread-safe for distinct keys:
+	// the load runs outside its lock, the cache insert is serialized). The
+	// serial definition loop below then only hits the cache.
+	{
+		struct Preload {
+			string file;
+			ImageMapConfig cfg;
+		};
+		vector<Preload> preload;
+		std::unordered_set<string> seenKeys;
+		for (const string &key : texKeys) {
+			const string propName = "scene.textures." + Property::ExtractField(key, 2);
+			if (props.Get(Property(propName + ".type")("imagemap")).Get<string>() != "imagemap")
+				continue;
+			const string file = props.Get(Property(propName + ".file")("image.png")).Get<string>();
+			ImageMapConfig cfg(props, propName);
+			if (seenKeys.insert(imgMapCache.GetCacheKey(file, cfg)).second)
+				preload.push_back({file, std::move(cfg)});
+		}
+		if (!preload.empty()) {
+			SDL_LOG("Preloading " << preload.size() << " image map(s) in parallel");
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, preload.size()),
+				[&](const tbb::blocked_range<size_t> &r) {
+					for (size_t i = r.begin(); i < r.end(); ++i)
+						imgMapCache.GetImageMap(preload[i].file, preload[i].cfg, true);
+				});
+		}
 	}
 
 	for(const string &key: texKeys) {
