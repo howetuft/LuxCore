@@ -46,7 +46,7 @@ namespace luxrays {
 //
 // NOTE: Shape used to live in the slg layer (slg/scene/shape.h) and
 // owned a runtime subdivided-envelope cache. That cache has been moved to a
-// static cache owned by the slg SubdivShape (see slg/shapes/subdiv.h); it is
+// static cache owned by the slg SubdivShape (see slg/shape_modifiers/subdiv.h); it is
 // no longer a member of Shape, so Shape here depends only on luxrays types.
 class Shape : public NamedObject {
 public:

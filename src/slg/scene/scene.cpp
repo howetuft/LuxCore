@@ -50,7 +50,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/usings.h"
-#include "slg/shapes/subdiv.h"
+#include "slg/shape_modifiers/subdiv.h"
 #include "slg/utils/pathinfo.h"
 #include "slg/cameras/camera.h"
 

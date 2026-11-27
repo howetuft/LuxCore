@@ -283,27 +283,27 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/scene/scenepreprocess.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/bevelshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/cameraprojuv.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/displacement.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/edgedetectoraov.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/groupshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/harlequinshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/islandaovshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/merge_on_distance.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/randomtriangleaovshape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/shape.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify_old.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/strands.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_envelope.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_old.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv_tessellate.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/tessellate.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/tessellate_core.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/bevelshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/cameraprojuv.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/displacement.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/edgedetectoraov.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/groupshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/harlequinshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/islandaovshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/merge_on_distance.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/meshshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/pointiness.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/randomtriangleaovshape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/shape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/simplify_old.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/simplify.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/strands.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/subdiv.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/subdiv_envelope.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/subdiv_old.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/subdiv_tessellate.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/tessellate.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shape_modifiers/tessellate_core.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/slg.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/textures/band.cpp
